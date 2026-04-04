@@ -585,6 +585,6 @@ Not available until `/Users/charvin/Projects/Codex` becomes a git repository.
 After this plan is implemented and verified, the next eligible execution plans are:
 
 - `ai-delivery-admin execution plan`
-- `skills & mcp execution plan`
+- `ai-delivery-skills implementation plan`
 
 Both downstream tracks depend on the project-local data contract remaining stable. If either downstream plan needs to change the structure or semantics of `.ai-delivery/`, that change must first be reconciled against the governing master plan at `/Users/charvin/Projects/Codex/docs/plans/2026-04-04-ai-delivery-implementation-plan.md` before implementation proceeds.

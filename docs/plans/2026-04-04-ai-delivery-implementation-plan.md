@@ -37,6 +37,7 @@ Any real implementation must begin by deriving one of the execution plans define
 This master plan governs:
 
 - project-local hidden data storage in `.ai-delivery/`
+- project-local workflow skills stored with the business project
 - the relationship between `.ai-delivery/` and `.specify/`
 - the separate `ai-delivery-admin` project
 - workflow state transitions and blocker behavior
@@ -58,7 +59,7 @@ This master plan does not directly define:
 
 ## System Context
 
-The system has three primary artifacts or runtime surfaces.
+The system has four primary artifacts or runtime surfaces.
 
 ### 1. Business Project: `.specify/`
 
@@ -76,14 +77,25 @@ Role:
 - stores requirement packages, Figma evidence cache, runtime state, blockers, worktree state, logs, and traceability records
 - acts as the project-local source of truth for the AI delivery workflow
 
-### 3. Separate Local Project: `ai-delivery-admin`
+### 3. Business Project: `.codex/skills/ai-delivery/`
+
+Role:
+
+- stores the three project-local workflow skills:
+  - `requirement-breakdown`
+  - `ui-requirement-mapping`
+  - `ui-interaction-design`
+- keeps workflow skill behavior close to the business project's own `.ai-delivery/` artifacts
+- allows requirement-development skills to travel with the project instead of with the admin system
+
+### 4. Separate Local Project: `ai-delivery-admin`
 
 Role:
 
 - binds to one or more business projects
 - reads `.specify/` and `.ai-delivery/`
 - presents a Web console
-- exposes local APIs, MCP tools, and supporting skills
+- exposes local APIs, MCP tools, and one supporting admin skill
 - never owns product truth; it only reads, validates, edits, and manages governed artifacts
 
 ## Architecture Principles
@@ -245,6 +257,7 @@ Key responsibilities:
 <project-root>/
 ├── .specify/
 ├── .ai-delivery/
+├── .codex/skills/ai-delivery/
 └── docs/plans/
 ```
 
@@ -501,7 +514,8 @@ The local admin system is a separate project and should be organized into clearl
 
 #### `skills/`
 
-- store supporting skill packages and references tied to the admin system
+- store the single admin support skill and its references
+- do not store the three project-local workflow skills
 
 ### Core UI Views
 
@@ -517,7 +531,33 @@ The admin console should eventually provide:
 
 ## Skill System Blueprint
 
-The system includes three custom skills.
+The system includes three project-local workflow skills plus one admin support skill.
+
+### Skill Placement Rules
+
+The workflow-skill home is:
+
+```text
+<project-root>/.codex/skills/ai-delivery/
+```
+
+This location owns:
+
+- `requirement-breakdown`
+- `ui-requirement-mapping`
+- `ui-interaction-design`
+
+The admin-skill home is:
+
+```text
+<ai-delivery-admin>/skills/
+```
+
+This location owns:
+
+- `ai-delivery-admin-support`
+
+The admin project must not become the source-of-truth home for the three workflow skills.
 
 ### 1. `requirement-breakdown`
 
@@ -570,15 +610,42 @@ Produces:
 - explicit micro-interaction assumptions
 - `interaction_ready` state outputs
 
+### 4. `ai-delivery-admin-support`
+
+Purpose:
+
+- teach agents how to use the governed admin system correctly
+- enforce the order of:
+  - bind project
+  - inspect blockers and dependency readiness
+  - append execution logs
+  - use governed MCP or admin APIs for writes
+
+Consumes:
+
+- admin project binding state
+- governed admin APIs or MCP tools
+
+Produces:
+
+- no workflow-truth artifacts of its own
+- support guidance for correct agent behavior when operating on project-local artifacts
+
 ### Shared Skill Rules
 
-All skills must:
+The three workflow skills must:
 
 - respect dual source truth boundaries
 - refuse silent invention of business or visual meaning
 - emit blockers for unsupported gaps or conflicts
 - write progress and status through governed backend pathways
 - produce output directly into `.ai-delivery/`
+
+The admin support skill must:
+
+- never claim ownership of `.ai-delivery/` artifact truth
+- route governance-sensitive operations through the admin system
+- stop when blocker or transition rules fail
 
 ## MCP Blueprint
 
@@ -795,13 +862,16 @@ Outputs:
 Responsibilities:
 
 - build the separate admin project
-- implement `adapters / server / web / shared`
+- implement `adapters / server / web / shared / skills / mcp-server`
 - implement project binding, reads, writes, views, blocker handling, and timeline surfaces
+- implement the single admin support skill in `ai-delivery-admin`
+- implement the governed MCP tool surface in `ai-delivery-admin`
 
 Must not own:
 
 - the root definition of project-local workflow truth
 - skill workflow semantics
+- the three project-local workflow skill packages in the business project
 - host-project business logic
 
 Outputs:
@@ -810,26 +880,29 @@ Outputs:
 - local APIs
 - adapter implementation
 - web console surfaces
+- one admin support skill package
+- MCP tool implementations
 
-### 3. `skills & mcp` Execution Plan
+### 3. `ai-delivery-skills` Implementation Plan
 
 Responsibilities:
 
-- implement the three custom skills
-- implement agent-facing MCP tools
+- implement the three project-local workflow skills in the business project
+- implement shared references, templates, validators, and install or sync scripts for those workflow skills
 - translate architecture constraints into executable agent rules
 
 Must not own:
 
 - admin web implementation
 - root `.ai-delivery/` contract design
+- the admin support skill
+- the MCP server
 - general-purpose product development outside the AI delivery system
 
 Outputs:
 
-- three skill packages
-- MCP tool implementations
-- references and validation tests for agent workflows
+- three project-local workflow skill packages
+- references, templates, install or sync scripts, and validation tests for project-local agent workflows
 
 ### Execution Plan Derivation Rules
 

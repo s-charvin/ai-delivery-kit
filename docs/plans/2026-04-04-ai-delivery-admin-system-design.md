@@ -12,7 +12,7 @@
 - 校验
 - 日志记录
 - 状态流转
-- MCP 与 skill 暴露
+- MCP 与 admin support skill 暴露
 
 它不拥有业务真相，不迁移业务数据，不替代 git。
 
@@ -48,6 +48,12 @@
 ├── shared/
 └── tests/
 ```
+
+说明：
+
+- `skills/` 目录只用于存放 admin support skill
+- 3 个业务开发 skill 不在此项目中维护
+- 3 个业务开发 skill 应随业务项目放置，建议位于 `<project-root>/.codex/skills/ai-delivery/`
 
 ## Responsibilities By Layer
 
@@ -92,8 +98,15 @@
 
 职责：
 
+- 提供 admin support skill
 - 为 agent 提供标准动作顺序
 - 约束“先查依赖、再写日志、再流转状态、再执行动作”的流程
+- 明确要求通过 MCP 或受控 API 完成治理类写操作
+
+说明：
+
+- 这一层不拥有 `requirement-breakdown`、`ui-requirement-mapping`、`ui-interaction-design`
+- 这 3 个 skill 是业务项目侧的开发 skill，不属于后台项目
 
 ### Web Console
 

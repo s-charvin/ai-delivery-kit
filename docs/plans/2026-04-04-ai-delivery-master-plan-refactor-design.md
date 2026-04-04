@@ -60,7 +60,7 @@
 
 1. `项目内数据层 execution plan`
 2. `ai-delivery-admin execution plan`
-3. `skills & mcp execution plan`
+3. `ai-delivery-skills implementation plan`
 
 ### Boundary Of Project Data Execution Plan
 
@@ -83,25 +83,27 @@
 职责：
 
 - 负责独立后台项目
-- 负责 `adapters / server / web / shared`
+- 负责 `adapters / server / web / shared / skills / mcp-server`
 - 负责项目绑定、概览读取、状态流转、日志写入、artifact 编辑、blocker 处理
+- 负责 `ai-delivery-admin` 内的 1 个 support skill
+- 负责 `ai-delivery-admin` 内的 MCP server
 - 消费 `.specify/` 与 `.ai-delivery/`，但不重新发明业务数据结构
 
 不负责：
 
 - 定义业务项目内的根数据契约
-- skill 工作流内容
+- 业务项目内 3 个开发 skill 的工作流内容
 - Requirement/Figma 业务规则重定义
 - 替代 git/worktree 机制本身
 
-### Boundary Of `skills & mcp` Execution Plan
+### Boundary Of `ai-delivery-skills` Implementation Plan
 
 职责：
 
-- 负责 3 个自定义 skill
-- 负责 MCP 工具面
+- 负责业务项目内的 3 个开发 skill
+- 负责这些 skill 的 `references / templates / validator / install-sync scripts`
 - 将主计划中的硬约束翻译成 agent 可执行规则
-- 通过受控接口读写状态、日志、artifact
+- 在可用时通过 admin support surface 或 MCP 使用受控接口读写状态、日志、artifact
 - 串起 `requirement-breakdown -> ui-requirement-mapping -> ui-interaction-design -> Spec Kit`
 
 不负责：
@@ -109,6 +111,8 @@
 - 后台 Web 页面
 - `.ai-delivery/` 根契约定义
 - 后台项目整体 server 架构
+- `ai-delivery-admin` 内的 support skill
+- `ai-delivery-admin` 内的 MCP server
 - 最终业务功能开发
 
 ## Refactor Success Criteria

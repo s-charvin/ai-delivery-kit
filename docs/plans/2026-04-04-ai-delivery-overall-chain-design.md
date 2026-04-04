@@ -69,6 +69,9 @@
 <project-root>/
 ├── .specify/
 ├── .ai-delivery/
+├── .codex/
+│   └── skills/
+│       └── ai-delivery/
 └── docs/plans/
 ```
 
@@ -79,9 +82,30 @@
 ├── server/
 ├── web/
 ├── mcp-server/
-├── skills/
+├── skills/                  # 仅放 admin support skill
 └── adapters/
 ```
+
+## Skill Placement
+
+- `requirement-breakdown`
+- `ui-requirement-mapping`
+- `ui-interaction-design`
+
+这 3 个 skill 是业务项目本地资产，用于直接支撑需求开发流程，建议放在：
+
+```text
+<project-root>/.codex/skills/ai-delivery/
+```
+
+`ai-delivery-admin` 不拥有这 3 个业务开发 skill。
+
+`ai-delivery-admin` 仅提供：
+
+- 1 个 admin support skill
+- 1 个 MCP 服务
+
+用于给 agent 提供受控的日志、状态流转、blocker、artifact 操作能力。
 
 ## Dual Source Of Truth
 
