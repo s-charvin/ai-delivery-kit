@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "truth_policy": {
+    "functional_source": "Requirement",
+    "visual_source": "Figma",
+    "conflict_behavior": "block"
+  },
+  "worktree_policy": {
+    "require_isolated_worktree": true,
+    "allow_precreate_before_dependencies": false
+  },
+  "logging_policy": {
+    "require_logs_for_main_session": true,
+    "require_logs_for_subagent": true,
+    "require_logs_for_state_change": true
+  },
+  "updated_at": "2026-04-04T00:00:00Z",
+  "updated_by": "system"
+}

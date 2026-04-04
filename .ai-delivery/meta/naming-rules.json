@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "sub_requirement_id_pattern": "SR-%03d",
+  "commit_prefix_template": "[{{subreq_id}}] ",
+  "require_commit_prefix": true,
+  "updated_at": "2026-04-04T00:00:00Z",
+  "updated_by": "system"
+}
