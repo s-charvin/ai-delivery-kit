@@ -23,6 +23,8 @@ Use this skill when a finalized or near-final requirement source needs to be spl
 
 All outputs stay inside `.ai-delivery/requirements/`.
 
+If the requirement package came from governed intake bootstrap, expect only the intake-owned scaffold to exist first. This skill is responsible for writing `breakdown-summary.md`, `global-rules.md`, and the canonical requirement `dependency-graph.json`.
+
 ## Required References
 
 - [Dual Truth Rules](../common/references/dual-truth-rules.md)
@@ -44,8 +46,9 @@ All outputs stay inside `.ai-delivery/requirements/`.
 3. Extract shared rules into `global-rules.md`.
 4. Create `breakdown-summary.md` and `dependency-graph.json`.
 5. Create one folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`.
-6. Keep all artifact truth in the business project's `.ai-delivery/requirements/` tree.
-7. Use the separate admin support surface for governed logging, blocker recording, or status transitions when it is available.
+6. Do not precreate `figma-mapping.md` or `interaction-design.md`; those files belong to the downstream UI mapping and interaction skills.
+7. Keep all artifact truth in the business project's `.ai-delivery/requirements/` tree.
+8. Use the separate admin support surface for governed dependency graph updates, logging, blocker recording, or status transitions when it is available.
 
 ## State And Blocker Rules
 
