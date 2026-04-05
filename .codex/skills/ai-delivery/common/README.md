@@ -15,6 +15,13 @@ When governed logging, status transitions, blocker handling, or artifact mutatio
 
 Shared references and output templates live under this `common/` directory so the three workflow skills stay aligned on truth boundaries, blocker handling, and artifact shapes.
 
+## Full-Chain Repair Notes
+
+- full-chain closure now depends on governed bootstrap, blocked-state recovery, merge finalization, and traceability-based Spec Kit bridge refs all operating over the same `.ai-delivery/` truth
+- `traceability.json` is a first-class governed artifact and the formal cross-layer carrier for both Figma evidence and `spec_kit_refs`
+- Figma cache under `.ai-delivery/figma-cache/` is indexed, freshness-checked, and read-oriented; it is not a generic editable document family
+- runtime daemon management is an admin-runtime concern and does not replace workflow truth recorded in `.ai-delivery/runtime/`
+
 ## Usage
 
 Project-local workflow skill packages live under:
