@@ -169,6 +169,7 @@
 
 - 创建 `.ai-delivery/requirements/<requirement-id>/`
 - 创建初始 `requirement.md`
+- 创建空的 canonical `dependency-graph.json`
 - 写入最小 requirement 级元信息
 
 推荐路径：
@@ -186,6 +187,12 @@
 - `global-rules.md`
 - `dependency-graph.json`
 - 各子需求目录与初始 artifact
+
+说明：
+
+- `status.json` 只能通过状态流转或恢复动作更新
+- `dependency.json` 是 requirement DAG 同步后的派生视图，不是手工编辑真相
+- `figma-mapping.md` 与 `interaction-design.md` 不应由 intake bootstrap 预先占位
 
 这意味着后台治理面必须把这些文件也纳入一等 artifact 范围，而不能只治理后续的 UI 与交互文档。
 

@@ -21,6 +21,8 @@ This skill produces:
 
 All outputs stay inside the matching `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/` folder.
 
+`interaction-design.md` may not exist yet in a newly bootstrapped package. This skill owns the first real write of that file.
+
 ## Required References
 
 - [Dual Truth Rules](../common/references/dual-truth-rules.md)

@@ -192,15 +192,18 @@
 - `requirement.md`
 - `breakdown-summary.md`
 - `global-rules.md`
-- `dependency-graph.json`
 - `README.md`
 - `requirement-slice.md`
 - `figma-mapping.md`
 - `interaction-design.md`
-- `status.json`
-- `dependency.json`
 - `traceability.json`
 - `decisions.md`
+
+说明：
+
+- `dependency-graph.json` 必须走专用 dependency graph 更新面，并同步派生 `dependency.json` 与 runtime graph
+- `status.json` 必须走 transition / resume 受控状态机
+- `dependency.json` 是派生文件，不在通用 artifact editor 中自由编辑
 
 ### Governed Artifact Coverage
 
@@ -250,7 +253,9 @@
 - `append_execution_log`
 - `create_requirement_package`
 - `create_sub_requirement_package`
+- `update_requirement_dependency_graph`
 - `transition_sub_requirement_status`
+- `update_blocker`
 - `resume_sub_requirement_after_blocker`
 - `check_dependency_ready`
 - `reserve_worktree_slot`

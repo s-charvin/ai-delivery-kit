@@ -17,6 +17,8 @@ Use this skill after `requirement-breakdown` when a sub-requirement already has 
 
 All outputs stay inside the matching `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/` folder.
 
+`figma-mapping.md` may not exist yet in a newly bootstrapped package. This skill owns the first real write of that file.
+
 ## Required References
 
 - [Dual Truth Rules](../common/references/dual-truth-rules.md)
