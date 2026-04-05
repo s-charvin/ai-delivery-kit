@@ -11,6 +11,13 @@ Allowed as `assumed_micro_interaction`:
 - submit deduplication while requests are in flight
 - baseline keyboard reachability
 
+Recording rules:
+
+- label the line as `Assumption: Micro Interaction`
+- identify the supporting source gap or `Source: Existing Pattern`
+- explain why the assumption stays below the business-meaning threshold
+- if the assumption would change business semantics, stop and escalate instead
+
 Not allowed:
 
 - new business branches
