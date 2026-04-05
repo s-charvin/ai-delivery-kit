@@ -126,11 +126,29 @@ validate_ui_requirement_mapping_skill() {
   require_contains "$skill_file" 'shared nodes'
 }
 
+validate_ui_interaction_design_skill() {
+  local skill_file="$SKILL_ROOT/ui-interaction-design/SKILL.md"
+
+  if [[ ! -f "$skill_file" ]]; then
+    return 0
+  fi
+
+  require_contains "$skill_file" 'requirement-slice.md'
+  require_contains "$skill_file" 'figma-mapping.md'
+  require_contains "$skill_file" 'interaction-design.md'
+  require_contains "$skill_file" 'assumed_micro_interaction'
+  require_contains "$skill_file" 'blocked_missing_design'
+  require_contains "$skill_file" 'blocked_requirement_figma_conflict'
+  require_contains "$skill_file" 'blocked_missing_requirement'
+  require_contains "$skill_file" 'Do not invent business flow or page structure'
+}
+
 validate_common_contract
 validate_generic_skill requirement-breakdown
 validate_generic_skill ui-requirement-mapping
 validate_generic_skill ui-interaction-design
 validate_requirement_breakdown_skill
 validate_ui_requirement_mapping_skill
+validate_ui_interaction_design_skill
 
 print -- 'PASS: project-local ai-delivery skill sources are structurally valid.'
