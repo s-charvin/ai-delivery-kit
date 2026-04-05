@@ -1,0 +1,98 @@
+#!/bin/zsh
+set -euo pipefail
+
+ROOT=$(git rev-parse --show-toplevel)
+SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
+COMMON_ROOT="$SKILL_ROOT/common"
+
+fail() {
+  print -u2 -- "[validate-project-ai-delivery-skills] $1"
+  exit 1
+}
+
+require_file() {
+  [[ -f "$1" ]] || fail "Missing file: $1"
+}
+
+require_dir() {
+  [[ -d "$1" ]] || fail "Missing directory: $1"
+}
+
+require_contains() {
+  local file=$1
+  local needle=$2
+  grep -Fq -- "$needle" "$file" || fail "Expected '$needle' in $file"
+}
+
+require_not_contains() {
+  local file=$1
+  local needle=$2
+  if grep -Fq -- "$needle" "$file"; then
+    fail "Unexpected '$needle' in $file"
+  fi
+}
+
+validate_markdown_links() {
+  local file=$1
+  local links
+  links=$(perl -ne 'while (/\[[^\]]*\]\(([^)]+)\)/g) { print "$1\n" }' "$file")
+
+  if [[ -z "$links" ]]; then
+    return
+  fi
+
+  while IFS= read -r link; do
+    [[ -z "$link" ]] && continue
+    [[ "$link" == http* ]] && continue
+    [[ "$link" == mailto:* ]] && continue
+    [[ "$link" == '#'* ]] && continue
+
+    if [[ "$link" == /* ]]; then
+      [[ -e "$link" ]] || fail "Broken absolute link '$link' in $file"
+    else
+      (cd "$(dirname "$file")" && [[ -e "$link" ]]) || fail "Broken relative link '$link' in $file"
+    fi
+  done <<< "$links"
+}
+
+validate_common_contract() {
+  require_dir "$SKILL_ROOT/requirement-breakdown"
+  require_dir "$SKILL_ROOT/ui-requirement-mapping"
+  require_dir "$SKILL_ROOT/ui-interaction-design"
+
+  require_file "$COMMON_ROOT/README.md"
+  require_file "$COMMON_ROOT/references/dual-truth-rules.md"
+  require_file "$COMMON_ROOT/references/blocker-catalog.md"
+  require_file "$COMMON_ROOT/references/logging-checklist.md"
+  require_file "$COMMON_ROOT/templates/requirement-slice-template.md"
+  require_file "$COMMON_ROOT/templates/figma-mapping-template.md"
+  require_file "$COMMON_ROOT/templates/interaction-design-template.md"
+
+  require_contains "$COMMON_ROOT/README.md" 'business-project assets'
+  require_contains "$COMMON_ROOT/README.md" '.ai-delivery'
+  require_contains "$COMMON_ROOT/README.md" 'not owned by `ai-delivery-admin`'
+  require_contains "$COMMON_ROOT/README.md" 'admin support surfaces'
+}
+
+validate_generic_skill() {
+  local skill_name=$1
+  local skill_file="$SKILL_ROOT/$skill_name/SKILL.md"
+
+  if [[ ! -f "$skill_file" ]]; then
+    return 0
+  fi
+
+  validate_markdown_links "$skill_file"
+  require_contains "$skill_file" '.ai-delivery'
+  require_contains "$skill_file" 'admin support'
+  require_contains "$skill_file" 'governed'
+  require_not_contains "$skill_file" 'owned by ai-delivery-admin'
+  require_not_contains "$skill_file" 'move workflow truth into ai-delivery-admin'
+}
+
+validate_common_contract
+validate_generic_skill requirement-breakdown
+validate_generic_skill ui-requirement-mapping
+validate_generic_skill ui-interaction-design
+
+print -- 'PASS: project-local ai-delivery skill sources are structurally valid.'
