@@ -1,7 +1,14 @@
 #!/bin/zsh
 set -euo pipefail
 
-ROOT=$(git rev-parse --show-toplevel)
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+
+if ROOT=$(git -C "$SCRIPT_DIR/.." rev-parse --show-toplevel 2>/dev/null); then
+  :
+else
+  ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd)
+fi
+
 SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
 COMMON_ROOT="$SKILL_ROOT/common"
 
@@ -88,6 +95,10 @@ validate_common_contract() {
   require_dir "$SKILL_ROOT/ui-requirement-mapping"
   require_dir "$SKILL_ROOT/ui-interaction-design"
 
+  require_file "$ROOT/scripts/bootstrap-ai-delivery-project.sh"
+  require_file "$ROOT/scripts/sync-ai-delivery-project-assets.sh"
+  require_file "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md"
+
   require_file "$COMMON_ROOT/README.md"
   require_file "$COMMON_ROOT/references/dual-truth-rules.md"
   require_file "$COMMON_ROOT/references/blocker-catalog.md"
@@ -100,6 +111,11 @@ validate_common_contract() {
   require_contains "$COMMON_ROOT/README.md" '.ai-delivery'
   require_contains "$COMMON_ROOT/README.md" 'not owned by `ai-delivery-admin`'
   require_contains "$COMMON_ROOT/README.md" 'admin support surfaces'
+  require_contains "$ROOT/scripts/bootstrap-ai-delivery-project.sh" '--target-repo'
+  require_contains "$ROOT/scripts/bootstrap-ai-delivery-project.sh" '.ai-delivery/meta/project-binding.json'
+  require_contains "$ROOT/scripts/sync-ai-delivery-project-assets.sh" '--mode sync'
+  require_contains "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" 'bootstrap-ai-delivery-project.sh'
+  require_contains "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" 'sync-ai-delivery-project-assets.sh'
 }
 
 validate_generic_skill() {
