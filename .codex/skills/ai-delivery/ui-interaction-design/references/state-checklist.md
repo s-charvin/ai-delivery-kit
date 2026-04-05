@@ -4,14 +4,18 @@
 - source-backed interaction facts
 - entry conditions
 - user actions
+- feedback and response model
 - system feedback
 - success state
 - empty state
 - loading state
 - error state
 - disabled state
+- loading behavior details
 - permission or visibility effects
 - navigation or local state changes
 - motion and transition notes
+- timing guidance
+- accessibility and input modality notes
 - explicit assumptions and escalations
 - source labels for every non-trivial rule

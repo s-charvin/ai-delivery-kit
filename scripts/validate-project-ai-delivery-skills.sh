@@ -147,7 +147,7 @@ validate_ui_requirement_mapping_skill() {
 
   require_contains "$skill_file" 'requirement-slice.md'
   require_contains "$skill_file" 'Figma retrieval order'
-  require_contains "$skill_file" 'screenshot'
+  require_contains "$skill_file" 'structured node'
   require_contains "$skill_file" 'figma-mapping.md'
   require_contains "$skill_file" 'traceability.json'
   require_contains "$skill_file" 'figma-cache/'

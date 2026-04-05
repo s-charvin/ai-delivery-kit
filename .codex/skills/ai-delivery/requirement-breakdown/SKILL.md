@@ -5,7 +5,7 @@ description: Use when approved or near-final top-level requirement material must
 
 # Requirement Breakdown
 
-Project-local workflow skill for turning top-level requirement material into governed requirement and sub-requirement artifacts inside the host repository.
+Project workflow skill for turning top-level requirement material into governed requirement and sub-requirement artifacts inside the host repository.
 
 ## Overview
 
@@ -19,6 +19,7 @@ Turn approved or near-final requirement truth into a breakdown package that down
 - Do not generate Spec Kit spec, plan, or tasks here.
 - Do not bind Figma nodes or make visual-truth decisions here.
 - Do not silently smooth over conflicts between approved requirement sources.
+- Do not replace source-backed requirement truth with source-free summaries.
 - Do not create a second truth store outside `.ai-delivery/`.
 - Do not delete later-stage artifacts such as `figma-mapping.md` or `interaction-design.md` if they already exist.
 - Do not promote ambiguous slices to `split_ready`.
@@ -83,13 +84,13 @@ If a source or artifact is missing:
 
 ## Output Goal
 
-Produce a requirement package that downstream skills can consume without reinterpreting the whole requirement source. The package must preserve:
+Produce a requirement package that downstream skills can consume without reinterpreting the whole requirement source. Preserve top-level requirement truth with minimal compression: copy or quote key source text before normalizing it, and make any compression, omissions, or conflicts explicit instead of smoothing them over. The package must preserve:
 
 - the authoritative requirement package rooted in `requirement.md`
 - requirement-level summaries in `breakdown-summary.md` and `global-rules.md`
 - an acyclic `dependency-graph.json`
-- one governed folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`
-- explicit source references, dependencies, acceptance signals, open questions, and blocker evidence
+- one governed folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`, where `README.md` is the human-readable navigation doc and `requirement-slice.md` is the authoritative source-preserving contract
+- explicit source coverage, key verbatim excerpts, dependencies, acceptance signals, open questions, compression warnings, and blocker evidence
 - first-class `traceability.json` and `status.json` contracts rather than informal notes
 
 Every editable Markdown or JSON artifact should follow the repo's governed metadata contract instead of ad-hoc file shapes.
@@ -120,6 +121,8 @@ If the folder already contains later-stage files such as `figma-mapping.md` or `
 
 - Read the top-level requirement material carefully and capture line numbers or source positions when possible.
 - Confirm which file is the current approved requirement source and which supplements are merely supporting context.
+- Identify which source paragraphs, bullets, or rule blocks must be copied verbatim into sub-requirement artifacts before any summarization.
+- If one top-level fragment will influence multiple sub-requirements or a global rule, record that shared coverage explicitly instead of silently rewording it.
 - Resolve the target requirement id and requirement folder under `.ai-delivery/requirements/`.
 - Reuse the shared references and templates from `../common/` instead of inventing new artifact shapes.
 
@@ -168,8 +171,10 @@ Required splitting rules:
 
 For each sub-requirement:
 
-- Write `README.md` using `references/subreq-readme-template.md`.
-- Write `requirement-slice.md` using `../common/templates/requirement-slice-template.md`.
+- Write `README.md` using `references/subreq-readme-template.md`. Treat it as the human-readable navigation doc: include metadata, top-level requirement coverage, key verbatim excerpts, a source-backed sub-requirement statement, boundary, dependencies, source-linked acceptance signals, open questions, compression warnings, and current status.
+- Write `requirement-slice.md` using `../common/templates/requirement-slice-template.md`. Treat it as the authoritative downstream contract: include exhaustive source requirement coverage, verbatim source excerpts, a normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, and a source requirement reference index.
+- Copy or quote first, then summarize. Do not let `requirement-slice.md` rely only on second-order summaries when the original top-level wording matters.
+- Do not copy template guidance sections such as `Template Authoring Rules` or `Template Example` into generated artifacts.
 - Write `dependency.json` with explicit `depends_on` and `blocks` declarations, even when they are empty.
 - Write `status.json` with the current status plus blocked-recovery fields such as `blocked_from_status` and `resume_target_status`.
 - Seed `traceability.json` as a first-class governed artifact with requirement references and the repo's current bridge fields. If the project already uses `spec_kit_refs`, keep or seed that bridge inside `traceability.json` instead of inventing a second bridge artifact.
@@ -178,7 +183,7 @@ For each sub-requirement:
 ### 7. Set state conservatively
 
 - Default uncertain slices to `draft`.
-- Move a sub-requirement to `split_ready` only when the slice is specific enough for downstream UI mapping and includes clear scope, dependencies, acceptance signals, open questions, and source requirement references.
+- Move a sub-requirement to `split_ready` only when the slice is specific enough for downstream UI mapping and includes complete source coverage, key verbatim excerpts, clear scope, dependencies, acceptance signals with source linkage, open questions, compression warnings when needed, and source requirement references.
 - When a blocker is raised, record the narrowest blocker from the catalog and preserve the blocked-recovery intent in `status.json`.
 - Use the separate admin support surface for governed logging, blocker recording, or status transitions when it is available.
 
@@ -186,12 +191,44 @@ For each sub-requirement:
 
 - Re-open the original requirement material after writing the artifacts.
 - Re-open `breakdown-summary.md`, `global-rules.md`, `dependency-graph.json`, and each sub-requirement folder.
-- Verify that no requirement section was silently dropped, the dependency graph is still acyclic, global rules are not duplicated into feature slices, and every sub-requirement has the required files and references.
+- Verify that no requirement section was silently dropped or over-compressed, the dependency graph is still acyclic, global rules are not duplicated into feature slices, and every sub-requirement has the required files and references.
+- Verify that every normalized statement and acceptance signal can be traced back to a source reference or quoted excerpt.
 - If you find a mismatch, fix the artifacts and re-check them before stopping.
+
+## Source-Preservation Writing Pattern
+
+- Copy or quote the critical source text before you normalize it.
+- Keep `README.md` shorter for humans, but keep it source-backed.
+- Use `requirement-slice.md` as the exhaustive downstream contract rather than a second short summary.
+- If a summary adds a business verb, condition, or state transition that the source never said, move it to `Open Questions` or `Ambiguities And Conflicts` instead of presenting it as truth.
+
+### Mini Example
+
+```md
+Top-level source:
+> Users can rename a project from Settings. Save stays disabled until the new name is non-empty and different from the current value.
+
+Verbatim Source Excerpts
+### Excerpt 1
+- `source_ref`: `requirement.md#L14-L15`
+- `quoted_text`:
+> Users can rename a project from Settings. Save stays disabled until the new name is non-empty and different from the current value.
+
+Normalized Slice Statement
+- `statement`: `This slice covers project-name editing in Settings, including disabled-save gating for empty or unchanged input.`
+- `source_basis`: `Excerpt 1`
+- `normalization_type`: `wording cleanup`
+
+Acceptance Signals
+### Signal 1
+- `signal`: `Save remains disabled when input is empty or unchanged.`
+- `source_ref`: `requirement.md#L15-L15`
+- `derived_from`: `verbatim excerpt`
+```
 
 ## State And Blocker Rules
 
-- Only move a sub-requirement to `split_ready` when the slice is specific enough for downstream UI mapping.
+- Only move a sub-requirement to `split_ready` when the slice is specific enough for downstream UI mapping and already preserves its critical source truth through coverage, verbatim excerpts, and source-linked acceptance signals.
 - If the requirement source conflicts with itself or another approved requirement source, block on `blocked_requirement_conflict`.
 - If a critical business fact is missing, block on `blocked_missing_requirement`.
 - If the boundary is still ambiguous, write the draft plus open questions and stop short of `split_ready`.
@@ -204,6 +241,7 @@ For each sub-requirement:
 - Do not generate Spec Kit spec, plan, or tasks here.
 - Do not bind Figma nodes here.
 - Do not move workflow truth into `ai-delivery-admin`.
+- Do not let source-free summaries replace quoted top-level requirement text in any `split_ready` slice.
 - Do not replace `traceability.json` with an informal note or a second bridge file.
 
 ## Output Standard
@@ -212,9 +250,12 @@ Every sub-requirement package must preserve:
 
 - clear scope
 - explicit type
+- explicit source coverage
+- key verbatim source excerpts where wording matters
 - explicit dependencies
 - acceptance signals
 - open questions
+- compression warnings when normalization could lose nuance
 - source requirement references
 
 Minimum artifact expectations:
@@ -222,8 +263,8 @@ Minimum artifact expectations:
 - `breakdown-summary.md`: source inputs, bootstrap-or-reuse note, sub-requirement index, global blockers, global open questions
 - `global-rules.md`: only cross-cutting rules that apply across multiple sub-requirements
 - `dependency-graph.json`: requirement-level DAG with no invented cycles
-- `README.md`: subreq id, title, type, summary, boundary, dependencies, acceptance signals, open questions, current status
-- `requirement-slice.md`: metadata, summary, in scope, out of scope, dependencies, acceptance signals, open questions, source requirement references
+- `README.md`: metadata, navigation summary, top-level requirement coverage, key verbatim excerpts, source-backed sub-requirement statement, boundary, dependencies, source-linked acceptance signals, open questions, compression warnings, current status
+- `requirement-slice.md`: metadata, exhaustive source requirement coverage, verbatim source excerpts, normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, source requirement reference index
 - `dependency.json`: explicit `depends_on` and `blocks`
 - `status.json`: `status`, `blocked_from_status`, and `resume_target_status`
 - `traceability.json`: requirement references, empty-or-initial mapping fields, conflicts, verification fields, and existing bridge contract fields when the repo expects them
@@ -238,10 +279,14 @@ Before reporting completion, confirm all of the following:
 - [ ] The current approved top-level requirement material was used
 - [ ] The correct requirement package was reused or bootstrapped without inventing a new layout
 - [ ] No requirement section was silently dropped
+- [ ] No critical source text was silently over-compressed when splitting into sub-requirements
 - [ ] `global-rules.md` contains only cross-cutting rules
 - [ ] Every sub-requirement has a unique id, clear type, and explicit dependency declaration
+- [ ] Every sub-requirement has explicit source coverage for the top-level fragments it depends on
+- [ ] Every `split_ready` candidate preserves key verbatim excerpts before normalized summaries
 - [ ] `dependency-graph.json` is acyclic and matches the per-sub-requirement dependencies
 - [ ] Every sub-requirement includes `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`
+- [ ] Every acceptance signal can be traced back to a concrete source reference or quoted excerpt
 - [ ] `status.json` preserves blocked-recovery fields
 - [ ] `traceability.json` is treated as a first-class governed artifact
 - [ ] Ambiguous slices remain `draft` or blocked instead of being forced to `split_ready`
@@ -306,6 +351,14 @@ Expected behavior:
 
 - preserve or seed that bridge contract inside `traceability.json`
 - do not invent a second bridge artifact
+
+### Scenario 8: A top-level requirement paragraph is dense and tempting to summarize away
+
+Expected behavior:
+
+- copy the critical lines into `Verbatim Source Excerpts` before normalizing them
+- map those lines into source coverage and acceptance signals
+- record a compression warning or open question if condensing the paragraph would lose nuance
 
 ## Handoff
 

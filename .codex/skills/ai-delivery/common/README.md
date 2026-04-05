@@ -18,9 +18,9 @@ Shared references and output templates live under this `common/` directory so th
 ## Full-Chain Repair Notes
 
 - full-chain closure now depends on governed bootstrap, blocked-state recovery, merge finalization, and traceability-based Spec Kit bridge refs all operating over the same `.ai-delivery/` truth
-- `traceability.json` is a first-class governed artifact and the formal cross-layer carrier for both Figma evidence and `spec_kit_refs`
+- `traceability.json` is a first-class governed artifact and the formal cross-layer carrier for both structured design evidence and `spec_kit_refs`
 - intake bootstrap does not preseed downstream `figma-mapping.md` or `interaction-design.md`; those files appear on first real write by the matching project-local skill or governed editor
-- Figma cache under `.ai-delivery/figma-cache/` is indexed, freshness-checked, and read-oriented; it is not a generic editable document family
+- `figma-cache` under `.ai-delivery/figma-cache/` remains the current governed cache root for design evidence compatibility; each cached artifact should preserve admin-compatible metadata plus `provider`, `artifact_type`, and provider-native `raw_payload` instead of a lossy normalized replacement
 - runtime daemon management is an admin-runtime concern and does not replace workflow truth recorded in `.ai-delivery/runtime/`
 
 ## Usage

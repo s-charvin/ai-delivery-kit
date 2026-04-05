@@ -11,6 +11,8 @@ Project-local workflow skill for converting governed requirement slices plus ver
 
 Use this skill after `ui-requirement-mapping` when a sub-requirement already has requirement truth, mapping truth, and supporting governed artifacts in place. This stage writes `interaction-design.md`, updates `decisions.md` when assumptions or escalations are needed, and preserves the upstream mapping and bridge contract instead of rewriting it from memory.
 
+This skill may refine bounded micro-interaction detail such as feedback patterns, loading presentation, motion timing, focus treatment, and accessibility defaults, but only when those refinements stay below the business-meaning threshold and remain explicitly labeled.
+
 ## Hard Boundary
 
 - Do not invent business flow or page structure.
@@ -27,6 +29,7 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 - Turning verified Requirement and Figma mapping evidence into an executable interaction contract
 - Defining source-backed user actions, feedback, states, and transitions
 - Recording bounded `assumed_micro_interaction` only inside the allowed boundary
+- Improving the quality of micro-interaction detail for loading, feedback, motion, timing, focus, and accessibility without expanding product meaning
 - Escalating missing interaction truth before implementation or Spec Kit planning
 
 ## Do Not Use This Skill For
@@ -44,6 +47,7 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 - [Logging Checklist](../common/references/logging-checklist.md)
 - [Interaction Design Template](../common/templates/interaction-design-template.md)
 - [Allowed Assumptions](references/allowed-assumptions.md)
+- [Interaction Quality Guidelines](references/interaction-quality-guidelines.md)
 - [State Checklist](references/state-checklist.md)
 
 Also read the existing `traceability.json` because it is a first-class governed artifact, not disposable sidecar context.
@@ -75,7 +79,7 @@ If a source or artifact is missing:
 
 - If `requirement-slice.md` is missing or still too ambiguous, stop and hand the work back to `requirement-breakdown`.
 - Prefer starting from `figma_mapped`; if the sub-requirement is still unmapped or blocked and the user did not ask for repair work, stop instead of pretending interaction design is normal.
-- If `figma-mapping.md` is missing or not screenshot-backed, stop and hand the work back to `ui-requirement-mapping`.
+- If `figma-mapping.md` is missing or not backed by trustworthy structured design evidence, stop and hand the work back to `ui-requirement-mapping`.
 - If `traceability.json` is missing or inconsistent with the visible mapping truth, repair or escalate that governed contract before claiming `interaction_ready`.
 - If only micro-interaction detail is missing, continue and record `assumed_micro_interaction`.
 - If the missing detail changes business meaning, stop and block instead of assuming.
@@ -112,18 +116,78 @@ Produce an interaction contract that developers can consume directly while prese
 - Derive interaction facts from Requirement truth, Figma mapping truth, comments, prototype flows, and already-approved patterns.
 - Label each fact as `Source: Requirement`, `Source: Figma`, `Source: Existing Pattern`, or `Assumption: Micro Interaction`.
 - Keep explicit separation between source-backed behavior and bounded assumptions.
+- Use `references/interaction-quality-guidelines.md` to choose the lightest safe feedback, loading, motion, timing, and accessibility defaults when the source truth leaves room for bounded refinement.
+
+### 2a. Bounded Interaction Quality Principles
+
+Use these principles to improve interaction quality without crossing into redesign.
+
+### 1. Feedback First
+
+- Prefer interaction feedback that confirms user intent clearly and immediately.
+- Distinguish between inline validation, field-level error, page-level error, toast, and progress feedback instead of collapsing everything into one generic message surface.
+- Prefer feedback that preserves user context over feedback that interrupts flow unless the source materials explicitly require interruption.
+- Choose the lightest feedback surface that preserves clarity. Prefer inline or local feedback before global or blocking interruption when business meaning is unchanged.
+
+### 2. Loading Should Preserve Orientation
+
+- Prefer loading states that preserve layout and user orientation.
+- When source truth does not specify exact presentation, prefer bounded defaults such as button-level loading, inline progress, or skeleton placeholders that match the existing surface instead of full-screen blocking states.
+- Loading behavior should explain whether the user can continue editing, wait in place, or retry.
+- Loading scope should match action scope. Prefer control, section, or container loading before page-level or app-wide blocking states.
+
+### 3. Motion Must Be Functional
+
+- Motion should communicate feedback, focus, continuity, or state change; it should not be decorative by default.
+- If motion detail is missing, prefer subtle, short, and interruptible transitions instead of large choreographed animation.
+- Use motion notes to describe purpose, not implementation library choices.
+- Prefer platform-neutral descriptions such as "preserve continuity between states" or "emphasize validation error" over web-specific animation techniques.
+
+### 4. Timing Should Be Consistent And Conservative
+
+- Micro-feedback should feel immediate.
+- Small component transitions should stay short and unobtrusive.
+- Longer motion should only appear when it explains meaningful continuity.
+- If exact timing is not source-backed, record timing guidance as a bounded micro-interaction assumption rather than as Figma truth.
+
+### 5. Accessibility Is Part Of The Contract
+
+- Preserve keyboard reachability, visible focus, state clarity, and reduced-motion behavior as first-class interaction concerns.
+- If the source does not specify animation accessibility behavior, default to respecting reduced-motion preferences.
+- Do not let motion or loading behavior hide important state changes from assistive or keyboard users.
+- If hover contributes meaning, require a focus or touch-equivalent behavior in the contract.
+
+### 6. Interruptibility Over Lock-In
+
+- Prefer interactions that allow users to recover, retry, or stay oriented.
+- Do not assume long-running transitions, blocking overlays, or locked states unless the source truth requires them.
+- If a loading or feedback pattern would temporarily block user action, state why that block is justified.
+
+### 7. Cross-Platform Neutrality
+
+- Write interaction guidance so web, iOS, and Android teams can all apply it without translating from one platform's implementation jargon.
+- Prefer behavior language such as focus retention, state emphasis, local progress, or gesture fallback over framework-specific APIs or code snippets.
+- If a platform-specific behavior matters, state the user-facing outcome instead of prescribing a single implementation stack.
 
 ### 3. Write `interaction-design.md`
 
 - Use `../common/templates/interaction-design-template.md`.
-- Cover interaction goal, entry conditions, user actions, system feedback, success, empty, loading, error, and disabled states, permission or visibility impacts, navigation or local state changes, motion and transition notes, and open escalations.
+- Cover interaction goal, entry conditions, user actions, feedback and response model, success, empty, loading, error, and disabled states, permission or visibility impacts, navigation or local state changes, motion and transition notes, accessibility and input modality notes, and open escalations.
 - Keep the document executable for downstream implementation without redesigning the product.
+
+### 3.1 Improve Micro-Interaction Detail Carefully
+
+- When the source truth is silent, use the allowed boundary to refine button loading, inline validation timing, hover or active states, focus visibility, reduced-motion handling, and toast-versus-inline error priority.
+- Prefer explicit notes such as "Loading preserves layout", "Focus remains visible after validation failure", or "Motion communicates state change only" over vague statements like "make it smoother".
+- Use the feedback surface ladder, loading pattern ladder, timing guidance, and common failure modes from `references/interaction-quality-guidelines.md` when deciding among safe defaults.
+- If a stronger interaction pattern would introduce a new branch, modal, page transition, or business rule, do not add it here.
 
 ### 4. Bound assumptions aggressively
 
 - Record `assumed_micro_interaction` only inside the allowed boundary from `references/allowed-assumptions.md`.
 - If an assumption would change business meaning, add a new branch, add a new screen step, or redefine permissions, stop and escalate instead of writing it as interaction truth.
 - Distinguish clearly between missing interaction detail and missing product requirement truth.
+- For motion, timing, and feedback assumptions, record both the reason and the restraint; explain why the assumption improves clarity without changing the feature's meaning.
 
 ### 5. Preserve adjacent artifacts
 
@@ -175,6 +239,8 @@ Every interaction contract should define:
 - permission or visibility effects when they already exist in source truth
 - navigation or local state changes
 - motion and transition notes
+- accessibility and input modality notes
+- feedback priority and loading presentation when they matter to usability
 - explicit assumptions and escalations
 
 If governed admin support is unavailable, keep artifact truth in `.ai-delivery/` and document the missing governed dependency locally without inventing another status or log store.
@@ -187,6 +253,10 @@ Before reporting completion, confirm all of the following:
 - [ ] The sub-requirement was safe to move from `figma_mapped` toward `interaction_ready`
 - [ ] Every key interaction fact is labeled by source or by `Assumption: Micro Interaction`
 - [ ] All critical states are defined: success, empty, loading, error, and disabled
+- [ ] Feedback surfaces and loading presentation are explicit when they matter to the user flow
+- [ ] Motion and timing notes are purposeful, conservative, and do not imply decorative redesign
+- [ ] Accessibility expectations such as focus visibility, keyboard reachability, and reduced-motion handling are covered when relevant
+- [ ] Hover, touch, keyboard, or gesture expectations are aligned when the interaction depends on more than one modality
 - [ ] No new business branch, field, step, dialog, permission rule, or page transition was invented
 - [ ] `assumed_micro_interaction` stays inside the allowed boundary
 - [ ] `figma-mapping.md` and `traceability.json` were preserved rather than overwritten
@@ -204,6 +274,22 @@ Expected behavior:
 - continue the contract
 - record `Assumption: Micro Interaction`
 - do not block if business meaning is unchanged
+
+### Scenario 1b: The source shows an action but does not specify how progress or completion feedback appears
+
+Expected behavior:
+
+- choose the lightest feedback pattern that preserves orientation
+- prefer inline or local feedback before heavier interruption when source truth allows
+- record the choice as `Assumption: Micro Interaction` or `Source: Existing Pattern`
+
+### Scenario 1c: A flow appears to need loading, but the source does not specify the loading scope
+
+Expected behavior:
+
+- choose the narrowest loading scope that matches the action scope
+- preserve layout and context whenever possible
+- record whether the user can keep editing, must wait, or can retry in place
 
 ### Scenario 2: Figma implies a confirm dialog that Requirement does not mention
 
@@ -242,6 +328,23 @@ Expected behavior:
 
 - record it only as `Source: Existing Pattern` or `Assumption: Micro Interaction` when allowed
 - do not let convenience override Requirement or Figma truth
+
+### Scenario 7: Motion detail is missing, but a transition is needed to keep state change understandable
+
+Expected behavior:
+
+- record a short, functional motion note
+- keep timing conservative and the transition interruptible
+- respect reduced-motion expectations
+- do not turn the gap into decorative animation work
+
+### Scenario 8: A control relies on hover or gesture affordance in the design evidence
+
+Expected behavior:
+
+- define the equivalent focus, touch, or visible fallback behavior if the source or existing pattern supports it
+- do not let hover-only or gesture-only discovery become the only path for important actions
+- escalate if the missing fallback changes usability or business meaning
 
 ## Handoff
 
