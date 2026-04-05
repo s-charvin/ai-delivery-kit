@@ -1,3 +1,8 @@
+---
+name: ui-requirement-mapping
+description: Use when a sub-requirement already has `requirement-slice.md` and must be bound to verified Figma evidence, screenshot-backed node mappings, or visual blockers before interaction design or implementation.
+---
+
 # UI Requirement Mapping
 
 Project-local workflow skill for binding a sub-requirement slice to verified Figma evidence and producing a 1:1 visual implementation contract inside the host repository.

@@ -32,6 +32,16 @@ require_not_contains() {
   fi
 }
 
+require_frontmatter_skill() {
+  local file=$1
+  local expected_name=$2
+
+  require_contains "$file" '---'
+  [[ "$(head -n 1 "$file")" == '---' ]] || fail "Expected YAML frontmatter at top of $file"
+  require_contains "$file" "name: $expected_name"
+  require_contains "$file" 'description: Use when'
+}
+
 validate_markdown_links() {
   local file=$1
   local links
@@ -82,6 +92,7 @@ validate_generic_skill() {
     return 0
   fi
 
+  require_frontmatter_skill "$skill_file" "$skill_name"
   validate_markdown_links "$skill_file"
   require_contains "$skill_file" '.ai-delivery'
   require_contains "$skill_file" 'admin support'

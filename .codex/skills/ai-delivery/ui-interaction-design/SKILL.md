@@ -1,3 +1,8 @@
+---
+name: ui-interaction-design
+description: Use when a sub-requirement already has `requirement-slice.md` and `figma-mapping.md` and needs an executable interaction contract, bounded micro-interaction assumptions, or escalation of missing interaction truth.
+---
+
 # UI Interaction Design
 
 Project-local workflow skill for converting requirement slices plus verified design mappings into an executable interaction contract inside the host repository.

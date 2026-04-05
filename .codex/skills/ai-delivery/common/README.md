@@ -4,12 +4,12 @@ These workflow skills are business-project assets that live inside this reposito
 
 They operate on the host project's `.ai-delivery/` workflow data, especially under:
 
-- `/Users/charvin/Projects/Codex/.ai-delivery/requirements/`
-- `/Users/charvin/Projects/Codex/.ai-delivery/meta/`
-- `/Users/charvin/Projects/Codex/.ai-delivery/runtime/`
-- `/Users/charvin/Projects/Codex/.ai-delivery/logs/`
+- `.ai-delivery/requirements/`
+- `.ai-delivery/meta/`
+- `.ai-delivery/runtime/`
+- `.ai-delivery/logs/`
 
-They are not owned by `ai-delivery-admin`, and they must not relocate workflow truth into `/Users/charvin/Projects/ai-delivery-admin`.
+They are not owned by `ai-delivery-admin`, and they must not relocate workflow truth into the admin repository.
 
 When governed logging, status transitions, blocker handling, or artifact mutation are needed, these project-local skills should use the separate admin support surfaces when those surfaces are available.
 
@@ -19,14 +19,14 @@ Shared references and output templates live under this `common/` directory so th
 
 Project-local workflow skill packages live under:
 
-- `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown`
-- `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping`
-- `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design`
+- `.codex/skills/ai-delivery/requirement-breakdown`
+- `.codex/skills/ai-delivery/ui-requirement-mapping`
+- `.codex/skills/ai-delivery/ui-interaction-design`
 
-To sync them into the current Codex environment without moving source of truth out of the repository, run:
+From the repository root, sync them into the current Codex environment without moving source of truth out of the repository:
 
 ```bash
-zsh /Users/charvin/Projects/Codex/scripts/install-project-ai-delivery-skills.sh
+zsh scripts/install-project-ai-delivery-skills.sh
 ```
 
 `ai-delivery-admin` owns the separate admin support skill and MCP server. These project-local workflow skills should cooperate with those governed support surfaces rather than trying to replace them.

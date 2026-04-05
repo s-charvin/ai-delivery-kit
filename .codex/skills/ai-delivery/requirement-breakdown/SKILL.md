@@ -1,3 +1,8 @@
+---
+name: requirement-breakdown
+description: Use when finalized or near-final requirement material must be split into tracked `.ai-delivery` sub-requirement packages, dependency metadata, and downstream-ready requirement slices before UI mapping or implementation planning.
+---
+
 # Requirement Breakdown
 
 Project-local workflow skill for turning top-level requirement material into tracked sub-requirement packages inside the host repository.
@@ -16,7 +21,7 @@ Use this skill when a finalized or near-final requirement source needs to be spl
 - per-sub-requirement `traceability.json`
 - per-sub-requirement `decisions.md`
 
-All outputs stay inside `/Users/charvin/Projects/Codex/.ai-delivery/requirements/`.
+All outputs stay inside `.ai-delivery/requirements/`.
 
 ## Required References
 
