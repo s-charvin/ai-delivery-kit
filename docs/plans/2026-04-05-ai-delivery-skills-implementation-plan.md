@@ -368,6 +368,7 @@ After this plan is implemented and verified:
 - those skills can create and update `.ai-delivery/` artifacts during requirement development while keeping artifact truth in the business project
 - governed logging, status mutation, blocker handling, and MCP operations remain the responsibility of the separate `ai-delivery-admin` execution track
 - future feature-development sessions can use the project-local skills together with the admin support surfaces without changing the core architecture
+- full end-to-end closure still depends on a later integration repair / full-chain verification track that reconciles bootstrap, blocked recovery, merge finalization, and Spec Kit bridge behavior across tracks
 
 If future work needs to:
 

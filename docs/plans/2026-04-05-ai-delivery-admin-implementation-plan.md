@@ -1026,6 +1026,7 @@ git -C /Users/charvin/Projects/ai-delivery-admin commit -m "docs: finalize admin
 After this plan is implemented and verified, the next eligible execution plan is:
 
 - `ai-delivery-skills implementation plan`
+- later, an `integration repair / full-chain verification plan`
 
 That downstream plan may consume the admin project's:
 
@@ -1036,3 +1037,5 @@ That downstream plan may consume the admin project's:
 - blocker and event surfaces
 
 It must not retroactively redefine the admin plan's ownership boundary. If the later project-local skills track needs the admin server to expose an additional capability, that addition should first be reconciled against the governing master plan at `/Users/charvin/Projects/Codex/docs/plans/2026-04-04-ai-delivery-implementation-plan.md`.
+
+This admin plan alone does not guarantee full-chain closure. Requirement bootstrap coverage, blocked-state recovery, merge finalization, and Spec Kit bridge verification must still be reconciled by the later integration repair / full-chain verification track.

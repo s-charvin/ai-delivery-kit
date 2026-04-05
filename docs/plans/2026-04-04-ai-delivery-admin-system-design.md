@@ -189,12 +189,44 @@
 
 允许编辑：
 
+- `requirement.md`
+- `breakdown-summary.md`
+- `global-rules.md`
+- `dependency-graph.json`
+- `README.md`
 - `requirement-slice.md`
 - `figma-mapping.md`
 - `interaction-design.md`
 - `status.json`
 - `dependency.json`
+- `traceability.json`
 - `decisions.md`
+
+### Governed Artifact Coverage
+
+后台系统必须把以下内容视为一等治理产物：
+
+- requirement 级 artifact
+  - `requirement.md`
+  - `breakdown-summary.md`
+  - `global-rules.md`
+  - `dependency-graph.json`
+- sub-requirement bootstrap artifact
+  - `README.md`
+  - `requirement-slice.md`
+  - `dependency.json`
+  - `status.json`
+  - `traceability.json`
+  - `decisions.md`
+- downstream design artifact
+  - `figma-mapping.md`
+  - `interaction-design.md`
+
+说明：
+
+- `traceability.json` 不是附属文件，而是核心治理对象
+- `figma-cache/` 中的 screenshot、node dump、token 等原始证据不应按通用文档编辑逻辑处理
+- raw Figma cache 更适合走“读取、索引、freshness 判断”边界
 
 ### Blocker Center
 
@@ -216,25 +248,36 @@
 - `list_sub_requirements`
 - `get_sub_requirement_detail`
 - `append_execution_log`
+- `create_requirement_package`
+- `create_sub_requirement_package`
 - `transition_sub_requirement_status`
+- `resume_sub_requirement_after_blocker`
 - `check_dependency_ready`
 - `reserve_worktree_slot`
 - `record_worktree_created`
 - `record_commit`
 - `record_merge_result`
+- `finalize_merge_and_unlock`
 - `list_blockers`
 - `upsert_artifact`
 - `read_traceability`
+- `list_figma_cache_entries`
+- `get_figma_cache_status`
 
 ## Validation Rules
 
 所有写接口都需要校验：
 
+- bootstrap 路径是否合法
+- artifact 类型是否属于受控范围
 - 状态迁移是否合法
 - 依赖是否满足
 - 当前是否已有 blocker
+- blocked 状态是否具备合法恢复目标
+- worktree 的 `base_branch` 是否符合主开发分支约束
 - 提交前缀是否符合命名约定
 - 并发版本号是否一致
+- merge 收敛动作是否联动更新必要运行态
 
 不通过时：
 
@@ -254,6 +297,24 @@
 - 审计一致
 - 日志一致
 - 冲突处理一致
+
+### Create And Update Policy
+
+后台治理面必须同时支持：
+
+- create：用于 `Requirement Intake` 与子需求 bootstrap
+- update：用于后续 requirement / mapping / interaction / decision 的版本化更新
+
+对于 create：
+
+- 初始版本必须显式落盘
+- 必须写入 `updated_at` 与 `updated_by`
+- 不允许无版本的隐式创建
+
+对于 update：
+
+- 必须携带当前版本
+- 版本不匹配时拒绝覆盖
 
 ### Concurrency Handling
 
@@ -293,6 +354,34 @@
 - 标记 `stale`
 - 不自动猜测刷新结果
 - 仅在用户要求或规则命中时刷新
+
+## Figma Cache Boundary
+
+后台系统对 `figma-cache/` 的职责应以读取与索引为主：
+
+- 展示 cache 是否存在
+- 展示是否过旧或损坏
+- 展示与哪个子需求存在绑定关系
+
+不建议将以下内容纳入通用 artifact 编辑器：
+
+- screenshot 二进制文件
+- 原始 node dump
+- token 原始导出
+
+这些内容更适合作为 skill 生成的原始证据，由后台提供 freshness 与可见性管理。
+
+## Runtime Control Boundary
+
+MCP daemon 启停、状态查看、日志查看属于 admin runtime 管理能力。
+
+它们的边界应为：
+
+- 默认对 Web 管理界面可用
+- 仅在明确设计专用 runtime tools 时才对 agent 暴露
+- 不作为 3 个项目内 workflow skill 的主依赖
+
+这样可以避免 runtime 控制和 workflow truth 混在一起。
 
 ## Testing Strategy
 

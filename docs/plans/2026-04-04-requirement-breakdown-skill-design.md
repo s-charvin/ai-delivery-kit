@@ -17,6 +17,21 @@
 
 它是整个流程的第一道结构化入口。
 
+## Requirement Intake Contract
+
+零起点流程下，`requirement-breakdown` 不应假设目标 requirement 包天然存在。
+
+正确责任边界应为：
+
+- `Requirement Intake` 负责创建 `.ai-delivery/requirements/<requirement-id>/`
+- `Requirement Intake` 负责创建初始 `requirement.md`
+- `requirement-breakdown` 负责扩展该 requirement 包并生成后续拆分产物
+
+如果执行时发现 intake 尚未落位：
+
+- 应按统一 bootstrap 契约补齐
+- 不允许随手发明第二套目录或命名方案
+
 ## References And Upstream Dependencies
 
 主参考：
@@ -36,6 +51,7 @@
 ## Responsibilities
 
 - 读取总需求文档
+- 扩展由 `Requirement Intake` 创建的 requirement 包
 - 抽取全局规则
 - 拆分子需求
 - 识别共享基建与跨功能依赖
@@ -186,3 +202,27 @@
 - `traceability.json`
 
 这样可以减少后续 agent 反复重读整份 PRD 的成本。
+
+## Governed Admin Contract
+
+当 admin 治理面可用时，本 skill 依赖其支持以下 create 或 update 行为：
+
+- `breakdown-summary.md`
+- `global-rules.md`
+- `dependency-graph.json`
+- 子需求 `README.md`
+- `requirement-slice.md`
+- `dependency.json`
+- `status.json`
+- `traceability.json`
+- `decisions.md`
+
+其中：
+
+- `traceability.json` 可以从最小 stub 开始
+- 不允许把它当成后续 skill 私有的旁路文件
+
+当 admin 暂时不可用时：
+
+- 允许在 `.ai-delivery/` 中按同一契约本地创建这些文件
+- 但不得引入新的真相存储位置

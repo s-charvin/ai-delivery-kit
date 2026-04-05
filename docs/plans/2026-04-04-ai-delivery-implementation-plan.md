@@ -301,6 +301,37 @@ Recommended shape:
         └── decisions.md
 ```
 
+### Governed Artifact Coverage Classes
+
+The architecture distinguishes the following governed artifact classes.
+
+#### Requirement Bootstrap Artifacts
+
+- `requirement.md`
+- `breakdown-summary.md`
+- `global-rules.md`
+- `dependency-graph.json`
+
+#### Sub-Requirement Bootstrap Artifacts
+
+- `README.md`
+- `requirement-slice.md`
+- `dependency.json`
+- `status.json`
+- `traceability.json`
+- `decisions.md`
+
+#### Downstream Design And Interaction Artifacts
+
+- `figma-mapping.md`
+- `interaction-design.md`
+
+`traceability.json` is a first-class governed artifact, not a sidecar detail file.
+
+#### Figma Raw Evidence Boundary
+
+`figma-cache/` remains project-local truth, but the admin system mainly indexes, reads, and evaluates freshness for it. Raw screenshots, node dumps, and token exports should not be treated as generic rich-text artifacts in the managed editor model.
+
 ### `figma-cache/`
 
 Purpose:
@@ -397,6 +428,26 @@ The AI delivery workflow proceeds through the following conceptual phases:
 7. `Merge Back To Main Dev`
 8. `Done`
 
+### Requirement Intake Bootstrap Contract
+
+Zero-based execution begins before any requirement package exists.
+
+Therefore `Requirement Intake` must:
+
+- create `.ai-delivery/requirements/<requirement-id>/`
+- create the initial `requirement.md`
+- stamp explicit metadata and version information
+
+Preferred mode:
+
+- use governed admin create surfaces when the admin system is available
+
+Fallback mode:
+
+- local creation inside `.ai-delivery/` is allowed only when the admin system is unavailable
+- the same contract shape must be used
+- no alternate truth store may be introduced
+
 ### Sub-Requirement State Machine
 
 ```text
@@ -427,6 +478,43 @@ blocked_missing_requirement
 blocked_merge_conflict
 blocked_verification_failure
 ```
+
+### Blocked-State Recovery Model
+
+Blocked states are recoverable, not terminal.
+
+Each blocked transition must preserve enough context to support legal resume behavior, including:
+
+- `blocked_from_status`
+- `resume_target_status`
+- the blocker record that justified the stop
+
+Closing a blocker must not silently move the sub-requirement forward. A governed resume action is required to place the sub-requirement back into a valid active state.
+
+### Merge Finalization And Dependency Unlock
+
+Recording a merge result is not sufficient by itself.
+
+A valid merge-finalization step must coordinate at least:
+
+- `merge-queue.json`
+- the sub-requirement `status.json`
+- `worktrees.json`
+- `task-board.json`
+- downstream readiness in `dependency-graph.json`
+
+Without this coordinated update, the workflow cannot claim that downstream requirements are truly unlocked.
+
+### Spec Kit Bridge Contract
+
+The `Spec Kit Phase` must formally bridge `.ai-delivery/` into `.specify/`.
+
+The bridge must:
+
+- map `requirement_id` and `subreq_id` to Spec Kit feature or spec identities
+- carry forward requirement, Figma, and interaction truth into spec generation inputs
+- allow reverse traceability from `.specify/` back to `.ai-delivery/`
+- create blockers when the bridge fails or produces ambiguous identity mapping
 
 ### Dependency Rules
 
@@ -533,6 +621,19 @@ The admin console should eventually provide:
 
 The system includes three project-local workflow skills plus one admin support skill.
 
+### Zero-Based Flow Contract
+
+From a zero-based start, the workflow must be able to proceed without hidden manual setup.
+
+That means:
+
+- `Requirement Intake` creates the initial requirement package
+- `requirement-breakdown` extends that package into sub-requirement structure
+- later workflow skills enrich the same project-local truth
+- the admin system governs logging, blockers, status transitions, worktree records, merge records, and managed artifact create or update pathways when available
+
+The workflow must not require a second hidden store outside `.ai-delivery/`.
+
 ### Skill Placement Rules
 
 The workflow-skill home is:
@@ -571,8 +672,13 @@ Consumes:
 
 Produces:
 
+- `breakdown-summary.md`
+- `global-rules.md`
+- `dependency-graph.json`
+- sub-requirement `README.md`
 - `requirement-slice.md`
 - dependency artifacts
+- initial `traceability.json` stubs
 - `split_ready` state outputs
 
 ### 2. `ui-requirement-mapping`
@@ -638,8 +744,11 @@ The three workflow skills must:
 - respect dual source truth boundaries
 - refuse silent invention of business or visual meaning
 - emit blockers for unsupported gaps or conflicts
-- write progress and status through governed backend pathways
 - produce output directly into `.ai-delivery/`
+
+When the admin system is available, the workflow skills should use governed create or update pathways for managed artifact classes plus all governance-sensitive writes.
+
+When the admin system is unavailable, local artifact generation is allowed only inside `.ai-delivery/` using the same contract shapes. Status transitions, blocker lifecycle, and runtime records still become authoritative only through governed admin surfaces once available.
 
 The admin support skill must:
 
@@ -666,17 +775,26 @@ MCP exists to provide a controlled AI-facing interface over the admin system.
 #### Workflow Control
 
 - `transition_sub_requirement_status`
+- `resume_sub_requirement_after_blocker`
 - `check_dependency_ready`
 - `reserve_worktree_slot`
 - `record_worktree_created`
 - `record_commit`
 - `record_merge_result`
+- `finalize_merge_and_unlock`
+
+#### Bootstrap And Repair
+
+- `create_requirement_package`
+- `create_sub_requirement_package`
 
 #### Artifact Management
 
 - `upsert_artifact`
 - `read_traceability`
 - `list_blockers`
+- `list_figma_cache_entries`
+- `get_figma_cache_status`
 
 #### Logging
 
@@ -686,11 +804,24 @@ MCP exists to provide a controlled AI-facing interface over the admin system.
 
 MCP writes must:
 
+- validate bootstrap target paths and allowed artifact classes
 - validate state transitions
 - validate dependency readiness
+- validate blocked-state recovery rules
 - validate naming rules such as commit prefix requirements
 - reject illegal or stale writes
 - record failures as managed events when appropriate
+
+### Runtime Control Boundary
+
+Runtime daemon control is not the same as workflow truth management.
+
+By default:
+
+- runtime start or stop should remain an operator or Web-admin concern
+- workflow skills must not depend on runtime control to define business truth
+
+Only dedicated runtime tools should expose those controls to agents.
 
 ### Idempotency And Versioning
 
@@ -903,6 +1034,27 @@ Outputs:
 
 - three project-local workflow skill packages
 - references, templates, install or sync scripts, and validation tests for project-local agent workflows
+
+### 4. Integration Repair And Full-Chain Verification Plan
+
+Responsibilities:
+
+- reconcile cross-track contracts after the first implementation wave exists
+- verify requirement bootstrap coverage, governed artifact coverage, blocked-state recovery, merge finalization, Spec Kit bridge behavior, and runtime boundary clarity
+- capture any remaining architecture drift between skill definitions and admin-governed surfaces
+
+Must not own:
+
+- a new business feature layer
+- unrelated product development
+- redefinition of the foundational storage layout
+
+Outputs:
+
+- a zero-based flow audit
+- a repair backlog or repair execution plan
+- cross-layer verification scenarios
+- documented closure criteria for claiming the full chain is connected
 
 ### Execution Plan Derivation Rules
 

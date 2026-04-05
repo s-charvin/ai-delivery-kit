@@ -113,6 +113,20 @@
 - `Source: Existing Pattern`
 - `Assumption: Micro Interaction`
 
+## Governed Admin Contract
+
+当 admin 治理面可用时，本 skill 依赖其支持以下受控写入：
+
+- `interaction-design.md`
+- `decisions.md`
+- 与 `interaction_ready` 相关的状态流转
+- blocker 的创建、关闭与恢复
+
+如果本 skill 因缺少交互真相而进入阻塞态：
+
+- 恢复应通过正式 blocker 恢复路径完成
+- 不应通过直接编辑状态文件绕开恢复语义
+
 ## References And Dependencies
 
 依赖：

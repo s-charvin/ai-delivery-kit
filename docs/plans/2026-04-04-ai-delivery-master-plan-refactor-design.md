@@ -32,7 +32,7 @@
 - 把“架构真相”和“开发顺序”分离
 - 把“系统设计”与“具体 execution plan”分离
 - 让后续新增能力不需要频繁推翻总计划
-- 为 3 份派生 execution plan 提供边界与依赖基线
+- 为多份派生 execution plan 提供边界与依赖基线
 
 ## Approved Main Sections
 
@@ -56,11 +56,12 @@
 
 ## Derived Execution Plans
 
-新版主计划明确后续只能派生以下三份 execution plan：
+新版主计划最初明确了三份主 execution plan，后续在零起点链路审查后，又补充了一条跨轨 integration repair / full-chain verification plan。
 
 1. `项目内数据层 execution plan`
 2. `ai-delivery-admin execution plan`
 3. `ai-delivery-skills implementation plan`
+4. `integration repair / full-chain verification plan`
 
 ### Boundary Of Project Data Execution Plan
 
@@ -115,13 +116,28 @@
 - `ai-delivery-admin` 内的 MCP server
 - 最终业务功能开发
 
+### Boundary Of `integration repair / full-chain verification plan`
+
+职责：
+
+- 在首轮实现之后，重新按零起点推演整条链路
+- 校验 skill 产物、`.ai-delivery/` 契约、admin 治理面、`.specify/` bridge 是否真正闭环
+- 修复跨 execution track 的合同缺口
+- 补充 bootstrap、blocked recovery、merge finalization、Spec Kit bridge 等跨层问题
+
+不负责：
+
+- 替代前三条执行线的主体实现
+- 重写业务功能开发逻辑
+- 推翻既有总架构边界
+
 ## Refactor Success Criteria
 
 当本轮重构完成时，新的主计划必须满足：
 
 - 不再以顺序施工任务为主结构
 - 明确主计划只是总蓝图，不直接替代 execution plan
-- 明确三份 execution plan 的边界、依赖与产出
+- 明确各 execution plan 的边界、依赖与产出
 - 能作为后续扩展与派生计划的稳定总纲
 
 ## Non-Goals

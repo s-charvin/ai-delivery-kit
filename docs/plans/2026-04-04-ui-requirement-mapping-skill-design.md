@@ -106,6 +106,26 @@
 - 缓存版本落后于指定设计版本
 - 关键节点损坏或取数失败
 
+## Governed Admin Contract
+
+当 admin 治理面可用时，本 skill 依赖其支持以下受控写入：
+
+- `figma-mapping.md`
+- `traceability.json`
+- `decisions.md`
+- 与 `figma_mapped` 相关的状态流转
+- 与设计冲突相关的 blocker 写入与恢复
+
+其中：
+
+- `traceability.json` 必须被视为一等治理对象
+- 不允许因为它是 JSON 就绕过治理面直接把映射真相藏进本地 sidecar
+
+对于 `figma-cache/`：
+
+- admin 主要负责读取、索引、freshness 判断
+- raw screenshot、node dump、token 文件仍属于项目内原始证据，不走通用文档编辑模式
+
 ## Mapping Output Requirements
 
 ### `figma-mapping.md`
@@ -176,3 +196,10 @@
 - Requirement/Figma 双向映射可读可查
 - 所有冲突要么阻塞，要么已有人工决议
 - 子需求状态可以推进到 `figma_mapped`
+
+## Recovery Rule
+
+如果本 skill 因设计冲突或证据缺失进入阻塞态：
+
+- 恢复动作应通过受控 blocker / status 恢复路径完成
+- 不应靠手工改写 `status.json` 假装已经恢复

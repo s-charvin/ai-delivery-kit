@@ -161,6 +161,34 @@
 7. `Merge Back To Main Dev`
 8. `Done`
 
+## Requirement Intake Bootstrap
+
+零起点流程默认项目里还不存在对应的 `requirement-id` 目录。
+
+因此 `Requirement Intake` 必须负责：
+
+- 创建 `.ai-delivery/requirements/<requirement-id>/`
+- 创建初始 `requirement.md`
+- 写入最小 requirement 级元信息
+
+推荐路径：
+
+- admin 可用时，通过受控 create surface 完成 bootstrap
+- admin 不可用时，只允许在 `.ai-delivery/` 内按同一契约本地创建，不允许另建旁路存储
+
+`requirement-breakdown` 不应再假设 requirement 包天然存在；它应当扩展 intake 已创建的包，或在缺失时按同一 bootstrap 契约补齐。
+
+## Requirement Breakdown Expansion Boundary
+
+在 `Requirement Intake` 之后，`requirement-breakdown` 负责补齐：
+
+- `breakdown-summary.md`
+- `global-rules.md`
+- `dependency-graph.json`
+- 各子需求目录与初始 artifact
+
+这意味着后台治理面必须把这些文件也纳入一等 artifact 范围，而不能只治理后续的 UI 与交互文档。
+
 ## Sub-Requirement State Machine
 
 ```text
@@ -192,6 +220,22 @@ blocked_merge_conflict
 blocked_verification_failure
 ```
 
+## Blocked State Recovery
+
+阻塞态不是终态，而是可恢复态。
+
+系统必须为每次阻塞保留：
+
+- `blocked_from_status`
+- `resume_target_status`
+- 触发 blocker 的原因与恢复条件
+
+恢复规则：
+
+- blocker 被关闭，不等于自动完成后续状态流转
+- 必须通过显式恢复动作回到合法的活跃状态
+- 不允许通过手工改 `status.json` 绕过恢复流程
+
 ## Dependency, Worktree, Merge And Parallel Rules
 
 ### Dependency Rules
@@ -218,12 +262,43 @@ blocked_verification_failure
 - 冲突需要在合并阶段解决
 - 后继依赖节点只有在前置节点 `merged_main_dev` 后才解锁
 
+### Merge Finalization Rules
+
+`merge` 完成必须被视为一个联动收敛动作，而不是一条孤立记录。
+
+至少应联动更新：
+
+- `merge-queue.json`
+- 子需求 `status.json`
+- `worktrees.json`
+- `task-board.json`
+- `dependency-graph.json` 的下游可执行状态
+
+如果只记录 merge 结果而不联动这些运行态文件，系统就无法真正解锁后继开发。
+
 ### Parallel Rules
 
 - 仅允许在同一依赖波次内并行
 - 并行节点必须写集不冲突
 - 每个 subagent 必须拥有自己的 worktree、日志流、状态文件
 - 不满足条件的子需求必须在主会话顺序执行
+
+## Spec Kit Bridge
+
+`Spec Kit Phase` 不应只停留在概念层。
+
+当子需求到达 `interaction_ready` 后，系统必须存在一条正式桥接路径，将：
+
+- `.ai-delivery` 中的 `requirement_id / subreq_id`
+- requirement 切片、Figma 映射、交互契约
+
+映射到 `.specify/` 中的 spec / plan / tasks identity。
+
+桥接要求：
+
+- 允许从 `.ai-delivery` 追溯到 `.specify/`
+- 允许从 `.specify/` 追溯回 source requirement 与 sub-requirement
+- bridge 失败时产生 blocker，而不是静默跳过
 
 ## Logging And Observability
 
