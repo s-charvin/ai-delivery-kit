@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-05T00:00:00.000Z",
+  "updated_by": "system",
+  "requirement_refs": [
+    "REQ-EXAMPLE-001"
+  ],
+  "figma_nodes": [],
+  "mapping_type": "fixture",
+  "confidence": "fixture",
+  "conflicts": [],
+  "last_verified_at": "2026-04-05T00:00:00.000Z",
+  "spec_kit_refs": {
+    "feature_id": "example-sr-001",
+    "spec_path": ".specify/fixtures/example-sr-001/spec.md",
+    "plan_path": ".specify/fixtures/example-sr-001/plan.md",
+    "tasks_path": ".specify/fixtures/example-sr-001/tasks.md",
+    "bridge_status": "seeded",
+    "last_synced_at": "2026-04-05T00:00:00.000Z"
+  }
+}
