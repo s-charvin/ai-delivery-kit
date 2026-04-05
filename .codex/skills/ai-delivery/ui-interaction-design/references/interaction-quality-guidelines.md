@@ -2,6 +2,8 @@
 
 Use this reference when `ui-interaction-design` needs better bounded defaults for micro-interactions, loading, feedback, motion, timing, and accessibility without changing business meaning.
 
+This guidance is intentionally project-local. Agents should use this repository reference directly and should not assume any external skill is installed for interaction design.
+
 ## Purposeful Motion
 
 Motion should only be used when it improves understanding.
@@ -90,6 +92,8 @@ Guidance:
 ## Input Modality And Accessibility
 
 Interaction quality must hold across pointer, touch, keyboard, and assistive use.
+
+Treat a11y as part of the interaction contract itself, not as optional cleanup.
 
 ### Keyboard And Focus
 

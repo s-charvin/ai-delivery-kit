@@ -10,6 +10,7 @@ Allowed as `assumed_micro_interaction`:
 - disabled controls cannot be activated
 - submit deduplication while requests are in flight
 - baseline keyboard reachability
+- bounded a11y improvements such as stronger focus visibility or clearer status announcement language
 - reduced-motion fallback behavior
 - conservative motion timing for state changes
 - layout-preserving loading presentation such as inline progress or skeletons

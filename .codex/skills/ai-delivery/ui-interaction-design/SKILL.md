@@ -13,6 +13,8 @@ Use this skill after `ui-requirement-mapping` when a sub-requirement already has
 
 This skill may refine bounded micro-interaction detail such as feedback patterns, loading presentation, motion timing, focus treatment, and accessibility defaults, but only when those refinements stay below the business-meaning threshold and remain explicitly labeled.
 
+This is a project-local skill with built-in interaction-design guidance. Do not stop because an external skill is missing, and do not assume users have installed any external skill package. The needed guidance for micro-interaction, motion, loading, feedback, timing, and a11y lives here in the repository on purpose.
+
 ## Hard Boundary
 
 - Do not invent business flow or page structure.
@@ -29,7 +31,7 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 - Turning verified Requirement and Figma mapping evidence into an executable interaction contract
 - Defining source-backed user actions, feedback, states, and transitions
 - Recording bounded `assumed_micro_interaction` only inside the allowed boundary
-- Improving the quality of micro-interaction detail for loading, feedback, motion, timing, focus, and accessibility without expanding product meaning
+- Improving the quality of micro-interaction detail for loading, feedback, motion, timing, focus, and a11y / accessibility without expanding product meaning
 - Escalating missing interaction truth before implementation or Spec Kit planning
 
 ## Do Not Use This Skill For
@@ -153,9 +155,16 @@ Use these principles to improve interaction quality without crossing into redesi
 ### 5. Accessibility Is Part Of The Contract
 
 - Preserve keyboard reachability, visible focus, state clarity, and reduced-motion behavior as first-class interaction concerns.
+- Treat a11y as part of interaction truth, not as optional polish after implementation.
 - If the source does not specify animation accessibility behavior, default to respecting reduced-motion preferences.
 - Do not let motion or loading behavior hide important state changes from assistive or keyboard users.
 - If hover contributes meaning, require a focus or touch-equivalent behavior in the contract.
+
+### 5a. Local Interaction Quality Contract
+
+- Use this repository-local guidance directly instead of depending on an external skill installation.
+- When the source leaves room for safe refinement, prefer the lightest helpful choice for feedback, loading, timing, and a11y.
+- If a stronger pattern would change product meaning, do not borrow it from intuition or from an external skill; escalate it back to Requirement or Figma truth.
 
 ### 6. Interruptibility Over Lock-In
 
@@ -177,7 +186,7 @@ Use these principles to improve interaction quality without crossing into redesi
 
 ### 3.1 Improve Micro-Interaction Detail Carefully
 
-- When the source truth is silent, use the allowed boundary to refine button loading, inline validation timing, hover or active states, focus visibility, reduced-motion handling, and toast-versus-inline error priority.
+- When the source truth is silent, use the allowed boundary to refine button loading, inline validation timing, hover or active states, focus visibility, reduced-motion handling, toast-versus-inline error priority, and other bounded a11y details that do not change business meaning.
 - Prefer explicit notes such as "Loading preserves layout", "Focus remains visible after validation failure", or "Motion communicates state change only" over vague statements like "make it smoother".
 - Use the feedback surface ladder, loading pattern ladder, timing guidance, and common failure modes from `references/interaction-quality-guidelines.md` when deciding among safe defaults.
 - If a stronger interaction pattern would introduce a new branch, modal, page transition, or business rule, do not add it here.
@@ -255,7 +264,7 @@ Before reporting completion, confirm all of the following:
 - [ ] All critical states are defined: success, empty, loading, error, and disabled
 - [ ] Feedback surfaces and loading presentation are explicit when they matter to the user flow
 - [ ] Motion and timing notes are purposeful, conservative, and do not imply decorative redesign
-- [ ] Accessibility expectations such as focus visibility, keyboard reachability, and reduced-motion handling are covered when relevant
+- [ ] Accessibility and a11y expectations such as focus visibility, keyboard reachability, and reduced-motion handling are covered when relevant
 - [ ] Hover, touch, keyboard, or gesture expectations are aligned when the interaction depends on more than one modality
 - [ ] No new business branch, field, step, dialog, permission rule, or page transition was invented
 - [ ] `assumed_micro_interaction` stays inside the allowed boundary
