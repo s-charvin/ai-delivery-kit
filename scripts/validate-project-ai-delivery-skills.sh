@@ -42,6 +42,24 @@ require_frontmatter_skill() {
   require_contains "$file" 'description: Use when'
 }
 
+validate_openai_yaml() {
+  local skill_name=$1
+  local yaml_file="$SKILL_ROOT/$skill_name/agents/openai.yaml"
+  local short_description
+
+  require_file "$yaml_file"
+  require_contains "$yaml_file" 'interface:'
+  require_contains "$yaml_file" 'display_name:'
+  require_contains "$yaml_file" 'short_description:'
+  require_contains "$yaml_file" 'default_prompt:'
+  require_contains "$yaml_file" "\$$skill_name"
+
+  short_description=$(sed -n 's/^  short_description: "\(.*\)"$/\1/p' "$yaml_file")
+  [[ -n "$short_description" ]] || fail "Missing parsed short_description in $yaml_file"
+  local length=${#short_description}
+  (( length >= 25 && length <= 64 )) || fail "short_description length must be 25-64 in $yaml_file (got $length)"
+}
+
 validate_markdown_links() {
   local file=$1
   local links
@@ -93,6 +111,7 @@ validate_generic_skill() {
   fi
 
   require_frontmatter_skill "$skill_file" "$skill_name"
+  validate_openai_yaml "$skill_name"
   validate_markdown_links "$skill_file"
   require_contains "$skill_file" '.ai-delivery'
   require_contains "$skill_file" 'admin support'
