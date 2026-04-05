@@ -90,9 +90,28 @@ validate_generic_skill() {
   require_not_contains "$skill_file" 'move workflow truth into ai-delivery-admin'
 }
 
+validate_requirement_breakdown_skill() {
+  local skill_file="$SKILL_ROOT/requirement-breakdown/SKILL.md"
+
+  if [[ ! -f "$skill_file" ]]; then
+    return 0
+  fi
+
+  require_contains "$skill_file" 'top-level requirement material'
+  require_contains "$skill_file" 'breakdown-summary.md'
+  require_contains "$skill_file" 'global-rules.md'
+  require_contains "$skill_file" 'dependency-graph.json'
+  require_contains "$skill_file" 'requirement-slice.md'
+  require_contains "$skill_file" 'split_ready'
+  require_contains "$skill_file" 'blocked_requirement_conflict'
+  require_contains "$skill_file" 'blocked_missing_requirement'
+  require_contains "$skill_file" 'Do not invent product truth'
+}
+
 validate_common_contract
 validate_generic_skill requirement-breakdown
 validate_generic_skill ui-requirement-mapping
 validate_generic_skill ui-interaction-design
+validate_requirement_breakdown_skill
 
 print -- 'PASS: project-local ai-delivery skill sources are structurally valid.'
