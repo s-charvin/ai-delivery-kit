@@ -50,6 +50,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
   --main-branch "main-dev"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
+[[ -d "$TARGET_REPO/.agents/skills/api-contract-mapping" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-requirement-mapping" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-interaction-design" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/meta/project-binding.json" ]]
@@ -59,6 +60,8 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ -f "$TARGET_REPO/.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/references/dual-truth-rules.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/templates/api-contract-mapping-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/templates/figma-mapping-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/references/dual-truth-rules.md" ]]

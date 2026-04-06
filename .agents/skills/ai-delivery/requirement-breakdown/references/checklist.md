@@ -8,11 +8,13 @@
 - extract cross-cutting rules into `global-rules.md`
 - produce `breakdown-summary.md`
 - produce an acyclic `dependency-graph.json`
-- create or update sub-requirement folders with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`
+- create or update sub-requirement folders with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, `api-contract-mapping.md`, and `decisions.md`
 - keep `README.md` source-backed with coverage, key verbatim excerpts, boundary, acceptance linkage, and compression warnings
 - keep `requirement-slice.md` exhaustive with source coverage, verbatim excerpts, normalized statement, scope boundary, ambiguities, and source reference index
 - keep `status.json` blocked-recovery fields such as `blocked_from_status` and `resume_target_status`
 - keep `traceability.json` as a first-class governed artifact, including existing bridge fields when the repo expects them
+- initialize `traceability.json.api_contract_mapping` as `not_provided` or `pending`
+- write `api-contract-mapping.md` as a factual placeholder for the dedicated API stage
 - set `split_ready` only when the slice is safe for downstream UI mapping and preserves critical source truth through coverage, verbatim excerpts, and source-linked acceptance signals
 - verify no requirement section was silently dropped or over-compressed during splitting
 - stop on `blocked_requirement_conflict` or `blocked_missing_requirement`

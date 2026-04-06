@@ -1,6 +1,6 @@
 ---
 name: requirement-breakdown
-description: Use when approved or near-final top-level requirement material must be expanded into governed `.ai-delivery` requirement packages, dependency metadata, and downstream-ready sub-requirement slices before UI mapping or implementation planning.
+description: Use when approved or near-final top-level requirement material must be expanded into governed `.ai-delivery` requirement packages, dependency metadata, and downstream-ready sub-requirement slices before API contract mapping, UI mapping, or implementation planning.
 ---
 
 # Requirement Breakdown
@@ -89,7 +89,7 @@ Produce a requirement package that downstream skills can consume without reinter
 - the authoritative requirement package rooted in `requirement.md`
 - requirement-level summaries in `breakdown-summary.md` and `global-rules.md`
 - an acyclic `dependency-graph.json`
-- one governed folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`, where `README.md` is the human-readable navigation doc and `requirement-slice.md` is the authoritative source-preserving contract
+- one governed folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, `api-contract-mapping.md`, and `decisions.md`, where `README.md` is the human-readable navigation doc and `requirement-slice.md` is the authoritative source-preserving contract
 - explicit source coverage, key verbatim excerpts, dependencies, acceptance signals, open questions, compression warnings, and blocker evidence
 - first-class `traceability.json` and `status.json` contracts rather than informal notes
 
@@ -110,6 +110,7 @@ Every editable Markdown or JSON artifact should follow the repo's governed metad
         ├── dependency.json
         ├── status.json
         ├── traceability.json
+        ├── api-contract-mapping.md
         └── decisions.md
 ```
 
@@ -177,7 +178,8 @@ For each sub-requirement:
 - Do not copy template guidance sections such as `Template Authoring Rules` or `Template Example` into generated artifacts.
 - Write `dependency.json` with explicit `depends_on` and `blocks` declarations, even when they are empty.
 - Write `status.json` with the current status plus blocked-recovery fields such as `blocked_from_status` and `resume_target_status`.
-- Seed `traceability.json` as a first-class governed artifact with requirement references and the repo's current bridge fields. If the project already uses `spec_kit_refs`, keep or seed that bridge inside `traceability.json` instead of inventing a second bridge artifact.
+- Seed `traceability.json` as a first-class governed artifact with requirement references, the repo's current bridge fields, and an initialized `api_contract_mapping` subtree. If the project already uses `spec_kit_refs`, keep or seed that bridge inside `traceability.json` instead of inventing a second bridge artifact.
+- Write `api-contract-mapping.md` as a governed placeholder artifact. If no API contract source was provided, record factual absence and initialize `traceability.json.api_contract_mapping.status` as `not_provided`. If API contract sources were provided but detailed mapping is deferred to the dedicated stage, initialize it as `pending`.
 - Write `decisions.md` with blocker evidence, bootstrap notes, governed-surface gaps, and any explicitly marked local assumptions.
 
 ### 7. Set state conservatively
@@ -267,7 +269,8 @@ Minimum artifact expectations:
 - `requirement-slice.md`: metadata, exhaustive source requirement coverage, verbatim source excerpts, normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, source requirement reference index
 - `dependency.json`: explicit `depends_on` and `blocks`
 - `status.json`: `status`, `blocked_from_status`, and `resume_target_status`
-- `traceability.json`: requirement references, empty-or-initial mapping fields, conflicts, verification fields, and existing bridge contract fields when the repo expects them
+- `traceability.json`: requirement references, empty-or-initial mapping fields, initialized `api_contract_mapping`, conflicts, verification fields, and existing bridge contract fields when the repo expects them
+- `api-contract-mapping.md`: placeholder or initialized downstream contract stage for later Swagger or OpenAPI mapping
 - `decisions.md`: blockers, recovery notes, bootstrap notes, governed-surface gaps, explicit assumptions
 
 If governed admin support is unavailable, document that missing dependency in local notes or `decisions.md`, but keep artifact truth in `.ai-delivery/`.
@@ -285,7 +288,7 @@ Before reporting completion, confirm all of the following:
 - [ ] Every sub-requirement has explicit source coverage for the top-level fragments it depends on
 - [ ] Every `split_ready` candidate preserves key verbatim excerpts before normalized summaries
 - [ ] `dependency-graph.json` is acyclic and matches the per-sub-requirement dependencies
-- [ ] Every sub-requirement includes `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, and `decisions.md`
+- [ ] Every sub-requirement includes `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, `api-contract-mapping.md`, and `decisions.md`
 - [ ] Every acceptance signal can be traced back to a concrete source reference or quoted excerpt
 - [ ] `status.json` preserves blocked-recovery fields
 - [ ] `traceability.json` is treated as a first-class governed artifact
@@ -360,8 +363,17 @@ Expected behavior:
 - map those lines into source coverage and acceptance signals
 - record a compression warning or open question if condensing the paragraph would lose nuance
 
+### Scenario 9: API contract materials are not yet available during breakdown
+
+Expected behavior:
+
+- continue the breakdown if requirement truth is still sufficient
+- initialize `api-contract-mapping.md` as a factual placeholder
+- set `traceability.json.api_contract_mapping.status` to `not_provided`
+- do not invent endpoints or fields
+
 ## Handoff
 
 Stop after producing the requirement breakdown package and passing the self-check.
 
-If the user wants to continue, hand the downstream stage the requirement package rooted in `requirement-slice.md`, `global-rules.md`, `dependency.json`, and `traceability.json`. Do not perform UI mapping, interaction design, or implementation planning inside this skill unless the user explicitly asks for the next stage.
+If the user wants to continue, hand the downstream stage the requirement package rooted in `requirement-slice.md`, `api-contract-mapping.md`, `global-rules.md`, `dependency.json`, and `traceability.json`. Do not perform API contract mapping, UI mapping, interaction design, or implementation planning inside this skill unless the user explicitly asks for the next stage.

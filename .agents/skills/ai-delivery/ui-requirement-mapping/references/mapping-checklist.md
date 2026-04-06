@@ -1,6 +1,6 @@
 # UI Requirement Mapping Checklist
 
-- read `requirement-slice.md`, `traceability.json`, and `status.json` before touching design evidence
+- read `requirement-slice.md`, `api-contract-mapping.md` when present, `traceability.json`, and `status.json` before touching design evidence
 - prefer starting from `split_ready`; stop and hand back to `requirement-breakdown` if the slice is still unstable
 - follow the Figma retrieval order
 - prefer cached evidence from `.ai-delivery/figma-cache/`
@@ -9,6 +9,7 @@
 - keep cached artifacts provider-aware with compatibility metadata plus `provider`, `artifact_type`, and provider-native `raw_payload`
 - write `figma-mapping.md`
 - update `traceability.json` in place
+- preserve existing API-contract mapping fields such as `api_contract_mapping`
 - preserve existing bridge fields such as `spec_kit_refs`
 - record companion UI explicitly
 - record shared nodes explicitly

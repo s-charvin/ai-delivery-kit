@@ -10,6 +10,7 @@
 当前参考仓库就是本仓库，它提供：
 
 - `requirement-breakdown`
+- `api-contract-mapping`
 - `ui-requirement-mapping`
 - `ui-interaction-design`
 - helper script
@@ -19,7 +20,7 @@
 
 - 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
 - 参考仓库里的 source skill 则位于 `.agents/skills/ai-delivery/`。
-- 一旦 bootstrap 到目标仓库，这 3 个 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
+- 一旦 bootstrap 到目标仓库，这 4 个 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
 
 ## 这套架构的职责边界
 
@@ -34,7 +35,7 @@
 
 推荐主链路：
 
-`Requirement Intake -> Requirement Breakdown -> UI Mapping -> Interaction Design -> Spec Kit -> Superpowers Execution`
+`Requirement Intake -> Requirement Breakdown -> API Contract Mapping (optional but governed) -> UI Mapping -> Interaction Design -> Spec Kit -> Superpowers Execution`
 
 ## 一次性接入任意仓库
 
@@ -63,6 +64,7 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 这一步会把下面这些内容落进目标仓库：
 
 - `.agents/skills/requirement-breakdown/`
+- `.agents/skills/api-contract-mapping/`
 - `.agents/skills/ui-requirement-mapping/`
 - `.agents/skills/ui-interaction-design/`
 - `.ai-delivery/scripts/validate-project-ai-delivery-skills.sh`
@@ -123,6 +125,7 @@ specify init --here --force --ai codex --ai-skills --script sh
 bootstrap 完成后，当前仓库内应该已经具备并可识别：
 
 - `$requirement-breakdown`
+- `$api-contract-mapping`
 - `$ui-requirement-mapping`
 - `$ui-interaction-design`
 
@@ -155,6 +158,7 @@ bootstrap 完成后，目标仓库至少具备：
 ├── .agents/
 │   └── skills/
 │       ├── requirement-breakdown/
+│       ├── api-contract-mapping/
 │       ├── ui-requirement-mapping/
 │       └── ui-interaction-design/
 ├── .ai-delivery/
@@ -220,11 +224,34 @@ bootstrap 完成后，目标仓库至少具备：
 - requirement_id 使用 req-project-rename
 - 如果 .ai-delivery/requirements/req-project-rename 不存在，就按当前 governed contract bootstrap
 - 生成 breakdown-summary.md、global-rules.md、dependency-graph.json 和 sub-requirements
-- 只做需求拆分，不做 Figma 映射，不做交互设计，不做 Spec Kit spec/plan/tasks
+- 初始化 api-contract-mapping.md 和 traceability.json.api_contract_mapping
+- 只做需求拆分和 API stage 初始化，不做详细 API 映射，不做 Figma 映射，不做交互设计，不做 Spec Kit spec/plan/tasks
 - 不允许脑补缺失业务规则
 ```
 
-### 第 2 步：UI Requirement Mapping
+### 第 2 步：API Contract Mapping（可选但受治理）
+
+如果已经提供 Swagger / OpenAPI / 接口协议：
+
+```text
+使用 $api-contract-mapping 处理子需求 SR-001。
+
+输入：
+- requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
+- requirement-slice: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
+- api contract: contracts/project-rename.openapi.yaml
+
+要求：
+- 生成 api-contract-mapping.md
+- 只更新 traceability.json.api_contract_mapping
+- 如果接口协议晚到，可以在 UI mapping 前补跑，或者与 UI mapping 并行补跑
+- 如果接口结论会影响 UI 或 interaction，则写入 downstream_revalidation
+- 不允许根据服务端内部实现细节脑补 client-facing contract
+```
+
+如果当前没有 API contract，可以跳过这一步，后续在协议补充后单独补跑。
+
+### 第 3 步：UI Requirement Mapping
 
 ```text
 使用 $ui-requirement-mapping 处理子需求 SR-001。
@@ -232,6 +259,7 @@ bootstrap 完成后，目标仓库至少具备：
 输入：
 - requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
 - requirement-slice: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
+- api contract mapping: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/api-contract-mapping.md
 - figma file: https://www.figma.com/file/abc123/Project-Settings
 - target node: 120:88
 
@@ -239,17 +267,19 @@ bootstrap 完成后，目标仓库至少具备：
 - 基于结构化 node payload 完成映射
 - 生成 figma-mapping.md
 - 更新 traceability.json
+- 保留现有 traceability.json.api_contract_mapping 子树
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
 ```
 
-### 第 3 步：UI Interaction Design
+### 第 4 步：UI Interaction Design
 
 ```text
 使用 $ui-interaction-design 处理子需求 SR-001。
 
 输入：
 - requirement-slice.md
+- api-contract-mapping.md（如果已存在）
 - figma-mapping.md
 - traceability.json
 
@@ -260,7 +290,7 @@ bootstrap 完成后，目标仓库至少具备：
 - 不允许新增业务步骤、字段、弹窗或页面跳转
 ```
 
-### 第 4 步：Spec Kit Phase
+### 第 5 步：Spec Kit Phase
 
 先生成 spec：
 
@@ -269,6 +299,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 上游输入必须以这些文件为准：
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
+- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/api-contract-mapping.md
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/figma-mapping.md
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/interaction-design.md
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json
@@ -295,7 +326,7 @@ bootstrap 完成后，目标仓库至少具备：
 使用 $speckit-tasks 为 feature 001-project-rename 生成可执行任务列表。
 ```
 
-### 第 5 步：Superpowers Execution
+### 第 6 步：Superpowers Execution
 
 这套架构里，执行层默认交给 `Superpowers`，不是 `Spec Kit`。
 

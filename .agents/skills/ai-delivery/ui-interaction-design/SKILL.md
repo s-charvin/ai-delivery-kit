@@ -9,7 +9,7 @@ Project-local workflow skill for converting governed requirement slices plus ver
 
 ## Overview
 
-Use this skill after `ui-requirement-mapping` when a sub-requirement already has requirement truth, mapping truth, and supporting governed artifacts in place. This stage writes `interaction-design.md`, updates `decisions.md` when assumptions or escalations are needed, and preserves the upstream mapping and bridge contract instead of rewriting it from memory.
+Use this skill after `ui-requirement-mapping` when a sub-requirement already has requirement truth, mapping truth, and supporting governed artifacts in place. If `api-contract-mapping.md` already exists, treat it as additional interface-contract context and preserve its traceability implications. This stage writes `interaction-design.md`, updates `decisions.md` when assumptions or escalations are needed, and preserves the upstream mapping and bridge contract instead of rewriting it from memory.
 
 This skill may refine bounded micro-interaction detail such as feedback patterns, loading presentation, motion timing, focus treatment, and accessibility defaults, but only when those refinements stay below the business-meaning threshold and remain explicitly labeled.
 
@@ -70,6 +70,7 @@ Also read the existing `traceability.json` because it is a first-class governed 
 
 ### Optional Inputs
 
+- `api-contract-mapping.md`
 - Figma comments
 - prototype flows
 - existing interaction conventions
@@ -93,7 +94,7 @@ Produce an interaction contract that developers can consume directly while prese
 - a source-bounded `interaction-design.md`
 - updates to `decisions.md` when assumptions, blockers, or revalidation notes appear
 - explicit labels for `Source: Requirement`, `Source: Figma`, `Source: Existing Pattern`, and `Assumption: Micro Interaction`
-- the existing `traceability.json` bridge context, including `spec_kit_refs` when present
+- the existing `traceability.json` bridge context, including `api_contract_mapping` and `spec_kit_refs` when present
 
 ## Default Output Paths
 
@@ -109,7 +110,7 @@ Produce an interaction contract that developers can consume directly while prese
 
 ### 1. Confirm the upstream mapping contract
 
-- Read `requirement-slice.md`, `figma-mapping.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
+- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
 - Confirm that the interaction work still matches the current sub-requirement scope and the verified mapping output.
 - Prefer to start from `figma_mapped`; if the mapping is stale, blocked, or unverified, stop and hand the work back upstream.
 
@@ -201,7 +202,7 @@ Use these principles to improve interaction quality without crossing into redesi
 ### 5. Preserve adjacent artifacts
 
 - Do not rewrite `figma-mapping.md` from memory.
-- Do not clear or replace `traceability.json`, including existing bridge fields such as `spec_kit_refs`.
+- Do not clear or replace `traceability.json`, including existing bridge fields such as `api_contract_mapping` and `spec_kit_refs`.
 - If interaction analysis reveals a mapping or visual-truth gap, record it in `decisions.md` and hand the issue back to `ui-requirement-mapping` or block it, rather than silently fixing the mapping in prose.
 
 ### 6. Handle state and blockers conservatively
@@ -218,7 +219,7 @@ Use these principles to improve interaction quality without crossing into redesi
 - Re-open `requirement-slice.md`, `figma-mapping.md`, `interaction-design.md`, and `traceability.json`.
 - Verify that every important interaction behavior is source-backed or explicitly labeled as `Assumption: Micro Interaction`.
 - Verify that no assumption changed business meaning and no upstream mapping truth was overwritten.
-- If later bridge context already exists in `traceability.json`, confirm it was preserved.
+- If later bridge context already exists in `traceability.json`, including `api_contract_mapping`, confirm it was preserved.
 
 ## State And Blocker Rules
 

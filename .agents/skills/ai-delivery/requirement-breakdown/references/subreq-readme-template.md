@@ -15,7 +15,7 @@
 
 - `one_line_purpose`:
 - `primary_surface_or_actor`:
-- `recommended_read_order`: `README.md -> requirement-slice.md -> dependency.json -> traceability.json -> decisions.md`
+- `recommended_read_order`: `README.md -> requirement-slice.md -> api-contract-mapping.md -> dependency.json -> traceability.json -> decisions.md`
 
 ## Top-Level Requirement Coverage
 
@@ -154,7 +154,7 @@
 ## Navigation Summary
 - `one_line_purpose`: `Covers editing profile name and avatar from the Profile Settings screen.`
 - `primary_surface_or_actor`: `Signed-in user on Profile Settings`
-- `recommended_read_order`: `README.md -> requirement-slice.md -> dependency.json -> traceability.json -> decisions.md`
+- `recommended_read_order`: `README.md -> requirement-slice.md -> api-contract-mapping.md -> dependency.json -> traceability.json -> decisions.md`
 
 ## Top-Level Requirement Coverage
 ### Coverage Item 1

@@ -62,6 +62,10 @@ require_file "$SKILL_ROOT/requirement-breakdown/references/dual-truth-rules.md"
 require_file "$SKILL_ROOT/requirement-breakdown/references/blocker-catalog.md"
 require_file "$SKILL_ROOT/requirement-breakdown/references/logging-checklist.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
+require_file "$SKILL_ROOT/api-contract-mapping/references/dual-truth-rules.md"
+require_file "$SKILL_ROOT/api-contract-mapping/references/blocker-catalog.md"
+require_file "$SKILL_ROOT/api-contract-mapping/references/logging-checklist.md"
+require_file "$SKILL_ROOT/api-contract-mapping/templates/api-contract-mapping-template.md"
 require_file "$SKILL_ROOT/ui-requirement-mapping/references/dual-truth-rules.md"
 require_file "$SKILL_ROOT/ui-requirement-mapping/references/blocker-catalog.md"
 require_file "$SKILL_ROOT/ui-requirement-mapping/references/logging-checklist.md"
@@ -72,5 +76,6 @@ require_file "$SKILL_ROOT/ui-interaction-design/references/logging-checklist.md"
 require_file "$SKILL_ROOT/ui-interaction-design/templates/interaction-design-template.md"
 
 require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
+require_not_contains "$SKILL_ROOT/api-contract-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-requirement-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-interaction-design/SKILL.md" '../common/'

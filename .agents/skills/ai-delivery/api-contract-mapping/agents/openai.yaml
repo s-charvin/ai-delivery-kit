@@ -1,0 +1,4 @@
+interface:
+  display_name: "API Contract Mapping"
+  short_description: "Map sub-requirements to API contracts"
+  default_prompt: "Use $api-contract-mapping to bind this sub-requirement to Swagger, OpenAPI, or other client-facing API contract materials and update the governed API mapping artifacts."

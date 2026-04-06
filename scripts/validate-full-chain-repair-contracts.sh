@@ -55,6 +55,14 @@ if (!data.spec_kit_refs || typeof data.spec_kit_refs !== 'object') {
   throw new Error(`Missing spec_kit_refs in ${filePath}`)
 }
 
+if (!data.api_contract_mapping || typeof data.api_contract_mapping !== 'object') {
+  throw new Error(`Missing api_contract_mapping in ${filePath}`)
+}
+
+if (typeof data.api_contract_mapping.status !== 'string' || data.api_contract_mapping.status.length === 0) {
+  throw new Error(`Missing api_contract_mapping.status in ${filePath}`)
+}
+
 for (const key of ['spec_path', 'plan_path', 'tasks_path']) {
   const value = data.spec_kit_refs[key]
   if (typeof value !== 'string' || value.length === 0) {
@@ -79,6 +87,7 @@ require_file "$SUBREQ_ROOT/dependency.json"
 require_file "$SUBREQ_ROOT/status.json"
 require_file "$SUBREQ_ROOT/traceability.json"
 require_file "$SUBREQ_ROOT/decisions.md"
+require_file "$SUBREQ_ROOT/api-contract-mapping.md"
 require_file "$SUBREQ_ROOT/figma-mapping.md"
 require_file "$SUBREQ_ROOT/interaction-design.md"
 
@@ -88,6 +97,7 @@ require_markdown_meta "$REQ_ROOT/global-rules.md"
 require_markdown_meta "$SUBREQ_ROOT/README.md"
 require_markdown_meta "$SUBREQ_ROOT/requirement-slice.md"
 require_markdown_meta "$SUBREQ_ROOT/decisions.md"
+require_markdown_meta "$SUBREQ_ROOT/api-contract-mapping.md"
 require_markdown_meta "$SUBREQ_ROOT/figma-mapping.md"
 require_markdown_meta "$SUBREQ_ROOT/interaction-design.md"
 

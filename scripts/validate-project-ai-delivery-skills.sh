@@ -168,6 +168,7 @@ validate_managed_contract() {
   fi
 
   require_contains "$onboarding_guide" '.agents/skills/requirement-breakdown'
+  require_contains "$onboarding_guide" '.agents/skills/api-contract-mapping'
   require_contains "$onboarding_guide" '.agents/skills/ui-requirement-mapping'
   require_contains "$onboarding_guide" '.agents/skills/ui-interaction-design'
   require_contains "$onboarding_guide" '.ai-delivery/scripts/validate-project-ai-delivery-skills.sh'
@@ -212,6 +213,28 @@ validate_requirement_breakdown_skill() {
   require_contains "$skill_file" 'blocked_requirement_conflict'
   require_contains "$skill_file" 'blocked_missing_requirement'
   require_contains "$skill_file" 'Do not invent product truth'
+}
+
+validate_api_contract_mapping_skill() {
+  local skill_file="$SKILL_ROOT/api-contract-mapping/SKILL.md"
+
+  validate_skill_local_assets \
+    api-contract-mapping \
+    references/dual-truth-rules.md \
+    references/blocker-catalog.md \
+    references/logging-checklist.md \
+    references/checklist.md \
+    templates/api-contract-mapping-template.md
+
+  require_contains "$skill_file" 'requirement-slice.md'
+  require_contains "$skill_file" 'api-contract-mapping.md'
+  require_contains "$skill_file" 'traceability.json'
+  require_contains "$skill_file" 'Swagger'
+  require_contains "$skill_file" 'OpenAPI'
+  require_contains "$skill_file" 'downstream_revalidation'
+  require_contains "$skill_file" 'blocked_missing_api_contract'
+  require_contains "$skill_file" 'blocked_api_contract_conflict'
+  require_contains "$skill_file" 'blocked_requirement_api_conflict'
 }
 
 validate_ui_requirement_mapping_skill() {
@@ -291,9 +314,11 @@ fi
 
 validate_managed_contract
 validate_generic_skill requirement-breakdown
+validate_generic_skill api-contract-mapping
 validate_generic_skill ui-requirement-mapping
 validate_generic_skill ui-interaction-design
 validate_requirement_breakdown_skill
+validate_api_contract_mapping_skill
 validate_ui_requirement_mapping_skill
 validate_ui_interaction_design_skill
 

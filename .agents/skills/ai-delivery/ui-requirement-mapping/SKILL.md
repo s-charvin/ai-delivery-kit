@@ -9,7 +9,7 @@ Project-local workflow skill for binding a governed sub-requirement slice to ver
 
 ## Overview
 
-Use this skill after `requirement-breakdown` when a sub-requirement package already exists under `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/`. This stage writes `figma-mapping.md`, updates `traceability.json` in place, and preserves the governed artifact contract created upstream instead of inventing a parallel mapping store.
+Use this skill after `requirement-breakdown` when a sub-requirement package already exists under `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/`. If `api-contract-mapping.md` already exists, treat it as upstream interface-contract context. This stage writes `figma-mapping.md`, updates `traceability.json` in place, and preserves the governed artifact contract created upstream instead of inventing a parallel mapping store.
 
 The primary evidence for this stage is structured node data from Figma MCP or compatible provider MCPs such as TemPad Dev, F2C, or other trustworthy structured design providers. Screenshots or previews may be cached as optional supporting context, but they are never the completion gate and never override structured node payloads.
 
@@ -64,6 +64,7 @@ Also match the governed artifact shapes already established under `.ai-delivery/
 
 ### Expected Supporting Inputs
 
+- `api-contract-mapping.md` when API contract mapping has already been performed
 - `traceability.json`
 - `status.json`
 - existing `decisions.md`
@@ -95,6 +96,7 @@ Produce a mapping package that downstream interaction design or implementation c
 
 - a structure-backed `figma-mapping.md`
 - an updated `traceability.json` with `requirement_refs`, `figma_nodes`, `mapping_type`, `confidence`, `conflicts`, and `last_verified_at`, plus provider-aware evidence refs when the existing governed contract already supports them
+- the existing `api_contract_mapping` subtree when the upstream API stage already populated it
 - existing bridge fields such as `spec_kit_refs` when the repo already carries them
 - explicit `required UI`, `companion UI`, `shared nodes`, `missing design evidence`, `conflicts`, and structured verification evidence
 - the raw evidence boundary between `.ai-delivery/figma-cache/` and the governed sub-requirement artifacts
@@ -137,7 +139,7 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 
 ### 1. Confirm the upstream breakdown contract
 
-- Read `requirement-slice.md`, `traceability.json`, `status.json`, and `decisions.md` before touching design evidence.
+- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `traceability.json`, `status.json`, and `decisions.md` before touching design evidence.
 - Confirm that the sub-requirement folder and `subreq-id` match the intended scope.
 - Prefer to start from `split_ready`; if upstream scope is still unstable, stop instead of papering over a breakdown issue.
 
@@ -168,7 +170,7 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 ### 5. Update `traceability.json` in place
 
 - Treat `traceability.json` as a first-class governed artifact, not a disposable sidecar.
-- Preserve existing `requirement_refs`, existing conflict history, and existing bridge fields such as `spec_kit_refs`.
+- Preserve existing `requirement_refs`, existing conflict history, existing API-contract mapping fields such as `api_contract_mapping`, and existing bridge fields such as `spec_kit_refs`.
 - Update only the mapping-owned facts such as `figma_nodes`, `mapping_type`, `confidence`, and `last_verified_at`.
 - If the existing governed contract already carries provider refs or evidence refs, preserve and update them in place.
 - If the contract does not yet carry provider-aware evidence fields, do not invent an incompatible JSON shape; keep the full provider and raw-artifact evidence trail in `figma-mapping.md` and `decisions.md`.
@@ -190,7 +192,7 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 - Verify that every claimed mapping still has structured evidence with provider, node ids, raw artifact refs, and explicit evidence basis.
 - Verify that every required UI item maps to real design evidence and every shared node or companion UI item is explicitly recorded.
 - Verify that cached artifacts preserve provider-native raw payloads instead of flattened summaries while keeping compatibility metadata required by current admin readers.
-- Verify that `traceability.json` still preserves bridge fields such as `spec_kit_refs` when they existed before the mapping pass.
+- Verify that `traceability.json` still preserves bridge fields such as `spec_kit_refs` and `api_contract_mapping` when they existed before the mapping pass.
 - If material mapping truth changed and `interaction-design.md` already exists, record the revalidation need in `decisions.md`.
 
 ## State And Blocker Rules
@@ -315,4 +317,4 @@ Expected behavior:
 
 Stop after producing the mapping package and passing the self-check.
 
-If the user wants to continue, hand the downstream stage `requirement-slice.md`, `figma-mapping.md`, `traceability.json`, and any mapping-related notes in `decisions.md`. Do not perform interaction design or implementation inside this skill unless the user explicitly asks for the next stage.
+If the user wants to continue, hand the downstream stage `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `traceability.json`, and any mapping-related notes in `decisions.md`. Do not perform interaction design or implementation inside this skill unless the user explicitly asks for the next stage.

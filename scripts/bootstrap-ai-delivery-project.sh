@@ -14,7 +14,7 @@ Usage:
   zsh scripts/bootstrap-ai-delivery-project.sh --target-repo /path/to/repo [--project-id my-project] [--main-branch main-dev]
 
 What it does:
-  - copies the three project-local workflow skills into .agents/skills/
+  - copies the four project-local workflow skills into .agents/skills/
   - copies validation/test/onboarding assets into .ai-delivery/
   - seeds the minimal .ai-delivery/ directory contract if files are missing
 EOF
@@ -135,6 +135,7 @@ TARGET_DOC_ROOT="$TARGET_REPO/.ai-delivery/docs/guides"
 
 MANAGED_PATHS=(
   "$TARGET_SKILLS_ROOT/requirement-breakdown"
+  "$TARGET_SKILLS_ROOT/api-contract-mapping"
   "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
   "$TARGET_SKILLS_ROOT/ui-interaction-design"
   "$TARGET_VALIDATE_SCRIPT"
@@ -161,6 +162,7 @@ done
   "$TARGET_REPO/.ai-delivery/runtime"
 
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/requirement-breakdown" "$TARGET_SKILLS_ROOT/requirement-breakdown"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/api-contract-mapping" "$TARGET_SKILLS_ROOT/api-contract-mapping"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-requirement-mapping" "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-interaction-design" "$TARGET_SKILLS_ROOT/ui-interaction-design"
 copy_managed_file "$ROOT/scripts/validate-project-ai-delivery-skills.sh" "$TARGET_VALIDATE_SCRIPT"
