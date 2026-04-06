@@ -45,10 +45,10 @@ If trustworthy structured design evidence cannot be obtained for required UI fro
 
 ## Required References
 
-- [Dual Truth Rules](../common/references/dual-truth-rules.md)
-- [Blocker Catalog](../common/references/blocker-catalog.md)
-- [Logging Checklist](../common/references/logging-checklist.md)
-- [Figma Mapping Template](../common/templates/figma-mapping-template.md)
+- [Dual Truth Rules](references/dual-truth-rules.md)
+- [Blocker Catalog](references/blocker-catalog.md)
+- [Logging Checklist](references/logging-checklist.md)
+- [Figma Mapping Template](templates/figma-mapping-template.md)
 - [Figma Fetch Order](references/figma-fetch-order.md)
 - [Mapping Checklist](references/mapping-checklist.md)
 
@@ -160,7 +160,7 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 
 ### 4. Write `figma-mapping.md`
 
-- Use `../common/templates/figma-mapping-template.md`.
+- Use `templates/figma-mapping-template.md`.
 - Include design target, structured evidence sources, requirement-to-node mapping, node-to-requirement mapping, required UI, companion UI, shared nodes, missing design evidence, conflicts, and traceability update notes.
 - For each mapped requirement point, record the provider, node ids, raw artifact refs, and why the structured payload is sufficient.
 - Keep missing design evidence factual. Missing design evidence is not permission to invent visual truth.

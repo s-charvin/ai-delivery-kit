@@ -44,10 +44,10 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 
 ## Required References
 
-- [Dual Truth Rules](../common/references/dual-truth-rules.md)
-- [Blocker Catalog](../common/references/blocker-catalog.md)
-- [Logging Checklist](../common/references/logging-checklist.md)
-- [Interaction Design Template](../common/templates/interaction-design-template.md)
+- [Dual Truth Rules](references/dual-truth-rules.md)
+- [Blocker Catalog](references/blocker-catalog.md)
+- [Logging Checklist](references/logging-checklist.md)
+- [Interaction Design Template](templates/interaction-design-template.md)
 - [Allowed Assumptions](references/allowed-assumptions.md)
 - [Interaction Quality Guidelines](references/interaction-quality-guidelines.md)
 - [State Checklist](references/state-checklist.md)
@@ -180,7 +180,7 @@ Use these principles to improve interaction quality without crossing into redesi
 
 ### 3. Write `interaction-design.md`
 
-- Use `../common/templates/interaction-design-template.md`.
+- Use `templates/interaction-design-template.md`.
 - Cover interaction goal, entry conditions, user actions, feedback and response model, success, empty, loading, error, and disabled states, permission or visibility impacts, navigation or local state changes, motion and transition notes, accessibility and input modality notes, and open escalations.
 - Keep the document executable for downstream implementation without redesigning the product.
 

@@ -43,10 +43,10 @@ If the request is still in discovery, the requirement source is still moving, or
 
 ## Required References
 
-- [Dual Truth Rules](../common/references/dual-truth-rules.md)
-- [Blocker Catalog](../common/references/blocker-catalog.md)
-- [Logging Checklist](../common/references/logging-checklist.md)
-- [Requirement Slice Template](../common/templates/requirement-slice-template.md)
+- [Dual Truth Rules](references/dual-truth-rules.md)
+- [Blocker Catalog](references/blocker-catalog.md)
+- [Logging Checklist](references/logging-checklist.md)
+- [Requirement Slice Template](templates/requirement-slice-template.md)
 - [Checklist](references/checklist.md)
 - [Sub-Requirement README Template](references/subreq-readme-template.md)
 
@@ -124,7 +124,7 @@ If the folder already contains later-stage files such as `figma-mapping.md` or `
 - Identify which source paragraphs, bullets, or rule blocks must be copied verbatim into sub-requirement artifacts before any summarization.
 - If one top-level fragment will influence multiple sub-requirements or a global rule, record that shared coverage explicitly instead of silently rewording it.
 - Resolve the target requirement id and requirement folder under `.ai-delivery/requirements/`.
-- Reuse the shared references and templates from `../common/` instead of inventing new artifact shapes.
+- Reuse this skill's local references and templates instead of inventing new artifact shapes.
 
 ### 2. Confirm or bootstrap the requirement package
 
@@ -172,7 +172,7 @@ Required splitting rules:
 For each sub-requirement:
 
 - Write `README.md` using `references/subreq-readme-template.md`. Treat it as the human-readable navigation doc: include metadata, top-level requirement coverage, key verbatim excerpts, a source-backed sub-requirement statement, boundary, dependencies, source-linked acceptance signals, open questions, compression warnings, and current status.
-- Write `requirement-slice.md` using `../common/templates/requirement-slice-template.md`. Treat it as the authoritative downstream contract: include exhaustive source requirement coverage, verbatim source excerpts, a normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, and a source requirement reference index.
+- Write `requirement-slice.md` using `templates/requirement-slice-template.md`. Treat it as the authoritative downstream contract: include exhaustive source requirement coverage, verbatim source excerpts, a normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, and a source requirement reference index.
 - Copy or quote first, then summarize. Do not let `requirement-slice.md` rely only on second-order summaries when the original top-level wording matters.
 - Do not copy template guidance sections such as `Template Authoring Rules` or `Template Example` into generated artifacts.
 - Write `dependency.json` with explicit `depends_on` and `blocks` declarations, even when they are empty.

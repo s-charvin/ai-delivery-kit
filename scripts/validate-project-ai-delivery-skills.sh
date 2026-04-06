@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 ROOT=""
 SKILL_ROOT=""
-COMMON_ROOT=""
+SKILL_LAYOUT=""
 
 fail() {
   print -u2 -- "[validate-project-ai-delivery-skills] $1"
@@ -16,14 +16,14 @@ resolve_repo_root() {
 
   for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
     candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
-    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
   done
 
   if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
@@ -106,78 +106,69 @@ validate_markdown_links() {
 }
 
 resolve_managed_asset_path() {
-  local root_relative=$1
-  local ai_delivery_relative=$2
+  local relative_path=$1
   local candidate
 
-  for candidate in "$ROOT/$root_relative" "$ROOT/.ai-delivery/$ai_delivery_relative"; do
+  for candidate in "$ROOT/$relative_path" "$ROOT/.ai-delivery/$relative_path"; do
     if [[ -e "$candidate" ]]; then
       print -r -- "$candidate"
       return 0
     fi
   done
 
-  fail "Missing managed asset: $root_relative"
+  fail "Missing managed asset: $relative_path"
 }
 
-validate_common_contract() {
-  local bootstrap_script
-  local sync_script
-  local install_script
+validate_skill_local_assets() {
+  local skill_name=$1
+  shift
+  local skill_dir="$SKILL_ROOT/$skill_name"
+  local local_path
+
+  require_dir "$skill_dir"
+  require_file "$skill_dir/SKILL.md"
+  require_file "$skill_dir/agents/openai.yaml"
+
+  for local_path in "$@"; do
+    require_file "$skill_dir/$local_path"
+  done
+}
+
+validate_managed_contract() {
   local validate_script
   local validate_test
-  local bootstrap_test
   local onboarding_guide
+  local bootstrap_script=""
 
-  bootstrap_script=$(resolve_managed_asset_path "scripts/bootstrap-ai-delivery-project.sh" "scripts/bootstrap-ai-delivery-project.sh")
-  sync_script=$(resolve_managed_asset_path "scripts/sync-ai-delivery-project-assets.sh" "scripts/sync-ai-delivery-project-assets.sh")
-  install_script=$(resolve_managed_asset_path "scripts/install-project-ai-delivery-skills.sh" "scripts/install-project-ai-delivery-skills.sh")
-  validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh" "scripts/validate-project-ai-delivery-skills.sh")
-  validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh" "tests/ai-delivery-skills/validate-sources.test.sh")
-  bootstrap_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/bootstrap-project.test.sh" "tests/ai-delivery-skills/bootstrap-project.test.sh")
-  onboarding_guide=$(resolve_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md" "docs/guides/ai-delivery-any-repo-onboarding.md")
+  validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
+  validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
+  onboarding_guide=$(resolve_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md")
 
-  require_dir "$SKILL_ROOT/requirement-breakdown"
-  require_dir "$SKILL_ROOT/ui-requirement-mapping"
-  require_dir "$SKILL_ROOT/ui-interaction-design"
-
-  require_file "$bootstrap_script"
-  require_file "$sync_script"
-  require_file "$install_script"
   require_file "$validate_script"
   require_file "$validate_test"
-  require_file "$bootstrap_test"
   require_file "$onboarding_guide"
 
-  require_file "$COMMON_ROOT/README.md"
-  require_file "$COMMON_ROOT/references/dual-truth-rules.md"
-  require_file "$COMMON_ROOT/references/blocker-catalog.md"
-  require_file "$COMMON_ROOT/references/logging-checklist.md"
-  require_file "$COMMON_ROOT/templates/requirement-slice-template.md"
-  require_file "$COMMON_ROOT/templates/figma-mapping-template.md"
-  require_file "$COMMON_ROOT/templates/interaction-design-template.md"
+  if [[ "$SKILL_LAYOUT" == "source" ]]; then
+    bootstrap_script="$ROOT/scripts/bootstrap-ai-delivery-project.sh"
+    require_file "$bootstrap_script"
+    require_file "$ROOT/tests/ai-delivery-skills/bootstrap-project.test.sh"
+    require_contains "$bootstrap_script" '.agents/skills'
+    require_not_contains "$bootstrap_script" 'install-project-ai-delivery-skills'
+    require_not_contains "$bootstrap_script" 'sync-ai-delivery-project-assets'
+  fi
 
-  require_contains "$COMMON_ROOT/README.md" 'business-project assets'
-  require_contains "$COMMON_ROOT/README.md" '.ai-delivery'
-  require_contains "$COMMON_ROOT/README.md" 'not owned by `ai-delivery-admin`'
-  require_contains "$COMMON_ROOT/README.md" 'admin support surfaces'
-  require_contains "$bootstrap_script" '--target-repo'
-  require_contains "$bootstrap_script" '.ai-delivery/meta/project-binding.json'
-  require_contains "$bootstrap_script" '.ai-delivery/scripts/install-project-ai-delivery-skills.sh'
-  require_contains "$sync_script" '--mode sync'
-  require_contains "$onboarding_guide" 'bootstrap-ai-delivery-project.sh'
-  require_contains "$onboarding_guide" 'sync-ai-delivery-project-assets.sh'
-  require_contains "$onboarding_guide" '.ai-delivery/scripts/install-project-ai-delivery-skills.sh'
-  require_contains "$onboarding_guide" '.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md'
+  require_contains "$onboarding_guide" '.agents/skills/requirement-breakdown'
+  require_contains "$onboarding_guide" '.agents/skills/ui-requirement-mapping'
+  require_contains "$onboarding_guide" '.agents/skills/ui-interaction-design'
+  require_contains "$onboarding_guide" '.ai-delivery/scripts/validate-project-ai-delivery-skills.sh'
+  require_not_contains "$onboarding_guide" 'install-project-ai-delivery-skills'
+  require_not_contains "$onboarding_guide" 'sync-ai-delivery-project-assets'
+  require_not_contains "$onboarding_guide" '### Step 3: 在目标仓库里安装 project-local skills 到当前 Codex 环境'
 }
 
 validate_generic_skill() {
   local skill_name=$1
   local skill_file="$SKILL_ROOT/$skill_name/SKILL.md"
-
-  if [[ ! -f "$skill_file" ]]; then
-    return 0
-  fi
 
   require_frontmatter_skill "$skill_file" "$skill_name"
   validate_openai_yaml "$skill_name"
@@ -187,14 +178,20 @@ validate_generic_skill() {
   require_contains "$skill_file" 'governed'
   require_not_contains "$skill_file" 'owned by ai-delivery-admin'
   require_not_contains "$skill_file" 'move workflow truth into ai-delivery-admin'
+  require_not_contains "$skill_file" '../common/'
 }
 
 validate_requirement_breakdown_skill() {
   local skill_file="$SKILL_ROOT/requirement-breakdown/SKILL.md"
 
-  if [[ ! -f "$skill_file" ]]; then
-    return 0
-  fi
+  validate_skill_local_assets \
+    requirement-breakdown \
+    references/dual-truth-rules.md \
+    references/blocker-catalog.md \
+    references/logging-checklist.md \
+    references/checklist.md \
+    references/subreq-readme-template.md \
+    templates/requirement-slice-template.md
 
   require_contains "$skill_file" 'top-level requirement material'
   require_contains "$skill_file" 'breakdown-summary.md'
@@ -210,9 +207,14 @@ validate_requirement_breakdown_skill() {
 validate_ui_requirement_mapping_skill() {
   local skill_file="$SKILL_ROOT/ui-requirement-mapping/SKILL.md"
 
-  if [[ ! -f "$skill_file" ]]; then
-    return 0
-  fi
+  validate_skill_local_assets \
+    ui-requirement-mapping \
+    references/dual-truth-rules.md \
+    references/blocker-catalog.md \
+    references/logging-checklist.md \
+    references/figma-fetch-order.md \
+    references/mapping-checklist.md \
+    templates/figma-mapping-template.md
 
   require_contains "$skill_file" 'requirement-slice.md'
   require_contains "$skill_file" 'Figma retrieval order'
@@ -233,9 +235,15 @@ validate_ui_requirement_mapping_skill() {
 validate_ui_interaction_design_skill() {
   local skill_file="$SKILL_ROOT/ui-interaction-design/SKILL.md"
 
-  if [[ ! -f "$skill_file" ]]; then
-    return 0
-  fi
+  validate_skill_local_assets \
+    ui-interaction-design \
+    references/dual-truth-rules.md \
+    references/blocker-catalog.md \
+    references/logging-checklist.md \
+    references/allowed-assumptions.md \
+    references/interaction-quality-guidelines.md \
+    references/state-checklist.md \
+    templates/interaction-design-template.md
 
   require_contains "$skill_file" 'requirement-slice.md'
   require_contains "$skill_file" 'figma-mapping.md'
@@ -260,10 +268,18 @@ validate_ui_interaction_design_skill() {
 }
 
 ROOT=$(resolve_repo_root)
-SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
-COMMON_ROOT="$SKILL_ROOT/common"
 
-validate_common_contract
+if [[ -d "$ROOT/.agents/skills/requirement-breakdown" ]]; then
+  SKILL_LAYOUT="bootstrapped"
+  SKILL_ROOT="$ROOT/.agents/skills"
+elif [[ -d "$ROOT/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+  SKILL_LAYOUT="source"
+  SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
+else
+  fail "Unable to detect project-local skill layout under $ROOT"
+fi
+
+validate_managed_contract
 validate_generic_skill requirement-breakdown
 validate_generic_skill ui-requirement-mapping
 validate_generic_skill ui-interaction-design

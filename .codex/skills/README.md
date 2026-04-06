@@ -8,7 +8,7 @@ This repository carries a vendorable set of project-local AI delivery workflow s
 
 These are business-project skills. They operate on `.ai-delivery/` inside whichever host repository owns them.
 
-When these managed helper assets are bootstrapped into another repository, their vendored copies live under `.ai-delivery/` instead of polluting the host repo root.
+When these managed helper assets are bootstrapped into another repository, the three workflow skills are installed directly into that host repo's `.agents/skills/` directory, while validation/docs artifacts live under `.ai-delivery/`.
 
 First-time bootstrap into another repository:
 
@@ -16,14 +16,8 @@ First-time bootstrap into another repository:
 zsh scripts/bootstrap-ai-delivery-project.sh --target-repo /path/to/target-repo --project-id my-project --main-branch main-dev
 ```
 
-Refresh an already bootstrapped repository from this one:
+Inside any bootstrapped repository, validate the installed project-local skills:
 
 ```bash
-zsh scripts/sync-ai-delivery-project-assets.sh --target-repo /path/to/target-repo
-```
-
-Inside any bootstrapped repository, sync the project-local skills into the current Codex environment:
-
-```bash
-zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```

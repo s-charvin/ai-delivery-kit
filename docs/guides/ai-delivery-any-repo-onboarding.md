@@ -18,7 +18,7 @@
 注意：
 
 - 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
-- 一旦 bootstrap 到目标仓库，这些 managed script、tests 和 onboarding guide 都会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
+- 一旦 bootstrap 到目标仓库，这 3 个 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
 
 ## 这套架构的职责边界
 
@@ -61,16 +61,15 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 
 这一步会把下面这些内容落进目标仓库：
 
-- `.codex/skills/ai-delivery/`
-- `.codex/skills/README.md`
-- `.ai-delivery/scripts/bootstrap-ai-delivery-project.sh`
-- `.ai-delivery/scripts/sync-ai-delivery-project-assets.sh`
-- `.ai-delivery/scripts/install-project-ai-delivery-skills.sh`
+- `.agents/skills/requirement-breakdown/`
+- `.agents/skills/ui-requirement-mapping/`
+- `.agents/skills/ui-interaction-design/`
 - `.ai-delivery/scripts/validate-project-ai-delivery-skills.sh`
 - `.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh`
-- `.ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh`
 - `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
 - 最小 `.ai-delivery/` 目录契约与基础 meta/runtime 文件
+
+也就是说，`project-local skills` 的初始化已经并入 bootstrap 本身，目标仓库不再需要额外执行单独的 skill 安装步骤。
 
 它不会做这些事情：
 
@@ -95,7 +94,7 @@ git --version
 推荐先安装稳定版本：
 
 ```bash
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git@v0.0.90
+uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify check
 ```
 
@@ -120,21 +119,20 @@ specify init --here --force --ai codex --ai-skills --script sh
 - 例如 `$speckit-constitution`、`$speckit-specify`、`$speckit-plan`
 - 升级时先备份 `.specify/memory/constitution.md`
 
-### Step 3: 在目标仓库里安装 project-local skills 到当前 Codex 环境
-
-```bash
-cd <target-repo-root>
-zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
-zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
-```
-
-完成后，当前 Codex 环境应该能识别：
+bootstrap 完成后，当前仓库内应该已经具备并可识别：
 
 - `$requirement-breakdown`
 - `$ui-requirement-mapping`
 - `$ui-interaction-design`
 
-### Step 4: 可选安装 admin support skill
+如需确认 bootstrap 结果，可以额外执行：
+
+```bash
+cd <target-repo-root>
+zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
+```
+
+### Step 3: 可选安装 admin support skill
 
 如果你还要接入控制面治理，从 `ai-delivery-admin` 仓库执行：
 
@@ -147,38 +145,9 @@ zsh scripts/install-admin-support-skill.sh
 
 - `$ai-delivery-admin-support`
 
-## 后续升级任意目标仓库
+## 当前初始化原则
 
-当参考仓库里的 project-local skills 或 helper script 更新后，在参考仓库执行：
-
-```bash
-cd <reference-repo-root>
-zsh scripts/sync-ai-delivery-project-assets.sh --target-repo <target-repo-root>
-```
-
-`sync` 会刷新这些 managed assets：
-
-- `.codex/skills/ai-delivery/`
-- `.codex/skills/README.md`
-- `.ai-delivery/scripts/`
-- `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
-- `.ai-delivery/tests/ai-delivery-skills/`
-
-如果目标仓库里还残留旧版根目录 managed 文件，`sync` 也会一并清理这些历史路径：
-
-- `scripts/bootstrap-ai-delivery-project.sh`
-- `scripts/sync-ai-delivery-project-assets.sh`
-- `scripts/install-project-ai-delivery-skills.sh`
-- `scripts/validate-project-ai-delivery-skills.sh`
-- `tests/ai-delivery-skills/validate-sources.test.sh`
-- `tests/ai-delivery-skills/bootstrap-project.test.sh`
-- `docs/guides/ai-delivery-any-repo-onboarding.md`
-
-但它不会覆盖这些真实业务数据：
-
-- `.ai-delivery/requirements/`
-- 已存在的 `.ai-delivery/meta/*.json`
-- 已存在的 `.ai-delivery/runtime/*.json`
+当前设计只关注新项目的一键初始化，不再额外设计“老项目升级同步脚本”这条链路。
 
 ## 目标仓库最小目录契约
 
@@ -186,10 +155,11 @@ bootstrap 完成后，目标仓库至少具备：
 
 ```text
 <target-repo>/
-├── .codex/
+├── .agents/
 │   └── skills/
-│       ├── README.md
-│       └── ai-delivery/
+│       ├── requirement-breakdown/
+│       ├── ui-requirement-mapping/
+│       └── ui-interaction-design/
 ├── .ai-delivery/
 │   ├── docs/
 │   │   └── guides/
@@ -205,13 +175,9 @@ bootstrap 完成后，目标仓库至少具备：
 │   │   ├── workflow-policy.json
 │   │   └── naming-rules.json
 │   ├── scripts/
-│   │   ├── bootstrap-ai-delivery-project.sh
-│   │   ├── sync-ai-delivery-project-assets.sh
-│   │   ├── install-project-ai-delivery-skills.sh
 │   │   └── validate-project-ai-delivery-skills.sh
 │   ├── tests/
 │   │   └── ai-delivery-skills/
-│   │       ├── bootstrap-project.test.sh
 │   │       └── validate-sources.test.sh
 │   └── runtime/
 │       ├── main-branch.json
@@ -373,15 +339,7 @@ cd <reference-repo-root>
 zsh scripts/bootstrap-ai-delivery-project.sh --target-repo <target-repo-root> --project-id <project-id> --main-branch main-dev
 cd <target-repo-root>
 specify init --here --ai codex --ai-skills --script sh
-zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
-```
-
-后续升级：
-
-```bash
-cd <reference-repo-root>
-zsh scripts/sync-ai-delivery-project-assets.sh --target-repo <target-repo-root>
 ```
 
 ## 验证命令
@@ -392,7 +350,6 @@ zsh scripts/sync-ai-delivery-project-assets.sh --target-repo <target-repo-root>
 cd <target-repo-root>
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 zsh .ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh
-zsh .ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh
 specify check
 ```
 
