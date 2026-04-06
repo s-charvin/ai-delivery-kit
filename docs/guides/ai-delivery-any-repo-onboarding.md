@@ -15,6 +15,11 @@
 - helper script
 - onboarding guide
 
+注意：
+
+- 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
+- 一旦 bootstrap 到目标仓库，这些 managed script、tests 和 onboarding guide 都会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
+
 ## 这套架构的职责边界
 
 固定边界如下：
@@ -58,13 +63,13 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 
 - `.codex/skills/ai-delivery/`
 - `.codex/skills/README.md`
-- `scripts/bootstrap-ai-delivery-project.sh`
-- `scripts/sync-ai-delivery-project-assets.sh`
-- `scripts/install-project-ai-delivery-skills.sh`
-- `scripts/validate-project-ai-delivery-skills.sh`
-- `tests/ai-delivery-skills/validate-sources.test.sh`
-- `tests/ai-delivery-skills/bootstrap-project.test.sh`
-- `docs/guides/ai-delivery-any-repo-onboarding.md`
+- `.ai-delivery/scripts/bootstrap-ai-delivery-project.sh`
+- `.ai-delivery/scripts/sync-ai-delivery-project-assets.sh`
+- `.ai-delivery/scripts/install-project-ai-delivery-skills.sh`
+- `.ai-delivery/scripts/validate-project-ai-delivery-skills.sh`
+- `.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh`
+- `.ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh`
+- `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
 - 最小 `.ai-delivery/` 目录契约与基础 meta/runtime 文件
 
 它不会做这些事情：
@@ -119,8 +124,8 @@ specify init --here --force --ai codex --ai-skills --script sh
 
 ```bash
 cd <target-repo-root>
-zsh scripts/install-project-ai-delivery-skills.sh
-zsh scripts/validate-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```
 
 完成后，当前 Codex 环境应该能识别：
@@ -155,9 +160,19 @@ zsh scripts/sync-ai-delivery-project-assets.sh --target-repo <target-repo-root>
 
 - `.codex/skills/ai-delivery/`
 - `.codex/skills/README.md`
-- helper script
-- onboarding guide
-- script test
+- `.ai-delivery/scripts/`
+- `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
+- `.ai-delivery/tests/ai-delivery-skills/`
+
+如果目标仓库里还残留旧版根目录 managed 文件，`sync` 也会一并清理这些历史路径：
+
+- `scripts/bootstrap-ai-delivery-project.sh`
+- `scripts/sync-ai-delivery-project-assets.sh`
+- `scripts/install-project-ai-delivery-skills.sh`
+- `scripts/validate-project-ai-delivery-skills.sh`
+- `tests/ai-delivery-skills/validate-sources.test.sh`
+- `tests/ai-delivery-skills/bootstrap-project.test.sh`
+- `docs/guides/ai-delivery-any-repo-onboarding.md`
 
 但它不会覆盖这些真实业务数据：
 
@@ -176,6 +191,9 @@ bootstrap 完成后，目标仓库至少具备：
 │       ├── README.md
 │       └── ai-delivery/
 ├── .ai-delivery/
+│   ├── docs/
+│   │   └── guides/
+│   │       └── ai-delivery-any-repo-onboarding.md
 │   ├── requirements/
 │   ├── figma-cache/
 │   ├── logs/
@@ -186,6 +204,15 @@ bootstrap 完成后，目标仓库至少具备：
 │   │   ├── project-binding.json
 │   │   ├── workflow-policy.json
 │   │   └── naming-rules.json
+│   ├── scripts/
+│   │   ├── bootstrap-ai-delivery-project.sh
+│   │   ├── sync-ai-delivery-project-assets.sh
+│   │   ├── install-project-ai-delivery-skills.sh
+│   │   └── validate-project-ai-delivery-skills.sh
+│   ├── tests/
+│   │   └── ai-delivery-skills/
+│   │       ├── bootstrap-project.test.sh
+│   │       └── validate-sources.test.sh
 │   └── runtime/
 │       ├── main-branch.json
 │       ├── worktrees.json
@@ -193,8 +220,6 @@ bootstrap 完成后，目标仓库至少具备：
 │       ├── dependency-graph.json
 │       ├── blockers.json
 │       └── task-board.json
-├── scripts/
-└── docs/guides/
 ```
 
 `.specify/` 则由 `Spec Kit` 负责初始化。
@@ -348,8 +373,8 @@ cd <reference-repo-root>
 zsh scripts/bootstrap-ai-delivery-project.sh --target-repo <target-repo-root> --project-id <project-id> --main-branch main-dev
 cd <target-repo-root>
 specify init --here --ai codex --ai-skills --script sh
-zsh scripts/install-project-ai-delivery-skills.sh
-zsh scripts/validate-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```
 
 后续升级：
@@ -365,9 +390,9 @@ zsh scripts/sync-ai-delivery-project-assets.sh --target-repo <target-repo-root>
 
 ```bash
 cd <target-repo-root>
-zsh scripts/validate-project-ai-delivery-skills.sh
-zsh tests/ai-delivery-skills/validate-sources.test.sh
-zsh tests/ai-delivery-skills/bootstrap-project.test.sh
+zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
+zsh .ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh
+zsh .ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh
 specify check
 ```
 

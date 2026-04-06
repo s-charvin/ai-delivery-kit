@@ -2,19 +2,34 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-
-if ROOT=$(git -C "$SCRIPT_DIR/.." rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd)
-fi
-
-SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
-COMMON_ROOT="$SKILL_ROOT/common"
+ROOT=""
+SKILL_ROOT=""
+COMMON_ROOT=""
 
 fail() {
   print -u2 -- "[validate-project-ai-delivery-skills] $1"
   exit 1
+}
+
+resolve_repo_root() {
+  local candidate
+
+  for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
+    candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
+    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  done
+
+  if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
+    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  fi
+
+  fail "Unable to resolve repository root from $SCRIPT_DIR"
 }
 
 require_file() {
@@ -90,14 +105,49 @@ validate_markdown_links() {
   done <<< "$links"
 }
 
+resolve_managed_asset_path() {
+  local root_relative=$1
+  local ai_delivery_relative=$2
+  local candidate
+
+  for candidate in "$ROOT/$root_relative" "$ROOT/.ai-delivery/$ai_delivery_relative"; do
+    if [[ -e "$candidate" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  done
+
+  fail "Missing managed asset: $root_relative"
+}
+
 validate_common_contract() {
+  local bootstrap_script
+  local sync_script
+  local install_script
+  local validate_script
+  local validate_test
+  local bootstrap_test
+  local onboarding_guide
+
+  bootstrap_script=$(resolve_managed_asset_path "scripts/bootstrap-ai-delivery-project.sh" "scripts/bootstrap-ai-delivery-project.sh")
+  sync_script=$(resolve_managed_asset_path "scripts/sync-ai-delivery-project-assets.sh" "scripts/sync-ai-delivery-project-assets.sh")
+  install_script=$(resolve_managed_asset_path "scripts/install-project-ai-delivery-skills.sh" "scripts/install-project-ai-delivery-skills.sh")
+  validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh" "scripts/validate-project-ai-delivery-skills.sh")
+  validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh" "tests/ai-delivery-skills/validate-sources.test.sh")
+  bootstrap_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/bootstrap-project.test.sh" "tests/ai-delivery-skills/bootstrap-project.test.sh")
+  onboarding_guide=$(resolve_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md" "docs/guides/ai-delivery-any-repo-onboarding.md")
+
   require_dir "$SKILL_ROOT/requirement-breakdown"
   require_dir "$SKILL_ROOT/ui-requirement-mapping"
   require_dir "$SKILL_ROOT/ui-interaction-design"
 
-  require_file "$ROOT/scripts/bootstrap-ai-delivery-project.sh"
-  require_file "$ROOT/scripts/sync-ai-delivery-project-assets.sh"
-  require_file "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md"
+  require_file "$bootstrap_script"
+  require_file "$sync_script"
+  require_file "$install_script"
+  require_file "$validate_script"
+  require_file "$validate_test"
+  require_file "$bootstrap_test"
+  require_file "$onboarding_guide"
 
   require_file "$COMMON_ROOT/README.md"
   require_file "$COMMON_ROOT/references/dual-truth-rules.md"
@@ -111,11 +161,14 @@ validate_common_contract() {
   require_contains "$COMMON_ROOT/README.md" '.ai-delivery'
   require_contains "$COMMON_ROOT/README.md" 'not owned by `ai-delivery-admin`'
   require_contains "$COMMON_ROOT/README.md" 'admin support surfaces'
-  require_contains "$ROOT/scripts/bootstrap-ai-delivery-project.sh" '--target-repo'
-  require_contains "$ROOT/scripts/bootstrap-ai-delivery-project.sh" '.ai-delivery/meta/project-binding.json'
-  require_contains "$ROOT/scripts/sync-ai-delivery-project-assets.sh" '--mode sync'
-  require_contains "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" 'bootstrap-ai-delivery-project.sh'
-  require_contains "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" 'sync-ai-delivery-project-assets.sh'
+  require_contains "$bootstrap_script" '--target-repo'
+  require_contains "$bootstrap_script" '.ai-delivery/meta/project-binding.json'
+  require_contains "$bootstrap_script" '.ai-delivery/scripts/install-project-ai-delivery-skills.sh'
+  require_contains "$sync_script" '--mode sync'
+  require_contains "$onboarding_guide" 'bootstrap-ai-delivery-project.sh'
+  require_contains "$onboarding_guide" 'sync-ai-delivery-project-assets.sh'
+  require_contains "$onboarding_guide" '.ai-delivery/scripts/install-project-ai-delivery-skills.sh'
+  require_contains "$onboarding_guide" '.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md'
 }
 
 validate_generic_skill() {
@@ -205,6 +258,10 @@ validate_ui_interaction_design_skill() {
   require_contains "$skill_file" 'blocked_missing_requirement'
   require_contains "$skill_file" 'Do not invent business flow or page structure'
 }
+
+ROOT=$(resolve_repo_root)
+SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
+COMMON_ROOT="$SKILL_ROOT/common"
 
 validate_common_contract
 validate_generic_skill requirement-breakdown

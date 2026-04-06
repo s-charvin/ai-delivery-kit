@@ -8,6 +8,8 @@ This repository carries a vendorable set of project-local AI delivery workflow s
 
 These are business-project skills. They operate on `.ai-delivery/` inside whichever host repository owns them.
 
+When these managed helper assets are bootstrapped into another repository, their vendored copies live under `.ai-delivery/` instead of polluting the host repo root.
+
 First-time bootstrap into another repository:
 
 ```bash
@@ -23,5 +25,5 @@ zsh scripts/sync-ai-delivery-project-assets.sh --target-repo /path/to/target-rep
 Inside any bootstrapped repository, sync the project-local skills into the current Codex environment:
 
 ```bash
-zsh scripts/install-project-ai-delivery-skills.sh
+zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh
 ```

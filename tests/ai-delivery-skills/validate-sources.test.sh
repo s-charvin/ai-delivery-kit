@@ -9,4 +9,21 @@ else
   ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 fi
 
-zsh "$ROOT/scripts/validate-project-ai-delivery-skills.sh"
+resolve_project_asset_path() {
+  local relative_path=$1
+  local candidate
+
+  for candidate in "$ROOT/$relative_path" "$ROOT/.ai-delivery/$relative_path"; do
+    if [[ -f "$candidate" ]]; then
+      print -- "$candidate"
+      return 0
+    fi
+  done
+
+  print -u2 -- "[validate-sources-test] Missing managed asset: $relative_path"
+  exit 1
+}
+
+VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delivery-skills.sh")
+
+zsh "$VALIDATE_SCRIPT"

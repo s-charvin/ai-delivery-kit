@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd)
+ROOT=""
 
 TARGET_REPO=""
 PROJECT_ID=""
@@ -17,7 +17,7 @@ Usage:
 
 What it does:
   - copies the project-local ai-delivery skills into the target repository
-  - copies the helper scripts and onboarding guide into the target repository
+  - copies the helper scripts, verification tests, and onboarding guide under .ai-delivery/
   - seeds the minimal .ai-delivery/ directory contract if files are missing
 
 Modes:
@@ -29,6 +29,27 @@ EOF
 fail() {
   print -u2 -- "[bootstrap-ai-delivery-project] $1"
   exit 1
+}
+
+resolve_repo_root() {
+  local candidate
+
+  for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
+    candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
+    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  done
+
+  if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
+    if [[ -d "$candidate/.codex/skills/ai-delivery" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  fi
+
+  fail "Unable to resolve repository root from $SCRIPT_DIR"
 }
 
 abs_dir() {
@@ -74,6 +95,36 @@ seed_file_if_missing() {
   : > "$target_file"
 }
 
+remove_managed_file_if_exists() {
+  local target_file=$1
+  local current_dir
+
+  [[ -e "$target_file" ]] || return 0
+
+  /bin/rm -f -- "$target_file"
+
+  current_dir=${target_file:h}
+  while [[ "$current_dir" != "$TARGET_REPO" ]]; do
+    /bin/rmdir -- "$current_dir" 2>/dev/null || break
+    current_dir=${current_dir:h}
+  done
+}
+
+resolve_source_managed_asset_path() {
+  local root_relative=$1
+  local ai_delivery_relative=$2
+  local candidate
+
+  for candidate in "$ROOT/$root_relative" "$ROOT/.ai-delivery/$ai_delivery_relative"; do
+    if [[ -e "$candidate" ]]; then
+      print -r -- "$candidate"
+      return 0
+    fi
+  done
+
+  fail "Missing source managed asset: $root_relative"
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --target-repo)
@@ -109,7 +160,19 @@ done
 [[ -n "$TARGET_REPO" ]] || fail "You must provide --target-repo"
 [[ "$MODE" == "bootstrap" || "$MODE" == "sync" ]] || fail "Unsupported mode: $MODE"
 
+ROOT=$(resolve_repo_root)
 TARGET_REPO=$(abs_dir "$TARGET_REPO")
+TARGET_AI_DELIVERY_ROOT="$TARGET_REPO/.ai-delivery"
+TARGET_MANAGED_SCRIPT_ROOT="$TARGET_AI_DELIVERY_ROOT/scripts"
+TARGET_MANAGED_TEST_ROOT="$TARGET_AI_DELIVERY_ROOT/tests/ai-delivery-skills"
+TARGET_MANAGED_DOC_ROOT="$TARGET_AI_DELIVERY_ROOT/docs/guides"
+SOURCE_BOOTSTRAP_SCRIPT=$(resolve_source_managed_asset_path "scripts/bootstrap-ai-delivery-project.sh" "scripts/bootstrap-ai-delivery-project.sh")
+SOURCE_SYNC_SCRIPT=$(resolve_source_managed_asset_path "scripts/sync-ai-delivery-project-assets.sh" "scripts/sync-ai-delivery-project-assets.sh")
+SOURCE_INSTALL_SCRIPT=$(resolve_source_managed_asset_path "scripts/install-project-ai-delivery-skills.sh" "scripts/install-project-ai-delivery-skills.sh")
+SOURCE_VALIDATE_SCRIPT=$(resolve_source_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh" "scripts/validate-project-ai-delivery-skills.sh")
+SOURCE_VALIDATE_TEST=$(resolve_source_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh" "tests/ai-delivery-skills/validate-sources.test.sh")
+SOURCE_BOOTSTRAP_TEST=$(resolve_source_managed_asset_path "tests/ai-delivery-skills/bootstrap-project.test.sh" "tests/ai-delivery-skills/bootstrap-project.test.sh")
+SOURCE_ONBOARDING_GUIDE=$(resolve_source_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md" "docs/guides/ai-delivery-any-repo-onboarding.md")
 
 if [[ -z "$PROJECT_ID" ]]; then
   PROJECT_ID=$(slugify "${TARGET_REPO:t}")
@@ -121,6 +184,16 @@ UPDATED_BY="bootstrap-ai-delivery-project"
 MANAGED_PATHS=(
   "$TARGET_REPO/.codex/skills/ai-delivery"
   "$TARGET_REPO/.codex/skills/README.md"
+  "$TARGET_MANAGED_SCRIPT_ROOT/bootstrap-ai-delivery-project.sh"
+  "$TARGET_MANAGED_SCRIPT_ROOT/sync-ai-delivery-project-assets.sh"
+  "$TARGET_MANAGED_SCRIPT_ROOT/install-project-ai-delivery-skills.sh"
+  "$TARGET_MANAGED_SCRIPT_ROOT/validate-project-ai-delivery-skills.sh"
+  "$TARGET_MANAGED_TEST_ROOT/validate-sources.test.sh"
+  "$TARGET_MANAGED_TEST_ROOT/bootstrap-project.test.sh"
+  "$TARGET_MANAGED_DOC_ROOT/ai-delivery-any-repo-onboarding.md"
+)
+
+LEGACY_MANAGED_PATHS=(
   "$TARGET_REPO/scripts/bootstrap-ai-delivery-project.sh"
   "$TARGET_REPO/scripts/sync-ai-delivery-project-assets.sh"
   "$TARGET_REPO/scripts/install-project-ai-delivery-skills.sh"
@@ -131,7 +204,7 @@ MANAGED_PATHS=(
 )
 
 if [[ "$MODE" == "bootstrap" ]]; then
-  for path in "${MANAGED_PATHS[@]}"; do
+  for path in "${MANAGED_PATHS[@]}" "${LEGACY_MANAGED_PATHS[@]}"; do
     if [[ -e "$path" ]]; then
       fail "Managed asset already exists: $path. Use --mode sync to refresh an existing repository."
     fi
@@ -140,11 +213,11 @@ fi
 
 /bin/mkdir -p -- \
   "$TARGET_REPO/.codex/skills" \
-  "$TARGET_REPO/scripts" \
-  "$TARGET_REPO/tests/ai-delivery-skills" \
-  "$TARGET_REPO/docs/guides" \
   "$TARGET_REPO/.ai-delivery/requirements" \
   "$TARGET_REPO/.ai-delivery/figma-cache" \
+  "$TARGET_MANAGED_SCRIPT_ROOT" \
+  "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills" \
+  "$TARGET_MANAGED_DOC_ROOT" \
   "$TARGET_REPO/.ai-delivery/logs/sessions" \
   "$TARGET_REPO/.ai-delivery/logs/subagents" \
   "$TARGET_REPO/.ai-delivery/meta" \
@@ -152,21 +225,25 @@ fi
 
 copy_managed_tree "$ROOT/.codex/skills/ai-delivery" "$TARGET_REPO/.codex/skills/ai-delivery"
 copy_managed_file "$ROOT/.codex/skills/README.md" "$TARGET_REPO/.codex/skills/README.md"
-copy_managed_file "$ROOT/scripts/bootstrap-ai-delivery-project.sh" "$TARGET_REPO/scripts/bootstrap-ai-delivery-project.sh"
-copy_managed_file "$ROOT/scripts/sync-ai-delivery-project-assets.sh" "$TARGET_REPO/scripts/sync-ai-delivery-project-assets.sh"
-copy_managed_file "$ROOT/scripts/install-project-ai-delivery-skills.sh" "$TARGET_REPO/scripts/install-project-ai-delivery-skills.sh"
-copy_managed_file "$ROOT/scripts/validate-project-ai-delivery-skills.sh" "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh"
-copy_managed_file "$ROOT/tests/ai-delivery-skills/validate-sources.test.sh" "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh"
-copy_managed_file "$ROOT/tests/ai-delivery-skills/bootstrap-project.test.sh" "$TARGET_REPO/tests/ai-delivery-skills/bootstrap-project.test.sh"
-copy_managed_file "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md"
+copy_managed_file "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_MANAGED_SCRIPT_ROOT/bootstrap-ai-delivery-project.sh"
+copy_managed_file "$SOURCE_SYNC_SCRIPT" "$TARGET_MANAGED_SCRIPT_ROOT/sync-ai-delivery-project-assets.sh"
+copy_managed_file "$SOURCE_INSTALL_SCRIPT" "$TARGET_MANAGED_SCRIPT_ROOT/install-project-ai-delivery-skills.sh"
+copy_managed_file "$SOURCE_VALIDATE_SCRIPT" "$TARGET_MANAGED_SCRIPT_ROOT/validate-project-ai-delivery-skills.sh"
+copy_managed_file "$SOURCE_VALIDATE_TEST" "$TARGET_MANAGED_TEST_ROOT/validate-sources.test.sh"
+copy_managed_file "$SOURCE_BOOTSTRAP_TEST" "$TARGET_MANAGED_TEST_ROOT/bootstrap-project.test.sh"
+copy_managed_file "$SOURCE_ONBOARDING_GUIDE" "$TARGET_MANAGED_DOC_ROOT/ai-delivery-any-repo-onboarding.md"
+
+for legacy_path in "${LEGACY_MANAGED_PATHS[@]}"; do
+  remove_managed_file_if_exists "$legacy_path"
+done
 
 /bin/chmod +x \
-  "$TARGET_REPO/scripts/bootstrap-ai-delivery-project.sh" \
-  "$TARGET_REPO/scripts/sync-ai-delivery-project-assets.sh" \
-  "$TARGET_REPO/scripts/install-project-ai-delivery-skills.sh" \
-  "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" \
-  "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" \
-  "$TARGET_REPO/tests/ai-delivery-skills/bootstrap-project.test.sh"
+  "$TARGET_MANAGED_SCRIPT_ROOT/bootstrap-ai-delivery-project.sh" \
+  "$TARGET_MANAGED_SCRIPT_ROOT/sync-ai-delivery-project-assets.sh" \
+  "$TARGET_MANAGED_SCRIPT_ROOT/install-project-ai-delivery-skills.sh" \
+  "$TARGET_MANAGED_SCRIPT_ROOT/validate-project-ai-delivery-skills.sh" \
+  "$TARGET_MANAGED_TEST_ROOT/validate-sources.test.sh" \
+  "$TARGET_MANAGED_TEST_ROOT/bootstrap-project.test.sh"
 
 seed_file_if_missing "$TARGET_REPO/.ai-delivery/.gitkeep"
 seed_file_if_missing "$TARGET_REPO/.ai-delivery/requirements/.gitkeep"
@@ -300,5 +377,5 @@ print -- "Managed AI Delivery assets copied into $TARGET_REPO"
 print -- "Next steps:"
 print -- "  1. cd $TARGET_REPO"
 print -- "  2. specify init --here --ai codex --ai-skills --script sh"
-print -- "  3. zsh scripts/install-project-ai-delivery-skills.sh"
-print -- "  4. zsh scripts/validate-project-ai-delivery-skills.sh"
+print -- "  3. zsh .ai-delivery/scripts/install-project-ai-delivery-skills.sh"
+print -- "  4. zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
