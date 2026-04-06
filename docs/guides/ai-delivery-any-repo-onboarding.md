@@ -18,6 +18,7 @@
 注意：
 
 - 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
+- 参考仓库里的 source skill 则位于 `.agents/skills/ai-delivery/`。
 - 一旦 bootstrap 到目标仓库，这 3 个 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
 
 ## 这套架构的职责边界
@@ -46,17 +47,17 @@ cd <reference-repo-root>
 zsh scripts/bootstrap-ai-delivery-project.sh \
   --target-repo <target-repo-root> \
   --project-id <project-id> \
-  --main-branch main-dev
+  --main-branch main
 ```
 
 例子：
 
 ```bash
-cd /Users/charvin/Projects/spec-dev/Codex
+cd /Users/xxx/Projects/delivery-dev
 zsh scripts/bootstrap-ai-delivery-project.sh \
-  --target-repo /Users/charvin/Projects/my-app \
+  --target-repo /Users/xxx/Projects/my-app \
   --project-id my-app \
-  --main-branch main-dev
+  --main-branch main
 ```
 
 这一步会把下面这些内容落进目标仓库：
@@ -91,7 +92,7 @@ git --version
 
 `Python` 需要 `3.11+`。
 
-推荐先安装稳定版本：
+安装：
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
@@ -144,10 +145,6 @@ zsh scripts/install-admin-support-skill.sh
 这样就能在 Codex 里使用：
 
 - `$ai-delivery-admin-support`
-
-## 当前初始化原则
-
-当前设计只关注新项目的一键初始化，不再额外设计“老项目升级同步脚本”这条链路。
 
 ## 目标仓库最小目录契约
 

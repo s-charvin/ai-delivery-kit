@@ -53,7 +53,7 @@
 
 - `skills/` 目录只用于存放 admin support skill
 - 3 个业务开发 skill 不在此项目中维护
-- 3 个业务开发 skill 应随业务项目放置，建议位于 `<project-root>/.codex/skills/ai-delivery/`
+- 3 个业务开发 skill 应随业务项目放置，建议直接位于 `<project-root>/.agents/skills/`
 
 ## Responsibilities By Layer
 

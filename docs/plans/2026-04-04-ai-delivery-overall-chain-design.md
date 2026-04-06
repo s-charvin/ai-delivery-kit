@@ -95,7 +95,7 @@
 这 3 个 skill 是业务项目本地资产，用于直接支撑需求开发流程，建议放在：
 
 ```text
-<project-root>/.codex/skills/ai-delivery/
+<project-root>/.agents/skills/
 ```
 
 `ai-delivery-admin` 不拥有这 3 个业务开发 skill。

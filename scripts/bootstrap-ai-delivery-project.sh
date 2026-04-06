@@ -30,14 +30,14 @@ resolve_repo_root() {
 
   for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
     candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
-    if [[ -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
   done
 
   if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
@@ -160,9 +160,9 @@ done
   "$TARGET_REPO/.ai-delivery/meta" \
   "$TARGET_REPO/.ai-delivery/runtime"
 
-copy_managed_tree "$ROOT/.codex/skills/ai-delivery/requirement-breakdown" "$TARGET_SKILLS_ROOT/requirement-breakdown"
-copy_managed_tree "$ROOT/.codex/skills/ai-delivery/ui-requirement-mapping" "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
-copy_managed_tree "$ROOT/.codex/skills/ai-delivery/ui-interaction-design" "$TARGET_SKILLS_ROOT/ui-interaction-design"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/requirement-breakdown" "$TARGET_SKILLS_ROOT/requirement-breakdown"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-requirement-mapping" "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-interaction-design" "$TARGET_SKILLS_ROOT/ui-interaction-design"
 copy_managed_file "$ROOT/scripts/validate-project-ai-delivery-skills.sh" "$TARGET_VALIDATE_SCRIPT"
 copy_managed_file "$ROOT/tests/ai-delivery-skills/validate-sources.test.sh" "$TARGET_TEST_ROOT/validate-sources.test.sh"
 copy_managed_file "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" "$TARGET_DOC_ROOT/ai-delivery-any-repo-onboarding.md"

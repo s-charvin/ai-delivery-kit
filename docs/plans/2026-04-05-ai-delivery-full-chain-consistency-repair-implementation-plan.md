@@ -187,10 +187,10 @@ The following checks passed during this audit:
 
 **Files:**
 - Modify: `/Users/charvin/Projects/ai-delivery-admin/server/src/services/bootstrap-service.ts`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/SKILL.md`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/SKILL.md`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/SKILL.md`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/README.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/SKILL.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/SKILL.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/SKILL.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/README.md`
 - Modify: `/Users/charvin/Projects/Codex/docs/plans/2026-04-04-ai-delivery-overall-chain-design.md`
 - Modify: `/Users/charvin/Projects/Codex/docs/plans/2026-04-04-ai-delivery-admin-system-design.md`
 - Test: `/Users/charvin/Projects/ai-delivery-admin/tests/server/requirement-bootstrap.test.ts`

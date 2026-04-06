@@ -16,14 +16,14 @@ resolve_repo_root() {
 
   for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
     candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
-    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
   done
 
   if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
@@ -107,14 +107,24 @@ validate_markdown_links() {
 
 resolve_managed_asset_path() {
   local relative_path=$1
-  local candidate
+  local candidate=""
 
-  for candidate in "$ROOT/$relative_path" "$ROOT/.ai-delivery/$relative_path"; do
-    if [[ -e "$candidate" ]]; then
-      print -r -- "$candidate"
-      return 0
-    fi
-  done
+  case "$SKILL_LAYOUT" in
+    source)
+      candidate="$ROOT/$relative_path"
+      ;;
+    bootstrapped)
+      candidate="$ROOT/.ai-delivery/$relative_path"
+      ;;
+    *)
+      fail "Unknown skill layout while resolving managed asset: $SKILL_LAYOUT"
+      ;;
+  esac
+
+  if [[ -e "$candidate" ]]; then
+    print -r -- "$candidate"
+    return 0
+  fi
 
   fail "Missing managed asset: $relative_path"
 }
@@ -272,9 +282,9 @@ ROOT=$(resolve_repo_root)
 if [[ -d "$ROOT/.agents/skills/requirement-breakdown" ]]; then
   SKILL_LAYOUT="bootstrapped"
   SKILL_ROOT="$ROOT/.agents/skills"
-elif [[ -d "$ROOT/.codex/skills/ai-delivery/requirement-breakdown" ]]; then
+elif [[ -d "$ROOT/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
   SKILL_LAYOUT="source"
-  SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
+  SKILL_ROOT="$ROOT/.agents/skills/ai-delivery"
 else
   fail "Unable to detect project-local skill layout under $ROOT"
 fi

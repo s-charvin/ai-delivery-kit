@@ -77,7 +77,7 @@ Role:
 - stores requirement packages, Figma evidence cache, runtime state, blockers, worktree state, logs, and traceability records
 - acts as the project-local source of truth for the AI delivery workflow
 
-### 3. Business Project: `.codex/skills/ai-delivery/`
+### 3. Business Project: `.agents/skills/`
 
 Role:
 
@@ -257,7 +257,7 @@ Key responsibilities:
 <project-root>/
 ├── .specify/
 ├── .ai-delivery/
-├── .codex/skills/ai-delivery/
+├── .agents/skills/
 └── docs/plans/
 ```
 
@@ -639,7 +639,7 @@ The workflow must not require a second hidden store outside `.ai-delivery/`.
 The workflow-skill home is:
 
 ```text
-<project-root>/.codex/skills/ai-delivery/
+<project-root>/.agents/skills/
 ```
 
 This location owns:

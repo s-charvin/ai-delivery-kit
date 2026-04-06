@@ -37,6 +37,12 @@ trap cleanup EXIT
 
 mkdir -p "$TARGET_REPO"
 git -C "$TARGET_REPO" init -q
+mkdir -p "$TARGET_REPO/docs/guides"
+cat > "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" <<'EOF'
+# stale root onboarding guide
+
+This file intentionally does not describe the bootstrapped flattened skill layout.
+EOF
 
 zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
   --target-repo "$TARGET_REPO" \
@@ -67,7 +73,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ ! -e "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh" ]]
 [[ ! -e "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ ! -e "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" ]]
-[[ ! -e "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
+grep -Fq 'stale root onboarding guide' "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md"
 
 grep -Fq '"project_id": "demo-project"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"

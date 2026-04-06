@@ -2,7 +2,7 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Implement the three project-local AI-delivery workflow skills inside `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/` so requirement breakdown, UI requirement mapping, and UI interaction design can be executed consistently against the host project's `.ai-delivery/` data contracts.
+**Goal:** Implement the three project-local AI-delivery workflow skills inside `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/` so requirement breakdown, UI requirement mapping, and UI interaction design can be executed consistently against the host project's `.ai-delivery/` data contracts.
 
 **Architecture:** Keep all workflow-skill source of truth inside the business project. This execution plan owns only the three project-local skill packages plus their shared references, templates, validators, and local install or sync scripts. It may consume the admin system's governed support surfaces when available, but it does not implement the admin support skill, the MCP server, or the `ai-delivery-admin` application itself.
 
@@ -63,12 +63,12 @@ Before implementation starts:
 
 **Files:**
 - Verify: `/Users/charvin/Projects/Codex/.ai-delivery/**`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/README.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/references/.gitkeep`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/templates/.gitkeep`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/.gitkeep`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/.gitkeep`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/.gitkeep`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/README.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/references/.gitkeep`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/templates/.gitkeep`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/.gitkeep`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/.gitkeep`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/.gitkeep`
 - Create: `/Users/charvin/Projects/Codex/tests/ai-delivery-skills/.gitkeep`
 
 **Step 1: Verify the project-local data contract still parses**
@@ -87,11 +87,11 @@ Run:
 
 ```bash
 mkdir -p \
-  /Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/references \
-  /Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/templates \
-  /Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/references \
-  /Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/references \
-  /Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/references \
+  /Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/references \
+  /Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/templates \
+  /Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/references \
+  /Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/references \
+  /Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/references \
   /Users/charvin/Projects/Codex/tests/ai-delivery-skills
 ```
 
@@ -111,7 +111,7 @@ The project-local README must say that:
 Run:
 
 ```bash
-find /Users/charvin/Projects/Codex/.codex/skills/ai-delivery -maxdepth 3 -print | sort
+find /Users/charvin/Projects/Codex/.agents/skills/ai-delivery -maxdepth 3 -print | sort
 ```
 
 Expected: only the planned roots and placeholder files appear
@@ -119,19 +119,19 @@ Expected: only the planned roots and placeholder files appear
 **Step 5: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills tests/ai-delivery-skills
+git -C /Users/charvin/Projects/Codex add .agents/skills tests/ai-delivery-skills
 git -C /Users/charvin/Projects/Codex commit -m "chore: scaffold project-local ai-delivery skill roots"
 ```
 
 ### Task 2: Add Shared References, Templates, And Skill Validation Tooling
 
 **Files:**
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/references/dual-truth-rules.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/references/blocker-catalog.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/references/logging-checklist.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/templates/requirement-slice-template.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/templates/figma-mapping-template.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/templates/interaction-design-template.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/references/dual-truth-rules.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/references/blocker-catalog.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/references/logging-checklist.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/templates/requirement-slice-template.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/templates/figma-mapping-template.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/templates/interaction-design-template.md`
 - Create: `/Users/charvin/Projects/Codex/scripts/validate-project-ai-delivery-skills.sh`
 - Create: `/Users/charvin/Projects/Codex/tests/ai-delivery-skills/validate-sources.test.sh`
 
@@ -185,16 +185,16 @@ Expected: PASS
 **Step 6: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills scripts tests/ai-delivery-skills
+git -C /Users/charvin/Projects/Codex add .agents/skills scripts tests/ai-delivery-skills
 git -C /Users/charvin/Projects/Codex commit -m "feat: add shared project-local skill references"
 ```
 
 ### Task 3: Implement The Project-Local `requirement-breakdown` Skill Package
 
 **Files:**
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/SKILL.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/references/checklist.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/requirement-breakdown/references/subreq-readme-template.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/SKILL.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/references/checklist.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/requirement-breakdown/references/subreq-readme-template.md`
 - Modify: `/Users/charvin/Projects/Codex/scripts/validate-project-ai-delivery-skills.sh`
 
 **Step 1: Write the skill contract test expectations**
@@ -229,16 +229,16 @@ Expected: PASS
 **Step 4: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills scripts
+git -C /Users/charvin/Projects/Codex add .agents/skills scripts
 git -C /Users/charvin/Projects/Codex commit -m "feat: add project-local requirement breakdown skill"
 ```
 
 ### Task 4: Implement The Project-Local `ui-requirement-mapping` Skill Package
 
 **Files:**
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/SKILL.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/references/figma-fetch-order.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-requirement-mapping/references/mapping-checklist.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/SKILL.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/references/figma-fetch-order.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-requirement-mapping/references/mapping-checklist.md`
 - Modify: `/Users/charvin/Projects/Codex/scripts/validate-project-ai-delivery-skills.sh`
 
 **Step 1: Extend the validator expectations**
@@ -273,16 +273,16 @@ Expected: PASS
 **Step 4: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills scripts
+git -C /Users/charvin/Projects/Codex add .agents/skills scripts
 git -C /Users/charvin/Projects/Codex commit -m "feat: add project-local ui requirement mapping skill"
 ```
 
 ### Task 5: Implement The Project-Local `ui-interaction-design` Skill Package
 
 **Files:**
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/SKILL.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/references/allowed-assumptions.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/ui-interaction-design/references/state-checklist.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/SKILL.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/references/allowed-assumptions.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/ui-interaction-design/references/state-checklist.md`
 - Modify: `/Users/charvin/Projects/Codex/scripts/validate-project-ai-delivery-skills.sh`
 
 **Step 1: Extend the validator expectations**
@@ -318,7 +318,7 @@ Expected: PASS
 **Step 4: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills scripts tests/ai-delivery-skills
+git -C /Users/charvin/Projects/Codex add .agents/skills scripts tests/ai-delivery-skills
 git -C /Users/charvin/Projects/Codex commit -m "feat: add project-local interaction design skill"
 ```
 
@@ -326,8 +326,8 @@ git -C /Users/charvin/Projects/Codex commit -m "feat: add project-local interact
 
 **Files:**
 - Create: `/Users/charvin/Projects/Codex/scripts/install-project-ai-delivery-skills.sh`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/README.md`
-- Create: `/Users/charvin/Projects/Codex/.codex/skills/README.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/README.md`
+- Create: `/Users/charvin/Projects/Codex/.agents/skills/README.md`
 
 **Step 1: Write the project-local install or sync script**
 
@@ -356,7 +356,7 @@ Expected: all commands pass
 **Step 4: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .codex/skills scripts tests/ai-delivery-skills
+git -C /Users/charvin/Projects/Codex add .agents/skills scripts tests/ai-delivery-skills
 git -C /Users/charvin/Projects/Codex commit -m "docs: finalize project-local ai-delivery skills"
 ```
 
@@ -364,7 +364,7 @@ git -C /Users/charvin/Projects/Codex commit -m "docs: finalize project-local ai-
 
 After this plan is implemented and verified:
 
-- the business project owns the three project-local workflow skills under `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/`
+- the business project owns the three project-local workflow skills under `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/`
 - those skills can create and update `.ai-delivery/` artifacts during requirement development while keeping artifact truth in the business project
 - governed logging, status mutation, blocker handling, and MCP operations remain the responsibility of the separate `ai-delivery-admin` execution track
 - future feature-development sessions can use the project-local skills together with the admin support surfaces without changing the core architecture

@@ -2,9 +2,9 @@
 
 This repository carries a vendorable set of project-local AI delivery workflow skills under:
 
-- `.codex/skills/ai-delivery/requirement-breakdown`
-- `.codex/skills/ai-delivery/ui-requirement-mapping`
-- `.codex/skills/ai-delivery/ui-interaction-design`
+- `.agents/skills/ai-delivery/requirement-breakdown`
+- `.agents/skills/ai-delivery/ui-requirement-mapping`
+- `.agents/skills/ai-delivery/ui-interaction-design`
 
 These are business-project skills. They operate on `.ai-delivery/` inside whichever host repository owns them.
 

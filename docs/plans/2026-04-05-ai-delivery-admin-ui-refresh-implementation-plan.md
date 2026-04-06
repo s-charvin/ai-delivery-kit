@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the existing server API and page data flow intact while replacing the web shell and primary surfaces with Mantine components. Add Markdown/JSON preview behavior inside the artifact editor, then harden the project-local interaction skill and validation contract so the interaction-design guidance is local, governed, and testable.
 
-**Tech Stack:** React 19, Vite, Vitest, Mantine, react-markdown, remark-gfm, project-local skill sources under `Codex/.codex/skills/ai-delivery`
+**Tech Stack:** React 19, Vite, Vitest, Mantine, react-markdown, remark-gfm, project-local skill sources under `Codex/.agents/skills/ai-delivery`
 
 ---
 
@@ -146,9 +146,9 @@ Keep existing headings and control labels stable so regressions are minimized.
 ### Task 7: Update the project-local interaction skill and references
 
 **Files:**
-- Modify: `/Users/charvin/Projects/spec-dev/Codex/.codex/skills/ai-delivery/ui-interaction-design/SKILL.md`
-- Modify: `/Users/charvin/Projects/spec-dev/Codex/.codex/skills/ai-delivery/ui-interaction-design/references/interaction-quality-guidelines.md`
-- Modify: `/Users/charvin/Projects/spec-dev/Codex/.codex/skills/ai-delivery/ui-interaction-design/references/allowed-assumptions.md`
+- Modify: `/Users/charvin/Projects/spec-dev/Codex/.agents/skills/ai-delivery/ui-interaction-design/SKILL.md`
+- Modify: `/Users/charvin/Projects/spec-dev/Codex/.agents/skills/ai-delivery/ui-interaction-design/references/interaction-quality-guidelines.md`
+- Modify: `/Users/charvin/Projects/spec-dev/Codex/.agents/skills/ai-delivery/ui-interaction-design/references/allowed-assumptions.md`
 
 **Step 1: Add the local-contract language**
 

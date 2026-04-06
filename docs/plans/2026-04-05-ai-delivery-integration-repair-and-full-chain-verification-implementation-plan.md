@@ -438,7 +438,7 @@ git -C /Users/charvin/Projects/ai-delivery-admin commit -m "feat: expose figma c
 **Files:**
 - Modify: `/Users/charvin/Projects/ai-delivery-admin/README.md`
 - Modify: `/Users/charvin/Projects/ai-delivery-admin/mcp-server/README.md`
-- Modify: `/Users/charvin/Projects/Codex/.codex/skills/ai-delivery/common/README.md`
+- Modify: `/Users/charvin/Projects/Codex/.agents/skills/ai-delivery/common/README.md`
 - Create: `/Users/charvin/Projects/ai-delivery-admin/tests/server/full-chain-repair-smoke.test.ts`
 
 **Step 1: Write the failing smoke test**
@@ -500,7 +500,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-git -C /Users/charvin/Projects/Codex add .specify .ai-delivery .codex/skills scripts tests/ai-delivery-contracts
+git -C /Users/charvin/Projects/Codex add .specify .ai-delivery .agents/skills scripts tests/ai-delivery-contracts
 git -C /Users/charvin/Projects/Codex commit -m "docs: finalize full-chain repair fixtures and contracts"
 
 git -C /Users/charvin/Projects/ai-delivery-admin add README.md mcp-server/README.md server web adapters shared tests

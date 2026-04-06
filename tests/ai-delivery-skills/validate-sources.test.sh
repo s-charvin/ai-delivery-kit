@@ -9,6 +9,9 @@ else
   ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 fi
 
+MANAGED_ASSET_ROOT=""
+SKILL_ROOT=""
+
 fail() {
   print -u2 -- "[validate-sources-test] $1"
   exit 1
@@ -16,14 +19,12 @@ fail() {
 
 resolve_project_asset_path() {
   local relative_path=$1
-  local candidate
+  local candidate="$MANAGED_ASSET_ROOT/$relative_path"
 
-  for candidate in "$ROOT/$relative_path" "$ROOT/.ai-delivery/$relative_path"; do
-    if [[ -f "$candidate" ]]; then
-      print -- "$candidate"
-      return 0
-    fi
-  done
+  if [[ -f "$candidate" ]]; then
+    print -- "$candidate"
+    return 0
+  fi
 
   fail "Missing managed asset: $relative_path"
 }
@@ -40,15 +41,22 @@ require_not_contains() {
   fi
 }
 
-VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delivery-skills.sh")
-
-if [[ -d "$ROOT/.agents/skills" ]]; then
-  SKILL_ROOT="$ROOT/.agents/skills"
+if [[ -d "$ROOT/.agents/skills/ai-delivery" ]]; then
+  MANAGED_ASSET_ROOT="$ROOT"
+  SKILL_ROOT="$ROOT/.agents/skills/ai-delivery"
 else
-  SKILL_ROOT="$ROOT/.codex/skills/ai-delivery"
+  MANAGED_ASSET_ROOT="$ROOT/.ai-delivery"
+  SKILL_ROOT="$ROOT/.agents/skills"
 fi
 
+VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delivery-skills.sh")
+
 zsh "$VALIDATE_SCRIPT"
+
+[[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
+if [[ "$ROOT" == "/Users/charvin/Projects/spec-dev/Codex" ]]; then
+  [[ ! -e "$ROOT/.codex/skills" ]] || fail "Source skill root should not remain under .codex/skills"
+fi
 
 require_file "$SKILL_ROOT/requirement-breakdown/references/dual-truth-rules.md"
 require_file "$SKILL_ROOT/requirement-breakdown/references/blocker-catalog.md"
