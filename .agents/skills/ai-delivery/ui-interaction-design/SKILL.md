@@ -23,6 +23,7 @@ This is a project-local skill with built-in interaction-design guidance. Do not 
 - Do not overwrite `figma-mapping.md` or `traceability.json` because an interaction contract prefers a different design.
 - Do not delete later-stage bridge or Spec Kit references when they already exist.
 - Do not hand-edit blocked states to look recovered.
+- Do not wait for request or response field finality to finish interaction design.
 
 If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, and trusted design evidence without changing business meaning, stop and escalate instead of filling the gap by intuition.
 
@@ -86,6 +87,7 @@ If a source or artifact is missing:
 - If `traceability.json` is missing or inconsistent with the visible mapping truth, repair or escalate that governed contract before claiming `interaction_ready`.
 - If only micro-interaction detail is missing, continue and record `assumed_micro_interaction`.
 - If the missing detail changes business meaning, stop and block instead of assuming.
+- Treat missing or partial API material as implementation-adjacent context unless it changes user-visible behavior.
 
 ## Output Goal
 
@@ -204,6 +206,7 @@ Use these principles to improve interaction quality without crossing into redesi
 - Do not rewrite `figma-mapping.md` from memory.
 - Do not clear or replace `traceability.json`, including existing bridge fields such as `api_contract_mapping` and `spec_kit_refs`.
 - If interaction analysis reveals a mapping or visual-truth gap, record it in `decisions.md` and hand the issue back to `ui-requirement-mapping` or block it, rather than silently fixing the mapping in prose.
+- If API details are still incomplete, preserve the user-visible interaction contract and record only the late-binding or implementation risk that remains.
 
 ### 6. Handle state and blockers conservatively
 

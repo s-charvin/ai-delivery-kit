@@ -151,11 +151,14 @@ validate_managed_contract() {
   local bootstrap_script=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
+  local validate_policy_test
   validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
+  validate_policy_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/api-nonblocking-policy.test.sh")
   onboarding_guide=$(resolve_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md")
 
   require_file "$validate_script"
   require_file "$validate_test"
+  require_file "$validate_policy_test"
   require_file "$onboarding_guide"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then

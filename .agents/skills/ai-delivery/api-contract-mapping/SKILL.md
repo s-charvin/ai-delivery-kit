@@ -1,6 +1,6 @@
 ---
 name: api-contract-mapping
-description: Use when a sub-requirement has governed breakdown artifacts and must be mapped to Swagger, OpenAPI, or other client-facing API contract materials before or alongside UI mapping.
+description: Use when a sub-requirement has governed breakdown artifacts and any available Swagger, OpenAPI, or other client-facing API contract material should be recorded as optional frontend context or implementation-adjacent mapping.
 ---
 
 # API Contract Mapping
@@ -11,7 +11,9 @@ Project-local workflow skill for binding a governed sub-requirement slice to ver
 
 Use this skill after `requirement-breakdown` when a sub-requirement package already exists under `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/`. This stage writes `api-contract-mapping.md`, updates `traceability.json.api_contract_mapping` in place, and preserves the governed artifact contract created upstream instead of inventing a parallel contract store.
 
-This skill is optional in the workflow only when trustworthy API contract materials were not provided. If Swagger, OpenAPI, or an exported client-facing interface contract is provided, this skill is the governed place to map it. If API contract materials arrive late, rerun this skill rather than stuffing late API findings into UI or interaction artifacts.
+This skill is not an early-stage frontend gate. Missing or partial API contract material does not block early frontend stages by default. Use it to capture what is known, what is missing, which frontend reservation points exist, and which implementation risks or late revalidation signals should be carried forward.
+
+If Swagger, OpenAPI, or an exported client-facing interface contract is provided, this skill is the governed place to map it. If API contract materials arrive late, rerun this skill rather than stuffing late API findings into UI or interaction artifacts.
 
 ## Hard Boundary
 
@@ -22,15 +24,16 @@ This skill is optional in the workflow only when trustworthy API contract materi
 - Do not overwrite non-API traceability fields owned by other stages.
 - Do not delete later-stage artifacts such as `figma-mapping.md` or `interaction-design.md`.
 - Do not hand-edit blocked states to look recovered.
+- Do not treat ordinary API incompleteness as a blocker for requirement breakdown, UI mapping, or interaction design.
 
-If trustworthy client-facing contract evidence cannot be obtained for the requested scope, stop and report that this stage cannot complete safely.
+If trustworthy client-facing contract evidence cannot be obtained for the requested scope, do not invent it. Record the absence or incompleteness factually and keep early frontend stages moving unless the missing truth would make the current stage materially wrong.
 
 ## Use This Skill For
 
 - Mapping `requirement-slice.md` to Swagger or OpenAPI materials
 - Producing `api-contract-mapping.md`
 - Updating `traceability.json.api_contract_mapping` with governed API mapping facts
-- Surfacing missing client-facing contracts, field gaps, and requirement or API conflicts
+- Surfacing missing client-facing contracts, field gaps, frontend reservation points, implementation risks, and requirement or API conflicts
 - Triggering governed `downstream_revalidation` when late API truth can affect UI mapping or interaction design
 
 ## Do Not Use This Skill For
@@ -78,11 +81,11 @@ Also match the governed artifact shapes already established under `.ai-delivery/
 If a source or artifact is missing:
 
 - If `requirement-slice.md` is missing or still too ambiguous, stop and hand the work back to `requirement-breakdown`.
-- If the user asked for API mapping but no trustworthy client-facing API contract source exists, block on `blocked_missing_api_contract`.
+- If no trustworthy client-facing API contract source exists yet, complete the stage with a factual placeholder and set `traceability.json.api_contract_mapping.status` to `not_provided` unless the current requested output would become misleading without contract-backed API truth.
 - If `traceability.json` is missing in a legacy folder, repair only the current governed contract and record that repair in `decisions.md`; do not invent a different JSON shape.
-- If multiple Swagger, OpenAPI, or exported API sources disagree on client-facing truth, block on `blocked_api_contract_conflict`.
-- If Requirement truth and API contract truth disagree, block on `blocked_requirement_api_conflict`.
-- If the source cannot be parsed or verified safely, block on `blocked_verification_failure`.
+- If multiple Swagger, OpenAPI, or exported API sources disagree on client-facing truth, block only when that disagreement changes current-stage conclusions.
+- If Requirement truth and API contract truth disagree, block only when that disagreement changes user-visible behavior or would make current-stage output materially wrong.
+- If the source cannot be parsed or verified safely, record the limitation and use `blocked_verification_failure` only when the current requested output depends on that verification.
 
 ## Output Goal
 
@@ -91,7 +94,7 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 - a source-backed `api-contract-mapping.md`
 - an updated `traceability.json.api_contract_mapping` subtree with status, source refs, operation refs, field gaps, requirement conflicts, verification timing, and `downstream_revalidation`
 - existing non-API traceability fields such as `requirement_refs`, `figma_nodes`, `spec_kit_refs`, and bridge context
-- explicit missing contracts, field gaps, and requirement or API conflicts
+- explicit known gaps, frontend reservation points, implementation risks, missing contracts, field gaps, and requirement or API conflicts
 
 ## Default Output Paths
 
@@ -121,29 +124,30 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 
 - Map only requirement points that are actually represented in the API contract.
 - Record exact operation refs such as method, path, and operation id when they exist.
-- If the API partially covers the requirement, record the gap as `Field Gaps` or `Missing Contracts` instead of guessing.
+- If the API partially covers the requirement, record the gap as `Field Gaps`, `Missing Contracts`, or `Frontend Reservation Points` instead of guessing.
 - If one API operation serves multiple requirement points, record that shared coverage explicitly.
+- Distinguish `known_gap`, `integration_risk`, and `blocking_conflict` instead of collapsing every unknown into a blocker.
 
 ### 4. Write `api-contract-mapping.md`
 
 - Use `templates/api-contract-mapping-template.md`.
-- Include input sources, requirement-to-API mapping, API-to-requirement mapping, request fields, response fields, error semantics, missing contracts, field gaps, requirement or API conflicts, and traceability update notes.
-- Keep the document factual and contract-scoped. Do not turn backend implementation uncertainty into invented client-facing gaps.
+- Include input sources, requirement-to-API mapping, API-to-requirement mapping, request fields, response fields, error semantics, frontend development posture, frontend reservation points, known gaps, integration risks, requirement or API conflicts, and traceability update notes.
+- Keep the document factual and contract-scoped. Do not turn backend implementation uncertainty into invented client-facing truth or into an unnecessary blocker.
 
 ### 5. Update `traceability.json` in place
 
 - Treat `traceability.json` as a first-class governed artifact, not a disposable sidecar.
 - Update only `api_contract_mapping.*`.
 - Preserve existing top-level fields such as `requirement_refs`, `figma_nodes`, `mapping_type`, `confidence`, `conflicts`, `last_verified_at`, and `spec_kit_refs`.
-- Use `downstream_revalidation` when late or changed API truth can affect `ui-requirement-mapping` or `ui-interaction-design`.
+- Use `downstream_revalidation` only when late or changed API truth can affect `ui-requirement-mapping` or `ui-interaction-design` in a user-visible way.
 
 ### 6. Handle state and blockers conservatively
 
 - Use `not_provided` only when the stage was skipped because no API contract source was supplied.
-- Use `pending` when sources exist but mapping work is not yet complete.
-- Use `mapped` only when the API mapping is backed by trustworthy client-facing contract evidence.
-- Use `needs_revalidation` when new or changed API truth can affect downstream UI or interaction artifacts.
-- Use `blocked_missing_api_contract`, `blocked_api_contract_conflict`, `blocked_requirement_api_conflict`, or `blocked_verification_failure` when the next safe step cannot proceed.
+- Use `pending` when sources exist but mapping work is not yet complete, or when partial evidence has been inventoried and more detail can arrive later.
+- Use `mapped` when the currently available API mapping is backed by trustworthy client-facing contract evidence for the relevant known scope. Do not wait for backend finality.
+- Use `needs_revalidation` when new or changed API truth can affect downstream UI or interaction artifacts in a user-visible way.
+- Use `blocked_missing_api_contract`, `blocked_api_contract_conflict`, `blocked_requirement_api_conflict`, or `blocked_verification_failure` only when the next safe step would otherwise become misleading or materially wrong.
 - When a blocker is entered, preserve the recovery intent in `status.json` with `blocked_from_status` and `resume_target_status`; do not bypass recovery through manual edits.
 - Use the separate admin support surface only for governed logging, blocker handling, status transitions, and artifact updates when available.
 
@@ -156,10 +160,10 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 
 ## State And Blocker Rules
 
-- If the user asked for API mapping but no trustworthy client-facing API contract source exists, block on `blocked_missing_api_contract`.
-- If multiple contract sources disagree on client-facing truth, block on `blocked_api_contract_conflict`.
-- If Requirement and API truth disagree, block on `blocked_requirement_api_conflict`.
-- If the source cannot be parsed or verified safely, block on `blocked_verification_failure`.
+- If no trustworthy client-facing API contract source exists yet, use `not_provided` by default and continue early frontend stages unless the current requested output would become misleading.
+- If multiple contract sources disagree on client-facing truth, block on `blocked_api_contract_conflict` only when the disagreement changes current-stage conclusions.
+- If Requirement and API truth disagree, block on `blocked_requirement_api_conflict` only when the disagreement changes user-visible behavior or invalidates the current artifact.
+- If the source cannot be parsed or verified safely, use `blocked_verification_failure` only when the current stage depends on that verification.
 - Only mark the API contract mapping stage as `mapped` when the result is source-backed and conflict-reviewed.
 
 ## Hard Constraints
@@ -179,8 +183,10 @@ Every API mapping must include:
 - API-to-requirement mapping
 - request and response field coverage
 - error semantics
-- missing contracts
-- field gaps
+- frontend development posture
+- frontend reservation points
+- known gaps
+- integration risks
 - requirement or API conflicts
 - traceability update notes
 
@@ -205,8 +211,9 @@ Before reporting completion, confirm all of the following:
 
 Expected behavior:
 
-- stop the stage
-- block on `blocked_missing_api_contract`
+- write a factual placeholder
+- keep `status` at `not_provided`
+- document frontend reservation points and implementation risks when relevant
 - do not invent endpoints from requirement prose
 
 ### Scenario 2: The requirement is clear, but the API contract is partial
@@ -214,7 +221,7 @@ Expected behavior:
 Expected behavior:
 
 - write the available operation mapping
-- record `Field Gaps` or `Missing Contracts`
+- record `Field Gaps`, `Known Gaps`, or `Frontend Reservation Points`
 - do not treat partial coverage as full coverage
 
 ### Scenario 3: API contract arrives after UI mapping already happened
@@ -222,14 +229,14 @@ Expected behavior:
 Expected behavior:
 
 - update `traceability.json.api_contract_mapping`
-- set `needs_revalidation` when the new API truth can affect UI or interaction artifacts
+- set `needs_revalidation` only when the new API truth can affect UI or interaction artifacts in a user-visible way
 - do not overwrite Figma or interaction fields
 
 ### Scenario 4: Two contract exports disagree
 
 Expected behavior:
 
-- block on `blocked_api_contract_conflict`
+- block on `blocked_api_contract_conflict` only if the disagreement changes current-stage conclusions
 - capture the conflicting evidence
 - stop short of `mapped`
 

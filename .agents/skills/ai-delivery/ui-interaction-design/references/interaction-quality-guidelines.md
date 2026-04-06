@@ -4,6 +4,8 @@ Use this reference when `ui-interaction-design` needs better bounded defaults fo
 
 This guidance is intentionally project-local. Agents should use this repository reference directly and should not assume any external skill is installed for interaction design.
 
+If API payload shape or request semantics are incomplete, do not let that erase a valid user-visible interaction contract. Record the late-binding or implementation risk separately unless backend truth changes visible states, visible flows, or visible feedback rules.
+
 ## Purposeful Motion
 
 Motion should only be used when it improves understanding.

@@ -25,6 +25,7 @@ The primary evidence for this stage is structured node data from Figma MCP or co
 - Do not replace `traceability.json` with a sidecar note or a second bridge artifact.
 - Do not delete `interaction-design.md` or other later-stage artifacts when re-running mapping.
 - Do not hand-edit blocked states to look recovered.
+- Do not require complete API mapping to finish UI mapping.
 
 If trustworthy structured design evidence cannot be obtained for required UI from Figma MCP or a compatible provider MCP, stop and report that this stage cannot complete safely.
 
@@ -174,6 +175,7 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 - Update only the mapping-owned facts such as `figma_nodes`, `mapping_type`, `confidence`, and `last_verified_at`.
 - If the existing governed contract already carries provider refs or evidence refs, preserve and update them in place.
 - If the contract does not yet carry provider-aware evidence fields, do not invent an incompatible JSON shape; keep the full provider and raw-artifact evidence trail in `figma-mapping.md` and `decisions.md`.
+- Treat missing or partial API context as implementation-adjacent support detail unless it changes user-visible structure or flow.
 
 ### 6. Handle state and blockers conservatively
 

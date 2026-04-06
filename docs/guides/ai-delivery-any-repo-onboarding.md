@@ -37,6 +37,12 @@
 
 `Requirement Intake -> Requirement Breakdown -> API Contract Mapping (optional but governed) -> UI Mapping -> Interaction Design -> Spec Kit -> Superpowers Execution`
 
+说明：
+
+- API contract mapping 是受治理的，但不是前期前端工作的默认门禁。
+- 缺 Swagger / OpenAPI、缺字段、字段未定、接口晚到，在这套链路里都默认视为后续集成上下文。
+- 只有当 API 已知事实会让当前需求、UI 或交互结论失真时，才应该 blocker 或触发重校验。
+
 ## 一次性接入任意仓库
 
 ### Step 1: 从参考仓库 bootstrap 目标仓库
@@ -246,6 +252,7 @@ bootstrap 完成后，目标仓库至少具备：
 - 只更新 traceability.json.api_contract_mapping
 - 如果接口协议晚到，可以在 UI mapping 前补跑，或者与 UI mapping 并行补跑
 - 如果接口结论会影响 UI 或 interaction，则写入 downstream_revalidation
+- 普通缺字段、缺错误码、缺接口、字段未定，只记录 known gaps / integration risks / reservation points，不阻塞前几个 frontend pre-dev 阶段
 - 不允许根据服务端内部实现细节脑补 client-facing contract
 ```
 

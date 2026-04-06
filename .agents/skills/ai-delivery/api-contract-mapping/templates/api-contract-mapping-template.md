@@ -63,11 +63,29 @@
 - `meaning`:
 - `requirement_basis`:
 
-## Missing Contracts
+## Frontend Development Posture
 
-- `missing_contract`:
-- `why_missing`:
+- `posture`: `ui_safe_to_proceed | interaction_safe_to_proceed | implementation_risk_only | needs_revalidation | blocking_conflict`
+- `summary`:
+- `current_stage_impact`:
+
+## Frontend Reservation Points
+
+### Reservation Item 1
+
+- `ui_or_interaction_surface`:
+- `reservation_reason`:
+- `expected_late_binding_point`:
+- `impact_level`: `known_gap | integration_risk | blocking_conflict`
+
+## Known Gaps
+
+### Known Gap Item 1
+
+- `gap`:
+- `why_open`:
 - `affected_requirement_points`:
+- `impact_level`: `known_gap | integration_risk | blocking_conflict`
 
 ## Field Gaps
 
@@ -76,6 +94,15 @@
 - `location`:
 - `gap_type`: `field_gap | semantic_gap`
 - `needed_additions`:
+- `affected_requirement_points`:
+
+## Integration Risks
+
+### Risk Item 1
+
+- `risk`:
+- `why_later_stage_only`:
+- `likely_owner`: `implementation | integration | backend-alignment`
 - `affected_requirement_points`:
 
 ## Requirement/API Conflicts
@@ -102,8 +129,8 @@
 1. `api-contract-mapping.md` is the governed human-readable API mapping contract for one sub-requirement.
 2. Only document client-facing interface truth. Do not analyze server-internal implementation.
 3. `Requirement To API Mapping` and `API To Requirement Mapping` should both be explicit so gaps and overreach are visible.
-4. If the API contract is missing fields or semantics, record them under `Field Gaps` or `Missing Contracts` instead of guessing.
-5. If Requirement and API disagree, record the issue under `Requirement/API Conflicts` and block when needed.
+4. If the API contract is missing fields or semantics, record them under `Known Gaps`, `Field Gaps`, `Frontend Reservation Points`, or `Integration Risks` instead of guessing.
+5. Missing or partial contracts do not block early frontend stages by default. Only use `Requirement/API Conflicts` for cases that make current-stage output materially wrong or require revalidation.
 6. `Traceability Update Notes` should explain what was written into `traceability.json.api_contract_mapping`.
 7. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated artifacts.
 
@@ -161,10 +188,24 @@
 - `meaning`: `Name conflict`
 - `requirement_basis`: `Open Question`
 
-## Missing Contracts
-- `missing_contract`: `No dedicated validation preview endpoint`
-- `why_missing`: `Requirement mentions disabled-save logic, but the contract does not expose additional server validation detail.`
+## Frontend Development Posture
+- `posture`: `implementation_risk_only`
+- `summary`: `Requirement, UI mapping, and interaction work can proceed, but final validation and save handling need late implementation review.`
+- `current_stage_impact`: `No early-stage blocker.`
+
+## Frontend Reservation Points
+### Reservation Item 1
+- `ui_or_interaction_surface`: `Save button loading and inline validation state`
+- `reservation_reason`: `Backend validation semantics are not fully specified yet.`
+- `expected_late_binding_point`: `Viewmodel submit handling`
+- `impact_level`: `integration_risk`
+
+## Known Gaps
+### Known Gap Item 1
+- `gap`: `No dedicated validation preview endpoint`
+- `why_open`: `Requirement mentions disabled-save logic, but the contract does not expose additional server validation detail.`
 - `affected_requirement_points`: `Save gating`
+- `impact_level`: `known_gap`
 
 ## Field Gaps
 ### Gap Item 1
@@ -172,6 +213,13 @@
 - `gap_type`: `semantic_gap`
 - `needed_additions`: `Clarify whether unchanged names return a no-op response or a validation error.`
 - `affected_requirement_points`: `Save gating`
+
+## Integration Risks
+### Risk Item 1
+- `risk`: `Submit handling may need to branch between no-op, inline validation, and retryable save failure once backend semantics settle.`
+- `why_later_stage_only`: `This affects implementation wiring more than early UI or interaction shape.`
+- `likely_owner`: `implementation`
+- `affected_requirement_points`: `Save gating; error feedback`
 
 ## Requirement/API Conflicts
 ### Conflict Item 1
@@ -185,5 +233,5 @@
 - `status`: `mapped`
 - `source_refs_handling`: `Recorded in traceability.json.api_contract_mapping.source_refs`
 - `operation_refs_handling`: `Recorded in traceability.json.api_contract_mapping.operation_refs`
-- `downstream_revalidation`: `ui-requirement-mapping, ui-interaction-design`
+- `downstream_revalidation`: `Only required if later API truth changes user-visible save or error behavior`
 ```

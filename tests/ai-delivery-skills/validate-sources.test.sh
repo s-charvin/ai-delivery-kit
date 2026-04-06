@@ -79,3 +79,5 @@ require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/api-contract-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-requirement-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-interaction-design/SKILL.md" '../common/'
+
+zsh "$SCRIPT_DIR/api-nonblocking-policy.test.sh"

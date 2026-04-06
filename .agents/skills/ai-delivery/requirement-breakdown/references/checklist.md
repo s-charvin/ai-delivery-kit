@@ -15,6 +15,7 @@
 - keep `traceability.json` as a first-class governed artifact, including existing bridge fields when the repo expects them
 - initialize `traceability.json.api_contract_mapping` as `not_provided` or `pending`
 - write `api-contract-mapping.md` as a factual placeholder for the dedicated API stage
+- do not let API incompleteness reduce a safe requirement slice
 - set `split_ready` only when the slice is safe for downstream UI mapping and preserves critical source truth through coverage, verbatim excerpts, and source-linked acceptance signals
 - verify no requirement section was silently dropped or over-compressed during splitting
 - stop on `blocked_requirement_conflict` or `blocked_missing_requirement`

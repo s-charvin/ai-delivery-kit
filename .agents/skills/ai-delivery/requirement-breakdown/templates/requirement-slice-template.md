@@ -112,6 +112,15 @@
 - `blocking_status`: `non_blocking | blocks_split_ready | blocked`
 - `related_source_ref`:
 
+## Implementation-Adjacent Notes
+
+### Item 1
+
+- `context_type`: `api_gap | integration_risk | late_binding_note`
+- `statement`:
+- `why_non_blocking_now`:
+- `expected_revisit_stage`: `api-contract-mapping | implementation | integration`
+
 ## Ambiguities And Conflicts
 
 ### Item 1
@@ -145,8 +154,9 @@
 4. `Normalized Slice Statement` may improve readability, but it cannot replace the excerpts or invent product truth.
 5. Every scope item, dependency, acceptance signal, and open question should be traceable back to a `source_ref`.
 6. `Ambiguities And Conflicts` should capture unstable or conflicting truth instead of smoothing it over.
-7. `Compression Warnings` should call out places where the slice structure may compress nuance from the top-level requirement.
-8. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated slice artifacts.
+7. Use `Implementation-Adjacent Notes` for API incompleteness that does not change requirement truth. Do not let backend gaps make a safe requirement slice look unstable.
+8. `Compression Warnings` should call out places where the slice structure may compress nuance from the top-level requirement.
+9. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated slice artifacts.
 
 ## Template Example
 
@@ -258,6 +268,13 @@
 - `why_open`: `The requirement defines retryable error but does not define partial success behavior.`
 - `blocking_status`: `non_blocking`
 - `related_source_ref`: `requirement.md#L17-L18`
+
+## Implementation-Adjacent Notes
+### Item 1
+- `context_type`: `late_binding_note`
+- `statement`: `No finalized API contract is required yet for splitting this requirement slice.`
+- `why_non_blocking_now`: `The requirement, UI, and interaction surfaces can still be described from product truth.`
+- `expected_revisit_stage`: `api-contract-mapping`
 
 ## Ambiguities And Conflicts
 ### Item 1

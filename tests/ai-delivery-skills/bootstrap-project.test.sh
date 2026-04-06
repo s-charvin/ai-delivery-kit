@@ -56,6 +56,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ -f "$TARGET_REPO/.ai-delivery/meta/project-binding.json" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/runtime/main-branch.json" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh" ]]
+[[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/references/dual-truth-rules.md" ]]

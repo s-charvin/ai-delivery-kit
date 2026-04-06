@@ -23,6 +23,7 @@ Turn approved or near-final requirement truth into a breakdown package that down
 - Do not create a second truth store outside `.ai-delivery/`.
 - Do not delete later-stage artifacts such as `figma-mapping.md` or `interaction-design.md` if they already exist.
 - Do not promote ambiguous slices to `split_ready`.
+- Do not let API incompleteness reduce a safe requirement slice.
 
 If the request is still in discovery, the requirement source is still moving, or the top-level requirement material is not yet approved enough to split safely, stop and tell the user this stage is too early.
 
@@ -81,6 +82,7 @@ If a source or artifact is missing:
 - If a missing input removes a critical business fact needed to split safely, block on `blocked_missing_requirement`.
 - If two approved requirement sources conflict, block on `blocked_requirement_conflict`.
 - If downstream materials such as Figma or API contracts are absent, do not block this stage unless the requirement truth itself depends on them.
+- Treat missing or partial API material as later integration context, not as requirement instability.
 
 ## Output Goal
 
@@ -179,7 +181,7 @@ For each sub-requirement:
 - Write `dependency.json` with explicit `depends_on` and `blocks` declarations, even when they are empty.
 - Write `status.json` with the current status plus blocked-recovery fields such as `blocked_from_status` and `resume_target_status`.
 - Seed `traceability.json` as a first-class governed artifact with requirement references, the repo's current bridge fields, and an initialized `api_contract_mapping` subtree. If the project already uses `spec_kit_refs`, keep or seed that bridge inside `traceability.json` instead of inventing a second bridge artifact.
-- Write `api-contract-mapping.md` as a governed placeholder artifact. If no API contract source was provided, record factual absence and initialize `traceability.json.api_contract_mapping.status` as `not_provided`. If API contract sources were provided but detailed mapping is deferred to the dedicated stage, initialize it as `pending`.
+- Write `api-contract-mapping.md` as a governed placeholder artifact. If no API contract source was provided, record factual absence and initialize `traceability.json.api_contract_mapping.status` as `not_provided`. If API contract sources were provided but detailed mapping is deferred to the dedicated stage, initialize it as `pending`. In both cases, keep the requirement slice focused on requirement truth, not backend completeness.
 - Write `decisions.md` with blocker evidence, bootstrap notes, governed-surface gaps, and any explicitly marked local assumptions.
 
 ### 7. Set state conservatively

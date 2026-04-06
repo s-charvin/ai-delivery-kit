@@ -13,9 +13,9 @@
 
 ## API Contract Blockers
 
-- `blocked_missing_api_contract`: the user asked for API mapping, but no trustworthy client-facing contract source is available.
-- `blocked_api_contract_conflict`: multiple Swagger, OpenAPI, or exported contract sources disagree on client-facing truth.
-- `blocked_requirement_api_conflict`: requirement truth and interface-contract truth disagree.
+- `blocked_missing_api_contract`: reserve for cases where the current requested output explicitly depends on contract-backed API truth and no trustworthy client-facing source exists. Do not use this as the default result of missing API material during early frontend stages.
+- `blocked_api_contract_conflict`: multiple Swagger, OpenAPI, or exported contract sources disagree on client-facing truth in a way that changes current-stage conclusions.
+- `blocked_requirement_api_conflict`: requirement truth and interface-contract truth disagree in a way that changes user-visible behavior or makes the current artifact materially wrong.
 
 ## Usage Rule
 

@@ -18,4 +18,5 @@
 - timing guidance
 - accessibility and input modality notes
 - explicit assumptions and escalations
+- separation between user-visible interaction truth and implementation-only API gaps
 - source labels for every non-trivial rule

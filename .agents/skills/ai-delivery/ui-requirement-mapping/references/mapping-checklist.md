@@ -11,6 +11,7 @@
 - update `traceability.json` in place
 - preserve existing API-contract mapping fields such as `api_contract_mapping`
 - preserve existing bridge fields such as `spec_kit_refs`
+- keep API incompleteness as optional context unless it changes user-visible structure or flow
 - record companion UI explicitly
 - record shared nodes explicitly
 - preserve later-stage files such as `interaction-design.md` when they already exist

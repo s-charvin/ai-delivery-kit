@@ -126,6 +126,12 @@
 - `status_reason`:
 - `next_safe_handoff`:
 
+## Implementation-Adjacent Notes
+
+- `api_posture`: `not_provided | pending | mapped | needs_revalidation`
+- `frontend_impact`: `none | known_gap | integration_risk | blocking_conflict`
+- `notes`:
+
 ---
 
 ## Template Authoring Rules
@@ -136,7 +142,8 @@
 4. `Key Verbatim Requirement Excerpts` should preserve the original wording that downstream readers would otherwise lose through summarization.
 5. Every `In Scope`, `Out Of Scope`, dependency, and acceptance item should name a `source_ref`.
 6. Use `Compression Warnings` whenever the top-level source was dense, cross-cutting, or had conditions that could be lost when simplified.
-7. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated sub-requirement artifacts.
+7. If API material is missing or partial, record it as implementation-adjacent context under `Implementation-Adjacent Notes` instead of treating it as requirement instability.
+8. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated sub-requirement artifacts.
 
 ## Template Example
 
@@ -232,4 +239,9 @@
 - `status`: `draft`
 - `status_reason`: `Core scope is clear, but save-coupling behavior is still open.`
 - `next_safe_handoff`: `Resolve the mixed-success question before promoting to split_ready.`
+
+## Implementation-Adjacent Notes
+- `api_posture`: `not_provided`
+- `frontend_impact`: `integration_risk`
+- `notes`: `Frontend requirement, UI mapping, and interaction work can proceed. Final save wiring may need adjustment when backend contract arrives.`
 ```

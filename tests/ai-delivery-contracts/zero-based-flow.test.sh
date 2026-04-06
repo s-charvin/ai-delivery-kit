@@ -68,9 +68,20 @@ require_contains "$SUBREQ_ROOT/status.json" '"blocked_from_status"'
 require_contains "$SUBREQ_ROOT/status.json" '"resume_target_status"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"spec_kit_refs"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"api_contract_mapping"'
-require_contains "$SUBREQ_ROOT/traceability.json" '"status": "mapped"'
 require_contains "$SUBREQ_ROOT/traceability.json" '".specify/fixtures/example-sr-001/spec.md"'
 require_contains "$SUBREQ_ROOT/traceability.json" '".specify/fixtures/example-sr-001/plan.md"'
 require_contains "$SUBREQ_ROOT/traceability.json" '".specify/fixtures/example-sr-001/tasks.md"'
+
+node - "$SUBREQ_ROOT/traceability.json" <<'NODE'
+const fs = require('node:fs')
+const filePath = process.argv[2]
+const data = JSON.parse(fs.readFileSync(filePath, 'utf8'))
+const status = data.api_contract_mapping?.status
+const allowed = new Set(['not_provided', 'pending', 'mapped', 'needs_revalidation'])
+
+if (!allowed.has(status)) {
+  throw new Error(`Unexpected api_contract_mapping.status in ${filePath}: ${status}`)
+}
+NODE
 
 print -- "PASS: zero-based full-chain fixture is present and bridgeable."

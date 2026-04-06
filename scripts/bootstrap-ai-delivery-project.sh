@@ -139,6 +139,7 @@ MANAGED_PATHS=(
   "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
   "$TARGET_SKILLS_ROOT/ui-interaction-design"
   "$TARGET_VALIDATE_SCRIPT"
+  "$TARGET_TEST_ROOT/api-nonblocking-policy.test.sh"
   "$TARGET_TEST_ROOT/validate-sources.test.sh"
   "$TARGET_DOC_ROOT/ai-delivery-any-repo-onboarding.md"
 )
@@ -166,11 +167,13 @@ copy_managed_tree "$ROOT/.agents/skills/ai-delivery/api-contract-mapping" "$TARG
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-requirement-mapping" "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-interaction-design" "$TARGET_SKILLS_ROOT/ui-interaction-design"
 copy_managed_file "$ROOT/scripts/validate-project-ai-delivery-skills.sh" "$TARGET_VALIDATE_SCRIPT"
+copy_managed_file "$ROOT/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" "$TARGET_TEST_ROOT/api-nonblocking-policy.test.sh"
 copy_managed_file "$ROOT/tests/ai-delivery-skills/validate-sources.test.sh" "$TARGET_TEST_ROOT/validate-sources.test.sh"
 copy_managed_file "$ROOT/docs/guides/ai-delivery-any-repo-onboarding.md" "$TARGET_DOC_ROOT/ai-delivery-any-repo-onboarding.md"
 
 /bin/chmod +x \
   "$TARGET_VALIDATE_SCRIPT" \
+  "$TARGET_TEST_ROOT/api-nonblocking-policy.test.sh" \
   "$TARGET_TEST_ROOT/validate-sources.test.sh"
 
 seed_file_if_missing "$TARGET_REPO/.ai-delivery/.gitkeep"
