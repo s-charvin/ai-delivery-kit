@@ -66,6 +66,17 @@
 - `shared_with`:
 - `artifact_refs`:
 
+## Executable Screen States
+
+### Screen State 1
+
+- `screen_state_id`:
+- `state_type`:
+- `executable_node_id`:
+- `parent_shell_node_id`:
+- `required_get_code_artifact_refs`:
+- `notes`:
+
 ## Missing Design Evidence
 
 - `requirement_point`:
@@ -85,6 +96,12 @@
 - `preserved_fields`:
 - `changed_fields`:
 - `provider_or_evidence_refs_handling`:
+
+## Mapping Readiness Verdict
+
+- `status`: `ready_for_acceptance_contract | blocked_missing_state_code | blocked_missing_visual_truth`
+- `blocking_reasons`:
+- `next_gate`: `ui-acceptance-contract | requirement-breakdown | blocked`
 
 ---
 
@@ -158,6 +175,15 @@
 - `shared_with`: `profile-settings-shell`
 - `artifact_refs`: `.ai-delivery/figma-cache/abc123/artifacts/node-profile-shell.json`
 
+## Executable Screen States
+### Screen State 1
+- `screen_state_id`: `profile-settings-edit-idle`
+- `state_type`: `idle`
+- `executable_node_id`: `987:610`
+- `parent_shell_node_id`: `987:500`
+- `required_get_code_artifact_refs`: `.ai-delivery/figma-cache/abc123/artifacts/node-profile-form-code.json`
+- `notes`: `The top-level section narrowed scope, but the executable state is the edit-form frame plus its state carrier.`
+
 ## Missing Design Evidence
 - `requirement_point`: `Retryable avatar upload failure`
 - `missing_evidence`: `No explicit error-state node was found in current structured payloads.`
@@ -174,4 +200,9 @@
 - `preserved_fields`: `requirement_refs, spec_kit_refs`
 - `changed_fields`: `figma_nodes, confidence, last_verified_at`
 - `provider_or_evidence_refs_handling`: `Provider-specific refs remain in figma-mapping.md because traceability.json does not yet define provider-aware evidence fields.`
+
+## Mapping Readiness Verdict
+- `status`: `ready_for_acceptance_contract`
+- `blocking_reasons`: `none`
+- `next_gate`: `ui-acceptance-contract`
 ```

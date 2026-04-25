@@ -5,11 +5,11 @@ description: Use when approved or near-final top-level requirement material must
 
 # Requirement Breakdown
 
-Project workflow skill for turning top-level requirement material into governed requirement and sub-requirement artifacts inside the host repository.
+Project workflow skill for turning top-level requirement material into governed requirement and sub-requirement artifacts inside the host repository, with shared foundations extracted early and delivery-slice candidates pre-seeded for downstream contract stages.
 
 ## Overview
 
-Turn approved or near-final requirement truth into a breakdown package that downstream skills can consume directly. This stage expands the intake package under `.ai-delivery/requirements/<requirement-id>/`, or bootstraps the same contract if intake is missing, without redesigning the product or inventing missing business truth.
+Turn approved or near-final requirement truth into a breakdown package that downstream skills can consume directly. This stage expands the intake package under `.ai-delivery/requirements/<requirement-id>/`, or bootstraps the same contract if intake is missing, without redesigning the product or inventing missing business truth. The goal is not only to split business boundaries, but also to pre-embed execution boundary hints such as capability profiles and delivery-slice candidates so later stages stop guessing where shared propagation or page-state work actually belongs.
 
 ## Hard Boundary
 
@@ -32,6 +32,8 @@ If the request is still in discovery, the requirement source is still moving, or
 - Expanding an approved or near-final requirement package after requirement intake
 - Splitting top-level requirement material into independently trackable sub-requirements
 - Extracting cross-cutting rules and dependency ordering before UI mapping
+- Extracting Shared Foundation and Cross-Feature Infrastructure surfaces before page-bearing modules absorb them accidentally
+- Recording delivery-slice candidates without freezing final implementation slices too early
 - Seeding governed sub-requirement artifacts such as `status.json` and `traceability.json`
 
 ## Do Not Use This Skill For
@@ -82,7 +84,6 @@ If a source or artifact is missing:
 - If a missing input removes a critical business fact needed to split safely, block on `blocked_missing_requirement`.
 - If two approved requirement sources conflict, block on `blocked_requirement_conflict`.
 - If downstream materials such as Figma or API contracts are absent, do not block this stage unless the requirement truth itself depends on them.
-- Treat missing or partial API material as later integration context, not as requirement instability.
 
 ## Output Goal
 
@@ -92,6 +93,8 @@ Produce a requirement package that downstream skills can consume without reinter
 - requirement-level summaries in `breakdown-summary.md` and `global-rules.md`
 - an acyclic `dependency-graph.json`
 - one governed folder per sub-requirement with `README.md`, `requirement-slice.md`, `dependency.json`, `status.json`, `traceability.json`, `api-contract-mapping.md`, and `decisions.md`, where `README.md` is the human-readable navigation doc and `requirement-slice.md` is the authoritative source-preserving contract
+- a source-backed Capability Profile for every sub-requirement so downstream stages can tell whether the slice is page-bearing, shared-state, integration-heavy, or infra-only
+- delivery-slice candidates recorded as hints for later synthesis, while keeping final page-state slice freezing out of this stage
 - explicit source coverage, key verbatim excerpts, dependencies, acceptance signals, open questions, compression warnings, and blocker evidence
 - first-class `traceability.json` and `status.json` contracts rather than informal notes
 
@@ -154,8 +157,15 @@ Use only these sub-requirement types:
 
 Required splitting rules:
 
+- Classify each candidate sub-requirement with a capability profile before finalizing the boundary:
+  - `contains_page_states`
+  - `contains_shared_state`
+  - `contains_integration`
+  - `contains_infra_only`
+- If one truth influences multiple pages, carriers, caches, owners, or propagation targets, extract it into `Shared Foundation` or `Cross-Feature Infrastructure` before feature modules consume it.
 - Shared foundations and shared components must be split out before the feature modules that consume them.
 - Cross-cutting rules that apply to two or more sub-requirements belong in `global-rules.md`, not in a fake feature module.
+- Record delivery-slice candidates for downstream synthesis, but do not freeze final page-state slices yet.
 - Do not over-split purely for implementation convenience.
 
 ### 4. Extract shared rules once
@@ -175,19 +185,25 @@ Required splitting rules:
 For each sub-requirement:
 
 - Write `README.md` using `references/subreq-readme-template.md`. Treat it as the human-readable navigation doc: include metadata, top-level requirement coverage, key verbatim excerpts, a source-backed sub-requirement statement, boundary, dependencies, source-linked acceptance signals, open questions, compression warnings, and current status.
-- Write `requirement-slice.md` using `templates/requirement-slice-template.md`. Treat it as the authoritative downstream contract: include exhaustive source requirement coverage, verbatim source excerpts, a normalized slice statement, scope boundary, dependency contract, acceptance signals, open questions, ambiguities or conflicts, compression warnings, and a source requirement reference index.
+- Write `README.md` and `requirement-slice.md` with a capability profile that makes page-bearing, shared-state, integration, and infra-only content explicit.
+- Write `requirement-slice.md` using `templates/requirement-slice-template.md`. Treat it as the authoritative downstream contract: include exhaustive source requirement coverage, verbatim source excerpts, a normalized slice statement, scope boundary, dependency contract, delivery-slice candidates, acceptance signals, open questions, ambiguities or conflicts, compression warnings, and a source requirement reference index.
 - Copy or quote first, then summarize. Do not let `requirement-slice.md` rely only on second-order summaries when the original top-level wording matters.
 - Do not copy template guidance sections such as `Template Authoring Rules` or `Template Example` into generated artifacts.
 - Write `dependency.json` with explicit `depends_on` and `blocks` declarations, even when they are empty.
 - Write `status.json` with the current status plus blocked-recovery fields such as `blocked_from_status` and `resume_target_status`.
-- Seed `traceability.json` as a first-class governed artifact with requirement references, the repo's current bridge fields, and an initialized `api_contract_mapping` subtree. If the project already uses `spec_kit_refs`, keep or seed that bridge inside `traceability.json` instead of inventing a second bridge artifact.
-- Write `api-contract-mapping.md` as a governed placeholder artifact. If no API contract source was provided, record factual absence and initialize `traceability.json.api_contract_mapping.status` as `not_provided`. If API contract sources were provided but detailed mapping is deferred to the dedicated stage, initialize it as `pending`. In both cases, keep the requirement slice focused on requirement truth, not backend completeness.
+- Seed `traceability.json` as a first-class governed artifact with requirement references, `source_index`, the repo's current bridge fields, an initialized `api_contract_mapping` subtree, and requirement-stage placeholders for capability profile or delivery-slice candidate handoff when the repo already expects them.
+- Write `api-contract-mapping.md` as a governed placeholder artifact. If no API contract source was provided, record factual absence and initialize `traceability.json.api_contract_mapping.status` as `missing_nonblocking`. If API contract sources were provided but detailed mapping is deferred to the dedicated stage, initialize it as `pending`.
 - Write `decisions.md` with blocker evidence, bootstrap notes, governed-surface gaps, and any explicitly marked local assumptions.
+- Grade open questions tightly:
+  - `non_blocking` only when the gap does not change boundary, acceptance, or propagation truth
+  - `blocks_acceptance_contract` when the gap would later affect default state, row composition, skeleton order, empty or search states, or other screen-contract truth
+  - `blocks_slice_synthesis` when the gap would later affect shared propagation, integration boundaries, or delivery-slice ownership
 
 ### 7. Set state conservatively
 
 - Default uncertain slices to `draft`.
-- Move a sub-requirement to `split_ready` only when the slice is specific enough for downstream UI mapping and includes complete source coverage, key verbatim excerpts, clear scope, dependencies, acceptance signals with source linkage, open questions, compression warnings when needed, and source requirement references.
+- Move a sub-requirement to `split_ready` only when the slice is specific enough for downstream UI mapping and includes complete source coverage, key verbatim excerpts, clear scope, dependencies, acceptance signals with source linkage, a capability profile, delivery-slice candidates, open questions, compression warnings when needed, and source requirement references.
+- Do not promote a slice to `split_ready` while any unresolved item is graded as `blocks_acceptance_contract` or `blocks_slice_synthesis`.
 - When a blocker is raised, record the narrowest blocker from the catalog and preserve the blocked-recovery intent in `status.json`.
 - Use the separate admin support surface for governed logging, blocker recording, or status transitions when it is available.
 
@@ -235,6 +251,8 @@ Acceptance Signals
 - Only move a sub-requirement to `split_ready` when the slice is specific enough for downstream UI mapping and already preserves its critical source truth through coverage, verbatim excerpts, and source-linked acceptance signals.
 - If the requirement source conflicts with itself or another approved requirement source, block on `blocked_requirement_conflict`.
 - If a critical business fact is missing, block on `blocked_missing_requirement`.
+- If an open question would later prevent a stable screen contract, classify it as `blocks_acceptance_contract`.
+- If an open question would later prevent stable shared-state or integration slicing, classify it as `blocks_slice_synthesis`.
 - If the boundary is still ambiguous, write the draft plus open questions and stop short of `split_ready`.
 - When a blocker is entered, preserve the recovery intent in `status.json` with `blocked_from_status` and `resume_target_status`; do not hand-edit around the recovery path later.
 
@@ -371,7 +389,8 @@ Expected behavior:
 
 - continue the breakdown if requirement truth is still sufficient
 - initialize `api-contract-mapping.md` as a factual placeholder
-- set `traceability.json.api_contract_mapping.status` to `not_provided`
+- set `traceability.json.api_contract_mapping.status` to `missing_nonblocking`
+- seed `traceability.json.source_index.requirement` with the source requirement refs and `traceability.json.source_index.api` with the non-blocking missing-contract record
 - do not invent endpoints or fields
 
 ## Handoff

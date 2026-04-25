@@ -66,5 +66,5 @@
 
 ## Traceability Update Notes
 
-- `status`: `not_provided`
+- `status`: `missing_nonblocking`
 - `downstream_revalidation`: `none`

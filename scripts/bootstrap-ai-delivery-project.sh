@@ -14,7 +14,7 @@ Usage:
   zsh scripts/bootstrap-ai-delivery-project.sh --target-repo /path/to/repo [--project-id my-project] [--main-branch main-dev]
 
 What it does:
-  - copies the four project-local workflow skills into .agents/skills/
+  - copies the governed project-local workflow skills into .agents/skills/
   - copies validation/test/onboarding assets into .ai-delivery/
   - seeds the minimal .ai-delivery/ directory contract if files are missing
 EOF
@@ -137,7 +137,9 @@ MANAGED_PATHS=(
   "$TARGET_SKILLS_ROOT/requirement-breakdown"
   "$TARGET_SKILLS_ROOT/api-contract-mapping"
   "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
+  "$TARGET_SKILLS_ROOT/ui-acceptance-contract"
   "$TARGET_SKILLS_ROOT/ui-interaction-design"
+  "$TARGET_SKILLS_ROOT/ai-delivery-orchestrator"
   "$TARGET_VALIDATE_SCRIPT"
   "$TARGET_TEST_ROOT/api-nonblocking-policy.test.sh"
   "$TARGET_TEST_ROOT/validate-sources.test.sh"
@@ -165,7 +167,9 @@ done
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/requirement-breakdown" "$TARGET_SKILLS_ROOT/requirement-breakdown"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/api-contract-mapping" "$TARGET_SKILLS_ROOT/api-contract-mapping"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-requirement-mapping" "$TARGET_SKILLS_ROOT/ui-requirement-mapping"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-acceptance-contract" "$TARGET_SKILLS_ROOT/ui-acceptance-contract"
 copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ui-interaction-design" "$TARGET_SKILLS_ROOT/ui-interaction-design"
+copy_managed_tree "$ROOT/.agents/skills/ai-delivery/ai-delivery-orchestrator" "$TARGET_SKILLS_ROOT/ai-delivery-orchestrator"
 copy_managed_file "$ROOT/scripts/validate-project-ai-delivery-skills.sh" "$TARGET_VALIDATE_SCRIPT"
 copy_managed_file "$ROOT/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" "$TARGET_TEST_ROOT/api-nonblocking-policy.test.sh"
 copy_managed_file "$ROOT/tests/ai-delivery-skills/validate-sources.test.sh" "$TARGET_TEST_ROOT/validate-sources.test.sh"
@@ -206,7 +210,72 @@ if [[ ! -f "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json" ]]; then
   "truth_policy": {
     "functional_source": "Requirement",
     "visual_source": "Figma",
+    "acceptance_source": "UIAcceptanceContract",
+    "interaction_source": "InteractionDesign",
     "conflict_behavior": "block"
+  },
+  "workflow_gates": [
+    "requirement",
+    "api_contract",
+    "ui_evidence",
+    "ui_acceptance_freeze",
+    "interaction",
+    "execution_prep",
+    "development_review",
+    "visual_acceptance_final_verification"
+  ],
+  "status_sequence": [
+    "draft",
+    "split_ready",
+    "api_mapped",
+    "figma_mapped",
+    "acceptance_frozen",
+    "interaction_ready",
+    "slices_ready",
+    "spec_ready",
+    "plan_ready",
+    "tasks_ready",
+    "in_dev",
+    "code_review_passed",
+    "visual_acceptance_passed",
+    "verified",
+    "merged"
+  ],
+  "api_contract_policy": {
+    "missing_default": "missing_nonblocking",
+    "hard_block_statuses": [
+      "blocked_api_contract_conflict",
+      "blocked_requirement_api_conflict",
+      "blocked_security_or_data_risk",
+      "blocked_verification_failure"
+    ]
+  },
+  "source_index_policy": {
+    "required_traceability_keys": [
+      "requirement",
+      "figma",
+      "api",
+      "spec_kit",
+      "pr",
+      "ci",
+      "visual",
+      "deploy",
+      "monitoring"
+    ]
+  },
+  "gate_requirements": {
+    "ui_bearing_before_spec": [
+      "acceptance_frozen"
+    ],
+    "ui_bearing_before_plan": [
+      "acceptance_frozen"
+    ],
+    "ui_bearing_before_tasks": [
+      "acceptance_frozen"
+    ],
+    "ui_bearing_before_verified_or_merge": [
+      "visual_acceptance_passed"
+    ]
   },
   "worktree_policy": {
     "require_isolated_worktree": true,
@@ -295,6 +364,28 @@ fi
 
 if [[ ! -f "$TARGET_REPO/.ai-delivery/runtime/task-board.json" ]]; then
   /bin/cat > "$TARGET_REPO/.ai-delivery/runtime/task-board.json" <<EOF
+{
+  "version": 1,
+  "items": [],
+  "updated_at": "$TIMESTAMP",
+  "updated_by": "$UPDATED_BY"
+}
+EOF
+fi
+
+if [[ ! -f "$TARGET_REPO/.ai-delivery/runtime/slice-closures.json" ]]; then
+  /bin/cat > "$TARGET_REPO/.ai-delivery/runtime/slice-closures.json" <<EOF
+{
+  "version": 1,
+  "items": [],
+  "updated_at": "$TIMESTAMP",
+  "updated_by": "$UPDATED_BY"
+}
+EOF
+fi
+
+if [[ ! -f "$TARGET_REPO/.ai-delivery/runtime/agent-sessions.json" ]]; then
+  /bin/cat > "$TARGET_REPO/.ai-delivery/runtime/agent-sessions.json" <<EOF
 {
   "version": 1,
   "items": [],

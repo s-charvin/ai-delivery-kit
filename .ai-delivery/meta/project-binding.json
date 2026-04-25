@@ -1,9 +1,9 @@
 {
   "version": 1,
-  "project_id": "codex",
-  "project_root": "/Users/charvin/Projects/Codex",
+  "project_id": "vela_app",
+  "project_root": "/Users/zuiyou/develop/flutter/vela_dev/vela_app",
   "specify_path": ".specify",
   "ai_delivery_path": ".ai-delivery",
-  "updated_at": "2026-04-04T00:00:00Z",
-  "updated_by": "system"
+  "updated_at": "2026-04-06T11:11:20Z",
+  "updated_by": "bootstrap-ai-delivery-project"
 }

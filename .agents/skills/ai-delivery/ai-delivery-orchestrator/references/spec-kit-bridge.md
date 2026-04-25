@@ -1,0 +1,23 @@
+# Spec Kit Bridge
+
+- Purpose: keep official `speckit-specify`, `speckit-plan`, and `speckit-tasks` upstream while giving them slice-scoped governed context.
+- `prepare-speckit-context` reads:
+  - `slice-contract.md`
+  - `interaction-design.md`
+  - `traceability.json`
+  - `ui-acceptance-contract.md` for UI slices
+  - `api-contract-mapping.md` when API impact exists
+- It writes one reduced context bundle:
+  - `spec-kit-input.md`
+- `spec-kit-input.md` is a transport artifact, not truth. The truth remains in `.ai-delivery`.
+- The bundle should carry:
+  - `requirement_id`
+  - `subreq_id`
+  - `slice_id`
+  - `slice_type`
+  - source artifact paths
+  - reverse traceability refs
+  - planning constraints derived from governed gates
+- Official `speckit-*` should consume `spec-kit-input.md` plus normal `.specify` templates without repo-local skill-body rewrites.
+- If source truth changes before the next Spec Kit step, regenerate `spec-kit-input.md` first.
+- Sample artifact: [contacts-friends-idle/spec-kit-input.md](examples/contacts-friends-idle/spec-kit-input.md)

@@ -52,9 +52,13 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
 [[ -d "$TARGET_REPO/.agents/skills/api-contract-mapping" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-requirement-mapping" ]]
+[[ -d "$TARGET_REPO/.agents/skills/ui-acceptance-contract" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-interaction-design" ]]
+[[ -d "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/meta/project-binding.json" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/runtime/main-branch.json" ]]
+[[ -f "$TARGET_REPO/.ai-delivery/runtime/slice-closures.json" ]]
+[[ -f "$TARGET_REPO/.ai-delivery/runtime/agent-sessions.json" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh" ]]
@@ -65,8 +69,10 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/templates/api-contract-mapping-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/templates/figma-mapping-template.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-acceptance-contract/templates/ui-acceptance-contract-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/templates/interaction-design-template.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/reconcile-rules.md" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
 [[ ! -e "$TARGET_REPO/.codex/skills/README.md" ]]
@@ -81,6 +87,8 @@ grep -Fq 'stale root onboarding guide' "$TARGET_REPO/docs/guides/ai-delivery-any
 
 grep -Fq '"project_id": "demo-project"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"
+grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"missing_nonblocking"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 
 zsh "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
 zsh "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"

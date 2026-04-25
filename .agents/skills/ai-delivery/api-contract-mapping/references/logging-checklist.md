@@ -6,7 +6,7 @@ Use this order whenever the separate admin support surface is available.
 2. append a start log for the current API contract mapping operation
 3. read current blockers, status, and `traceability.json` before mutating artifacts
 4. perform the artifact write inside `.ai-delivery/`
-5. record any status transition, blocker creation, blocker recovery, or downstream revalidation signal through the governed support surface, but do not escalate ordinary API gaps into blockers
+5. record any status transition, blocker creation, blocker recovery, or downstream revalidation signal through the governed support surface
 6. append a completion or failure log with enough detail to resume after interruption
 
 If the admin support surface is not available yet:

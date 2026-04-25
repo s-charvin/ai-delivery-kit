@@ -17,6 +17,14 @@
 - `primary_surface_or_actor`:
 - `recommended_read_order`: `README.md -> requirement-slice.md -> api-contract-mapping.md -> dependency.json -> traceability.json -> decisions.md`
 
+## Capability Profile
+
+- `contains_page_states`: `true | false`
+- `contains_shared_state`: `true | false`
+- `contains_integration`: `true | false`
+- `contains_infra_only`: `true | false`
+- `boundary_note`:
+
 ## Top-Level Requirement Coverage
 
 <!-- Map the exact top-level source fragments this sub-requirement covers. Do not collapse multiple source fragments into one vague bullet. -->
@@ -89,6 +97,17 @@
 - `why`:
 - `source_ref`:
 
+## Delivery-Slice Candidates
+
+### Candidate 1
+
+- `candidate_id`:
+- `candidate_type`: `page-state | shared-state | integration`
+- `owned_truth`:
+- `why_now`:
+- `freeze_later_at`: `ui-acceptance-contract | ui-interaction-design | n/a`
+- `source_basis`:
+
 ## Acceptance Signals With Source Linkage
 
 <!-- Every acceptance signal must point back to a concrete source fragment or quoted excerpt. -->
@@ -106,7 +125,7 @@
 
 - `question`:
 - `why_open`:
-- `blocking_status`: `non_blocking | blocks_split_ready | blocked`
+- `blocking_status`: `non_blocking | blocks_acceptance_contract | blocks_slice_synthesis | blocked`
 - `related_source_ref`:
 
 ## Compression Warnings
@@ -126,12 +145,6 @@
 - `status_reason`:
 - `next_safe_handoff`:
 
-## Implementation-Adjacent Notes
-
-- `api_posture`: `not_provided | pending | mapped | needs_revalidation`
-- `frontend_impact`: `none | known_gap | integration_risk | blocking_conflict`
-- `notes`:
-
 ---
 
 ## Template Authoring Rules
@@ -142,8 +155,7 @@
 4. `Key Verbatim Requirement Excerpts` should preserve the original wording that downstream readers would otherwise lose through summarization.
 5. Every `In Scope`, `Out Of Scope`, dependency, and acceptance item should name a `source_ref`.
 6. Use `Compression Warnings` whenever the top-level source was dense, cross-cutting, or had conditions that could be lost when simplified.
-7. If API material is missing or partial, record it as implementation-adjacent context under `Implementation-Adjacent Notes` instead of treating it as requirement instability.
-8. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated sub-requirement artifacts.
+7. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated sub-requirement artifacts.
 
 ## Template Example
 
@@ -162,6 +174,13 @@
 - `one_line_purpose`: `Covers editing profile name and avatar from the Profile Settings screen.`
 - `primary_surface_or_actor`: `Signed-in user on Profile Settings`
 - `recommended_read_order`: `README.md -> requirement-slice.md -> api-contract-mapping.md -> dependency.json -> traceability.json -> decisions.md`
+
+## Capability Profile
+- `contains_page_states`: `true`
+- `contains_shared_state`: `false`
+- `contains_integration`: `false`
+- `contains_infra_only`: `false`
+- `boundary_note`: `Owns one page-bearing requirement surface and defers cross-surface propagation.`
 
 ## Top-Level Requirement Coverage
 ### Coverage Item 1
@@ -214,6 +233,15 @@
 - `why`: `UI mapping should bind to the same field and save-state contract.`
 - `source_ref`: `requirement.md#L12-L16`
 
+## Delivery-Slice Candidates
+### Candidate 1
+- `candidate_id`: `profile-settings-edit-idle`
+- `candidate_type`: `page-state`
+- `owned_truth`: `The Profile Settings edit screen in its default editable state.`
+- `why_now`: `The requirement already stabilizes the screen actor and field group.`
+- `freeze_later_at`: `ui-acceptance-contract`
+- `source_basis`: `Excerpt 1`
+
 ## Acceptance Signals With Source Linkage
 ### Signal 1
 - `signal`: `Save remains disabled when there is no valid change.`
@@ -225,7 +253,7 @@
 ### Question 1
 - `question`: `Does avatar upload failure preserve the edited profile name in the form?`
 - `why_open`: `The top-level requirement defines edit capability but does not define mixed success and failure behavior.`
-- `blocking_status`: `non_blocking`
+- `blocking_status`: `blocks_slice_synthesis`
 - `related_source_ref`: `requirement.md#L12-L18`
 
 ## Compression Warnings
@@ -239,9 +267,4 @@
 - `status`: `draft`
 - `status_reason`: `Core scope is clear, but save-coupling behavior is still open.`
 - `next_safe_handoff`: `Resolve the mixed-success question before promoting to split_ready.`
-
-## Implementation-Adjacent Notes
-- `api_posture`: `not_provided`
-- `frontend_impact`: `integration_risk`
-- `notes`: `Frontend requirement, UI mapping, and interaction work can proceed. Final save wiring may need adjustment when backend contract arrives.`
 ```

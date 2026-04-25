@@ -1,0 +1,24 @@
+# Spec Kit Binding
+
+- Purpose: audit official Spec Kit outputs and bind them back into `.ai-delivery` without rewriting official `spec.md`, `plan.md`, or `tasks.md`.
+- After each official Spec Kit step, run a local bind pass against:
+  - `spec-kit-input.md`
+  - generated `spec.md`, `plan.md`, or `tasks.md`
+  - `traceability.json`
+  - `status.json`
+- The bind pass writes:
+  - `spec-kit-binding.json`
+- The bind pass also updates:
+  - `traceability.json.spec_kit_refs`
+  - the slice `status.json` to `spec_ready`, `plan_ready`, or `tasks_ready`
+- `spec-kit-binding.json` should record:
+  - the input bundle path
+  - bound output paths
+  - which readiness status was advanced
+  - whether traceability sync succeeded
+  - audit metadata such as timestamp and actor
+- Use the bind checklist before writing `traceability.json.spec_kit_refs`:
+  - [Spec Kit Bind Checklist](spec-kit-bind-checklist.md)
+- If the official output conflicts with governed upstream truth, do not bind it. Open a blocker or rerun from `prepare-speckit-context`.
+- Reverse traceability belongs in `.ai-delivery` sidecars, not in patched official Spec Kit instructions.
+- Sample artifact: [contacts-friends-idle/spec-kit-binding.json](examples/contacts-friends-idle/spec-kit-binding.json)

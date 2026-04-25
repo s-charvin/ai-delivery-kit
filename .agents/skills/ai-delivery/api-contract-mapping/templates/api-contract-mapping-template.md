@@ -63,29 +63,24 @@
 - `meaning`:
 - `requirement_basis`:
 
-## Frontend Development Posture
+## Action Side Effects Matrix
 
-- `posture`: `ui_safe_to_proceed | interaction_safe_to_proceed | implementation_risk_only | needs_revalidation | blocking_conflict`
-- `summary`:
-- `current_stage_impact`:
+### Action Item 1
 
-## Frontend Reservation Points
+- `action_id`:
+- `operation_ref`:
+- `request_contract`:
+- `success_return_semantics`:
+- `error_semantics`:
+- `local_state_effect`:
+- `upstream_downstream_propagation_expectation`:
+- `revalidation_targets`:
 
-### Reservation Item 1
+## Missing Contracts
 
-- `ui_or_interaction_surface`:
-- `reservation_reason`:
-- `expected_late_binding_point`:
-- `impact_level`: `known_gap | integration_risk | blocking_conflict`
-
-## Known Gaps
-
-### Known Gap Item 1
-
-- `gap`:
-- `why_open`:
+- `missing_contract`:
+- `why_missing`:
 - `affected_requirement_points`:
-- `impact_level`: `known_gap | integration_risk | blocking_conflict`
 
 ## Field Gaps
 
@@ -94,15 +89,6 @@
 - `location`:
 - `gap_type`: `field_gap | semantic_gap`
 - `needed_additions`:
-- `affected_requirement_points`:
-
-## Integration Risks
-
-### Risk Item 1
-
-- `risk`:
-- `why_later_stage_only`:
-- `likely_owner`: `implementation | integration | backend-alignment`
 - `affected_requirement_points`:
 
 ## Requirement/API Conflicts
@@ -119,7 +105,11 @@
 
 - `status`:
 - `source_refs_handling`:
+- `source_index_update`: `traceability.json.source_index.api`
 - `operation_refs_handling`:
+- `action_side_effects`:
+- `propagation_targets`:
+- `client_semantic_gaps`:
 - `downstream_revalidation`:
 
 ---
@@ -129,8 +119,8 @@
 1. `api-contract-mapping.md` is the governed human-readable API mapping contract for one sub-requirement.
 2. Only document client-facing interface truth. Do not analyze server-internal implementation.
 3. `Requirement To API Mapping` and `API To Requirement Mapping` should both be explicit so gaps and overreach are visible.
-4. If the API contract is missing fields or semantics, record them under `Known Gaps`, `Field Gaps`, `Frontend Reservation Points`, or `Integration Risks` instead of guessing.
-5. Missing or partial contracts do not block early frontend stages by default. Only use `Requirement/API Conflicts` for cases that make current-stage output materially wrong or require revalidation.
+4. If the API contract is missing fields or semantics, record them under `Field Gaps` or `Missing Contracts` instead of guessing.
+5. If Requirement and API disagree, record the issue under `Requirement/API Conflicts` and block when needed.
 6. `Traceability Update Notes` should explain what was written into `traceability.json.api_contract_mapping`.
 7. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated artifacts.
 
@@ -188,24 +178,21 @@
 - `meaning`: `Name conflict`
 - `requirement_basis`: `Open Question`
 
-## Frontend Development Posture
-- `posture`: `implementation_risk_only`
-- `summary`: `Requirement, UI mapping, and interaction work can proceed, but final validation and save handling need late implementation review.`
-- `current_stage_impact`: `No early-stage blocker.`
+## Action Side Effects Matrix
+### Action Item 1
+- `action_id`: `rename-project-submit`
+- `operation_ref`: `PATCH /projects/{projectId}`
+- `request_contract`: `body.name must carry the proposed project name.`
+- `success_return_semantics`: `Response returns the updated project name payload.`
+- `error_semantics`: `409 represents name conflict; generic 500 remains under-specified for retry UX.`
+- `local_state_effect`: `Current project name should update in the active screen state after success.`
+- `upstream_downstream_propagation_expectation`: `Any other carrier showing the project title should refresh or consume the updated payload.`
+- `revalidation_targets`: `ui-interaction-design, delivery-slice synthesis`
 
-## Frontend Reservation Points
-### Reservation Item 1
-- `ui_or_interaction_surface`: `Save button loading and inline validation state`
-- `reservation_reason`: `Backend validation semantics are not fully specified yet.`
-- `expected_late_binding_point`: `Viewmodel submit handling`
-- `impact_level`: `integration_risk`
-
-## Known Gaps
-### Known Gap Item 1
-- `gap`: `No dedicated validation preview endpoint`
-- `why_open`: `Requirement mentions disabled-save logic, but the contract does not expose additional server validation detail.`
+## Missing Contracts
+- `missing_contract`: `No dedicated validation preview endpoint`
+- `why_missing`: `Requirement mentions disabled-save logic, but the contract does not expose additional server validation detail.`
 - `affected_requirement_points`: `Save gating`
-- `impact_level`: `known_gap`
 
 ## Field Gaps
 ### Gap Item 1
@@ -213,13 +200,6 @@
 - `gap_type`: `semantic_gap`
 - `needed_additions`: `Clarify whether unchanged names return a no-op response or a validation error.`
 - `affected_requirement_points`: `Save gating`
-
-## Integration Risks
-### Risk Item 1
-- `risk`: `Submit handling may need to branch between no-op, inline validation, and retryable save failure once backend semantics settle.`
-- `why_later_stage_only`: `This affects implementation wiring more than early UI or interaction shape.`
-- `likely_owner`: `implementation`
-- `affected_requirement_points`: `Save gating; error feedback`
 
 ## Requirement/API Conflicts
 ### Conflict Item 1
@@ -230,8 +210,12 @@
 - `resolution_path`: `Block and request clarified client-facing error semantics.`
 
 ## Traceability Update Notes
-- `status`: `mapped`
+- `status`: `mapped | missing_nonblocking | pending | needs_revalidation | blocked_*`
 - `source_refs_handling`: `Recorded in traceability.json.api_contract_mapping.source_refs`
+- `source_index_update`: `Recorded under traceability.json.source_index.api`
 - `operation_refs_handling`: `Recorded in traceability.json.api_contract_mapping.operation_refs`
-- `downstream_revalidation`: `Only required if later API truth changes user-visible save or error behavior`
+- `action_side_effects`: `Recorded under traceability.json.api_contract_mapping.action_side_effects`
+- `propagation_targets`: `Recorded under traceability.json.api_contract_mapping.propagation_targets`
+- `client_semantic_gaps`: `Recorded under traceability.json.api_contract_mapping.client_semantic_gaps`
+- `downstream_revalidation`: `ui-requirement-mapping, ui-interaction-design`
 ```

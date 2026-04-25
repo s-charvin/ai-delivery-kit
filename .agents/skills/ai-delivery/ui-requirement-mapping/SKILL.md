@@ -5,13 +5,13 @@ description: Use when a sub-requirement already has governed breakdown artifacts
 
 # UI Requirement Mapping
 
-Project-local workflow skill for binding a governed sub-requirement slice to verified structured design evidence and producing a 1:1 visual implementation contract inside the host repository.
+Project-local workflow skill for binding a governed sub-requirement slice to verified structured design evidence and producing an evidence-backed mapping handoff inside the host repository.
 
 ## Overview
 
 Use this skill after `requirement-breakdown` when a sub-requirement package already exists under `.ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/`. If `api-contract-mapping.md` already exists, treat it as upstream interface-contract context. This stage writes `figma-mapping.md`, updates `traceability.json` in place, and preserves the governed artifact contract created upstream instead of inventing a parallel mapping store.
 
-The primary evidence for this stage is structured node data from Figma MCP or compatible provider MCPs such as TemPad Dev, F2C, or other trustworthy structured design providers. Screenshots or previews may be cached as optional supporting context, but they are never the completion gate and never override structured node payloads.
+The primary evidence for this stage is structured node data from Figma MCP or compatible provider MCPs such as TemPad Dev, F2C, or other trustworthy structured design providers. Screenshots or previews may be cached as optional supporting context, but they are never the completion gate and never override structured node payloads. This stage stops at evidence binding plus executable-state discovery; it does not freeze the immutable screen contract, which belongs to the later `ui-acceptance-contract` gate.
 
 ## Hard Boundary
 
@@ -21,6 +21,8 @@ The primary evidence for this stage is structured node data from Figma MCP or co
 - Do not treat screenshots, previews, or prose-only descriptions as sufficient mapping evidence.
 - Do not use a top-level `SECTION` as the final executable node target.
 - Do not mark mapping complete without trustworthy structured node payloads for each claimed executable node.
+- Do not treat `SECTION` plus `get_structure` as sufficient for final screen-state truth when `get_code` for the final state is still missing.
+- Do not use this stage to freeze the final screen contract, layout order, or reuse policy.
 - Do not flatten provider payloads into a lossy replacement schema inside the cache.
 - Do not replace `traceability.json` with a sidecar note or a second bridge artifact.
 - Do not delete `interaction-design.md` or other later-stage artifacts when re-running mapping.
@@ -33,6 +35,7 @@ If trustworthy structured design evidence cannot be obtained for required UI fro
 
 - Binding a `requirement-slice.md` to structured design evidence from Figma MCP or compatible provider MCPs
 - Producing `figma-mapping.md` before interaction design or implementation
+- Producing `Executable Screen States` and a `Mapping Readiness Verdict` for the acceptance-freeze handoff
 - Updating `traceability.json` with verified nodes, confidence, conflicts, verification timing, and provider-aware evidence references when the governed contract already supports them
 - Surfacing visual blockers, shared nodes, and companion UI without silently broadening business scope
 
@@ -102,6 +105,7 @@ Produce a mapping package that downstream interaction design or implementation c
 - explicit `required UI`, `companion UI`, `shared nodes`, `missing design evidence`, `conflicts`, and structured verification evidence
 - the raw evidence boundary between `.ai-delivery/figma-cache/` and the governed sub-requirement artifacts
 - a unified provider-aware cache in which each cached artifact preserves compatibility metadata plus `provider`, `artifact_type`, and `raw_payload` without flattening the provider response
+- a handoff that names Executable Screen States and a Mapping Readiness Verdict before `ui-acceptance-contract`
 
 ## Default Output Paths
 
@@ -154,17 +158,21 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 
 ### 3. Select executable nodes conservatively
 
+- Use `SECTION` only as an entry point when the requested scope is large.
+- Use `get_structure` to narrow hierarchy and locate candidate carriers.
 - Converge to real executable frames, components, or regions from structured provider payloads.
 - Do not use a top-level `SECTION` as the final executable node target.
+- Require `get_code` for every final frame or state that will later feed `ui-acceptance-contract`.
 - Do not complete mapping from node names alone, screenshots alone, or prose-only summaries.
 - Record `companion UI` explicitly when fidelity requires neighboring UI to ship together.
 - Record `shared nodes` explicitly when one visual carrier belongs to multiple sub-requirements.
 - If two structured providers disagree on hierarchy, node identity, or executable boundaries, record the conflict and block when it cannot be resolved safely.
+- Missing default state, search state, row composition, parent shell, key state carrier, or asset form must be treated as blocked evidence rather than a soft note.
 
 ### 4. Write `figma-mapping.md`
 
 - Use `templates/figma-mapping-template.md`.
-- Include design target, structured evidence sources, requirement-to-node mapping, node-to-requirement mapping, required UI, companion UI, shared nodes, missing design evidence, conflicts, and traceability update notes.
+- Include design target, structured evidence sources, requirement-to-node mapping, node-to-requirement mapping, required UI, companion UI, shared nodes, Executable Screen States, missing design evidence, conflicts, Mapping Readiness Verdict, and traceability update notes.
 - For each mapped requirement point, record the provider, node ids, raw artifact refs, and why the structured payload is sufficient.
 - Keep missing design evidence factual. Missing design evidence is not permission to invent visual truth.
 
@@ -175,14 +183,15 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 - Update only the mapping-owned facts such as `figma_nodes`, `mapping_type`, `confidence`, and `last_verified_at`.
 - If the existing governed contract already carries provider refs or evidence refs, preserve and update them in place.
 - If the contract does not yet carry provider-aware evidence fields, do not invent an incompatible JSON shape; keep the full provider and raw-artifact evidence trail in `figma-mapping.md` and `decisions.md`.
-- Treat missing or partial API context as implementation-adjacent support detail unless it changes user-visible structure or flow.
 
 ### 6. Handle state and blockers conservatively
 
-- Only advance the sub-requirement toward `figma_mapped` when the mapping is backed by trustworthy structured node payloads, conflict-reviewed, and executable-node-based.
+- Only advance the sub-requirement toward `figma_mapped` when the mapping is backed by trustworthy structured node payloads, conflict-reviewed, executable-node-based, and ready for acceptance handoff.
 - If Figma-derived structured evidence conflicts with itself across providers or retrieval passes, block on `blocked_figma_conflict`.
 - If the requirement defines functionality but the design evidence has no visual carrier, block on `blocked_missing_design`.
 - If design evidence shows a visual or state that the requirement explicitly excludes, block on `blocked_requirement_figma_conflict`.
+- If a final screen state is identified but its state-level `get_code` evidence is missing, block on `blocked_missing_state_code`.
+- If required visual truth such as default, search, row composition, parent shell, or asset form is missing, block on `blocked_missing_visual_truth`.
 - If a required executable node cannot be validated from trustworthy structured evidence, block on `blocked_verification_failure`.
 - Optional screenshots or previews never upgrade low-confidence structured evidence into `figma_mapped`.
 - When a blocker is entered, preserve the recovery intent in `status.json` with `blocked_from_status` and `resume_target_status`; do not bypass recovery with manual edits.
@@ -203,7 +212,9 @@ Keep `raw_payload` in the provider's native response shape. Preserve the compati
 - If design evidence shows a visual or state that the requirement explicitly excludes, block on `blocked_requirement_figma_conflict`.
 - If Figma-derived structured evidence conflicts with itself across providers or retrieval passes, block on `blocked_figma_conflict`.
 - If a required executable node cannot be validated from trustworthy structured evidence, block on `blocked_verification_failure`.
-- Only advance the sub-requirement toward `figma_mapped` when the mapping is structure-backed and conflict-reviewed.
+- If a final state lacks `get_code`, block on `blocked_missing_state_code`.
+- If key visual truth needed for screen acceptance is missing, block on `blocked_missing_visual_truth`.
+- Only advance the sub-requirement toward `figma_mapped` when the mapping is structure-backed, conflict-reviewed, and `ready_for_acceptance_contract`.
 
 ## Hard Constraints
 
@@ -225,8 +236,10 @@ Every mapping must include:
 - required UI list
 - companion UI list
 - shared nodes list
+- Executable Screen States
 - missing design evidence list
 - conflict list
+- Mapping Readiness Verdict
 - structured verification evidence with provider, artifact refs, node ids, and evidence basis
 
 If governed admin support is unavailable, keep artifact truth in `.ai-delivery/` and document the missing governed dependency locally without inventing an alternate truth store.
@@ -241,7 +254,9 @@ Before reporting completion, confirm all of the following:
 - [ ] No mapping was completed from node names alone, screenshots alone, or prose-only descriptions
 - [ ] Provider and raw artifact refs are recorded for every mapped executable node
 - [ ] No top-level `SECTION` was used as the final executable target
+- [ ] Every final executable screen state has `get_code` evidence recorded
 - [ ] `companion UI` and `shared nodes` are explicitly recorded when present
+- [ ] `Mapping Readiness Verdict` is `ready_for_acceptance_contract` or blocked with explicit reasons
 - [ ] The `figma-cache` artifacts preserve compatibility metadata plus `provider`, `artifact_type`, and provider-native `raw_payload`
 - [ ] `traceability.json` preserves existing bridge fields such as `spec_kit_refs`
 - [ ] `traceability.json` remains a first-class governed artifact rather than a sidecar note

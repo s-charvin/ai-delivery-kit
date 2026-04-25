@@ -13,6 +13,16 @@
 - `source_coverage_status`: `complete | partial | blocked`
 - `split_readiness_note`:
 
+## Capability Profile
+
+<!-- Mark the capability surface this sub-requirement owns so downstream stages know whether it should later freeze screen contracts, shared propagation, or integration behavior. -->
+
+- `contains_page_states`: `true | false`
+- `contains_shared_state`: `true | false`
+- `contains_integration`: `true | false`
+- `contains_infra_only`: `true | false`
+- `boundary_note`:
+
 ## Source Requirement Coverage
 
 <!-- Exhaustively map every top-level source fragment this slice depends on. If a fragment is shared with another slice, say so explicitly. -->
@@ -94,6 +104,19 @@
 - `constraint`:
 - `source_ref`:
 
+## Delivery-Slice Candidates
+
+<!-- Record likely execution slices now, but do not freeze final page-state slicing until later contract stages. -->
+
+### Candidate 1
+
+- `candidate_id`:
+- `candidate_type`: `page-state | shared-state | integration`
+- `owned_truth`:
+- `why_now`:
+- `freeze_later_at`: `ui-acceptance-contract | ui-interaction-design | n/a`
+- `source_basis`:
+
 ## Acceptance Signals
 
 ### Signal 1
@@ -109,17 +132,8 @@
 
 - `question`:
 - `why_open`:
-- `blocking_status`: `non_blocking | blocks_split_ready | blocked`
+- `blocking_status`: `non_blocking | blocks_acceptance_contract | blocks_slice_synthesis | blocked`
 - `related_source_ref`:
-
-## Implementation-Adjacent Notes
-
-### Item 1
-
-- `context_type`: `api_gap | integration_risk | late_binding_note`
-- `statement`:
-- `why_non_blocking_now`:
-- `expected_revisit_stage`: `api-contract-mapping | implementation | integration`
 
 ## Ambiguities And Conflicts
 
@@ -154,9 +168,8 @@
 4. `Normalized Slice Statement` may improve readability, but it cannot replace the excerpts or invent product truth.
 5. Every scope item, dependency, acceptance signal, and open question should be traceable back to a `source_ref`.
 6. `Ambiguities And Conflicts` should capture unstable or conflicting truth instead of smoothing it over.
-7. Use `Implementation-Adjacent Notes` for API incompleteness that does not change requirement truth. Do not let backend gaps make a safe requirement slice look unstable.
-8. `Compression Warnings` should call out places where the slice structure may compress nuance from the top-level requirement.
-9. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated slice artifacts.
+7. `Compression Warnings` should call out places where the slice structure may compress nuance from the top-level requirement.
+8. Do not copy the `Template Authoring Rules` or `Template Example` sections into generated slice artifacts.
 
 ## Template Example
 
@@ -172,6 +185,13 @@
 - `parent_requirement`: `account-settings`
 - `source_coverage_status`: `partial`
 - `split_readiness_note`: `Need to resolve whether avatar upload failure preserves edited name input.`
+
+## Capability Profile
+- `contains_page_states`: `true`
+- `contains_shared_state`: `false`
+- `contains_integration`: `false`
+- `contains_infra_only`: `false`
+- `boundary_note`: `This slice owns a page-bearing edit surface, but not cross-page propagation truth.`
 
 ## Source Requirement Coverage
 ### Coverage Item 1
@@ -249,6 +269,15 @@
 - `constraint`: `Do not redefine upload retry behavior without clearer product truth.`
 - `source_ref`: `requirement.md#L17-L18`
 
+## Delivery-Slice Candidates
+### Candidate 1
+- `candidate_id`: `profile-settings-edit-idle`
+- `candidate_type`: `page-state`
+- `owned_truth`: `The editable Profile Settings screen state before submission.`
+- `why_now`: `The requirement already establishes a stable page-bearing state and field set.`
+- `freeze_later_at`: `ui-acceptance-contract`
+- `source_basis`: `Excerpt 1`
+
 ## Acceptance Signals
 ### Signal 1
 - `signal`: `Users can edit profile name and avatar from Profile Settings.`
@@ -266,15 +295,8 @@
 ### Question 1
 - `question`: `When avatar upload fails, should the edited name stay locally retained and still be savable?`
 - `why_open`: `The requirement defines retryable error but does not define partial success behavior.`
-- `blocking_status`: `non_blocking`
+- `blocking_status`: `blocks_slice_synthesis`
 - `related_source_ref`: `requirement.md#L17-L18`
-
-## Implementation-Adjacent Notes
-### Item 1
-- `context_type`: `late_binding_note`
-- `statement`: `No finalized API contract is required yet for splitting this requirement slice.`
-- `why_non_blocking_now`: `The requirement, UI, and interaction surfaces can still be described from product truth.`
-- `expected_revisit_stage`: `api-contract-mapping`
 
 ## Ambiguities And Conflicts
 ### Item 1

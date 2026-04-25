@@ -4,6 +4,8 @@
 - source-backed interaction facts
 - entry conditions
 - user actions
+- Action Chain Matrix
+- State Propagation Matrix
 - feedback and response model
 - system feedback
 - success state
@@ -14,9 +16,10 @@
 - loading behavior details
 - permission or visibility effects
 - navigation or local state changes
+- navigation conflict boundaries
 - motion and transition notes
 - timing guidance
 - accessibility and input modality notes
 - explicit assumptions and escalations
-- separation between user-visible interaction truth and implementation-only API gaps
+- finalized `delivery-slices/index.json`
 - source labels for every non-trivial rule

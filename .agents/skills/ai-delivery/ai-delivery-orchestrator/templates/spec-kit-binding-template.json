@@ -1,0 +1,14 @@
+{
+  "slice_id": "<slice-id>",
+  "spec_kit_input_path": "<path-to-spec-kit-input.md>",
+  "bound_outputs": {
+    "spec_path": "",
+    "plan_path": "",
+    "tasks_path": ""
+  },
+  "bound_statuses": [],
+  "traceability_synced": false,
+  "official_upstream_unchanged": true,
+  "updated_at": "<ISO8601>",
+  "updated_by": "<agent>"
+}

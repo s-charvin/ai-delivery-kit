@@ -55,6 +55,32 @@
 
 -
 
+## Action Chain Matrix
+
+### Action Chain 1
+
+- `action_id`:
+- `entry_state`:
+- `user_action`:
+- `hit_target_owner`:
+- `callback_owner`:
+- `repo_or_api`:
+- `success_state_change`:
+- `failure_feedback`:
+- `upstream_downstream_refresh_targets`:
+- `navigation_conflict_boundary`:
+
+## State Propagation Matrix
+
+### Propagation Item 1
+
+- `source_action`:
+- `source_state_owner`:
+- `target_page_or_component`:
+- `target_state_field`:
+- `update_mode`: `optimistic | local_replace | background_refresh | hard_reload`
+- `consistency_risk`:
+
 ## Motion And Transition Notes
 
 - motion purpose:
@@ -83,3 +109,8 @@
 ## Escalations And Open Questions
 
 -
+
+## Slice Synthesis Output
+
+- `delivery-slices/index.json`:
+- `slice_readiness_note`:

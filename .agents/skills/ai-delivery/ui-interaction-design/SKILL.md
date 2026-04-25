@@ -9,7 +9,7 @@ Project-local workflow skill for converting governed requirement slices plus ver
 
 ## Overview
 
-Use this skill after `ui-requirement-mapping` when a sub-requirement already has requirement truth, mapping truth, and supporting governed artifacts in place. If `api-contract-mapping.md` already exists, treat it as additional interface-contract context and preserve its traceability implications. This stage writes `interaction-design.md`, updates `decisions.md` when assumptions or escalations are needed, and preserves the upstream mapping and bridge contract instead of rewriting it from memory.
+Use this skill after `ui-acceptance-contract` when a sub-requirement already has requirement truth, mapping truth, acceptance-freeze truth, and supporting governed artifacts in place. If `api-contract-mapping.md` already exists, treat it as additional interface-contract context and preserve its traceability implications. This stage writes `interaction-design.md`, finalizes `delivery-slices/index.json`, updates `decisions.md` when assumptions or escalations are needed, and preserves the upstream mapping and bridge contract instead of rewriting it from memory.
 
 This skill may refine bounded micro-interaction detail such as feedback patterns, loading presentation, motion timing, focus treatment, and accessibility defaults, but only when those refinements stay below the business-meaning threshold and remain explicitly labeled.
 
@@ -20,6 +20,7 @@ This is a project-local skill with built-in interaction-design guidance. Do not 
 - Do not invent business flow or page structure.
 - Do not add new fields, steps, dialogs, permissions, or page transitions.
 - Do not label an assumption as if it were original Requirement or Figma fact.
+- Do not repair visual truth here; if `ui-acceptance-contract.md` is incomplete or blocked, hand the issue back upstream.
 - Do not overwrite `figma-mapping.md` or `traceability.json` because an interaction contract prefers a different design.
 - Do not delete later-stage bridge or Spec Kit references when they already exist.
 - Do not hand-edit blocked states to look recovered.
@@ -30,7 +31,9 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 ## Use This Skill For
 
 - Turning verified Requirement and Figma mapping evidence into an executable interaction contract
+- Consuming `ui-acceptance-contract.md` to freeze action closure against immutable screen contracts
 - Defining source-backed user actions, feedback, states, and transitions
+- Producing `Action Chain Matrix` and `State Propagation Matrix`
 - Recording bounded `assumed_micro_interaction` only inside the allowed boundary
 - Improving the quality of micro-interaction detail for loading, feedback, motion, timing, focus, and a11y / accessibility without expanding product meaning
 - Escalating missing interaction truth before implementation or Spec Kit planning
@@ -62,12 +65,14 @@ Also read the existing `traceability.json` because it is a first-class governed 
 - `subreq-id`
 - `requirement-slice.md`
 - `figma-mapping.md`
+- `ui-acceptance-contract.md`
 
 ### Expected Supporting Inputs
 
 - `traceability.json`
 - `status.json`
 - existing `decisions.md`
+- `delivery-slices/index.json` when the sub-requirement is being revised rather than synthesized for the first time
 
 ### Optional Inputs
 
@@ -82,18 +87,21 @@ Also read the existing `traceability.json` because it is a first-class governed 
 If a source or artifact is missing:
 
 - If `requirement-slice.md` is missing or still too ambiguous, stop and hand the work back to `requirement-breakdown`.
-- Prefer starting from `figma_mapped`; if the sub-requirement is still unmapped or blocked and the user did not ask for repair work, stop instead of pretending interaction design is normal.
+- Prefer starting from `acceptance_frozen`; if the sub-requirement is still unmapped, unfrozen, or blocked and the user did not ask for repair work, stop instead of pretending interaction design is normal.
 - If `figma-mapping.md` is missing or not backed by trustworthy structured design evidence, stop and hand the work back to `ui-requirement-mapping`.
+- If `ui-acceptance-contract.md` is missing, incomplete, or blocked, stop and hand the work back to the acceptance-freeze stage.
 - If `traceability.json` is missing or inconsistent with the visible mapping truth, repair or escalate that governed contract before claiming `interaction_ready`.
 - If only micro-interaction detail is missing, continue and record `assumed_micro_interaction`.
 - If the missing detail changes business meaning, stop and block instead of assuming.
-- Treat missing or partial API material as implementation-adjacent context unless it changes user-visible behavior.
 
 ## Output Goal
 
 Produce an interaction contract that developers can consume directly while preserving upstream mapping truth. The output must preserve:
 
 - a source-bounded `interaction-design.md`
+- a source-bounded `Action Chain Matrix`
+- a source-bounded `State Propagation Matrix`
+- a finalized `delivery-slices/index.json` for the current sub-requirement
 - updates to `decisions.md` when assumptions, blockers, or revalidation notes appear
 - explicit labels for `Source: Requirement`, `Source: Figma`, `Source: Existing Pattern`, and `Assumption: Micro Interaction`
 - the existing `traceability.json` bridge context, including `api_contract_mapping` and `spec_kit_refs` when present
@@ -103,6 +111,7 @@ Produce an interaction contract that developers can consume directly while prese
 ```text
 .ai-delivery/requirements/<requirement-id>/sub-requirements/<subreq-id>/
 ├── interaction-design.md
+├── delivery-slices/index.json
 ├── decisions.md
 ├── status.json
 └── traceability.json
@@ -110,15 +119,15 @@ Produce an interaction contract that developers can consume directly while prese
 
 ## Workflow
 
-### 1. Confirm the upstream mapping contract
+### 1. Confirm the upstream contract stack
 
-- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
+- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `ui-acceptance-contract.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
 - Confirm that the interaction work still matches the current sub-requirement scope and the verified mapping output.
-- Prefer to start from `figma_mapped`; if the mapping is stale, blocked, or unverified, stop and hand the work back upstream.
+- Prefer to start from `acceptance_frozen`; if the mapping or acceptance freeze is stale, blocked, or unverified, stop and hand the work back upstream.
 
 ### 2. Extract source-backed interaction facts
 
-- Derive interaction facts from Requirement truth, Figma mapping truth, comments, prototype flows, and already-approved patterns.
+- Derive interaction facts from Requirement truth, API contract truth, Figma mapping truth, UI acceptance truth, comments, prototype flows, and already-approved patterns.
 - Label each fact as `Source: Requirement`, `Source: Figma`, `Source: Existing Pattern`, or `Assumption: Micro Interaction`.
 - Keep explicit separation between source-backed behavior and bounded assumptions.
 - Use `references/interaction-quality-guidelines.md` to choose the lightest safe feedback, loading, motion, timing, and accessibility defaults when the source truth leaves room for bounded refinement.
@@ -184,8 +193,20 @@ Use these principles to improve interaction quality without crossing into redesi
 ### 3. Write `interaction-design.md`
 
 - Use `templates/interaction-design-template.md`.
-- Cover interaction goal, entry conditions, user actions, feedback and response model, success, empty, loading, error, and disabled states, permission or visibility impacts, navigation or local state changes, motion and transition notes, accessibility and input modality notes, and open escalations.
+- Cover interaction goal, entry conditions, user actions, feedback and response model, success, empty, loading, error, and disabled states, permission or visibility impacts, navigation or local state changes, Action Chain Matrix, State Propagation Matrix, motion and transition notes, accessibility and input modality notes, and open escalations.
 - Keep the document executable for downstream implementation without redesigning the product.
+
+### 3a. Freeze action closure and propagation
+
+- Every meaningful CTA or gesture must appear in the Action Chain Matrix with `entry_state`, `user_action`, `hit_target_owner`, `callback_owner`, `repo_or_api`, `success_state_change`, `failure_feedback`, `upstream_downstream_refresh_targets`, and `navigation_conflict_boundary`.
+- Every cross-owner or cross-surface consequence must appear in the State Propagation Matrix with `source_action`, `source_state_owner`, `target_page_or_component`, `target_state_field`, `update_mode`, and `consistency_risk`.
+- Treat navigation conflict, hit-target overlap, empty callback risk, and "close page without business action" risk as contract-level concerns, not review-only surprises.
+
+### 3b. Finalize slice synthesis
+
+- After the matrices are frozen, synthesize or update `delivery-slices/index.json`.
+- Finalize one `page-state` slice per frozen screen state, plus `shared-state` or `integration` slices for propagation and cross-route ownership.
+- Do not finalize slice ownership before the action and propagation contracts are explicit.
 
 ### 3.1 Improve Micro-Interaction Detail Carefully
 
@@ -206,11 +227,11 @@ Use these principles to improve interaction quality without crossing into redesi
 - Do not rewrite `figma-mapping.md` from memory.
 - Do not clear or replace `traceability.json`, including existing bridge fields such as `api_contract_mapping` and `spec_kit_refs`.
 - If interaction analysis reveals a mapping or visual-truth gap, record it in `decisions.md` and hand the issue back to `ui-requirement-mapping` or block it, rather than silently fixing the mapping in prose.
-- If API details are still incomplete, preserve the user-visible interaction contract and record only the late-binding or implementation risk that remains.
+- If interaction analysis reveals an acceptance-freeze gap, record it in `decisions.md` and hand the issue back to `ui-acceptance-contract` rather than repairing visual truth here.
 
 ### 6. Handle state and blockers conservatively
 
-- Only advance the sub-requirement toward `interaction_ready` when the key interaction states are defined and the remaining assumptions stay inside the allowed micro-interaction boundary.
+- Only advance the sub-requirement toward `interaction_ready` when the key interaction states are defined, action closure is matrix-backed, propagation is matrix-backed, `delivery-slices/index.json` is finalized, and the remaining assumptions stay inside the allowed micro-interaction boundary.
 - If the requirement needs an action but design cannot carry it, block on `blocked_missing_design`.
 - If Figma interaction evidence conflicts with requirement truth, block on `blocked_requirement_figma_conflict`.
 - If a key business interaction cannot be resolved from current materials, block on `blocked_missing_requirement`.
@@ -230,7 +251,7 @@ Use these principles to improve interaction quality without crossing into redesi
 - If Figma interaction evidence conflicts with requirement truth, block on `blocked_requirement_figma_conflict`.
 - If a key business interaction cannot be resolved from current materials, block on `blocked_missing_requirement`.
 - Do not move the sub-requirement forward as interaction-complete while those blockers remain open.
-- Only advance the sub-requirement toward `interaction_ready` when the contract is source-backed and assumption-bounded.
+- Only advance the sub-requirement toward `interaction_ready` when the contract is source-backed, acceptance-backed, propagation-aware, and assumption-bounded.
 
 ## Hard Constraints
 
@@ -247,6 +268,8 @@ Every interaction contract should define:
 
 - source-backed interaction facts
 - user actions
+- Action Chain Matrix
+- State Propagation Matrix
 - system feedback
 - success, empty, loading, error, and disabled states
 - permission or visibility effects when they already exist in source truth
@@ -263,8 +286,10 @@ If governed admin support is unavailable, keep artifact truth in `.ai-delivery/`
 Before reporting completion, confirm all of the following:
 
 - [ ] `requirement-slice.md`, `figma-mapping.md`, and `traceability.json` were read before drafting
-- [ ] The sub-requirement was safe to move from `figma_mapped` toward `interaction_ready`
+- [ ] The sub-requirement was safe to move from `acceptance_frozen` toward `interaction_ready`
 - [ ] Every key interaction fact is labeled by source or by `Assumption: Micro Interaction`
+- [ ] Every meaningful action appears in the `Action Chain Matrix`
+- [ ] Every cross-surface consequence appears in the `State Propagation Matrix`
 - [ ] All critical states are defined: success, empty, loading, error, and disabled
 - [ ] Feedback surfaces and loading presentation are explicit when they matter to the user flow
 - [ ] Motion and timing notes are purposeful, conservative, and do not imply decorative redesign
@@ -273,6 +298,7 @@ Before reporting completion, confirm all of the following:
 - [ ] No new business branch, field, step, dialog, permission rule, or page transition was invented
 - [ ] `assumed_micro_interaction` stays inside the allowed boundary
 - [ ] `figma-mapping.md` and `traceability.json` were preserved rather than overwritten
+- [ ] `delivery-slices/index.json` was finalized after the matrices were frozen
 - [ ] Existing bridge fields such as `spec_kit_refs` remain intact when they already existed
 - [ ] Blockers preserve `blocked_from_status` and `resume_target_status`
 

@@ -1,0 +1,31 @@
+{
+  "slice_id": "contacts-friends-idle",
+  "spec_kit_input_path": ".ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/delivery-slices/contacts-friends-idle/spec-kit-input.md",
+  "bound_outputs": {
+    "spec_path": "specs/contacts-directory-slices/contacts-friends-idle/spec.md",
+    "plan_path": "specs/contacts-directory-slices/contacts-friends-idle/plan.md",
+    "tasks_path": "specs/contacts-directory-slices/contacts-friends-idle/tasks.md"
+  },
+  "bound_statuses": [
+    "spec_ready",
+    "plan_ready",
+    "tasks_ready"
+  ],
+  "traceability_patch": {
+    "spec_kit_refs": {
+      "spec_paths": [
+        "specs/contacts-directory-slices/contacts-friends-idle/spec.md"
+      ],
+      "plan_paths": [
+        "specs/contacts-directory-slices/contacts-friends-idle/plan.md"
+      ],
+      "tasks_paths": [
+        "specs/contacts-directory-slices/contacts-friends-idle/tasks.md"
+      ]
+    }
+  },
+  "traceability_synced": true,
+  "official_upstream_unchanged": true,
+  "updated_at": "2026-04-21T11:52:00+08:00",
+  "updated_by": "codex"
+}

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "updated_at": "2026-04-25T00:00:00.000Z",
+  "updated_by": "codex",
+  "slices": [
+    {
+      "slice_id": "contacts-friends-idle",
+      "status": "tasks_ready",
+      "ui_acceptance_contract": "ui-acceptance-contract.md",
+      "spec_kit_input": "spec-kit-input.md"
+    }
+  ]
+}

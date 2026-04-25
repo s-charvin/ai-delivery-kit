@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Acceptance Contract"
+  short_description: "Freeze screen-state acceptance contracts for UI slices"
+  default_prompt: "Use $ui-acceptance-contract to freeze screen-state UI acceptance contracts, update traceability, and block downstream work until acceptance is frozen."
