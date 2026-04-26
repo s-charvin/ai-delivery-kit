@@ -106,6 +106,7 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ ! -e "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh" ]]
 [[ ! -e "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ ! -e "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" ]]
+[[ ! -e "$TARGET_REPO/.agents/AGENTS.md" ]]
 [[ -d "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"

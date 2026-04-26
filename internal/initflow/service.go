@@ -146,7 +146,7 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	result.Bootstrapped = true
 
 	if !info.HasSpecify && (hasSpecify || specifyInstalledNow) {
-		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx)); len(cmd) > 0 {
+		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx), s.GOOS); len(cmd) > 0 {
 			if err := s.Runner.Run(ctx, command.Command{
 				Name: cmd[0],
 				Args: cmd[1:],

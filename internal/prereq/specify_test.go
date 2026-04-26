@@ -51,13 +51,13 @@ func TestDetectSpecifyFallsBackToPipx(t *testing.T) {
 }
 
 func TestBuildSpecifyInitCommandSkipsExistingSpecifyTree(t *testing.T) {
-	if cmd := BuildSpecifyInitCommand(true, true); len(cmd) != 0 {
+	if cmd := BuildSpecifyInitCommand(true, true, "linux"); len(cmd) != 0 {
 		t.Fatalf("expected no init command when .specify already exists, got %#v", cmd)
 	}
 }
 
 func TestBuildSpecifyInitCommandIncludesForce(t *testing.T) {
-	cmd := BuildSpecifyInitCommand(false, false)
+	cmd := BuildSpecifyInitCommand(false, false, "linux")
 
 	for _, arg := range cmd {
 		if arg == "--force" {
@@ -69,8 +69,8 @@ func TestBuildSpecifyInitCommandIncludesForce(t *testing.T) {
 }
 
 func TestBuildSpecifyInitCommandAddsAISkillsOnlyWhenSupported(t *testing.T) {
-	withSkills := BuildSpecifyInitCommand(false, true)
-	withoutSkills := BuildSpecifyInitCommand(false, false)
+	withSkills := BuildSpecifyInitCommand(false, true, "linux")
+	withoutSkills := BuildSpecifyInitCommand(false, false, "linux")
 
 	foundWith := false
 	for _, arg := range withSkills {
@@ -88,4 +88,31 @@ func TestBuildSpecifyInitCommandAddsAISkillsOnlyWhenSupported(t *testing.T) {
 			t.Fatalf("did not expect --ai-skills when unsupported, got %#v", withoutSkills)
 		}
 	}
+}
+
+func TestBuildSpecifyInitCommandDefaultsToShOutsideWindows(t *testing.T) {
+	cmd := BuildSpecifyInitCommand(false, false, "linux")
+
+	assertSpecifyScriptArg(t, cmd, "sh")
+}
+
+func TestBuildSpecifyInitCommandDefaultsToPsOnWindows(t *testing.T) {
+	cmd := BuildSpecifyInitCommand(false, false, "windows")
+
+	assertSpecifyScriptArg(t, cmd, "ps")
+}
+
+func assertSpecifyScriptArg(t *testing.T, cmd []string, expected string) {
+	t.Helper()
+
+	for i := 0; i < len(cmd)-1; i++ {
+		if cmd[i] == "--script" {
+			if cmd[i+1] != expected {
+				t.Fatalf("expected --script %q, got %#v", expected, cmd)
+			}
+			return
+		}
+	}
+
+	t.Fatalf("expected --script %q, got %#v", expected, cmd)
 }

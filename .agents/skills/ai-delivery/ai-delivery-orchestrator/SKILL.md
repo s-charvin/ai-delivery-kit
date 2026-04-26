@@ -42,6 +42,7 @@ When available, use `ai-delivery-admin-support` for governed admin support loggi
 
 Required local references:
 
+- [Requirement Routing Rules](references/requirement-routing-rules.md)
 - [Reconcile Rules](references/reconcile-rules.md)
 - [Stage Mapping](references/stage-mapping.md)
 - [Spec Kit Bridge](references/spec-kit-bridge.md)
@@ -112,7 +113,7 @@ Resolve the active mode after every reconcile. Use `.ai-delivery` plus `todo.md`
 
 Map common user intents to the runtime modes instead of asking the user to name the next skill.
 
-When a user brings new material, first decide whether to continue an existing requirement or create a new one.
+When a user brings new material, first decide whether to continue an existing requirement or create a new one. Use the Requirement Routing Rules as the minimum evidence threshold for that recommendation.
 
 1. Inspect existing `.ai-delivery/requirements/*` packages, `todo.md`, `status.json`, and `traceability.json`.
 2. Produce one recommendation only:
@@ -195,7 +196,8 @@ Use the stage mapping and bridge references as the authoritative sources for fix
   - Output: `spec-kit-binding.json`; update `traceability.json.spec_kit_refs`
   - Guards: `spec_ready`, `plan_ready`, `tasks_ready`
 - Development execution
-  - Inputs: `slice-contract.md`, `tasks.md`, `spec-kit-binding.json`, traceability refs, `.agents/AGENTS.md`
+  - Inputs: `slice-contract.md`, `tasks.md`, `spec-kit-binding.json`, traceability refs
+  - Optional context: project-local `.agents/AGENTS.md` when the host repository already provides one
   - Guard: slice reaches `merged`; UI-bearing slices must reach `visual_acceptance_passed` before merge completion
 
 ## Queue Compression

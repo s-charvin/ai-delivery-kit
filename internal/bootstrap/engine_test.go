@@ -59,6 +59,10 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if !strings.Contains(string(branch), `"branch_name": "main"`) {
 		t.Fatalf("expected main branch in runtime json, got %s", string(branch))
 	}
+
+	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected bootstrap not to inject .agents/AGENTS.md, got %v", err)
+	}
 }
 
 func TestRunFailsOnManagedConflictWithoutMutatingRepo(t *testing.T) {

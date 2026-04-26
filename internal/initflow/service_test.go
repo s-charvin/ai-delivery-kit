@@ -146,6 +146,9 @@ func TestRunAcceptInstallExecutesInstallCommandsOnly(t *testing.T) {
 	if !containsArg(last.Args, "--ai-skills") {
 		t.Fatalf("expected specify init to include --ai-skills when supported, got %#v", last.Args)
 	}
+	if !hasArgPair(last.Args, "--script", "sh") {
+		t.Fatalf("expected linux specify init to default to --script sh, got %#v", last.Args)
+	}
 
 	if last.Dir != "/tmp/project" {
 		t.Fatalf("expected specify init to run in repo root, got %#v", last)
@@ -348,6 +351,50 @@ func TestRunFallsBackWhenSpecifyInitHelpDoesNotSupportAISkills(t *testing.T) {
 	}
 }
 
+func TestRunUsesPsScriptModeOnWindows(t *testing.T) {
+	bootstrapper := &fakeBootstrapper{}
+	runner := &fakeRunner{paths: map[string]string{
+		"specify": "specify",
+		"git":     "git",
+	}}
+	service := Service{
+		Prompt:       staticPrompt(true),
+		Runner:       runner,
+		Bootstrapper: bootstrapper,
+		ReadCommandOutput: func(context.Context, string, ...string) (string, error) {
+			return "Usage: specify init\n  --ai-skills\n", nil
+		},
+		Discover: func(string) (repo.Info, error) {
+			return repo.Info{Root: "C:/tmp/project"}, nil
+		},
+		HomeDir: "C:/tmp/home",
+		GOOS:    "windows",
+		StatPath: func(path string) error {
+			if path == "C:/tmp/home/.agents/skills/superpowers" {
+				return nil
+			}
+			return errors.New("missing")
+		},
+	}
+
+	_, err := service.Run(context.Background(), Input{
+		TargetPath:  "C:/tmp/project",
+		Interactive: true,
+	})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected only specify init command, got %#v", runner.calls)
+	}
+
+	call := runner.calls[0]
+	if !hasArgPair(call.Args, "--script", "ps") {
+		t.Fatalf("expected windows specify init to default to --script ps, got %#v", call.Args)
+	}
+}
+
 func TestRunDerivesProjectAndMainBranchWhenInputDoesNotProvideThem(t *testing.T) {
 	bootstrapper := &fakeBootstrapper{}
 	runner := &fakeRunner{paths: map[string]string{
@@ -454,6 +501,15 @@ func (f *fakeRunner) LookPath(file string) (string, error) {
 func containsArg(args []string, needle string) bool {
 	for _, arg := range args {
 		if arg == needle {
+			return true
+		}
+	}
+	return false
+}
+
+func hasArgPair(args []string, key string, value string) bool {
+	for i := 0; i < len(args)-1; i++ {
+		if args[i] == key && args[i+1] == value {
 			return true
 		}
 	}

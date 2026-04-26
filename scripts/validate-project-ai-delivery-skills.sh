@@ -149,6 +149,8 @@ validate_managed_contract() {
   local validate_script
   local validate_test
   local bootstrap_script=""
+  local ci_workflow=""
+  local release_workflow=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
   local validate_policy_test
@@ -162,8 +164,12 @@ validate_managed_contract() {
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
     readme_file="$ROOT/README.md"
     bootstrap_script="$ROOT/scripts/bootstrap-ai-delivery-project.sh"
+    ci_workflow="$ROOT/.github/workflows/ci.yml"
+    release_workflow="$ROOT/.github/workflows/release.yml"
     require_file "$readme_file"
     require_file "$bootstrap_script"
+    require_file "$ci_workflow"
+    require_file "$release_workflow"
     require_file "$ROOT/tests/ai-delivery-skills/bootstrap-project.test.sh"
     require_contains "$bootstrap_script" 'go run ./cmd/ai-delivery init'
     require_contains "$bootstrap_script" '/path/to/repo'
@@ -176,10 +182,19 @@ validate_managed_contract() {
     require_contains "$readme_file" 'scripts/bootstrap-ai-delivery.sh'
     require_contains "$readme_file" 'ai-delivery-orchestrator'
     require_contains "$readme_file" 'continue an existing requirement or create a new one'
+    require_contains "$readme_file" 'runs `specify init` only when `specify-cli` is already available or was installed during onboarding'
     require_contains "$readme_file" 'main'
     require_contains "$readme_file" 'tag push'
     require_not_contains "$readme_file" '--project-id'
     require_not_contains "$readme_file" '--main-branch'
+    require_contains "$ci_workflow" 'uses: actions/checkout@v5'
+    require_contains "$ci_workflow" 'uses: actions/setup-go@v6'
+    require_contains "$ci_workflow" 'cache: false'
+    require_contains "$ci_workflow" "version: '~> v2'"
+    require_contains "$release_workflow" 'uses: actions/checkout@v5'
+    require_contains "$release_workflow" 'uses: actions/setup-go@v6'
+    require_contains "$release_workflow" 'cache: false'
+    require_contains "$release_workflow" "version: '~> v2'"
   fi
 }
 
@@ -297,6 +312,7 @@ validate_orchestrator_skill() {
 
   validate_skill_local_assets \
     ai-delivery-orchestrator \
+    references/requirement-routing-rules.md \
     references/reconcile-rules.md \
     references/stage-mapping.md \
     references/spec-kit-bridge.md \
@@ -315,6 +331,7 @@ validate_orchestrator_skill() {
   require_contains "$skill_file" 'visual_acceptance_passed'
   require_contains "$skill_file" 'continue an existing requirement or create a new one'
   require_contains "$skill_file" 'human confirmation'
+  require_contains "$skill_file" 'Requirement Routing Rules'
   require_contains "$skill_file" 'direct use of lower-level skills remains supported'
 }
 

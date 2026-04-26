@@ -28,6 +28,7 @@ The bootstrap script downloads a temporary release binary and runs the same cano
 - detects the main branch and writes `.ai-delivery/runtime/main-branch.json`
 - checks for `specify-cli` and `superpowers`
 - prompts before installing missing prerequisites through their official paths
+- runs `specify init` only when `specify-cli` is already available or was installed during onboarding
 - seeds the governed `.ai-delivery` contract, project-local skills, validators, and support files
 
 The normal public path no longer asks the user to provide `project_id` or `main-branch`.

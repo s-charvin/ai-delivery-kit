@@ -1,5 +1,7 @@
 package prereq
 
+import "runtime"
+
 const (
 	SpecKitInstallDocsURL = "https://github.com/github/spec-kit/blob/main/docs/installation.md"
 	SpecKitGitRef         = "git+https://github.com/github/spec-kit.git"
@@ -37,7 +39,7 @@ func DetectSpecify(input StatusInput) ToolPlan {
 	return base
 }
 
-func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool) []string {
+func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool, goos string) []string {
 	if hasSpecifyDir {
 		return nil
 	}
@@ -52,6 +54,16 @@ func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool) []string {
 	if useAISkills {
 		command = append(command, "--ai-skills")
 	}
-	command = append(command, "--script", "sh")
+	command = append(command, "--script", defaultSpecifyScript(goos))
 	return command
+}
+
+func defaultSpecifyScript(goos string) string {
+	if goos == "" {
+		goos = runtime.GOOS
+	}
+	if goos == "windows" {
+		return "ps"
+	}
+	return "sh"
 }

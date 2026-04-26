@@ -106,7 +106,8 @@
   - `tasks.md`
   - `spec-kit-binding.json`
   - traceability refs
-  - `.agents/AGENTS.md`
+- Optional context:
+  - project-local `.agents/AGENTS.md` when the host repository already provides one
 - Ordered stages:
   - `using-git-worktrees`
   - `test-driven-development`
