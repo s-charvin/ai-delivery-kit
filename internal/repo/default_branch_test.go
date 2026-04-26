@@ -22,3 +22,10 @@ func TestChooseDefaultBranchFallsBackToMain(t *testing.T) {
 		t.Fatalf("expected main fallback, got %q", got)
 	}
 }
+
+func TestChooseDefaultBranchIgnoresGitFatalOutput(t *testing.T) {
+	got := chooseDefaultBranch("fatal: ref refs/remotes/origin/HEAD is not a symbolic ref\n", "main-dev")
+	if got != "main-dev" {
+		t.Fatalf("expected fatal output to be ignored, got %q", got)
+	}
+}

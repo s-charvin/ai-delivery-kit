@@ -148,19 +148,16 @@ validate_managed_contract() {
   local readme_file=""
   local validate_script
   local validate_test
-  local onboarding_guide
   local bootstrap_script=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
   local validate_policy_test
   validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
   validate_policy_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/api-nonblocking-policy.test.sh")
-  onboarding_guide=$(resolve_managed_asset_path "docs/guides/ai-delivery-any-repo-onboarding.md")
 
   require_file "$validate_script"
   require_file "$validate_test"
   require_file "$validate_policy_test"
-  require_file "$onboarding_guide"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
     readme_file="$ROOT/README.md"
@@ -169,35 +166,21 @@ validate_managed_contract() {
     require_file "$bootstrap_script"
     require_file "$ROOT/tests/ai-delivery-skills/bootstrap-project.test.sh"
     require_contains "$bootstrap_script" 'go run ./cmd/ai-delivery init'
-    require_contains "$bootstrap_script" '--target-repo'
+    require_contains "$bootstrap_script" '/path/to/repo'
+    require_not_contains "$bootstrap_script" '--target-repo'
     require_not_contains "$bootstrap_script" 'install-project-ai-delivery-skills'
     require_not_contains "$bootstrap_script" 'sync-ai-delivery-project-assets'
 
-    require_contains "$readme_file" 'ai-delivery init'
+    require_contains "$readme_file" 'ai-delivery init /path/to/repo'
     require_contains "$readme_file" 'scripts/install-ai-delivery.sh'
     require_contains "$readme_file" 'scripts/bootstrap-ai-delivery.sh'
+    require_contains "$readme_file" 'ai-delivery-orchestrator'
+    require_contains "$readme_file" 'continue an existing requirement or create a new one'
     require_contains "$readme_file" 'main'
     require_contains "$readme_file" 'tag push'
+    require_not_contains "$readme_file" '--project-id'
+    require_not_contains "$readme_file" '--main-branch'
   fi
-
-  require_contains "$onboarding_guide" 'ai-delivery init <target> --project-id <project-id> --main-branch main'
-  require_contains "$onboarding_guide" 'scripts/install-ai-delivery.sh'
-  require_contains "$onboarding_guide" 'scripts/bootstrap-ai-delivery.sh'
-  require_contains "$onboarding_guide" 'bash -s -- <target> --project-id <project-id> --main-branch main'
-  require_contains "$onboarding_guide" 'specify-cli'
-  require_contains "$onboarding_guide" 'superpowers'
-  require_contains "$onboarding_guide" '官方路径安装'
-  require_contains "$onboarding_guide" '官方安装链接'
-  require_contains "$onboarding_guide" '.agents/skills/requirement-breakdown'
-  require_contains "$onboarding_guide" '.agents/skills/api-contract-mapping'
-  require_contains "$onboarding_guide" '.agents/skills/ui-requirement-mapping'
-  require_contains "$onboarding_guide" '.agents/skills/ui-acceptance-contract'
-  require_contains "$onboarding_guide" '.agents/skills/ui-interaction-design'
-  require_contains "$onboarding_guide" '.agents/skills/ai-delivery-orchestrator'
-  require_contains "$onboarding_guide" '.ai-delivery/scripts/validate-project-ai-delivery-skills.sh'
-  require_not_contains "$onboarding_guide" 'install-project-ai-delivery-skills'
-  require_not_contains "$onboarding_guide" 'sync-ai-delivery-project-assets'
-  require_not_contains "$onboarding_guide" '### Step 3: 在目标仓库里安装 project-local skills 到当前 Codex 环境'
 }
 
 validate_generic_skill() {
@@ -330,6 +313,9 @@ validate_orchestrator_skill() {
   require_contains "$skill_file" 'agent session'
   require_contains "$skill_file" 'tasks_ready_user_confirmation'
   require_contains "$skill_file" 'visual_acceptance_passed'
+  require_contains "$skill_file" 'continue an existing requirement or create a new one'
+  require_contains "$skill_file" 'human confirmation'
+  require_contains "$skill_file" 'direct use of lower-level skills remains supported'
 }
 
 validate_ui_interaction_design_skill() {

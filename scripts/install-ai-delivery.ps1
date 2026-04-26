@@ -105,7 +105,7 @@ try {
 
   Write-Log "Installed ai-delivery to $targetPath"
   Write-Log "Add $InstallDir to PATH if needed."
-  Write-Log "Run: ai-delivery init C:\path\to\repo --project-id my-project --main-branch main"
+  Write-Log "Run: ai-delivery init C:\path\to\repo"
 } finally {
   if (Test-Path -LiteralPath $tempDir) {
     Remove-Item -LiteralPath $tempDir -Recurse -Force

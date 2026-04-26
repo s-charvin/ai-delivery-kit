@@ -9,6 +9,8 @@ description: Use when a requirement should be advanced through the contract-gate
 
 Use this skill to orchestrate the contract-gated workflow through one requirement-level `todo.md` while treating `.ai-delivery` as the only source of truth.
 
+This is the default entry for requirement work after repository onboarding. In the normal path, it should decide whether to continue an existing requirement or create a new one, pause for human confirmation, and only then dispatch the governed chain.
+
 This skill is a governed wrapper around the existing workflow skills. It coordinates the current chain end to end:
 
 - `requirement-breakdown`
@@ -52,6 +54,7 @@ Required local references:
 
 - Do not move workflow truth out of `.ai-delivery`.
 - Do not generate a separate `todo.json`.
+- Do not require the user to manually choose the first low-level workflow skill in the normal path.
 - Do not let UI-bearing sub-requirements enter `speckit-*` before `acceptance_frozen`.
 - Do not let UI-bearing sub-requirements claim planning readiness before `slices_ready`.
 - Do not let UI-bearing slices claim merge completion before `visual_acceptance_passed`.
@@ -107,7 +110,19 @@ Resolve the active mode after every reconcile. Use `.ai-delivery` plus `todo.md`
 
 ## User Entry Mapping
 
-Map common user intents to the runtime modes instead of asking the user to name the next skill:
+Map common user intents to the runtime modes instead of asking the user to name the next skill.
+
+When a user brings new material, first decide whether to continue an existing requirement or create a new one.
+
+1. Inspect existing `.ai-delivery/requirements/*` packages, `todo.md`, `status.json`, and `traceability.json`.
+2. Produce one recommendation only:
+   - `continue req-xxx`
+   - or `create req-yyy`
+3. Pause for human confirmation before taking either path.
+4. If the user overrides the recommendation, follow the human decision and continue the governed workflow.
+5. Treat direct low-level skill invocation as an exception path only when its preconditions are already satisfied.
+
+After the routing decision is confirmed, map the user intent to the runtime mode:
 
 - "给你需求文档、swagger、Figma 已开，开始跑"
   - Enter `bootstrap` when no valid `todo.md` exists, otherwise reconcile and continue with `resume`.
@@ -117,6 +132,8 @@ Map common user intents to the runtime modes instead of asking the user to name 
   - Reconcile first, require `current_checkpoint=CP-001` and all executable slices at `tasks_ready`, then enter `confirm-to-dev`.
 - "这个 blocker 我处理好了，继续跑"
   - Reconcile first, require `current_checkpoint=CP-002`, then enter `blocker-recovery` if the blocker can now be cleared safely.
+
+direct use of lower-level skills remains supported when their preconditions are already satisfied, but that is an exception path for recovery or expert use, not the normal entry for new requirements.
 
 ## Reconcile Rules
 

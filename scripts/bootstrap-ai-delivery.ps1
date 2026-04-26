@@ -2,8 +2,6 @@
 param(
   [Parameter(Mandatory = $true, Position = 0)]
   [string]$TargetRepo,
-  [string]$ProjectId = "",
-  [string]$MainBranch = "main",
   [string]$Version = $env:AI_DELIVERY_VERSION,
   [string]$Repo = $env:AI_DELIVERY_REPO,
   [string]$DownloadBaseUrl = $env:AI_DELIVERY_DOWNLOAD_BASE_URL,
@@ -49,7 +47,7 @@ function Get-ArchiveName {
 
 function Invoke-AiDelivery {
   param([string]$Executable)
-  & $Executable init $TargetRepo --project-id $ProjectId --main-branch $MainBranch
+  & $Executable init $TargetRepo
 }
 
 function Get-FileHashValue {

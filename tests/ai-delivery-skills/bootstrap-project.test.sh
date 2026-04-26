@@ -38,6 +38,7 @@ trap cleanup EXIT
 
 mkdir -p "$TARGET_REPO" "$TEMP_BIN"
 git -C "$TARGET_REPO" init -q
+git -C "$TARGET_REPO" checkout -q -b main-dev
 mkdir -p "$TARGET_REPO/docs/guides"
 cat > "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" <<'EOF'
 # stale root onboarding guide
@@ -69,10 +70,7 @@ exit 0
 EOF
 chmod +x "$TEMP_BIN/specify"
 
-PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
-  --target-repo "$TARGET_REPO" \
-  --project-id "demo-project" \
-  --main-branch "main-dev"
+PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
 [[ -d "$TARGET_REPO/.agents/skills/api-contract-mapping" ]]
@@ -87,7 +85,7 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh" ]]
-[[ -f "$TARGET_REPO/.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
+[[ ! -e "$TARGET_REPO/.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/references/dual-truth-rules.md" ]]
@@ -109,9 +107,7 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ ! -e "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ ! -e "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" ]]
 [[ -d "$TARGET_REPO/.specify" ]]
-grep -Fq 'stale root onboarding guide' "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md"
-
-grep -Fq '"project_id": "demo-project"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
+grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"missing_nonblocking"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"

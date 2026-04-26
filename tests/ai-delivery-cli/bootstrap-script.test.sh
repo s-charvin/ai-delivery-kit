@@ -57,14 +57,16 @@ chmod +x "$LOCAL_CMD"
 
 AI_DELIVERY_CMD="$LOCAL_CMD" \
   bash "$BOOTSTRAP_SCRIPT" \
-    "$TARGET_REPO" \
-    --project-id "demo-project" \
-    --main-branch "main"
+    "$TARGET_REPO"
 
 assert_file_contains "$LOCAL_LOG" 'init'
 assert_file_contains "$LOCAL_LOG" "$TARGET_REPO"
-assert_file_contains "$LOCAL_LOG" '--project-id demo-project'
-assert_file_contains "$LOCAL_LOG" '--main-branch main'
+if grep -Fq -- '--project-id' "$LOCAL_LOG"; then
+  fail "did not expect manual project id flags in bootstrap invocation"
+fi
+if grep -Fq -- '--main-branch' "$LOCAL_LOG"; then
+  fail "did not expect manual main branch flags in bootstrap invocation"
+fi
 
 cat >"$DOWNLOAD_CMD" <<EOF
 #!/usr/bin/env bash
@@ -83,11 +85,13 @@ EOF
 AI_DELIVERY_DOWNLOAD_BASE_URL="file://$TEMP_DIR" \
   AI_DELIVERY_VERSION="v9.9.9" \
   bash "$BOOTSTRAP_SCRIPT" \
-    "$TARGET_REPO" \
-    --project-id "download-project" \
-    --main-branch "release/main"
+    "$TARGET_REPO"
 
 assert_file_contains "$DOWNLOAD_LOG" 'init'
 assert_file_contains "$DOWNLOAD_LOG" "$TARGET_REPO"
-assert_file_contains "$DOWNLOAD_LOG" '--project-id download-project'
-assert_file_contains "$DOWNLOAD_LOG" '--main-branch release/main'
+if grep -Fq -- '--project-id' "$DOWNLOAD_LOG"; then
+  fail "did not expect manual project id flags in downloaded bootstrap invocation"
+fi
+if grep -Fq -- '--main-branch' "$DOWNLOAD_LOG"; then
+  fail "did not expect manual main branch flags in downloaded bootstrap invocation"
+fi

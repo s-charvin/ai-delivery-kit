@@ -14,7 +14,6 @@ func Manifest() []ManagedAsset {
 		{Source: ".agents/skills/ai-delivery/ui-acceptance-contract", Target: ".agents/skills/ui-acceptance-contract", Kind: "dir"},
 		{Source: ".agents/skills/ai-delivery/ui-interaction-design", Target: ".agents/skills/ui-interaction-design", Kind: "dir"},
 		{Source: ".agents/skills/ai-delivery/ai-delivery-orchestrator", Target: ".agents/skills/ai-delivery-orchestrator", Kind: "dir"},
-		{Source: "docs/guides/ai-delivery-any-repo-onboarding.md", Target: ".ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md", Kind: "file"},
 		{Source: "scripts/validate-project-ai-delivery-skills.sh", Target: ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/validate-sources.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh", Kind: "file"},

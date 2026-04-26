@@ -202,7 +202,6 @@ func managedDirectories() []string {
 		".ai-delivery/figma-cache",
 		".ai-delivery/scripts",
 		".ai-delivery/tests/ai-delivery-skills",
-		".ai-delivery/docs/guides",
 		".ai-delivery/logs/sessions",
 		".ai-delivery/logs/subagents",
 		".ai-delivery/meta",

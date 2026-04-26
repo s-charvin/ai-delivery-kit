@@ -9,7 +9,7 @@ AI_DELIVERY_TEMP_DIR=""
 
 usage() {
   cat <<'EOF'
-Usage: bootstrap-ai-delivery.sh /path/to/repo [--project-id my-project] [--main-branch main]
+Usage: bootstrap-ai-delivery.sh /path/to/repo
 
 Environment overrides:
   AI_DELIVERY_CMD               Local ai-delivery executable for tests and development
@@ -151,14 +151,12 @@ verify_checksum() {
 run_ai_delivery() {
   local ai_delivery_cmd=$1
   local target_repo=$2
-  local project_id=$3
-  local main_branch=$4
 
-  "$ai_delivery_cmd" init "$target_repo" --project-id "$project_id" --main-branch "$main_branch"
+  "$ai_delivery_cmd" init "$target_repo"
 }
 
 main() {
-  local target_repo="" project_id="" main_branch="main"
+  local target_repo=""
   local os arch archive_name base_url temp_dir archive_path checksums_path extracted_dir binary_path
 
   if [[ $# -eq 0 ]]; then
@@ -177,16 +175,6 @@ main() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --project-id)
-        [[ $# -ge 2 ]] || fail "Missing value for --project-id"
-        project_id=$2
-        shift 2
-        ;;
-      --main-branch)
-        [[ $# -ge 2 ]] || fail "Missing value for --main-branch"
-        main_branch=$2
-        shift 2
-        ;;
       -h|--help)
         usage
         exit 0
@@ -202,7 +190,7 @@ main() {
 
   if [[ -n "$AI_DELIVERY_CMD" ]]; then
     log "Using local ai-delivery command override"
-    run_ai_delivery "$AI_DELIVERY_CMD" "$target_repo" "$project_id" "$main_branch"
+    run_ai_delivery "$AI_DELIVERY_CMD" "$target_repo"
     exit 0
   fi
 
@@ -233,7 +221,7 @@ main() {
   [[ -n "$binary_path" ]] || fail "Extracted archive did not contain ai-delivery"
   chmod +x "$binary_path"
 
-  run_ai_delivery "$binary_path" "$target_repo" "$project_id" "$main_branch"
+  run_ai_delivery "$binary_path" "$target_repo"
 }
 
 main "$@"

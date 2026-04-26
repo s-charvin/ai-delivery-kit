@@ -27,7 +27,6 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".agents/skills/api-contract-mapping/references/dual-truth-rules.md"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
-		filepath.Join(target, ".ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
 		filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"),
 		filepath.Join(target, ".ai-delivery/runtime/main-branch.json"),
@@ -39,6 +38,10 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
 		}
+	}
+
+	if _, err := os.Stat(filepath.Join(target, ".ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md")); !os.IsNotExist(err) {
+		t.Fatalf("expected onboarding guide to be absent, got %v", err)
 	}
 
 	binding, err := os.ReadFile(filepath.Join(target, ".ai-delivery/meta/project-binding.json"))

@@ -194,7 +194,7 @@ main() {
   log "Installed ai-delivery to $target_path"
   log "Add $AI_DELIVERY_INSTALL_DIR to PATH if it is not already available:"
   log "  export PATH=\"$AI_DELIVERY_INSTALL_DIR:\$PATH\""
-  log "Run: ai-delivery init /path/to/repo --project-id my-project --main-branch main"
+  log "Run: ai-delivery init /path/to/repo"
 }
 
 main "$@"

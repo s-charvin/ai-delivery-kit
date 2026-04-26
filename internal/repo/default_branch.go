@@ -8,11 +8,17 @@ import (
 
 func chooseDefaultBranch(originHeadRef, currentBranch string) string {
 	originHeadRef = strings.TrimSpace(originHeadRef)
+	if strings.HasPrefix(originHeadRef, "fatal:") {
+		originHeadRef = ""
+	}
 	if originHeadRef != "" {
 		return strings.TrimPrefix(originHeadRef, "origin/")
 	}
 
 	currentBranch = strings.TrimSpace(currentBranch)
+	if strings.HasPrefix(currentBranch, "fatal:") {
+		currentBranch = ""
+	}
 	if currentBranch != "" && currentBranch != "HEAD" {
 		return currentBranch
 	}

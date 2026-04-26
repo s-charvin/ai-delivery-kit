@@ -14,7 +14,6 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/ai-delivery/ui-acceptance-contract/templates/ui-acceptance-contract-template.md",
 		".agents/skills/ai-delivery/ui-interaction-design/templates/interaction-design-template.md",
 		".agents/skills/ai-delivery/ai-delivery-orchestrator/references/reconcile-rules.md",
-		"docs/guides/ai-delivery-any-repo-onboarding.md",
 		"scripts/validate-project-ai-delivery-skills.sh",
 		"tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
 		"tests/ai-delivery-skills/validate-sources.test.sh",
