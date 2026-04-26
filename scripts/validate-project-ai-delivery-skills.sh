@@ -189,10 +189,13 @@ validate_managed_contract() {
     require_not_contains "$readme_file" '--main-branch'
     require_contains "$ci_workflow" 'uses: actions/checkout@v5'
     require_contains "$ci_workflow" 'uses: actions/setup-go@v6'
+    require_contains "$ci_workflow" 'uses: goreleaser/goreleaser-action@v7'
     require_contains "$ci_workflow" 'cache: false'
     require_contains "$ci_workflow" "version: '~> v2'"
     require_contains "$release_workflow" 'uses: actions/checkout@v5'
     require_contains "$release_workflow" 'uses: actions/setup-go@v6'
+    require_contains "$release_workflow" 'uses: goreleaser/goreleaser-action@v7'
+    require_contains "$release_workflow" 'uses: softprops/action-gh-release@v3'
     require_contains "$release_workflow" 'cache: false'
     require_contains "$release_workflow" "version: '~> v2'"
   fi
