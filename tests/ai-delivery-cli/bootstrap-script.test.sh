@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
+ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+BOOTSTRAP_SCRIPT="$ROOT/scripts/bootstrap-ai-delivery.sh"
+
+fail() {
+  printf '[bootstrap-script-test] %s\n' "$1" >&2
+  exit 1
+}
+
+assert_file_contains() {
+  local file=$1
+  local needle=$2
+
+  grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
+}
+
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-bootstrap-script.XXXXXX")
+TARGET_REPO="$TEMP_DIR/target repo"
+LOCAL_LOG="$TEMP_DIR/local-command.log"
+DOWNLOAD_LOG="$TEMP_DIR/download-command.log"
+LOCAL_CMD="$TEMP_DIR/local-ai-delivery"
+DOWNLOAD_CMD="$TEMP_DIR/ai-delivery"
+
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64|amd64)
+    ARCH="amd64"
+    ;;
+  arm64|aarch64)
+    ARCH="arm64"
+    ;;
+  *)
+    fail "unsupported test architecture: $ARCH"
+    ;;
+esac
+
+ARCHIVE_NAME="ai-delivery_${OS}_${ARCH}.tar.gz"
+
+cleanup() {
+  rm -rf "$TEMP_DIR"
+}
+
+trap cleanup EXIT
+
+mkdir -p "$TARGET_REPO"
+
+cat >"$LOCAL_CMD" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "\$*" >"$LOCAL_LOG"
+EOF
+chmod +x "$LOCAL_CMD"
+
+AI_DELIVERY_CMD="$LOCAL_CMD" \
+  bash "$BOOTSTRAP_SCRIPT" \
+    "$TARGET_REPO" \
+    --project-id "demo-project" \
+    --main-branch "main"
+
+assert_file_contains "$LOCAL_LOG" 'init'
+assert_file_contains "$LOCAL_LOG" "$TARGET_REPO"
+assert_file_contains "$LOCAL_LOG" '--project-id demo-project'
+assert_file_contains "$LOCAL_LOG" '--main-branch main'
+
+cat >"$DOWNLOAD_CMD" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "\$*" >"$DOWNLOAD_LOG"
+EOF
+chmod +x "$DOWNLOAD_CMD"
+
+tar -C "$TEMP_DIR" -czf "$TEMP_DIR/$ARCHIVE_NAME" "$(basename "$DOWNLOAD_CMD")"
+CHECKSUM=$(shasum -a 256 "$TEMP_DIR/$ARCHIVE_NAME" | awk '{print $1}')
+cat >"$TEMP_DIR/checksums.txt" <<EOF
+$CHECKSUM  $ARCHIVE_NAME
+deadbeef  ai-delivery_linux_amd64.tar.gz
+EOF
+
+AI_DELIVERY_DOWNLOAD_BASE_URL="file://$TEMP_DIR" \
+  AI_DELIVERY_VERSION="v9.9.9" \
+  bash "$BOOTSTRAP_SCRIPT" \
+    "$TARGET_REPO" \
+    --project-id "download-project" \
+    --main-branch "release/main"
+
+assert_file_contains "$DOWNLOAD_LOG" 'init'
+assert_file_contains "$DOWNLOAD_LOG" "$TARGET_REPO"
+assert_file_contains "$DOWNLOAD_LOG" '--project-id download-project'
+assert_file_contains "$DOWNLOAD_LOG" '--main-branch release/main'

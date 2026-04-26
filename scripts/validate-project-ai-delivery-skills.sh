@@ -145,6 +145,7 @@ validate_skill_local_assets() {
 }
 
 validate_managed_contract() {
+  local readme_file=""
   local validate_script
   local validate_test
   local onboarding_guide
@@ -162,14 +163,31 @@ validate_managed_contract() {
   require_file "$onboarding_guide"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
+    readme_file="$ROOT/README.md"
     bootstrap_script="$ROOT/scripts/bootstrap-ai-delivery-project.sh"
+    require_file "$readme_file"
     require_file "$bootstrap_script"
     require_file "$ROOT/tests/ai-delivery-skills/bootstrap-project.test.sh"
-    require_contains "$bootstrap_script" '.agents/skills'
+    require_contains "$bootstrap_script" 'go run ./cmd/ai-delivery init'
+    require_contains "$bootstrap_script" '--target-repo'
     require_not_contains "$bootstrap_script" 'install-project-ai-delivery-skills'
     require_not_contains "$bootstrap_script" 'sync-ai-delivery-project-assets'
+
+    require_contains "$readme_file" 'ai-delivery init'
+    require_contains "$readme_file" 'scripts/install-ai-delivery.sh'
+    require_contains "$readme_file" 'scripts/bootstrap-ai-delivery.sh'
+    require_contains "$readme_file" 'main'
+    require_contains "$readme_file" 'tag push'
   fi
 
+  require_contains "$onboarding_guide" 'ai-delivery init <target> --project-id <project-id> --main-branch main'
+  require_contains "$onboarding_guide" 'scripts/install-ai-delivery.sh'
+  require_contains "$onboarding_guide" 'scripts/bootstrap-ai-delivery.sh'
+  require_contains "$onboarding_guide" 'bash -s -- <target> --project-id <project-id> --main-branch main'
+  require_contains "$onboarding_guide" 'specify-cli'
+  require_contains "$onboarding_guide" 'superpowers'
+  require_contains "$onboarding_guide" '官方路径安装'
+  require_contains "$onboarding_guide" '官方安装链接'
   require_contains "$onboarding_guide" '.agents/skills/requirement-breakdown'
   require_contains "$onboarding_guide" '.agents/skills/api-contract-mapping'
   require_contains "$onboarding_guide" '.agents/skills/ui-requirement-mapping'

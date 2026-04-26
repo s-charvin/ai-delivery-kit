@@ -1,0 +1,46 @@
+version: 2
+
+project_name: ai-delivery
+
+before:
+  hooks:
+    - go test ./...
+
+builds:
+  - id: ai-delivery
+    main: ./cmd/ai-delivery
+    binary: ai-delivery
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X github.com/s-charvin/ai-delivery-kit/internal/version.Version={{ .Version }} -X github.com/s-charvin/ai-delivery-kit/internal/version.Commit={{ .Commit }} -X github.com/s-charvin/ai-delivery-kit/internal/version.Date={{ .Date }}
+
+archives:
+  - id: ai-delivery
+    ids:
+      - ai-delivery
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: s-charvin
+    name: ai-delivery-kit

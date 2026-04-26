@@ -28,6 +28,7 @@ SOURCE_BOOTSTRAP_SCRIPT=$(resolve_project_asset_path "scripts/bootstrap-ai-deliv
 
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-bootstrap.XXXXXX")
 TARGET_REPO="$TEMP_DIR/target-repo"
+TEMP_BIN="$TEMP_DIR/bin"
 
 cleanup() {
   rm -rf "$TEMP_DIR"
@@ -35,7 +36,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-mkdir -p "$TARGET_REPO"
+mkdir -p "$TARGET_REPO" "$TEMP_BIN"
 git -C "$TARGET_REPO" init -q
 mkdir -p "$TARGET_REPO/docs/guides"
 cat > "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" <<'EOF'
@@ -44,7 +45,31 @@ cat > "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" <<'EOF'
 This file intentionally does not describe the bootstrapped flattened skill layout.
 EOF
 
-zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
+cat > "$TEMP_BIN/specify" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${1:-}" == "init" && "${2:-}" == "--help" ]]; then
+  cat <<'HELP'
+Usage: specify init [OPTIONS] [PROJECT_NAME]
+  --ai TEXT
+  --script [sh|ps]
+  --force
+HELP
+  exit 0
+fi
+
+if [[ "${1:-}" == "init" ]]; then
+  mkdir -p .specify
+  : > .specify/.gitkeep
+  exit 0
+fi
+
+exit 0
+EOF
+chmod +x "$TEMP_BIN/specify"
+
+PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
   --target-repo "$TARGET_REPO" \
   --project-id "demo-project" \
   --main-branch "main-dev"
@@ -83,6 +108,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" \
 [[ ! -e "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/bootstrap-project.test.sh" ]]
 [[ ! -e "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ ! -e "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" ]]
+[[ -d "$TARGET_REPO/.specify" ]]
 grep -Fq 'stale root onboarding guide' "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md"
 
 grep -Fq '"project_id": "demo-project"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"

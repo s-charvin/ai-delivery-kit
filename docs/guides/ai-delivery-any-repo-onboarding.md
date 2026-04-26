@@ -5,9 +5,9 @@
 只要你的目标仓库满足下面两点，就可以接入这套架构：
 
 1. 该仓库是实际业务仓库，后续会承载 `.ai-delivery/`、`.specify/` 和 project-local skills。
-2. 你手里有一个“参考仓库”，里面已经维护好这套 project AI delivery skill 源码与 helper script。
+2. 你可以使用 `ai-delivery` CLI，或者直接运行发布出来的 bootstrap 脚本。
 
-当前参考仓库就是本仓库，它提供：
+当前 source repo 仍然是这些 governed 资产的维护来源，它提供：
 
 - `requirement-breakdown`
 - `api-contract-mapping`
@@ -20,7 +20,8 @@
 
 注意：
 
-- 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
+- 对外推荐入口已经不是“先进入参考仓库再 bootstrap”，而是 `ai-delivery init` 或发布脚本。
+- source repo 里的 helper script 仍位于仓库根目录，主要用于兼容包装、本地开发和 contract test。
 - 参考仓库里的 source skill 则位于 `.agents/skills/ai-delivery/`。
 - 一旦 bootstrap 到目标仓库，这些 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
 
@@ -47,26 +48,32 @@
 
 ## 一次性接入任意仓库
 
-### Step 1: 从参考仓库 bootstrap 目标仓库
+### Step 1: 安装 `ai-delivery` CLI，或直接使用 bootstrap 脚本
 
-在参考仓库里执行：
+推荐主路径是直接安装 CLI：
 
 ```bash
-cd <reference-repo-root>
-zsh scripts/bootstrap-ai-delivery-project.sh \
-  --target-repo <target-repo-root> \
-  --project-id <project-id> \
-  --main-branch main
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash
+ai-delivery init <target> --project-id <project-id> --main-branch main
 ```
 
 例子：
 
 ```bash
-cd /Users/xxx/Projects/delivery-dev
-zsh scripts/bootstrap-ai-delivery-project.sh \
-  --target-repo /Users/xxx/Projects/my-app \
-  --project-id my-app \
-  --main-branch main
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash
+ai-delivery init /Users/xxx/Projects/my-app --project-id my-app --main-branch main
+```
+
+如果你不想先安装 CLI，可以直接走 no-install bootstrap：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/bootstrap-ai-delivery.sh | bash -s -- <target> --project-id <project-id> --main-branch main
+```
+
+例子：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/bootstrap-ai-delivery.sh | bash -s -- /Users/xxx/Projects/my-app --project-id my-app --main-branch main
 ```
 
 这一步会把下面这些内容落进目标仓库：
@@ -82,17 +89,25 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 - `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
 - 最小 `.ai-delivery/` 目录契约与基础 meta/runtime 文件
 
-也就是说，`project-local skills` 的初始化已经并入 bootstrap 本身，目标仓库不再需要额外执行单独的 skill 安装步骤。
+也就是说，`project-local skills` 的初始化已经并入 `ai-delivery init` / bootstrap 本身，目标仓库不再需要额外执行单独的 skill 安装步骤。
+
+如果 CLI 检测到缺失的 `specify-cli` 或 `superpowers`，会先提示你是否按官方路径安装：
+
+- 你选择安装：CLI 会按支持环境里的官方路径继续处理。
+- 你选择不安装：CLI 仍会完成 `.ai-delivery` 与 governed skill 的初始化，但会打印官方安装链接，方便你后续手动处理。
 
 它不会做这些事情：
 
-- 不会安装全局 `Spec Kit` CLI
-- 不会自动执行 `specify init`
 - 不会创建真实 requirement package
 - 不会绑定 Figma
 - 不会启动 `ai-delivery-admin`
 
-### Step 2: 在目标仓库里安装 Spec Kit
+兼容说明：
+
+- 如果你正在 `ai-delivery-kit` source repo 内做本地验证，仍然可以执行 `zsh scripts/bootstrap-ai-delivery-project.sh --target-repo <target-repo-root> --project-id <project-id> --main-branch main`。
+- 这个 wrapper 仍然有效，但它是兼容入口，不是对外推荐入口。
+
+### Step 2: 确认 `specify-cli` / `superpowers` 就绪
 
 先确保机器具备：
 
@@ -104,18 +119,24 @@ git --version
 
 `Python` 需要 `3.11+`。
 
-安装：
+如果你在 Step 1 里已经允许 CLI 代装，可以直接跳到验证步骤。
+
+如果你在 Step 1 里选择稍后处理，可以按官方路径自行安装 `specify-cli`，并确认 `superpowers` 已经在当前 agent 环境可用。
+
+`specify-cli` 示例安装：
 
 ```bash
 uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
 specify check
 ```
 
-再进入目标仓库初始化 `Spec Kit`：
+`superpowers` 请按你当前 coding agent 支持的官方路径安装；如果 CLI 没有直接代装，它会打印对应官方链接。
+
+然后进入目标仓库确认 `Spec Kit` 可用：
 
 ```bash
 cd <target-repo-root>
-specify init --here --ai codex --ai-skills --script sh
+specify init --here --force --ai codex --script sh
 ```
 
 如果仓库已经有旧的 `Spec Kit` 模板，需要升级：
@@ -123,7 +144,7 @@ specify init --here --ai codex --ai-skills --script sh
 ```bash
 cd <target-repo-root>
 cp .specify/memory/constitution.md .specify/memory/constitution.backup.md 2>/dev/null || true
-specify init --here --force --ai codex --ai-skills --script sh
+specify init --here --force --ai codex --script sh
 ```
 
 说明：
@@ -131,6 +152,8 @@ specify init --here --force --ai codex --ai-skills --script sh
 - 在 `Codex` 里，`Spec Kit` 的调用方式是 `$speckit-*`
 - 例如 `$speckit-constitution`、`$speckit-specify`、`$speckit-plan`
 - 升级时先备份 `.specify/memory/constitution.md`
+- `ai-delivery init` 自动接管 `specify init` 时，会先检测你本地 `specify` 是否支持 `--ai-skills`；如果当前版本不支持，会自动退回兼容命令。
+- `superpowers` 在这套链路里负责执行纪律，不负责替代 `.ai-delivery` 或 `Spec Kit` 的制品边界
 
 bootstrap 完成后，当前仓库内应该已经具备并可识别：
 
@@ -378,10 +401,8 @@ bootstrap 脚本不会替目标仓库强行规定 `traceability.json.spec_kit_re
 第一次接入：
 
 ```bash
-cd <reference-repo-root>
-zsh scripts/bootstrap-ai-delivery-project.sh --target-repo <target-repo-root> --project-id <project-id> --main-branch main-dev
-cd <target-repo-root>
-specify init --here --ai codex --ai-skills --script sh
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash
+ai-delivery init <target> --project-id <project-id> --main-branch main
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```
 
