@@ -26,6 +26,10 @@ jobs:
         with:
           go-version: "1.22"
 
+      - name: Install zsh on Ubuntu
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y zsh
+
       - name: Run Unix release rehearsal
         if: runner.os != 'Windows'
         run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh
@@ -49,6 +53,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.22"
+
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
 
       - name: Run release rehearsal gates
         run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh

@@ -10,6 +10,13 @@ log() {
   printf '[release-rehearsal] %s\n' "$1"
 }
 
+need_cmd() {
+  command -v "$1" >/dev/null 2>&1 || {
+    log "FAIL  missing required command: $1"
+    return 1
+  }
+}
+
 run_step() {
   local label=$1
   shift
@@ -59,6 +66,7 @@ maybe_run_pwsh() {
 main() {
   cd "$ROOT"
 
+  need_cmd zsh
   run_step "go test ./..." env GOCACHE="$GOCACHE_DIR" go test ./...
   run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
   run_step "legacy bootstrap contract" env GOCACHE="$GOCACHE_DIR" zsh tests/ai-delivery-skills/bootstrap-project.test.sh
