@@ -165,9 +165,8 @@ func TestRunAcceptInstallExecutesInstallCommandsOnly(t *testing.T) {
 func TestRunSkipsSpecifyInitWhenInstallIsDeclined(t *testing.T) {
 	bootstrapper := &fakeBootstrapper{}
 	runner := &fakeRunner{paths: map[string]string{
-		"uv":      "uv",
-		"specify": "specify",
-		"git":     "git",
+		"uv":  "uv",
+		"git": "git",
 	}}
 	service := Service{
 		Prompt:       staticPrompt(false),
@@ -208,6 +207,57 @@ func TestRunSkipsSpecifyInitWhenInstallIsDeclined(t *testing.T) {
 
 	if len(result.DocsLinks) == 0 {
 		t.Fatal("expected docs links when install is declined")
+	}
+}
+
+func TestRunDecliningSuperpowersInstallDoesNotBlockExistingSpecifyInit(t *testing.T) {
+	bootstrapper := &fakeBootstrapper{}
+	runner := &fakeRunner{paths: map[string]string{
+		"specify": "specify",
+		"git":     "git",
+	}}
+	service := Service{
+		Prompt:       staticPrompt(false),
+		Runner:       runner,
+		Bootstrapper: bootstrapper,
+		ReadCommandOutput: func(context.Context, string, ...string) (string, error) {
+			return "Usage: specify init\n  --ai-skills\n", nil
+		},
+		Discover: func(string) (repo.Info, error) {
+			return repo.Info{Root: "/tmp/project"}, nil
+		},
+		HomeDir: "/tmp/home",
+		GOOS:    "linux",
+		StatPath: func(string) error {
+			return errors.New("missing")
+		},
+	}
+
+	result, err := service.Run(context.Background(), Input{
+		TargetPath:  "/tmp/project",
+		ProjectID:   "demo-project",
+		MainBranch:  "main",
+		Interactive: true,
+	})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	if !bootstrapper.called {
+		t.Fatal("expected bootstrap to run")
+	}
+
+	if len(runner.calls) != 1 {
+		t.Fatalf("expected only specify init command, got %#v", runner.calls)
+	}
+
+	call := runner.calls[0]
+	if call.Name != "specify" || len(call.Args) == 0 || call.Args[0] != "init" {
+		t.Fatalf("expected specify init command, got %#v", call)
+	}
+
+	if len(result.DocsLinks) == 0 {
+		t.Fatal("expected docs links for declined superpowers install")
 	}
 }
 

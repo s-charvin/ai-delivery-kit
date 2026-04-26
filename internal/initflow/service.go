@@ -95,7 +95,6 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 
 	result := Result{RepoRoot: info.Root}
 	specifyInstalledNow := false
-	installDeclined := false
 
 	autoInstallable := len(specifyPlan.InstallCommands) > 0 || len(superpowersPlan.InstallCommands) > 0
 	if autoInstallable {
@@ -122,7 +121,6 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 				result.InstalledTools = append(result.InstalledTools, superpowersPlan.Name)
 			}
 		} else {
-			installDeclined = true
 			result.DocsLinks = append(result.DocsLinks, specifyPlan.DocsURLs...)
 			result.DocsLinks = append(result.DocsLinks, superpowersPlan.DocsURLs...)
 		}
@@ -149,7 +147,7 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	}
 	result.Bootstrapped = true
 
-	if !info.HasSpecify && !installDeclined && (hasSpecify || specifyInstalledNow) {
+	if !info.HasSpecify && (hasSpecify || specifyInstalledNow) {
 		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx)); len(cmd) > 0 {
 			if err := s.Runner.Run(ctx, command.Command{
 				Name: cmd[0],

@@ -26,20 +26,9 @@ jobs:
         with:
           go-version: "1.22"
 
-      - name: Run Go tests
-        run: go test ./...
-
-      - name: Run bootstrap smoke test
+      - name: Run Unix release rehearsal
         if: runner.os != 'Windows'
-        run: bash tests/ai-delivery-cli/bootstrap-script.test.sh
-
-      - name: Run install smoke test
-        if: runner.os != 'Windows'
-        run: bash tests/ai-delivery-cli/install-script.test.sh
-
-      - name: Run legacy bootstrap compatibility test
-        if: runner.os != 'Windows'
-        run: zsh tests/ai-delivery-skills/bootstrap-project.test.sh
+        run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh
 
       - name: Validate PowerShell script syntax
         if: runner.os == 'Windows'
@@ -60,6 +49,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.22"
+
+      - name: Run release rehearsal gates
+        run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh
 
       - name: Run GoReleaser snapshot check
         uses: goreleaser/goreleaser-action@v6

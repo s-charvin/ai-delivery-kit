@@ -53,3 +53,14 @@ This source repository still keeps `scripts/bootstrap-ai-delivery-project.sh` as
 
 - `main` validates build and pre-release checks only.
 - `tag push` publishes the formal GitHub Release.
+
+## Release Rehearsal
+
+Run the local release rehearsal before creating a release tag:
+
+```bash
+bash scripts/rehearse-release.sh
+```
+
+By default, the script runs the Go test suite, validators, legacy/bootstrap/install smoke tests, and `git diff --check`.
+If `goreleaser` or `pwsh` are available locally, it will include those checks too.
