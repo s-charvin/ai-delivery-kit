@@ -40,8 +40,6 @@ func TestRunSkipsAlreadyInstalledTools(t *testing.T) {
 
 	result, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -83,8 +81,6 @@ func TestRunDeclineStillBootstrapsAIDelivery(t *testing.T) {
 
 	result, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -130,8 +126,6 @@ func TestRunAcceptInstallExecutesInstallCommandsOnly(t *testing.T) {
 
 	_, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -187,8 +181,6 @@ func TestRunSkipsSpecifyInitWhenInstallIsDeclined(t *testing.T) {
 
 	result, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -235,8 +227,6 @@ func TestRunDecliningSuperpowersInstallDoesNotBlockExistingSpecifyInit(t *testin
 
 	result, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -289,8 +279,6 @@ func TestRunUsesExistingSpecifyToInitializeMissingSpecifyTree(t *testing.T) {
 
 	_, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -341,8 +329,6 @@ func TestRunFallsBackWhenSpecifyInitHelpDoesNotSupportAISkills(t *testing.T) {
 
 	_, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	})
 	if err != nil {
@@ -359,6 +345,47 @@ func TestRunFallsBackWhenSpecifyInitHelpDoesNotSupportAISkills(t *testing.T) {
 	}
 	if !containsArg(call.Args, "--force") {
 		t.Fatalf("expected --force in fallback specify init command, got %#v", call.Args)
+	}
+}
+
+func TestRunDerivesProjectAndMainBranchWhenInputDoesNotProvideThem(t *testing.T) {
+	bootstrapper := &fakeBootstrapper{}
+	runner := &fakeRunner{paths: map[string]string{
+		"git": "git",
+	}}
+	service := Service{
+		Prompt:       staticPrompt(true),
+		Runner:       runner,
+		Bootstrapper: bootstrapper,
+		Discover: func(string) (repo.Info, error) {
+			return repo.Info{Root: "/tmp/demo-repo", HasSpecify: true}, nil
+		},
+		DetectMainBranch: func(context.Context, string) (string, error) {
+			return "release/main", nil
+		},
+		HomeDir: "/tmp/home",
+		GOOS:    "linux",
+		StatPath: func(path string) error {
+			if path == "/tmp/home/.agents/skills/superpowers" {
+				return nil
+			}
+			return errors.New("missing")
+		},
+	}
+
+	_, err := service.Run(context.Background(), Input{
+		TargetPath:  "/tmp/demo-repo",
+		Interactive: true,
+	})
+	if err != nil {
+		t.Fatalf("run failed: %v", err)
+	}
+
+	if bootstrapper.config.ProjectID != "demo-repo" {
+		t.Fatalf("expected derived project id, got %#v", bootstrapper.config)
+	}
+	if bootstrapper.config.MainBranch != "release/main" {
+		t.Fatalf("expected derived branch, got %#v", bootstrapper.config)
 	}
 }
 
@@ -387,8 +414,6 @@ func TestRunStopsBeforeInstallOrBootstrapOnPreflightConflict(t *testing.T) {
 
 	if _, err := service.Run(context.Background(), Input{
 		TargetPath:  "/tmp/project",
-		ProjectID:   "demo-project",
-		MainBranch:  "main",
 		Interactive: true,
 	}); err == nil {
 		t.Fatal("expected preflight failure, got nil")

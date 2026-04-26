@@ -2,7 +2,6 @@ package cli
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -58,26 +57,9 @@ func (a *App) Run(args []string) int {
 }
 
 func (a *App) runInit(args []string) int {
-	if len(args) == 0 {
-		_, _ = fmt.Fprintln(a.stderr, "init requires a target repository path")
+	if len(args) != 1 {
+		_, _ = fmt.Fprintln(a.stderr, "init requires exactly one target repository path")
 		a.printUsage()
-		return 1
-	}
-
-	target := args[0]
-	flagSet := flag.NewFlagSet("init", flag.ContinueOnError)
-	flagSet.SetOutput(a.stderr)
-
-	var projectID string
-	var mainBranch string
-	flagSet.StringVar(&projectID, "project-id", "", "Project identifier")
-	flagSet.StringVar(&mainBranch, "main-branch", "main", "Main branch name")
-
-	if err := flagSet.Parse(args[1:]); err != nil {
-		return 1
-	}
-	if flagSet.NArg() > 0 {
-		_, _ = fmt.Fprintf(a.stderr, "unexpected extra arguments: %v\n", flagSet.Args())
 		return 1
 	}
 
@@ -90,19 +72,18 @@ func (a *App) runInit(args []string) int {
 		}
 
 		runner = initflow.Service{
-			Prompt:       prompt.Terminal{Reader: a.stdin, Writer: a.stdout},
-			Runner:       command.OSRunner{},
-			Bootstrapper: bootstrap.Engine{},
-			Discover:     repo.Discover,
-			HomeDir:      homeDir,
-			GOOS:         a.goos,
+			Prompt:           prompt.Terminal{Reader: a.stdin, Writer: a.stdout},
+			Runner:           command.OSRunner{},
+			Bootstrapper:     bootstrap.Engine{},
+			Discover:         repo.Discover,
+			DetectMainBranch: repo.DetectDefaultBranch,
+			HomeDir:          homeDir,
+			GOOS:             a.goos,
 		}
 	}
 
 	result, err := runner.Run(context.Background(), initflow.Input{
-		TargetPath:  target,
-		ProjectID:   projectID,
-		MainBranch:  mainBranch,
+		TargetPath:  args[0],
 		Interactive: true,
 	})
 	if err != nil {

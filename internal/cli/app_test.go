@@ -35,34 +35,19 @@ func TestRunWithoutCommandPrintsUsage(t *testing.T) {
 	}
 }
 
-func TestRunInitCommandParsesTargetAndFlags(t *testing.T) {
+func TestRunInitCommandParsesOnlyTargetPath(t *testing.T) {
 	var out bytes.Buffer
 	fake := &fakeInitRunner{}
 	app := New(&out, &out)
 	app.initRunner = fake
 
-	exitCode := app.Run([]string{
-		"init",
-		"/tmp/demo-repo",
-		"--project-id",
-		"demo-project",
-		"--main-branch",
-		"main",
-	})
+	exitCode := app.Run([]string{"init", "/tmp/demo-repo"})
 	if exitCode != 0 {
 		t.Fatalf("expected exit code 0, got %d", exitCode)
 	}
 
 	if fake.input.TargetPath != "/tmp/demo-repo" {
 		t.Fatalf("expected target path to be parsed, got %#v", fake.input)
-	}
-
-	if fake.input.ProjectID != "demo-project" {
-		t.Fatalf("expected project id to be parsed, got %#v", fake.input)
-	}
-
-	if fake.input.MainBranch != "main" {
-		t.Fatalf("expected main branch to be parsed, got %#v", fake.input)
 	}
 }
 
