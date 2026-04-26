@@ -23,6 +23,8 @@ jobs:
 
       - name: Publish release artifacts
         uses: goreleaser/goreleaser-action@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           distribution: goreleaser
           version: latest
@@ -30,6 +32,8 @@ jobs:
 
       - name: Upload public install/bootstrap scripts
         uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           files: |
             scripts/install-ai-delivery.sh
