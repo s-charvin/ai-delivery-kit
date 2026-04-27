@@ -41,6 +41,8 @@ jobs:
         run: |
           $null = [System.Management.Automation.Language.Parser]::ParseFile("scripts/install-ai-delivery.ps1", [ref]$null, [ref]$null)
           $null = [System.Management.Automation.Language.Parser]::ParseFile("scripts/bootstrap-ai-delivery.ps1", [ref]$null, [ref]$null)
+          pwsh -NoProfile -File tests/ai-delivery-cli/install-script-powershell.test.ps1
+          pwsh -NoProfile -File tests/ai-delivery-cli/bootstrap-script-powershell.test.ps1
 
   prerelease-check:
     runs-on: ubuntu-latest

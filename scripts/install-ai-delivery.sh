@@ -57,16 +57,25 @@ should_use_github_auth() {
 download_to() {
   local url=$1
   local output=$2
+  shift 2
   local -a curl_args
   local -a wget_args
 
-  curl_args=(-fsSL "$url" -o "$output")
-  wget_args=(-qO "$output" "$url")
+  curl_args=(-fsSL)
+  wget_args=(-qO "$output")
+
+  for header in "$@"; do
+    curl_args+=(-H "$header")
+    wget_args+=(--header="$header")
+  done
 
   if should_use_github_auth "$url"; then
-    curl_args=(-H "Authorization: Bearer $GITHUB_TOKEN" "${curl_args[@]}")
-    wget_args=("--header=Authorization: Bearer $GITHUB_TOKEN" "${wget_args[@]}")
+    curl_args+=(-H "Authorization: Bearer $GITHUB_TOKEN")
+    wget_args+=(--header="Authorization: Bearer $GITHUB_TOKEN")
   fi
+
+  curl_args+=("$url" -o "$output")
+  wget_args+=("$url")
 
   if command -v curl >/dev/null 2>&1; then
     curl "${curl_args[@]}"
@@ -122,6 +131,94 @@ release_base_url() {
   fi
 
   printf 'https://github.com/%s/releases/download/%s\n' "$AI_DELIVERY_REPO" "$AI_DELIVERY_VERSION"
+}
+
+github_api_base_url() {
+  printf 'https://api.github.com/repos/%s\n' "$AI_DELIVERY_REPO"
+}
+
+github_release_api_url() {
+  local api_base
+
+  api_base=$(github_api_base_url)
+  if [[ "$AI_DELIVERY_VERSION" == "latest" ]]; then
+    printf '%s/releases/latest\n' "$api_base"
+    return 0
+  fi
+
+  printf '%s/releases/tags/%s\n' "$api_base" "$AI_DELIVERY_VERSION"
+}
+
+release_source_description() {
+  if [[ -n "$AI_DELIVERY_DOWNLOAD_BASE_URL" ]]; then
+    printf '%s\n' "$AI_DELIVERY_DOWNLOAD_BASE_URL"
+    return 0
+  fi
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    printf 'GitHub Releases API for %s (%s)\n' "$AI_DELIVERY_REPO" "$AI_DELIVERY_VERSION"
+    return 0
+  fi
+
+  release_base_url
+}
+
+escape_sed_regex() {
+  printf '%s' "$1" | sed 's/[][\/.^$*]/\\&/g'
+}
+
+release_metadata_path() {
+  printf '%s/release.json\n' "$AI_DELIVERY_TEMP_DIR"
+}
+
+find_github_release_asset_id() {
+  local metadata_path=$1
+  local asset_name=$2
+  local escaped_name
+  local release_json
+
+  escaped_name=$(escape_sed_regex "$asset_name")
+  release_json=$(tr -d '\r\n' <"$metadata_path")
+
+  printf '%s\n' "$release_json" | sed -n "s/.*\"id\":[[:space:]]*\([0-9][0-9]*\)[[:space:]]*,[[:space:]]*\"node_id\":[[:space:]]*\"[^\"]*\"[[:space:]]*,[[:space:]]*\"name\":[[:space:]]*\"$escaped_name\".*/\1/p"
+}
+
+download_github_release_metadata() {
+  local metadata_path=$1
+
+  [[ -f "$metadata_path" ]] && return 0
+  download_to "$(github_release_api_url)" "$metadata_path" 'Accept: application/vnd.github+json'
+}
+
+download_github_release_asset() {
+  local asset_name=$1
+  local output=$2
+  local metadata_path
+  local asset_id
+
+  metadata_path=$(release_metadata_path)
+  download_github_release_metadata "$metadata_path"
+  asset_id=$(find_github_release_asset_id "$metadata_path" "$asset_name")
+  [[ -n "$asset_id" ]] || fail "Could not find release asset $asset_name for $AI_DELIVERY_REPO@$AI_DELIVERY_VERSION"
+
+  download_to "$(github_api_base_url)/releases/assets/$asset_id" "$output" 'Accept: application/octet-stream'
+}
+
+download_release_asset() {
+  local asset_name=$1
+  local output=$2
+
+  if [[ -n "$AI_DELIVERY_DOWNLOAD_BASE_URL" ]]; then
+    download_to "$AI_DELIVERY_DOWNLOAD_BASE_URL/$asset_name" "$output"
+    return 0
+  fi
+
+  if [[ -n "${GITHUB_TOKEN:-}" ]]; then
+    download_github_release_asset "$asset_name" "$output"
+    return 0
+  fi
+
+  download_to "$(release_base_url)/$asset_name" "$output"
 }
 
 checksum_tool() {
@@ -180,7 +277,7 @@ verify_checksum() {
 }
 
 main() {
-  local os arch archive_name base_url temp_dir archive_path checksums_path extracted_dir binary_path target_path
+  local os arch archive_name source_desc archive_path checksums_path extracted_dir binary_path target_path
 
   if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
     usage
@@ -191,7 +288,7 @@ main() {
   os=$(detect_os)
   arch=$(detect_arch)
   archive_name="ai-delivery_${os}_${arch}.tar.gz"
-  base_url=$(release_base_url)
+  source_desc=$(release_source_description)
   AI_DELIVERY_TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-install.XXXXXX")
   archive_path="$AI_DELIVERY_TEMP_DIR/$archive_name"
   checksums_path="$AI_DELIVERY_TEMP_DIR/checksums.txt"
@@ -202,10 +299,10 @@ main() {
 
   mkdir -p "$AI_DELIVERY_INSTALL_DIR" "$extracted_dir"
 
-  log "Downloading ${archive_name} from ${base_url}"
-  download_to "$base_url/$archive_name" "$archive_path"
+  log "Downloading ${archive_name} from ${source_desc}"
+  download_release_asset "$archive_name" "$archive_path"
 
-  if download_to "$base_url/checksums.txt" "$checksums_path"; then
+  if download_release_asset "checksums.txt" "$checksums_path"; then
     verify_checksum "$archive_path" "$checksums_path"
   else
     log "Could not download checksums.txt; continuing without checksum verification."

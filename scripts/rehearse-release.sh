@@ -61,6 +61,8 @@ maybe_run_pwsh() {
   fi
 
   run_step "powershell syntax" pwsh -NoProfile -Command '$null = [System.Management.Automation.Language.Parser]::ParseFile("scripts/install-ai-delivery.ps1", [ref]$null, [ref]$null); $null = [System.Management.Automation.Language.Parser]::ParseFile("scripts/bootstrap-ai-delivery.ps1", [ref]$null, [ref]$null)'
+  run_step "powershell install smoke" pwsh -NoProfile -File tests/ai-delivery-cli/install-script-powershell.test.ps1
+  run_step "powershell bootstrap smoke" pwsh -NoProfile -File tests/ai-delivery-cli/bootstrap-script-powershell.test.ps1
 }
 
 main() {

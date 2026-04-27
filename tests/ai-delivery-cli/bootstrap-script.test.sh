@@ -17,6 +17,15 @@ assert_file_contains() {
   grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
 }
 
+assert_file_not_contains() {
+  local file=$1
+  local needle=$2
+
+  if grep -Fq -- "$needle" "$file"; then
+    fail "did not expect '$needle' in $file"
+  fi
+}
+
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-bootstrap-script.XXXXXX")
 TARGET_REPO="$TEMP_DIR/target repo"
 LOCAL_LOG="$TEMP_DIR/local-command.log"
@@ -125,18 +134,35 @@ for arg in "\$@"; do
   esac
 done
 
-[[ -n "\$output" ]] || fail "curl stub missing output path"
-[[ -n "\$url" ]] || fail "curl stub missing url"
+[[ -n "\$output" ]] || {
+  printf '%s\n' "curl stub missing output path" >&2
+  exit 1
+}
+[[ -n "\$url" ]] || {
+  printf '%s\n' "curl stub missing url" >&2
+  exit 1
+}
 
 case "\$url" in
-  */$ARCHIVE_NAME)
+  https://api.github.com/repos/example/private-repo/releases/tags/v0.0.1)
+    cat >"\$output" <<JSON
+{
+  "assets": [
+    { "id": 201, "node_id": "asset-201", "name": "$ARCHIVE_NAME" },
+    { "id": 202, "node_id": "asset-202", "name": "checksums.txt" }
+  ]
+}
+JSON
+    ;;
+  https://api.github.com/repos/example/private-repo/releases/assets/201)
     cp "$TEMP_DIR/$ARCHIVE_NAME" "\$output"
     ;;
-  */checksums.txt)
+  https://api.github.com/repos/example/private-repo/releases/assets/202)
     cp "$TEMP_DIR/checksums.txt" "\$output"
     ;;
   *)
-    fail "unexpected curl url: \$url"
+    printf '%s\n' "unexpected curl url: \$url" >&2
+    exit 1
     ;;
 esac
 EOF
@@ -146,11 +172,15 @@ rm -f "$DOWNLOAD_LOG"
 PATH="$STUB_DIR:$PATH" \
   GITHUB_TOKEN="test-token" \
   AI_DELIVERY_REPO="example/private-repo" \
-  AI_DELIVERY_VERSION="latest" \
+  AI_DELIVERY_VERSION="v0.0.1" \
   bash "$BOOTSTRAP_SCRIPT" \
     "$TARGET_REPO"
 
 assert_file_contains "$CURL_LOG" 'Authorization: Bearer test-token'
-assert_file_contains "$CURL_LOG" "https://github.com/example/private-repo/releases/latest/download/$ARCHIVE_NAME"
+assert_file_contains "$CURL_LOG" 'Accept: application/octet-stream'
+assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-repo/releases/tags/v0.0.1'
+assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-repo/releases/assets/201'
+assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-repo/releases/assets/202'
+assert_file_not_contains "$CURL_LOG" "https://github.com/example/private-repo/releases/download/v0.0.1/$ARCHIVE_NAME"
 assert_file_contains "$DOWNLOAD_LOG" 'init'
 assert_file_contains "$DOWNLOAD_LOG" "$TARGET_REPO"
