@@ -11,6 +11,8 @@ Use this skill to orchestrate the contract-gated workflow through one requiremen
 
 This is the default entry for requirement work after repository onboarding. In the normal path, it should decide whether to continue an existing requirement or create a new one, pause for human confirmation, and only then dispatch the governed chain.
 
+After `requirement-breakdown`, the default posture is `UI-first, integration-later`: prefer the visual/design track as soon as trustworthy design evidence is runnable, let the API/integration track run in parallel or arrive later, and use late API truth to trigger governed `downstream_revalidation` instead of prematurely pausing the whole requirement.
+
 This skill is a governed wrapper around the existing workflow skills. It coordinates the current chain end to end:
 
 - `requirement-breakdown`
@@ -59,6 +61,8 @@ Required local references:
 - Do not let UI-bearing sub-requirements enter `speckit-*` before `acceptance_frozen`.
 - Do not let UI-bearing sub-requirements claim planning readiness before `slices_ready`.
 - Do not let UI-bearing slices claim merge completion before `visual_acceptance_passed`.
+- Do not promote an API-only or slice-local blocker to requirement-wide `CP-002` while any safe runnable queue item still exists.
+- Do not let a blocked queue entry swallow later queue entries that are still safe to run.
 - Do not turn checkpoints into a second truth store.
 - Do not let subagents advance gates, decide blockers, or merge changes.
 - Do not skip source index, agent session, or slice closure records when a governed admin support surface is available.
@@ -78,6 +82,25 @@ Three-layer model:
 `traceability.json.source_index` is the canonical source index for requirement, Figma, API, Spec Kit, PR, CI, visual, deploy, and monitoring references. Runtime `agent-sessions.json` records who ran the work and where. Runtime `slice-closures.json` records the merged slice summary, tests, review, visual acceptance, deployment evidence, accepted risks, and follow-ups.
 
 Bridge artifacts such as `spec-kit-input.md` and `spec-kit-binding.json` live under `.ai-delivery` as disposable derived sidecars. If they drift from governed source contracts, regenerate them from `.ai-delivery` instead of editing official Spec Kit outputs to compensate.
+
+## Runnable Queue And Blocker Scope
+
+Use these terms explicitly during reconcile and queue decisions:
+
+- `runnable queue item`
+  - Any item that can still move forward safely under the current governed truth without inventing missing facts.
+  - Common examples: Tempad or Figma evidence capture, `ui-requirement-mapping`, page shell implementation, local state or event skeletons, navigation flow, repository or adapter seams, mock wiring, read-only presentation paths, or other safe partial frontend work.
+- `slice-local blocker`
+  - A blocker that stops one slice, one stage, or one capability surface only.
+  - It must not block unrelated slices or stages by default.
+- `action-level integration blocker`
+  - A blocker that stops real API wiring or final semantic closure for one action.
+  - It does not block visual mapping, shell work, local state work, navigation skeletons, non-dangerous user paths, or other safe partial development unless those activities truly depend on the missing API truth.
+- `requirement-global blocker`
+  - A blocker that is allowed to hold the whole requirement only when every currently derivable queue item is non-runnable.
+  - If even one safe runnable item remains, the blocker is not requirement-global yet.
+
+The default orchestrator strategy is `continue safest runnable work first`, not `pause on first blocker`.
 
 ## Runtime Modes
 
@@ -104,8 +127,9 @@ Resolve the active mode after every reconcile. Use `.ai-delivery` plus `todo.md`
    - `todo.md` exists, `current_checkpoint` is `CP-002`, and either the user has supplied the missing decision or the external blocker has been cleared.
    - Reconcile again, clear the blocker note only if the guard is now satisfiable, then resume from the blocked step.
 5. `resume`
-   - `todo.md` exists, no checkpoint is actively holding the run, and at least one queue item still has an unsatisfied guard.
-   - Continue from the next unresolved queue item after reconcile.
+   - `todo.md` exists, no checkpoint is actively holding the run, and at least one queue item is still unresolved or runnable after reconcile.
+   - Blocked items may remain in the queue while later independent work continues.
+   - Continue from the safest runnable unresolved queue item after reconcile.
 
 `current_phase` and `current_checkpoint` are execution-panel hints, not truth by themselves. If they disagree with `.ai-delivery`, trust `.ai-delivery` and rewrite the `todo.md` header during reconcile.
 
@@ -140,14 +164,16 @@ direct use of lower-level skills remains supported when their preconditions are 
 
 1. Re-read `.ai-delivery` status and traceability artifacts before trusting `todo.md`.
 2. Re-check every todo guard against the governed artifacts.
-3. If the guard is already satisfied, mark the queue item complete without re-running the stage.
-4. If outputs exist but the guard is not satisfied, re-run the stage or open a blocker. Do not skip it.
+3. Classify every blocker as `slice-local`, `action-level integration blocker`, or `requirement-global blocker` before choosing a checkpoint.
+4. Re-check what the blocker actually blocks: visual truth, acceptance freeze, interaction contract, full integration, or final delivery claim.
+5. If the guard is already satisfied, mark the queue item complete without re-running the stage.
+6. If outputs exist but the guard is not satisfied, re-run the stage or open the narrowest blocker. Keep the blocked item in the queue and continue later runnable items that do not depend on it.
 
 ## Stage Mapping
 
 - Requirement: `requirement-breakdown`
-- API: `api-contract-mapping`
-- UI Evidence: `ui-requirement-mapping`
+- Visual/Design Track: `ui-requirement-mapping`
+- API/Integration Track: `api-contract-mapping`
 - UI Freeze: `ui-acceptance-contract`
 - Interaction And Slice Synthesis: `ui-interaction-design`
 - Spec Kit Bridge: `prepare-speckit-context`
@@ -159,27 +185,32 @@ direct use of lower-level skills remains supported when their preconditions are 
 
 - `CP-001 tasks_ready_user_confirmation`
 - `CP-002 hard_blocker_pause`
+  - Enter this checkpoint only when the current requirement has no safe runnable queue item left.
+  - API blockers on one or more sub-requirements do not qualify by themselves if other UI truth capture, shell work, local interaction work, acceptance prep, or safe partial development items can still continue.
 
 ## Stage Inputs And Guards
 
-Use the stage mapping and bridge references as the authoritative sources for fixed inputs and completion guards. The minimum required contracts are:
+Use the stage mapping and bridge references as supporting shorthand for fixed inputs and completion guards. When older shorthand conflicts with the blocker-scope and runnable-queue rules in this skill, this skill wins. The minimum required contracts are:
 
 - `requirement-breakdown`
   - Input: top-level requirement document
   - Guard: requirement package created under `.ai-delivery/requirements/<requirement-id>/`
 - `api-contract-mapping`
   - Inputs: `requirement-slice.md`, `traceability.json`, `status.json`, api contract
-  - Guard: sub-requirement reaches `api_mapped` or explicit blocked state
+  - Guard: sub-requirement reaches `api_mapped`, `missing_nonblocking`, `needs_revalidation`, or the narrowest explicit blocked state with recovery notes
+  - Rule: judge blocker severity by `slice + stage`, not by the whole requirement; API gaps mainly block dangerous action wiring, irreversible behavior confirmation, server-driven branches, and final delivery claims
 - `ui-requirement-mapping`
-  - Inputs: `requirement-slice.md`, `api-contract-mapping.md`, Figma design source
+  - Inputs: `requirement-slice.md`, Figma design source; add `api-contract-mapping.md` when present
   - Rule: if the target is a large `SECTION`, start with `get_structure`; final executable states must still have `get_code`
-  - Guard: sub-requirement reaches `figma_mapped`
+  - Rule: permit entry when API status is `api_mapped`, `missing_nonblocking`, or `needs_revalidation`; if API is `blocked_*` but the blocker is API-only and does not prevent visual-carrier recognition, continue in `visual-evidence-first` mode
+  - Guard: sub-requirement reaches `figma_mapped` with a governed readiness verdict, even when later acceptance or integration work is still deferred by API truth
 - `ui-acceptance-contract`
-  - Inputs: `requirement-slice.md`, `figma-mapping.md`, final-state `get_code` evidence
+  - Inputs: `requirement-slice.md`, `figma-mapping.md`, final-state `get_code` evidence; add `api-contract-mapping.md` only when API truth changes the executable screen-state contract
   - Guard: sub-requirement reaches `acceptance_frozen`
 - `ui-interaction-design`
-  - Inputs: `requirement-slice.md`, `figma-mapping.md`, `ui-acceptance-contract.md`, `api-contract-mapping.md`
+  - Inputs: `requirement-slice.md`, `figma-mapping.md`, `ui-acceptance-contract.md`; add `api-contract-mapping.md` when present or when action semantics are already known
   - Output: `interaction-design.md`, `delivery-slices/index.json`
+  - Rule: allow shell, navigation, local-state, and safe action-path synthesis to continue while action-level API blockers remain explicit as deferred wiring or blocked integration notes
   - Guard: sub-requirement reaches `slices_ready`
 - `prepare-speckit-context`
   - Inputs: `slice-contract.md`, `interaction-design.md`, `traceability.json`; add `ui-acceptance-contract.md` for UI slices and `api-contract-mapping.md` when API impact exists
@@ -206,21 +237,25 @@ Use the stage mapping and bridge references as the authoritative sources for fix
 
 ## State Machine
 
-Stage 1:
+Stage 1 is a governed queue, not an API-first linear hard gate:
 
 1. `requirement-breakdown`
-2. `api-contract-mapping`
-3. `ui-requirement-mapping` for UI-bearing sub-requirements only
-4. `ui-acceptance-contract` for UI-bearing sub-requirements only
-5. `ui-interaction-design` for UI-bearing sub-requirements only
-6. `prepare-speckit-context`
-7. official `speckit-specify`
-8. local spec bind
-9. official `speckit-plan`
-10. local plan bind
-11. official `speckit-tasks`
-12. local tasks bind
-13. `tasks_ready_user_confirmation`
+2. Enter two tracks after breakdown:
+   - `visual/design track`
+   - `api/integration track`
+3. Run `ui-requirement-mapping` for UI-bearing sub-requirements as soon as trustworthy design evidence is runnable.
+4. Run `api-contract-mapping` whenever client-facing API truth exists; rerun it later when API truth arrives late or changes materially.
+5. Reconcile both tracks; continue safe work that does not depend on blocked API semantics.
+6. Run `ui-acceptance-contract` for UI-bearing sub-requirements only when visual truth is fully source-backed and any API truth that changes the frozen screen-state contract is sufficiently known.
+7. Run `ui-interaction-design` for UI-bearing sub-requirements only when the acceptance contract is frozen; keep unresolved dangerous-action semantics explicit as `integration_deferred`, `action-blocked-not-visual-blocked`, or equivalent governed notes instead of inventing closure.
+8. `prepare-speckit-context`
+9. official `speckit-specify`
+10. local spec bind
+11. official `speckit-plan`
+12. local plan bind
+13. official `speckit-tasks`
+14. local tasks bind
+15. `tasks_ready_user_confirmation`
 
 Stage 2:
 
@@ -238,9 +273,12 @@ Stage 2:
 
 - Pause at `tasks_ready_user_confirmation` until the user confirms.
 - Escalate only on a hard blocker, a non-recoverable gate failure, or a missing human decision.
+- Continue the safest runnable work first whenever a narrower blocker still leaves queue items runnable.
 - UI-bearing sub-requirements cannot enter `speckit-*` before `acceptance_frozen`.
 - UI-bearing sub-requirements cannot claim slice execution readiness before `slices_ready`.
 - UI-bearing slices cannot claim merge completion before `visual_acceptance_passed`.
+- Partial frontend work such as shells, navigation paths, local state, adapter seams, mock wiring, form validation, or read-only surfaces may advance before full API closure when their governed notes make the remaining integration work explicit.
+- Do not present partial or integration-deferred work as full implementation completion, full integration completion, or merge readiness.
 
 ## Subagent Budget
 
@@ -264,6 +302,7 @@ Stage 2:
 - `review` first failure must enter an auto-fix loop before escalation.
 - Visual acceptance first failure must enter an auto-fix loop before escalation.
 - Pause only at `CP-001 tasks_ready_user_confirmation` or `CP-002 hard_blocker_pause`.
+- `CP-002 hard_blocker_pause` is valid only when no safe runnable queue item remains for the current requirement.
 
 ## ai-delivery-admin Policy
 

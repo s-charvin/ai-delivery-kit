@@ -13,6 +13,8 @@ Use this skill after `ui-acceptance-contract` when a sub-requirement already has
 
 This skill may refine bounded micro-interaction detail such as feedback patterns, loading presentation, motion timing, focus treatment, and accessibility defaults, but only when those refinements stay below the business-meaning threshold and remain explicitly labeled.
 
+This stage can still move forward when API truth is partial, late, or blocked at the action-integration layer, as long as the accepted screen contract is stable and the missing API truth is recorded as deferred wiring, action-level integration blockage, or downstream revalidation rather than being invented.
+
 This is a project-local skill with built-in interaction-design guidance. Do not stop because an external skill is missing, and do not assume users have installed any external skill package. The needed guidance for micro-interaction, motion, loading, feedback, timing, and a11y lives here in the repository on purpose.
 
 ## Hard Boundary
@@ -25,6 +27,7 @@ This is a project-local skill with built-in interaction-design guidance. Do not 
 - Do not delete later-stage bridge or Spec Kit references when they already exist.
 - Do not hand-edit blocked states to look recovered.
 - Do not wait for request or response field finality to finish interaction design.
+- Do not claim complete integration truth or dangerous-action closure when the required API semantics are still unresolved.
 
 If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, and trusted design evidence without changing business meaning, stop and escalate instead of filling the gap by intuition.
 
@@ -91,6 +94,7 @@ If a source or artifact is missing:
 - If `figma-mapping.md` is missing or not backed by trustworthy structured design evidence, stop and hand the work back to `ui-requirement-mapping`.
 - If `ui-acceptance-contract.md` is missing, incomplete, or blocked, stop and hand the work back to the acceptance-freeze stage.
 - If `traceability.json` is missing or inconsistent with the visible mapping truth, repair or escalate that governed contract before claiming `interaction_ready`.
+- If `api-contract-mapping.md` is missing, partial, or stale, continue the shell, navigation, local-state, loading, feedback, and safe-path interaction contract when those behaviors are source-backed; keep unresolved action semantics explicit as deferred integration notes instead of inventing them.
 - If only micro-interaction detail is missing, continue and record `assumed_micro_interaction`.
 - If the missing detail changes business meaning, stop and block instead of assuming.
 
@@ -131,6 +135,7 @@ Produce an interaction contract that developers can consume directly while prese
 - Label each fact as `Source: Requirement`, `Source: Figma`, `Source: Existing Pattern`, or `Assumption: Micro Interaction`.
 - Keep explicit separation between source-backed behavior and bounded assumptions.
 - Use `references/interaction-quality-guidelines.md` to choose the lightest safe feedback, loading, motion, timing, and accessibility defaults when the source truth leaves room for bounded refinement.
+- If API truth is incomplete, keep action semantics open and explicit; do not convert missing request, response, side-effect, or error truth into invented interaction branches.
 
 ### 2a. Bounded Interaction Quality Principles
 
@@ -206,6 +211,7 @@ Use these principles to improve interaction quality without crossing into redesi
 
 - After the matrices are frozen, synthesize or update `delivery-slices/index.json`.
 - Finalize one `page-state` slice per frozen screen state, plus `shared-state` or `integration` slices for propagation and cross-route ownership.
+- It is acceptable for page-state or shared-state slices to be ready while some dangerous-action or server-driven integration slices remain explicitly deferred or blocked, as long as the governed artifacts make that separation visible.
 - Do not finalize slice ownership before the action and propagation contracts are explicit.
 
 ### 3.1 Improve Micro-Interaction Detail Carefully
@@ -235,6 +241,7 @@ Use these principles to improve interaction quality without crossing into redesi
 - If the requirement needs an action but design cannot carry it, block on `blocked_missing_design`.
 - If Figma interaction evidence conflicts with requirement truth, block on `blocked_requirement_figma_conflict`.
 - If a key business interaction cannot be resolved from current materials, block on `blocked_missing_requirement`.
+- If an API-only gap blocks one action's real wiring or dangerous-action semantics but does not block shell, navigation, local state, or non-dangerous paths, record it as `integration_deferred`, `action-blocked-not-visual-blocked`, or an equivalent governed note instead of blocking the whole interaction stage.
 - When a blocker is entered, preserve the recovery intent in `status.json` with `blocked_from_status` and `resume_target_status`; do not bypass recovery through manual edits.
 - Use the separate admin support surface only for governed logging, blocker handling, status transitions, and artifact updates when available.
 
@@ -250,6 +257,7 @@ Use these principles to improve interaction quality without crossing into redesi
 - If the requirement needs an action but design cannot carry it, block on `blocked_missing_design`.
 - If Figma interaction evidence conflicts with requirement truth, block on `blocked_requirement_figma_conflict`.
 - If a key business interaction cannot be resolved from current materials, block on `blocked_missing_requirement`.
+- Do not block the whole interaction stage only because API action semantics are incomplete when the remaining work is clearly shell-level, local-state, navigation, or other safe partial interaction work.
 - Do not move the sub-requirement forward as interaction-complete while those blockers remain open.
 - Only advance the sub-requirement toward `interaction_ready` when the contract is source-backed, acceptance-backed, propagation-aware, and assumption-bounded.
 
@@ -300,6 +308,7 @@ Before reporting completion, confirm all of the following:
 - [ ] `figma-mapping.md` and `traceability.json` were preserved rather than overwritten
 - [ ] `delivery-slices/index.json` was finalized after the matrices were frozen
 - [ ] Existing bridge fields such as `spec_kit_refs` remain intact when they already existed
+- [ ] Any unresolved API-only action gap is explicit as deferred integration or blocked action wiring rather than hidden inside the interaction contract
 - [ ] Blockers preserve `blocked_from_status` and `resume_target_status`
 
 ## Pressure Scenarios

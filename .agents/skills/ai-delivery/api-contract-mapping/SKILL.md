@@ -13,6 +13,8 @@ Use this skill after `requirement-breakdown` when a sub-requirement package alre
 
 This skill is optional in the workflow only when trustworthy API contract materials were not provided. If Swagger, OpenAPI, or an exported client-facing interface contract is provided, this skill is the governed place to map it. If API contract materials arrive late, rerun this skill rather than stuffing late API findings into UI or interaction artifacts. The goal is not just endpoint lookup; it is to freeze an action-semantic contract with request meaning, response meaning, relation semantics, error mapping, and success side effects so later interaction or propagation work is not forced to guess.
 
+This stage does not act as a blanket front-door gate for the whole requirement. Missing or partial API truth should normally degrade to `missing_nonblocking`, `pending`, `needs_revalidation`, or action-level notes first, while UI mapping, shell work, local state work, interaction skeletons, and other safe partial frontend work continue when they do not require the missing API truth yet.
+
 ## Hard Boundary
 
 - Do not invent client-facing API truth.
@@ -24,7 +26,9 @@ This skill is optional in the workflow only when trustworthy API contract materi
 - Do not delete later-stage artifacts such as `figma-mapping.md` or `interaction-design.md`.
 - Do not hand-edit blocked states to look recovered.
 
-Missing or partial API contract material does not block early frontend stages by default. If trustworthy client-facing contract evidence cannot be obtained for the requested scope, record the gap as `missing_nonblocking` unless the missing contract makes implementation impossible, contradicts requirement truth, or creates security/data risk.
+Missing or partial API contract material does not block early frontend stages by default. If trustworthy client-facing contract evidence cannot be obtained for the requested scope, record the gap as `missing_nonblocking` unless the missing contract makes the next safe stage for this slice impossible, contradicts requirement truth, or creates security/data risk.
+
+Judge blocker severity by `slice + stage`, not by the whole requirement. API gaps do not block UI mapping, UI shell work, local state management, interaction skeletons, safe partial implementation, or read-only paths unless those exact activities truly depend on the missing API truth.
 
 ## Use This Skill For
 
@@ -80,7 +84,7 @@ Also match the governed artifact shapes already established under `.ai-delivery/
 If a source or artifact is missing:
 
 - If `requirement-slice.md` is missing or still too ambiguous, stop and hand the work back to `requirement-breakdown`.
-- If the user asked for API mapping but no trustworthy client-facing API contract source exists, write the factual absence into `api-contract-mapping.md`, set `traceability.json.api_contract_mapping.status` to `missing_nonblocking`, update `traceability.json.source_index.api`, and continue only to stages that do not require API finality.
+- If the user asked for API mapping but no trustworthy client-facing API contract source exists, write the factual absence into `api-contract-mapping.md`, set `traceability.json.api_contract_mapping.status` to `missing_nonblocking`, update `traceability.json.source_index.api`, and continue any later UI mapping, shell, local-state, interaction-skeleton, or safe partial-development stages that do not require API finality.
 - If `traceability.json` is missing in a legacy folder, repair only the current governed contract and record that repair in `decisions.md`; do not invent a different JSON shape.
 - If multiple Swagger, OpenAPI, or exported API sources disagree on client-facing truth, block on `blocked_api_contract_conflict`.
 - If Requirement truth and API contract truth disagree, block on `blocked_requirement_api_conflict`.
@@ -127,6 +131,7 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 - If the API partially covers the requirement, record the gap as `Field Gaps` or `Missing Contracts` instead of guessing.
 - If one API operation serves multiple requirement points, record that shared coverage explicitly.
 - For every user-visible action that can trigger an API call or consume its result, record the action-level request contract, response semantics, relation semantics, error mapping, and success side effects.
+- Distinguish ordinary missing detail from a true `action-level integration blocker`; do not escalate to `blocked_*` until the next safe stage for that slice really cannot continue without the missing API truth.
 
 ### 4. Write `api-contract-mapping.md`
 
@@ -148,7 +153,8 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 - Use `pending` when sources exist but mapping work is not yet complete.
 - Use `mapped` only when the API mapping is backed by trustworthy client-facing contract evidence and the stage has no unresolved gap in endpoint, request fields, response semantics, relation semantics, error mapping, or success side effects.
 - Use `needs_revalidation` when new or changed API truth can affect downstream UI or interaction artifacts.
-- Use `blocked_missing_api_contract`, `blocked_api_contract_conflict`, `blocked_requirement_api_conflict`, `blocked_security_or_data_risk`, or `blocked_verification_failure` only when the next safe step cannot proceed.
+- Use `blocked_missing_api_contract`, `blocked_api_contract_conflict`, `blocked_requirement_api_conflict`, `blocked_security_or_data_risk`, or `blocked_verification_failure` only when the next safe step for the current slice cannot proceed.
+- Treat dangerous action wiring, irreversible behavior confirmation, server-driven branches, and complete integration claims as the primary blockage surface for API gaps; do not use those gaps to block earlier visual or shell stages by default.
 - When a blocker is entered, preserve the recovery intent in `status.json` with `blocked_from_status` and `resume_target_status`; do not bypass recovery through manual edits.
 - Use the separate admin support surface only for governed logging, blocker handling, status transitions, and artifact updates when available.
 
@@ -166,7 +172,8 @@ Produce an API mapping package that downstream UI mapping, interaction design, o
 - If multiple contract sources disagree on client-facing truth, block on `blocked_api_contract_conflict`.
 - If Requirement and API truth disagree, block on `blocked_requirement_api_conflict`.
 - If the source cannot be parsed or verified safely, block on `blocked_verification_failure`.
-- Treat missing endpoint, request fields, response semantics, relation semantics, error mapping, or success side effects as non-blocking gaps by default; escalate only when the current slice cannot be implemented safely without them.
+- Treat missing endpoint, request fields, response semantics, relation semantics, error mapping, or success side effects as non-blocking gaps by default; escalate only when the current slice and current stage cannot continue safely without them.
+- API gaps should normally block real wiring for dangerous actions, irreversible operations, server-driven branches, or full delivery claims, not early UI mapping or safe partial frontend work.
 - Only mark the API contract mapping stage as `mapped` when the result is source-backed, conflict-reviewed, and action-semantically complete for the mapped scope.
 
 ## Hard Constraints
@@ -206,6 +213,7 @@ Before reporting completion, confirm all of the following:
 - [ ] `Action Side Effects Matrix` captures request contract, success_return_semantics, local_state_effect, and revalidation_targets for each mapped action
 - [ ] `downstream_revalidation` was set only when justified
 - [ ] The narrowest blocker was chosen when blocked
+- [ ] Any `blocked_*` result was justified against the next safe stage for this slice rather than against the whole requirement
 - [ ] Existing bridge fields such as `spec_kit_refs` were preserved
 
 ## Pressure Scenarios
@@ -214,9 +222,10 @@ Before reporting completion, confirm all of the following:
 
 Expected behavior:
 
-- stop the stage
+- finish the governed record without inventing endpoints
 - set `traceability.json.api_contract_mapping.status` to `missing_nonblocking`
 - update `traceability.json.source_index.api` with the missing contract record
+- leave UI mapping and other safe non-integration stages runnable
 - do not invent endpoints from requirement prose
 
 ### Scenario 2: The requirement is clear, but the API contract is partial
@@ -226,6 +235,7 @@ Expected behavior:
 - write the available operation mapping
 - record `Field Gaps` or `Missing Contracts`
 - do not treat partial coverage as full coverage
+- do not block unrelated UI-first work unless the missing API truth stops the next safe stage for this slice
 
 ### Scenario 3: API contract arrives after UI mapping already happened
 

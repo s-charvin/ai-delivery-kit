@@ -1,6 +1,6 @@
 ---
 name: ui-acceptance-contract
-description: Use when a UI-bearing sub-requirement already has governed requirement, API, and Figma artifacts and must freeze immutable screen-state acceptance contracts before interaction design, Spec Kit, or implementation.
+description: Use when a UI-bearing sub-requirement already has governed requirement and Figma artifacts, plus API artifacts when they materially affect the frozen screen contract, and must freeze immutable screen-state acceptance contracts before interaction design, Spec Kit, or implementation.
 ---
 
 # UI Acceptance Contract
@@ -9,7 +9,7 @@ Project-local workflow skill for freezing screen and state level UI acceptance t
 
 ## Overview
 
-Use this skill after `ui-requirement-mapping` when a UI-bearing sub-requirement already has requirement truth, API contract truth when available, and trustworthy structured design evidence. This stage writes `ui-acceptance-contract.md`, updates `traceability.json.ui_acceptance_contract` in place, and advances `status.json` to `acceptance_frozen` only when the screen-state contract is truly ready.
+Use this skill after `ui-requirement-mapping` when a UI-bearing sub-requirement already has requirement truth, trustworthy structured design evidence, and API contract truth when that API truth materially changes the executable screen-state contract. This stage writes `ui-acceptance-contract.md`, updates `traceability.json.ui_acceptance_contract` in place, and advances `status.json` to `acceptance_frozen` only when the screen-state contract is truly ready.
 
 This skill exists to separate two concerns that were previously mixed together:
 
@@ -79,6 +79,7 @@ If a source or artifact is missing:
 - If any required final screen state lacks trustworthy `get_code` evidence, block on `blocked_verification_failure`.
 - If a critical 1:1 visual truth gap remains unresolved, block on `blocked_missing_design`.
 - If Requirement truth and Figma truth conflict inside the executable screen contract, block on `blocked_requirement_figma_conflict`.
+- If API truth is incomplete but does not change the frozen screen-state contract, keep that gap explicit for later interaction or integration work instead of blocking acceptance on API completeness alone.
 - If `traceability.json` is missing in a legacy folder, repair only the governed contract and record the repair in `decisions.md`.
 
 ## Output Goal
@@ -104,7 +105,7 @@ Produce an acceptance package that downstream stages can consume directly withou
 
 ### 1. Confirm the upstream contract
 
-- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting the acceptance contract.
+- Read `requirement-slice.md`, `api-contract-mapping.md` when present and when it affects screen-state meaning, `figma-mapping.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting the acceptance contract.
 - Prefer starting from `figma_mapped`.
 - Confirm the sub-requirement is UI-bearing and that downstream execution still depends on 1:1 visual truth.
 
@@ -140,6 +141,7 @@ Produce an acceptance package that downstream stages can consume directly withou
 - If a required final screen state has no trustworthy executable evidence, block on `blocked_verification_failure`.
 - If a required visual carrier is missing, block on `blocked_missing_design`.
 - If requirement, API, and visual truth conflict in a way that changes the executable screen contract, block on the narrowest matching blocker and stop short of `acceptance_frozen`.
+- Do not block acceptance only because later action semantics or server side effects are still incomplete when those gaps do not alter the frozen screen-state contract.
 - Only move the sub-requirement to `acceptance_frozen` when the contract is fully source-backed and safe for downstream consumption.
 
 ## Hard Constraints
