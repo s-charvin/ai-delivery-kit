@@ -82,6 +82,11 @@ $WebRequestLog = New-Object System.Collections.Generic.List[object]
 $ArchiveName = "ai-delivery_windows_amd64.zip"
 $ArchivePath = Join-Path $TempDir $ArchiveName
 $ChecksumsPath = Join-Path $TempDir "checksums.txt"
+$global:AiDeliveryTestWebRequestLog = $WebRequestLog
+$global:AiDeliveryTestTempDir = $TempDir
+$global:AiDeliveryTestArchiveName = $ArchiveName
+$global:AiDeliveryTestArchivePath = $ArchivePath
+$global:AiDeliveryTestChecksumsPath = $ChecksumsPath
 
 try {
   New-Item -ItemType Directory -Force -Path $TempDir | Out-Null
@@ -115,33 +120,33 @@ try {
       }
     }
 
-    $script:WebRequestLog.Add([pscustomobject]@{
+    $global:AiDeliveryTestWebRequestLog.Add([pscustomobject]@{
         Uri           = $Uri
         Authorization = $authorization
         Accept        = $accept
       })
 
     switch ($Uri) {
-      { $_ -eq "file://$TempDir/$ArchiveName" } {
-        Copy-Item -LiteralPath $ArchivePath -Destination $OutFile -Force
+      { $_ -eq "file://$global:AiDeliveryTestTempDir/$global:AiDeliveryTestArchiveName" } {
+        Copy-Item -LiteralPath $global:AiDeliveryTestArchivePath -Destination $OutFile -Force
         break
       }
-      { $_ -eq "file://$TempDir/checksums.txt" } {
-        Copy-Item -LiteralPath $ChecksumsPath -Destination $OutFile -Force
+      { $_ -eq "file://$global:AiDeliveryTestTempDir/checksums.txt" } {
+        Copy-Item -LiteralPath $global:AiDeliveryTestChecksumsPath -Destination $OutFile -Force
         break
       }
       "https://api.github.com/repos/example/private-repo/releases/latest" {
         Set-Content -LiteralPath $OutFile -NoNewline -Value @"
-{"assets":[{"id":101,"name":"$ArchiveName"},{"id":102,"name":"checksums.txt"}]}
+{"assets":[{"id":101,"name":"$global:AiDeliveryTestArchiveName"},{"id":102,"name":"checksums.txt"}]}
 "@
         break
       }
       "https://api.github.com/repos/example/private-repo/releases/assets/101" {
-        Copy-Item -LiteralPath $ArchivePath -Destination $OutFile -Force
+        Copy-Item -LiteralPath $global:AiDeliveryTestArchivePath -Destination $OutFile -Force
         break
       }
       "https://api.github.com/repos/example/private-repo/releases/assets/102" {
-        Copy-Item -LiteralPath $ChecksumsPath -Destination $OutFile -Force
+        Copy-Item -LiteralPath $global:AiDeliveryTestChecksumsPath -Destination $OutFile -Force
         break
       }
       default {
@@ -176,6 +181,11 @@ try {
 } finally {
   Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue
   Remove-Item Env:AI_DELIVERY_TEST_OUTPUT -ErrorAction SilentlyContinue
+  Remove-Variable -Name AiDeliveryTestWebRequestLog -Scope Global -ErrorAction SilentlyContinue
+  Remove-Variable -Name AiDeliveryTestTempDir -Scope Global -ErrorAction SilentlyContinue
+  Remove-Variable -Name AiDeliveryTestArchiveName -Scope Global -ErrorAction SilentlyContinue
+  Remove-Variable -Name AiDeliveryTestArchivePath -Scope Global -ErrorAction SilentlyContinue
+  Remove-Variable -Name AiDeliveryTestChecksumsPath -Scope Global -ErrorAction SilentlyContinue
   if (Test-Path -LiteralPath $TempDir) {
     Remove-Item -LiteralPath $TempDir -Recurse -Force
   }
