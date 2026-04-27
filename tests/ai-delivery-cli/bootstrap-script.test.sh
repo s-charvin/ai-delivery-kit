@@ -21,8 +21,10 @@ TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-bootstrap-script.XXXXXX")
 TARGET_REPO="$TEMP_DIR/target repo"
 LOCAL_LOG="$TEMP_DIR/local-command.log"
 DOWNLOAD_LOG="$TEMP_DIR/download-command.log"
+CURL_LOG="$TEMP_DIR/curl.log"
 LOCAL_CMD="$TEMP_DIR/local-ai-delivery"
 DOWNLOAD_CMD="$TEMP_DIR/ai-delivery"
+STUB_DIR="$TEMP_DIR/stubs"
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
@@ -47,6 +49,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$TARGET_REPO"
+mkdir -p "$STUB_DIR"
 
 cat >"$LOCAL_CMD" <<EOF
 #!/usr/bin/env bash
@@ -95,3 +98,59 @@ fi
 if grep -Fq -- '--main-branch' "$DOWNLOAD_LOG"; then
   fail "did not expect manual main branch flags in downloaded bootstrap invocation"
 fi
+
+cat >"$STUB_DIR/curl" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "\$*" >>"$CURL_LOG"
+
+output=""
+url=""
+expect_output=0
+for arg in "\$@"; do
+  if [[ \$expect_output -eq 1 ]]; then
+    output=\$arg
+    expect_output=0
+    continue
+  fi
+
+  case "\$arg" in
+    -o)
+      expect_output=1
+      ;;
+    http://*|https://*|file://*)
+      url=\$arg
+      ;;
+  esac
+done
+
+[[ -n "\$output" ]] || fail "curl stub missing output path"
+[[ -n "\$url" ]] || fail "curl stub missing url"
+
+case "\$url" in
+  */$ARCHIVE_NAME)
+    cp "$TEMP_DIR/$ARCHIVE_NAME" "\$output"
+    ;;
+  */checksums.txt)
+    cp "$TEMP_DIR/checksums.txt" "\$output"
+    ;;
+  *)
+    fail "unexpected curl url: \$url"
+    ;;
+esac
+EOF
+chmod +x "$STUB_DIR/curl"
+rm -f "$DOWNLOAD_LOG"
+
+PATH="$STUB_DIR:$PATH" \
+  GITHUB_TOKEN="test-token" \
+  AI_DELIVERY_REPO="example/private-repo" \
+  AI_DELIVERY_VERSION="latest" \
+  bash "$BOOTSTRAP_SCRIPT" \
+    "$TARGET_REPO"
+
+assert_file_contains "$CURL_LOG" 'Authorization: Bearer test-token'
+assert_file_contains "$CURL_LOG" "https://github.com/example/private-repo/releases/latest/download/$ARCHIVE_NAME"
+assert_file_contains "$DOWNLOAD_LOG" 'init'
+assert_file_contains "$DOWNLOAD_LOG" "$TARGET_REPO"

@@ -16,6 +16,7 @@ Environment overrides:
   AI_DELIVERY_VERSION           Release tag or latest. Default: latest
   AI_DELIVERY_INSTALL_DIR       Install destination. Default: $HOME/.local/bin
   AI_DELIVERY_DOWNLOAD_BASE_URL Override release asset base URL for testing or mirrors
+  GITHUB_TOKEN                  Optional GitHub token used for authenticated downloads
 EOF
 }
 
@@ -38,17 +39,42 @@ need_cmd() {
   command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
 }
 
+should_use_github_auth() {
+  local url=$1
+
+  [[ -n "${GITHUB_TOKEN:-}" ]] || return 1
+
+  case "$url" in
+    https://github.com/*|https://api.github.com/*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 download_to() {
   local url=$1
   local output=$2
+  local -a curl_args
+  local -a wget_args
+
+  curl_args=(-fsSL "$url" -o "$output")
+  wget_args=(-qO "$output" "$url")
+
+  if should_use_github_auth "$url"; then
+    curl_args=(-H "Authorization: Bearer $GITHUB_TOKEN" "${curl_args[@]}")
+    wget_args=("--header=Authorization: Bearer $GITHUB_TOKEN" "${wget_args[@]}")
+  fi
 
   if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$url" -o "$output"
+    curl "${curl_args[@]}"
     return 0
   fi
 
   if command -v wget >/dev/null 2>&1; then
-    wget -qO "$output" "$url"
+    wget "${wget_args[@]}"
     return 0
   fi
 

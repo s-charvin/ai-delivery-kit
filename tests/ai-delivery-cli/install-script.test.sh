@@ -21,6 +21,8 @@ TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-install-script.XXXXXX")
 INSTALL_DIR="$TEMP_DIR/bin"
 STUB_BIN="$TEMP_DIR/ai-delivery"
 OUTPUT_LOG="$TEMP_DIR/install-output.log"
+CURL_LOG="$TEMP_DIR/curl.log"
+STUB_DIR="$TEMP_DIR/stubs"
 
 OS=$(uname -s | tr '[:upper:]' '[:lower:]')
 ARCH=$(uname -m)
@@ -45,6 +47,7 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "$INSTALL_DIR"
+mkdir -p "$STUB_DIR"
 
 cat >"$STUB_BIN" <<EOF
 #!/usr/bin/env bash
@@ -68,3 +71,59 @@ AI_DELIVERY_INSTALL_DIR="$INSTALL_DIR" \
 [[ -x "$INSTALL_DIR/ai-delivery" ]] || fail "expected installed ai-delivery binary"
 "$INSTALL_DIR/ai-delivery"
 assert_file_contains "$OUTPUT_LOG" 'installed-stub'
+
+cat >"$STUB_DIR/curl" <<EOF
+#!/usr/bin/env bash
+set -euo pipefail
+
+printf '%s\n' "\$*" >>"$CURL_LOG"
+
+output=""
+url=""
+expect_output=0
+for arg in "\$@"; do
+  if [[ \$expect_output -eq 1 ]]; then
+    output=\$arg
+    expect_output=0
+    continue
+  fi
+
+  case "\$arg" in
+    -o)
+      expect_output=1
+      ;;
+    http://*|https://*|file://*)
+      url=\$arg
+      ;;
+  esac
+done
+
+[[ -n "\$output" ]] || fail "curl stub missing output path"
+[[ -n "\$url" ]] || fail "curl stub missing url"
+
+case "\$url" in
+  */$ARCHIVE_NAME)
+    cp "$TEMP_DIR/$ARCHIVE_NAME" "\$output"
+    ;;
+  */checksums.txt)
+    cp "$TEMP_DIR/checksums.txt" "\$output"
+    ;;
+  *)
+    fail "unexpected curl url: \$url"
+    ;;
+esac
+EOF
+chmod +x "$STUB_DIR/curl"
+
+AUTH_INSTALL_DIR="$TEMP_DIR/auth-bin"
+mkdir -p "$AUTH_INSTALL_DIR"
+
+PATH="$STUB_DIR:$PATH" \
+  GITHUB_TOKEN="test-token" \
+  AI_DELIVERY_INSTALL_DIR="$AUTH_INSTALL_DIR" \
+  AI_DELIVERY_REPO="example/private-repo" \
+  AI_DELIVERY_VERSION="latest" \
+  bash "$INSTALL_SCRIPT"
+
+assert_file_contains "$CURL_LOG" 'Authorization: Bearer test-token'
+assert_file_contains "$CURL_LOG" "https://github.com/example/private-repo/releases/latest/download/$ARCHIVE_NAME"
