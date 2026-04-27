@@ -92,7 +92,7 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/templates/api-contract-mapping-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/templates/figma-mapping-template.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-acceptance-contract/templates/ui-acceptance-contract-template.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-acceptance-contract/templates/ui-acceptance-contract-template.yaml" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/references/dual-truth-rules.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/templates/interaction-design-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/reconcile-rules.md" ]]

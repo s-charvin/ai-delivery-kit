@@ -5,7 +5,7 @@
   - `slice-contract.md`
   - `interaction-design.md`
   - `traceability.json`
-  - `ui-acceptance-contract.md` for UI slices
+  - `ui-acceptance-contract.yaml` for UI slices
   - `api-contract-mapping.md` when API impact exists
 - It writes one reduced context bundle:
   - `spec-kit-input.md`

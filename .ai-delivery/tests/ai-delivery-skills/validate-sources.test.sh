@@ -73,7 +73,7 @@ require_file "$SKILL_ROOT/ui-requirement-mapping/templates/figma-mapping-templat
 require_file "$SKILL_ROOT/ui-acceptance-contract/references/dual-truth-rules.md"
 require_file "$SKILL_ROOT/ui-acceptance-contract/references/blocker-catalog.md"
 require_file "$SKILL_ROOT/ui-acceptance-contract/references/logging-checklist.md"
-require_file "$SKILL_ROOT/ui-acceptance-contract/templates/ui-acceptance-contract-template.md"
+require_file "$SKILL_ROOT/ui-acceptance-contract/templates/ui-acceptance-contract-template.yaml"
 require_file "$SKILL_ROOT/ui-interaction-design/references/dual-truth-rules.md"
 require_file "$SKILL_ROOT/ui-interaction-design/references/blocker-catalog.md"
 require_file "$SKILL_ROOT/ui-interaction-design/references/logging-checklist.md"

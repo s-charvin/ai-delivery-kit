@@ -42,7 +42,7 @@
   },
   "ui_acceptance_contract": {
     "status": "frozen",
-    "path": ".ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/ui-acceptance-contract.md",
+    "path": ".ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/ui-acceptance-contract.yaml",
     "screen_state_ids": [
       "contacts-friends-idle"
     ],

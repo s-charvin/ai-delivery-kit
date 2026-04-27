@@ -671,7 +671,7 @@ AI 自动范围：拆分、命名、依赖初判、缺口列举。
 
 输入：Figma node/frame、design tokens、组件约束、目标状态、交互说明。
 
-输出：`figma-mapping.md`、`ui-acceptance-contract.md`、visual acceptance checklist、prototype evidence。
+输出：`figma-mapping.md`、`ui-acceptance-contract.yaml`、visual acceptance checklist、prototype evidence。
 
 门禁：UI-bearing sub-requirement 必须达到 `acceptance_frozen` 后才能进入 Spec Kit。
 

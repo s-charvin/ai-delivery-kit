@@ -11,7 +11,7 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/ai-delivery/requirement-breakdown/references/dual-truth-rules.md",
 		".agents/skills/ai-delivery/api-contract-mapping/templates/api-contract-mapping-template.md",
 		".agents/skills/ai-delivery/ui-requirement-mapping/templates/figma-mapping-template.md",
-		".agents/skills/ai-delivery/ui-acceptance-contract/templates/ui-acceptance-contract-template.md",
+		".agents/skills/ai-delivery/ui-acceptance-contract/templates/ui-acceptance-contract-template.yaml",
 		".agents/skills/ai-delivery/ui-interaction-design/templates/interaction-design-template.md",
 		".agents/skills/ai-delivery/ai-delivery-orchestrator/references/reconcile-rules.md",
 		"scripts/validate-project-ai-delivery-skills.sh",

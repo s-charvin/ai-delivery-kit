@@ -36,6 +36,8 @@
   - `requirement-slice.md`
   - `figma-mapping.md`
   - final-state `get_code` evidence
+- Fixed output:
+  - `ui-acceptance-contract.yaml`
 - Completion guard: sub-requirement reaches `acceptance_frozen`
 
 ## Interaction And Slice Synthesis
@@ -44,7 +46,7 @@
 - Fixed inputs:
   - `requirement-slice.md`
   - `figma-mapping.md`
-  - `ui-acceptance-contract.md`
+  - `ui-acceptance-contract.yaml`
   - `api-contract-mapping.md`
 - Fixed outputs:
   - `interaction-design.md`
@@ -59,7 +61,7 @@
   - `slice-contract.md`
   - `interaction-design.md`
   - `traceability.json`
-  - `ui-acceptance-contract.md` for UI slices
+  - `ui-acceptance-contract.yaml` for UI slices
   - `api-contract-mapping.md` when API impact exists
 - Fixed output:
   - `spec-kit-input.md`

@@ -22,7 +22,7 @@ This is a project-local skill with built-in interaction-design guidance. Do not 
 - Do not invent business flow or page structure.
 - Do not add new fields, steps, dialogs, permissions, or page transitions.
 - Do not label an assumption as if it were original Requirement or Figma fact.
-- Do not repair visual truth here; if `ui-acceptance-contract.md` is incomplete or blocked, hand the issue back upstream.
+- Do not repair visual truth here; if `ui-acceptance-contract.yaml` is incomplete or blocked, hand the issue back upstream.
 - Do not overwrite `figma-mapping.md` or `traceability.json` because an interaction contract prefers a different design.
 - Do not delete later-stage bridge or Spec Kit references when they already exist.
 - Do not hand-edit blocked states to look recovered.
@@ -34,7 +34,7 @@ If interaction truth cannot be resolved from Requirement, `figma-mapping.md`, an
 ## Use This Skill For
 
 - Turning verified Requirement and Figma mapping evidence into an executable interaction contract
-- Consuming `ui-acceptance-contract.md` to freeze action closure against immutable screen contracts
+- Consuming `ui-acceptance-contract.yaml` to freeze action closure against immutable screen contracts
 - Defining source-backed user actions, feedback, states, and transitions
 - Producing `Action Chain Matrix` and `State Propagation Matrix`
 - Recording bounded `assumed_micro_interaction` only inside the allowed boundary
@@ -68,7 +68,7 @@ Also read the existing `traceability.json` because it is a first-class governed 
 - `subreq-id`
 - `requirement-slice.md`
 - `figma-mapping.md`
-- `ui-acceptance-contract.md`
+- `ui-acceptance-contract.yaml`
 
 ### Expected Supporting Inputs
 
@@ -92,7 +92,7 @@ If a source or artifact is missing:
 - If `requirement-slice.md` is missing or still too ambiguous, stop and hand the work back to `requirement-breakdown`.
 - Prefer starting from `acceptance_frozen`; if the sub-requirement is still unmapped, unfrozen, or blocked and the user did not ask for repair work, stop instead of pretending interaction design is normal.
 - If `figma-mapping.md` is missing or not backed by trustworthy structured design evidence, stop and hand the work back to `ui-requirement-mapping`.
-- If `ui-acceptance-contract.md` is missing, incomplete, or blocked, stop and hand the work back to the acceptance-freeze stage.
+- If `ui-acceptance-contract.yaml` is missing, incomplete, or blocked, stop and hand the work back to the acceptance-freeze stage.
 - If `traceability.json` is missing or inconsistent with the visible mapping truth, repair or escalate that governed contract before claiming `interaction_ready`.
 - If `api-contract-mapping.md` is missing, partial, or stale, continue the shell, navigation, local-state, loading, feedback, and safe-path interaction contract when those behaviors are source-backed; keep unresolved action semantics explicit as deferred integration notes instead of inventing them.
 - If only micro-interaction detail is missing, continue and record `assumed_micro_interaction`.
@@ -125,7 +125,8 @@ Produce an interaction contract that developers can consume directly while prese
 
 ### 1. Confirm the upstream contract stack
 
-- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `ui-acceptance-contract.md`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
+- Read `requirement-slice.md`, `api-contract-mapping.md` when present, `figma-mapping.md`, `ui-acceptance-contract.yaml`, `traceability.json`, `status.json`, and `decisions.md` before drafting any interaction contract.
+- Treat `ui-acceptance-contract.yaml` as the canonical UI acceptance truth. Consume `screen_states[*].component_tree` directly for hierarchy, component type, layout, box model, typography, icon/image/state rules, and implementation mapping; do not reconstruct those details from memory or from separate Markdown notes.
 - Confirm that the interaction work still matches the current sub-requirement scope and the verified mapping output.
 - Prefer to start from `acceptance_frozen`; if the mapping or acceptance freeze is stale, blocked, or unverified, stop and hand the work back upstream.
 

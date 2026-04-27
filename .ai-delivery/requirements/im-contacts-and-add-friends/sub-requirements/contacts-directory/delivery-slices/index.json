@@ -6,7 +6,7 @@
     {
       "slice_id": "contacts-friends-idle",
       "status": "tasks_ready",
-      "ui_acceptance_contract": "ui-acceptance-contract.md",
+      "ui_acceptance_contract": "ui-acceptance-contract.yaml",
       "spec_kit_input": "spec-kit-input.md"
     }
   ]

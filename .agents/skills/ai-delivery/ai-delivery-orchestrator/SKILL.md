@@ -206,14 +206,15 @@ Use the stage mapping and bridge references as supporting shorthand for fixed in
   - Guard: sub-requirement reaches `figma_mapped` with a governed readiness verdict, even when later acceptance or integration work is still deferred by API truth
 - `ui-acceptance-contract`
   - Inputs: `requirement-slice.md`, `figma-mapping.md`, final-state `get_code` evidence; add `api-contract-mapping.md` only when API truth changes the executable screen-state contract
+  - Output: `ui-acceptance-contract.yaml` as the only canonical UI acceptance truth, rooted at `screen_states[*].component_tree`
   - Guard: sub-requirement reaches `acceptance_frozen`
 - `ui-interaction-design`
-  - Inputs: `requirement-slice.md`, `figma-mapping.md`, `ui-acceptance-contract.md`; add `api-contract-mapping.md` when present or when action semantics are already known
+  - Inputs: `requirement-slice.md`, `figma-mapping.md`, `ui-acceptance-contract.yaml`; add `api-contract-mapping.md` when present or when action semantics are already known
   - Output: `interaction-design.md`, `delivery-slices/index.json`
   - Rule: allow shell, navigation, local-state, and safe action-path synthesis to continue while action-level API blockers remain explicit as deferred wiring or blocked integration notes
   - Guard: sub-requirement reaches `slices_ready`
 - `prepare-speckit-context`
-  - Inputs: `slice-contract.md`, `interaction-design.md`, `traceability.json`; add `ui-acceptance-contract.md` for UI slices and `api-contract-mapping.md` when API impact exists
+  - Inputs: `slice-contract.md`, `interaction-design.md`, `traceability.json`; add `ui-acceptance-contract.yaml` for UI slices and `api-contract-mapping.md` when API impact exists
   - Output: `spec-kit-input.md`
   - Guard: `spec-kit-input.md` exists and matches current governed slice truth
 - official `speckit-specify`, `speckit-plan`, `speckit-tasks`

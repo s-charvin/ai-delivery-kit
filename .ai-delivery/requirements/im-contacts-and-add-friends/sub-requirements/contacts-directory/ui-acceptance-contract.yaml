@@ -1,0 +1,284 @@
+version: 1
+updated_at: "2026-04-25T00:00:00.000Z"
+updated_by: "codex"
+
+contract:
+  id: "contacts-directory"
+  status: "acceptance_frozen"
+  source_requirements:
+    - "requirement-slice.md"
+  source_design:
+    figma_mapping: "figma-mapping.md"
+    get_code_artifacts:
+      - ".ai-delivery/figma-cache/im-contacts/artifacts/contacts-friends-idle-code.json"
+    token_artifacts: []
+    asset_artifacts: []
+  api_dependency:
+    required_for_screen_contract: false
+    notes: "Contact listing and invitation APIs affect integration behavior, not the frozen idle-state visual structure."
+
+spacing_policy:
+  padding: "Use for internal container breathing room."
+  gap: "Use for sibling spacing owned by parent layout."
+  margin: "Use only for external placement when parent layout cannot own spacing."
+  equivalent_visuals_rule: "If padding and margin can create the same visual result, choose the semantic owner that best matches component responsibility and record that decision."
+
+screen_states:
+  - screen_state_id: "contacts-friends-idle"
+    state_type: "idle"
+    executable_frame_node_id: "12:34"
+    parent_shell_node_id: "10:1"
+    component_tree:
+      component_id: "contacts-directory-screen"
+      node_id: "12:34"
+      component_type: "screen"
+      role: "contacts-directory-shell"
+      required: true
+      layout:
+        mode: "vertical-stack"
+        primary_axis: "vertical"
+        cross_axis_alignment: "stretch"
+        main_axis_alignment: "start"
+        gap: "0px"
+        positioning: "in-flow"
+        wrap: false
+        constraints: []
+      box_model:
+        padding:
+          top: "0px"
+          right: "0px"
+          bottom: "0px"
+          left: "0px"
+        margin:
+          top: "0px"
+          right: "0px"
+          bottom: "0px"
+          left: "0px"
+        spacing_semantics: "Root screen does not own external margin; child containers own their internal padding."
+      size:
+        width_behavior: "fill-parent"
+        height_behavior: "fill-parent"
+        min_width: null
+        max_width: null
+        min_height: null
+        max_height: null
+      component_props: {}
+      visual_style:
+        background:
+          mode: "static-token"
+          token: "--color-surface-page"
+      states:
+        required_states:
+          - "default"
+        state_style_refs:
+          default: "figma:12:34"
+      implementation_mapping:
+        preferred_component: "ContactsDirectoryScreen"
+        allowed_substitution: false
+        prop_mapping: {}
+      source_refs:
+        - artifact: "figma-mapping.md"
+          evidence: "Executable screen state contacts-friends-idle maps to node 12:34."
+      blocking_unknowns: []
+      children:
+        - component_id: "contacts-header"
+          node_id: "12:35"
+          component_type: "container"
+          role: "directory-header"
+          required: true
+          layout:
+            mode: "horizontal-stack"
+            primary_axis: "horizontal"
+            cross_axis_alignment: "center"
+            main_axis_alignment: "space-between"
+            gap: "12px"
+            positioning: "in-flow"
+            wrap: false
+            constraints: []
+          box_model:
+            padding:
+              top: "12px"
+              right: "16px"
+              bottom: "12px"
+              left: "16px"
+            margin:
+              top: "0px"
+              right: "0px"
+              bottom: "0px"
+              left: "0px"
+            spacing_semantics: "Header owns internal padding; parent owns vertical placement."
+          size:
+            width_behavior: "fill-parent"
+            height_behavior: "hug-content"
+          component_props:
+            container:
+              background: "static-token"
+              background_token: "--color-surface-page"
+              border: "none"
+          visual_style: {}
+          source_refs:
+            - artifact: "figma-mapping.md"
+              evidence: "Header belongs to the contacts directory executable frame."
+          blocking_unknowns: []
+          children:
+            - component_id: "contacts-title"
+              node_id: "12:36"
+              component_type: "text"
+              role: "screen-title"
+              required: true
+              layout:
+                mode: "leaf"
+                positioning: "in-flow"
+              box_model:
+                padding:
+                  top: "0px"
+                  right: "0px"
+                  bottom: "0px"
+                  left: "0px"
+                margin:
+                  top: "0px"
+                  right: "0px"
+                  bottom: "0px"
+                  left: "0px"
+                spacing_semantics: "Text spacing is owned by the header gap."
+              size:
+                width_behavior: "hug-content"
+                height_behavior: "hug-content"
+              content:
+                text_source: "figma"
+                text_value: "Contacts"
+                max_lines: 1
+                overflow: "ellipsis"
+              typography:
+                font_family: "system"
+                font_size: "17px"
+                font_weight: 600
+                line_height: "24px"
+                color_token: "--color-text-primary"
+              source_refs:
+                - artifact: "figma-mapping.md"
+                  evidence: "Title text is required in the idle directory state."
+              blocking_unknowns: []
+              children: []
+        - component_id: "add-friend-entry"
+          node_id: "12:40"
+          component_type: "button"
+          role: "add-friend-entry"
+          required: true
+          layout:
+            mode: "horizontal-stack"
+            primary_axis: "horizontal"
+            cross_axis_alignment: "center"
+            main_axis_alignment: "start"
+            gap: "10px"
+            positioning: "in-flow"
+            wrap: false
+            constraints: []
+          box_model:
+            padding:
+              top: "12px"
+              right: "16px"
+              bottom: "12px"
+              left: "16px"
+            margin:
+              top: "0px"
+              right: "0px"
+              bottom: "0px"
+              left: "0px"
+            spacing_semantics: "Entry owns tap-target padding; icon and label spacing is parent-owned gap."
+          size:
+            width_behavior: "fill-parent"
+            height_behavior: "hug-content"
+            min_height: "48px"
+          component_props:
+            button:
+              variant: "list-entry"
+              size: "medium"
+              state_coverage:
+                - "default"
+                - "pressed"
+              content_complexity: "icon-and-text"
+              background: "static-token"
+              radius: "0px"
+          visual_style:
+            background:
+              mode: "static-token"
+              token: "--color-surface-page"
+            foreground:
+              token: "--color-text-primary"
+            border:
+              mode: "none"
+          content:
+            text_source: "figma"
+            text_value: "Add friend"
+            max_lines: 1
+            overflow: "ellipsis"
+          implementation_mapping:
+            preferred_component: "ListActionRow"
+            allowed_substitution: false
+            prop_mapping:
+              leadingIcon: "add-friend-plus-icon"
+              title: "Add friend"
+              onTap: "open add friend flow"
+          source_refs:
+            - artifact: "figma-mapping.md"
+              evidence: "Add Friend Entry is a required element in contacts-friends-idle."
+          blocking_unknowns: []
+          children:
+            - component_id: "add-friend-plus-icon"
+              node_id: "12:41"
+              component_type: "icon"
+              role: "leading-icon"
+              required: true
+              layout:
+                mode: "leaf"
+                positioning: "in-flow"
+              box_model:
+                padding:
+                  top: "0px"
+                  right: "0px"
+                  bottom: "0px"
+                  left: "0px"
+                margin:
+                  top: "0px"
+                  right: "0px"
+                  bottom: "0px"
+                  left: "0px"
+                spacing_semantics: "Icon spacing is owned by the row gap."
+              size:
+                width: "20px"
+                height: "20px"
+                width_behavior: "fixed"
+                height_behavior: "fixed"
+              icon:
+                asset_ref: "design-system:add"
+                asset_source: "existing-design-system"
+                download_status: "not_required_system_icon"
+                size: "20px"
+                color_token: "--color-icon-primary"
+                semantic_role: "add"
+              component_props:
+                icon:
+                  size: "20px"
+                  color_token: "--color-icon-primary"
+                  semantic_role: "add"
+              source_refs:
+                - artifact: "figma-mapping.md"
+                  evidence: "The add friend row includes a leading add icon."
+              blocking_unknowns: []
+              children: []
+
+verification_targets:
+  - screen_state_id: "contacts-friends-idle"
+    golden_name: "contacts-friends-idle"
+    screenshot_size: "390x844"
+    artifact_refs:
+      - "figma-mapping.md"
+      - "ui-acceptance-contract.yaml"
+      - "interaction-design.md"
+    manual_side_by_side_points:
+      - "Directory title typography and header padding match source evidence."
+      - "Add friend row uses row-owned tap-target padding and parent-owned icon/text gap."
+      - "Grouped contacts, add-friend entry, and empty/error affordances preserve their frozen visual positions."
+
+unresolved_ui_truth: []

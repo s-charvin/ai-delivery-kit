@@ -11,7 +11,7 @@
 
 - slice_contract_path: .ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/delivery-slices/contacts-friends-idle/slice-contract.md
 - interaction_design_path: .ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/interaction-design.md
-- ui_acceptance_contract_path: .ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/ui-acceptance-contract.md
+- ui_acceptance_contract_path: .ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/ui-acceptance-contract.yaml
 - api_contract_mapping_path: .ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/api-contract-mapping.md
 
 ## Traceability Refs

@@ -254,13 +254,16 @@ validate_ui_acceptance_contract_skill() {
     references/dual-truth-rules.md \
     references/blocker-catalog.md \
     references/logging-checklist.md \
-    templates/ui-acceptance-contract-template.md
+    templates/ui-acceptance-contract-template.yaml
 
-  require_contains "$skill_file" 'ui-acceptance-contract.md'
+  require_contains "$skill_file" 'ui-acceptance-contract.yaml'
   require_contains "$skill_file" 'acceptance_frozen'
   require_contains "$skill_file" 'traceability.json.ui_acceptance_contract'
   require_contains "$skill_file" 'blocked_missing_design'
   require_contains "$skill_file" 'blocked_requirement_figma_conflict'
+  require_contains "$skill_file" 'component_tree'
+  require_contains "$skill_file" 'spacing_policy'
+  require_contains "$skill_file" 'special UI-provided icon'
 }
 
 validate_ui_requirement_mapping_skill() {

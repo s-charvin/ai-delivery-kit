@@ -1,0 +1,141 @@
+version: 1
+updated_at: "<ISO8601>"
+updated_by: "<agent>"
+
+contract:
+  id: "<subreq-id>"
+  status: "acceptance_frozen"
+  source_requirements:
+    - "requirement-slice.md"
+  source_design:
+    figma_mapping: "figma-mapping.md"
+    get_code_artifacts: []
+    token_artifacts: []
+    asset_artifacts: []
+  api_dependency:
+    required_for_screen_contract: false
+    notes: "API truth affects later interaction or integration only when it does not change the frozen visual screen contract."
+
+spacing_policy:
+  padding: "Use for internal container breathing room."
+  gap: "Use for sibling spacing owned by parent layout."
+  margin: "Use only for external placement when parent layout cannot own spacing."
+  equivalent_visuals_rule: "If padding and margin can create the same visual result, choose the semantic owner that best matches component responsibility and record that decision."
+
+screen_states:
+  - screen_state_id: "<screen-state-id>"
+    state_type: "<idle|loading|empty|error|success|disabled|custom>"
+    executable_frame_node_id: "<figma-node-id>"
+    parent_shell_node_id: "<figma-node-id-or-null>"
+    component_tree:
+      component_id: "<root-component-id>"
+      node_id: "<figma-node-id>"
+      component_type: "screen"
+      role: "<root-role>"
+      required: true
+      layout:
+        mode: "<vertical-stack|horizontal-stack|grid|absolute|overlay|list|leaf>"
+        primary_axis: "<vertical|horizontal|none>"
+        cross_axis_alignment: "<stretch|center|start|end|none>"
+        main_axis_alignment: "<start|center|end|space-between|none>"
+        gap: "0px"
+        positioning: "in-flow"
+        wrap: false
+        constraints: []
+      box_model:
+        padding:
+          top: "0px"
+          right: "0px"
+          bottom: "0px"
+          left: "0px"
+        margin:
+          top: "0px"
+          right: "0px"
+          bottom: "0px"
+          left: "0px"
+        spacing_semantics: "<who owns internal spacing, sibling spacing, and external placement>"
+      size:
+        width: null
+        height: null
+        width_behavior: "<fill-parent|hug-content|fixed|runtime>"
+        height_behavior: "<fill-parent|hug-content|fixed|runtime>"
+        min_width: null
+        max_width: null
+        min_height: null
+        max_height: null
+        aspect_ratio: null
+      component_props: {}
+      visual_style: {}
+      content: {}
+      typography: {}
+      icon: {}
+      image: {}
+      states:
+        required_states: []
+        state_style_refs: {}
+      implementation_mapping:
+        preferred_component: null
+        allowed_substitution: false
+        prop_mapping: {}
+      source_refs:
+        - artifact: "figma-mapping.md"
+          evidence: "<source-backed evidence sentence>"
+      blocking_unknowns: []
+      children:
+        - component_id: "<child-component-id>"
+          node_id: "<figma-node-id>"
+          component_type: "<container|card|list|list-item|form|text|text-input|button|image|icon|tab|navigation|divider|badge|modal|sheet|toast|custom>"
+          role: "<semantic-role>"
+          required: true
+          layout:
+            mode: "leaf"
+            positioning: "in-flow"
+          box_model:
+            padding:
+              top: "0px"
+              right: "0px"
+              bottom: "0px"
+              left: "0px"
+            margin:
+              top: "0px"
+              right: "0px"
+              bottom: "0px"
+              left: "0px"
+            spacing_semantics: "Leaf spacing is owned by parent unless source evidence says otherwise."
+          size:
+            width_behavior: "hug-content"
+            height_behavior: "hug-content"
+          component_props: {}
+          visual_style: {}
+          content: {}
+          typography: {}
+          icon: {}
+          image: {}
+          states:
+            required_states:
+              - "default"
+            state_style_refs: {}
+          implementation_mapping:
+            preferred_component: null
+            allowed_substitution: false
+            prop_mapping: {}
+          source_refs: []
+          blocking_unknowns: []
+          children: []
+
+verification_targets:
+  - screen_state_id: "<screen-state-id>"
+    golden_name: "<golden-name>"
+    screenshot_size: "<width>x<height>"
+    artifact_refs:
+      - "figma-mapping.md"
+      - "ui-acceptance-contract.yaml"
+    manual_side_by_side_points:
+      - "<specific 1:1 visual comparison point>"
+
+unresolved_ui_truth:
+  - unknown: "<missing visual/component/layout/style/icon truth>"
+    affected_component: "<component-id>"
+    impact: "<why implementation or verification cannot be frozen>"
+    resolution_path: "<fetch get_code/download asset/request design clarification/user-provided asset>"
+    blocks: "<acceptance_frozen|interaction_design|none>"
