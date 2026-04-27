@@ -23,6 +23,38 @@ spacing_policy:
   margin: "Use only for external placement when parent layout cannot own spacing."
   equivalent_visuals_rule: "If padding and margin can create the same visual result, choose the semantic owner that best matches component responsibility and record that decision."
 
+tree_extraction:
+  source_node_id: "12:34"
+  extraction_mode: "source-tree-first"
+  evidence_artifacts:
+    - "figma-mapping.md"
+    - ".ai-delivery/figma-cache/im-contacts/artifacts/contacts-friends-idle-code.json"
+  wrapper_retention_policy:
+    block_on_unfetched_descendants: true
+    preserve_when:
+      - "Node owns layout mode, spacing, visual styling, hit target, state styling, or asset boundary."
+      - "Node removal would change source-backed ordering, padding, icon/text gap, or tap target geometry."
+    collapse_allowed_when:
+      - "Node owns no independent visual, layout, semantic, interaction, state, overflow, or asset truth."
+      - "Collapse is recorded with collapsed_source_node_ids and a concrete collapse_reason."
+  audit:
+    source_nodes_reviewed:
+      - "12:34"
+      - "12:35"
+      - "12:36"
+      - "12:40"
+      - "12:41"
+    preserved_source_node_ids:
+      - "12:34"
+      - "12:35"
+      - "12:36"
+      - "12:40"
+      - "12:41"
+    collapsed_source_node_ids: []
+    blocked_source_node_ids: []
+    notes:
+      - "Sample contract preserves wrapper boundaries that own header padding, row tap-target padding, and icon/text gap."
+
 screen_states:
   - screen_state_id: "contacts-friends-idle"
     state_type: "idle"
@@ -34,6 +66,16 @@ screen_states:
       component_type: "screen"
       role: "contacts-directory-shell"
       required: true
+      extraction:
+        source_node_type: "FRAME"
+        source_node_name: "Contacts directory idle"
+        wrapper_role: "semantic-component"
+        retained_from_source_node_ids:
+          - "12:34"
+        collapsed_source_node_ids: []
+        retention_reason: "Root executable frame owns the screen boundary and vertical child ordering."
+        collapse_reason: null
+        extraction_confidence: "high"
       layout:
         mode: "vertical-stack"
         primary_axis: "vertical"
@@ -86,6 +128,16 @@ screen_states:
           component_type: "container"
           role: "directory-header"
           required: true
+          extraction:
+            source_node_type: "FRAME"
+            source_node_name: "Contacts header"
+            wrapper_role: "layout-wrapper"
+            retained_from_source_node_ids:
+              - "12:35"
+            collapsed_source_node_ids: []
+            retention_reason: "Header owns horizontal layout, internal padding, and title placement."
+            collapse_reason: null
+            extraction_confidence: "high"
           layout:
             mode: "horizontal-stack"
             primary_axis: "horizontal"
@@ -126,6 +178,16 @@ screen_states:
               component_type: "text"
               role: "screen-title"
               required: true
+              extraction:
+                source_node_type: "TEXT"
+                source_node_name: "Contacts"
+                wrapper_role: "content-leaf"
+                retained_from_source_node_ids:
+                  - "12:36"
+                collapsed_source_node_ids: []
+                retention_reason: "Text node owns title content, typography, max-lines, and overflow behavior."
+                collapse_reason: null
+                extraction_confidence: "high"
               layout:
                 mode: "leaf"
                 positioning: "in-flow"
@@ -165,6 +227,16 @@ screen_states:
           component_type: "button"
           role: "add-friend-entry"
           required: true
+          extraction:
+            source_node_type: "INSTANCE"
+            source_node_name: "Add friend entry"
+            wrapper_role: "hit-target-wrapper"
+            retained_from_source_node_ids:
+              - "12:40"
+            collapsed_source_node_ids: []
+            retention_reason: "Row owns tap target geometry, icon/text horizontal layout, gap, and action styling."
+            collapse_reason: null
+            extraction_confidence: "high"
           layout:
             mode: "horizontal-stack"
             primary_axis: "horizontal"
@@ -230,6 +302,16 @@ screen_states:
               component_type: "icon"
               role: "leading-icon"
               required: true
+              extraction:
+                source_node_type: "VECTOR"
+                source_node_name: "Add icon"
+                wrapper_role: "asset-leaf"
+                retained_from_source_node_ids:
+                  - "12:41"
+                collapsed_source_node_ids: []
+                retention_reason: "Icon leaf owns size, semantic role, and color token."
+                collapse_reason: null
+                extraction_confidence: "high"
               layout:
                 mode: "leaf"
                 positioning: "in-flow"

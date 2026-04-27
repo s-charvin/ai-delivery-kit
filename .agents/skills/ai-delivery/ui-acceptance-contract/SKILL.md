@@ -121,6 +121,7 @@ Required top-level keys:
 - `updated_by`
 - `contract`
 - `spacing_policy`
+- `tree_extraction`
 - `screen_states`
 - `verification_targets`
 - `unresolved_ui_truth`
@@ -153,9 +154,111 @@ Each `screen_states[*].component_tree` node should include the fields that apply
 - `implementation_mapping`
 - `source_refs`
 - `blocking_unknowns`
+- `extraction`
 - `children`
 
 Keep related truth next to the node it governs. Do not split required elements, layout constraints, typography, and component props into separate tables that downstream readers must mentally join.
+
+## Component Tree Extraction Workflow
+
+Complex Figma, Tempad, or provider nodes must be converted with a source-tree-first extraction workflow. The goal is not to make a prettier implementation tree; the goal is to preserve every node boundary that affects 1:1 rendering, layout ownership, hit targets, state styling, or asset delivery.
+
+### 1. Collect complete structural evidence
+
+- Start from the executable frame node named by `figma-mapping.md`.
+- Read final-state `get_code` evidence for the executable frame.
+- Use `get_structure` or equivalent provider structure output to inspect the raw node hierarchy, geometry, child order, and auto-layout hints.
+- If provider output warns about depth caps, shell omission, omitted children, detached instance boundaries, or missing vector assets, fetch the omitted child nodes before freezing acceptance.
+- If required descendants cannot be fetched and their absence could affect 1:1 implementation, record `unresolved_ui_truth` with `blocks: acceptance_frozen`.
+
+### 2. Classify raw source nodes before shaping the contract
+
+For every meaningful source node, classify it as one of these roles before deciding whether it appears as a component node:
+
+- `semantic-component`: screen, section, form, card, list, row, button, input, tab, modal, or another user-recognizable unit.
+- `layout-wrapper`: owns auto-layout, stack direction, grid behavior, absolute positioning context, scroll area, gap, wrap, alignment, or constraints.
+- `visual-wrapper`: owns background, border, radius, shadow, blur, opacity, clipping, mask, elevation, or state styling.
+- `hit-target-wrapper`: owns tappable/clickable bounds, focus ring, hover/pressed area, disabled behavior, or gesture surface.
+- `content-leaf`: text, rich text span group, value label, badge label, or other content-bearing node.
+- `asset-leaf`: image, icon, avatar, logo, vector, illustration, or provider-downloaded asset.
+- `decoration-only`: a visual flourish that does not own semantic content but still may require preservation if it affects 1:1 pixels.
+- `implementation-noise`: a source wrapper that owns no visual, layout, semantic, hit-target, overflow, state, or asset truth.
+
+Do not collapse a node until it has been classified. Classification should be recorded in the node-local `extraction.wrapper_role` or in top-level `tree_extraction.audit.notes`.
+
+### 3. Preserve wrappers unless collapse is proven safe
+
+Use `tree_extraction.wrapper_retention_policy` to govern the decision.
+
+Preserve a source wrapper as a component node when it owns any of the following:
+
+- auto-layout or layout mode
+- axis, alignment, gap, wrap, or child ordering
+- padding, margin, spacing ownership, or constraints
+- clipping, mask, overflow, scroll, or viewport behavior
+- background, fill, gradient, border, radius, shadow, blur, opacity, or elevation
+- fixed size, min/max size, aspect ratio, responsive behavior, or absolute positioning
+- z-order, overlay relationship, pinned/sticky behavior, or layer stacking that affects pixels
+- component variant, state styling, disabled/loading/error/selected treatment, or token mode
+- hit target, focus surface, hover/pressed surface, gesture boundary, or accessibility role
+- image, icon, vector, downloaded asset, or asset mask boundary
+- repeated item boundary for lists, grids, feeds, menus, or grouped rows
+
+Collapse a source node only when all of these are true:
+
+- It owns no independent visual, layout, semantic, interaction, state, overflow, or asset truth.
+- Removing it does not change parent/child spacing, alignment, clipping, size, or stacking.
+- Its children can be reparented without losing source-backed ordering or role.
+- The collapse decision is recorded in `collapsed_source_node_ids` with a concrete `collapse_reason`.
+
+Do not collapse wrappers merely because implementation would be shorter, because the source tree looks deep, or because a code component usually hides that wrapper internally. Convenience is not evidence.
+
+### 4. Build the acceptance component tree deliberately
+
+- Keep the tree rooted at the executable screen state.
+- Preserve source child order for auto-layout and normal flow.
+- For absolute or overlay layouts, preserve visual stacking and record `layout.positioning`, `layout.constraints`, and z-order notes.
+- For repeated lists or grids, freeze the list/container node plus the item component pattern; include representative source node ids and list-specific props such as divider, item spacing, empty state, and scroll behavior.
+- For text groups, keep separate text nodes when typography, color, max-lines, overflow, runtime source, or semantic role differs.
+- For icons or vectors, keep asset-leaf nodes when they affect layout, spacing, color, semantic role, or must be downloaded.
+- For decoration-only nodes, preserve them when they affect 1:1 pixels; if folded into `visual_style`, record the folded source id and reason.
+
+### 5. Audit the extraction
+
+The YAML must include top-level `tree_extraction`:
+
+```yaml
+tree_extraction:
+  source_node_id: "<executable-frame-node-id>"
+  extraction_mode: "source-tree-first"
+  evidence_artifacts: []
+  wrapper_retention_policy:
+    block_on_unfetched_descendants: true
+    preserve_when: []
+    collapse_allowed_when: []
+  audit:
+    source_nodes_reviewed: []
+    preserved_source_node_ids: []
+    collapsed_source_node_ids: []
+    blocked_source_node_ids: []
+    notes: []
+```
+
+Each component node should include node-local `extraction`:
+
+```yaml
+extraction:
+  source_node_type: "<FRAME|INSTANCE|GROUP|TEXT|VECTOR|RECTANGLE|IMAGE|COMPONENT|unknown>"
+  source_node_name: "<source node name>"
+  wrapper_role: "<semantic-component|layout-wrapper|visual-wrapper|hit-target-wrapper|content-leaf|asset-leaf|decoration-only|implementation-noise>"
+  retained_from_source_node_ids: []
+  collapsed_source_node_ids: []
+  retention_reason: "<why this boundary remains in the component tree>"
+  collapse_reason: null
+  extraction_confidence: "<high|medium|blocked>"
+```
+
+If extraction confidence is `blocked` for any required component or descendant, do not advance to `acceptance_frozen`.
 
 ## Component Tree Contract
 
@@ -166,6 +269,7 @@ Freeze every final screen state's UI hierarchy as a nested tree.
 - `children` must preserve source-backed visual hierarchy and order.
 - Parent, companion, and shared UI relationships may be represented with node-local `source_refs`, `role`, or `implementation_mapping`, but the acceptance truth must still be readable from the tree itself.
 - Use stable, implementation-friendly `component_id` values, but do not let invented ids replace the source `node_id`.
+- Use `tree_extraction` plus node-local `extraction` to prove how complex source nodes were preserved, folded, or blocked.
 
 Component type vocabulary should be specific enough to guide implementation:
 
@@ -349,7 +453,15 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - Require trustworthy `get_code` evidence for every final screen state before freezing the contract.
 - Record frozen state ids, parent shells, required hierarchy, component tree roots, and verification targets.
 
-### 3. Freeze the YAML UI truth tree
+### 3. Extract and audit the component tree
+
+- Traverse the source design hierarchy before writing the acceptance tree.
+- Classify raw nodes as semantic components, layout wrappers, visual wrappers, hit-target wrappers, content leaves, asset leaves, decoration-only nodes, or implementation-noise.
+- Preserve every wrapper that owns 1:1-impacting layout, visual, state, hit-target, overflow, asset, or responsive truth.
+- Collapse only proven-safe implementation-noise nodes, and record every collapsed source id in `tree_extraction.audit.collapsed_source_node_ids` and node-local `extraction.collapsed_source_node_ids`.
+- Set `tree_extraction.wrapper_retention_policy.block_on_unfetched_descendants` to `true`; if required descendants are omitted or depth-capped and cannot be fetched, block instead of approximating the component tree.
+
+### 4. Freeze the YAML UI truth tree
 
 - Use `templates/ui-acceptance-contract-template.yaml`.
 - Write `screen_states[*].component_tree` as the primary artifact shape.
@@ -357,7 +469,7 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - Treat every 1:1-impacting unknown as either resolved or blocked.
 - Do not let visual unknowns degrade into soft notes.
 
-### 4. Update traceability and status conservatively
+### 5. Update traceability and status conservatively
 
 - Update only `traceability.json.ui_acceptance_contract`.
 - Set `traceability.json.ui_acceptance_contract.path` to `ui-acceptance-contract.yaml`.
@@ -365,11 +477,12 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - Advance `status.json` to `acceptance_frozen` only when each frozen page-state contract is source-backed and the remaining unknowns do not compromise 1:1 delivery.
 - Use the separate admin support surface only for governed logging, blocker handling, and status transitions when available.
 
-### 5. Re-audit before handoff
+### 6. Re-audit before handoff
 
 - Re-open `figma-mapping.md`, `ui-acceptance-contract.yaml`, `traceability.json`, and `status.json`.
 - Verify that every frozen screen state has final executable evidence and `verification_targets`.
 - Verify that every component node has enough source-backed truth for 1:1 implementation at its level of responsibility.
+- Verify that every preserved or collapsed source node is explainable through `tree_extraction` or node-local `extraction`.
 - Verify that no visual truth was guessed or shifted into interaction design.
 
 ## State And Blocker Rules
@@ -378,6 +491,7 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - If a required visual carrier is missing, block on `blocked_missing_design`.
 - If requirement, API, and visual truth conflict in a way that changes the executable screen contract, block on the narrowest matching blocker and stop short of `acceptance_frozen`.
 - If a required special UI-provided icon cannot be downloaded from MCP or another trusted provider and the user has not provided it, block on `blocked_missing_design` or the narrowest available visual-evidence blocker.
+- If a required descendant was omitted by depth cap, shell truncation, or provider fetch failure and may affect 1:1 layout or style, block instead of approximating the component tree.
 - Do not block acceptance only because later action semantics or server side effects are still incomplete when those gaps do not alter the frozen screen-state contract.
 - Only move the sub-requirement to `acceptance_frozen` when the YAML contract is fully source-backed and safe for downstream consumption.
 
@@ -396,8 +510,10 @@ Every YAML acceptance contract must define:
 
 - `contract` metadata and source dependencies
 - top-level `spacing_policy`
+- top-level `tree_extraction` audit with wrapper retention policy
 - frozen `screen_states`
 - nested `component_tree` for every final screen state
+- node-local `extraction` evidence for retained or collapsed source nodes
 - component identity, type, role, hierarchy, and requiredness
 - layout mode, axis, alignment, gap, positioning, wrap, and constraints
 - box model padding, margin, gap ownership, and spacing semantics
@@ -423,6 +539,9 @@ Before reporting completion, confirm all of the following:
 - [ ] `traceability.json.ui_acceptance_contract` was updated without overwriting other fields
 - [ ] `status.json` only moved to `acceptance_frozen` when the YAML contract became source-backed
 - [ ] `screen_states[*].component_tree` carries hierarchy, layout, box model, component type, and key style truth
+- [ ] `tree_extraction` records reviewed, preserved, collapsed, and blocked source nodes
+- [ ] Every collapsed wrapper has `collapsed_source_node_ids` and a source-backed collapse reason
+- [ ] Required descendants hidden by depth cap or shell omission were fetched or blocked
 - [ ] `spacing_policy` and node-level `box_model.spacing_semantics` make padding, margin, and gap ownership explicit
 - [ ] Special UI-provided icons are downloaded and referenced, or blocked until provided
 - [ ] `verification_targets` are explicit

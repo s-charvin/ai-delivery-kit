@@ -22,6 +22,29 @@ spacing_policy:
   margin: "Use only for external placement when parent layout cannot own spacing."
   equivalent_visuals_rule: "If padding and margin can create the same visual result, choose the semantic owner that best matches component responsibility and record that decision."
 
+tree_extraction:
+  source_node_id: "<executable-frame-node-id>"
+  extraction_mode: "source-tree-first"
+  evidence_artifacts:
+    - "figma-mapping.md"
+  wrapper_retention_policy:
+    block_on_unfetched_descendants: true
+    preserve_when:
+      - "Node owns layout mode, axis, alignment, gap, wrap, constraints, or child order."
+      - "Node owns padding, margin, clipping, mask, overflow, scroll, or viewport behavior."
+      - "Node owns background, fill, border, radius, shadow, blur, opacity, elevation, or token mode."
+      - "Node owns fixed sizing, responsive behavior, z-order, overlay, state styling, hit target, or asset boundary."
+    collapse_allowed_when:
+      - "Node owns no independent visual, layout, semantic, interaction, state, overflow, or asset truth."
+      - "Removing the node does not change spacing, alignment, clipping, size, stacking, or source-backed order."
+      - "The collapse is recorded with collapsed_source_node_ids and a concrete collapse_reason."
+  audit:
+    source_nodes_reviewed: []
+    preserved_source_node_ids: []
+    collapsed_source_node_ids: []
+    blocked_source_node_ids: []
+    notes: []
+
 screen_states:
   - screen_state_id: "<screen-state-id>"
     state_type: "<idle|loading|empty|error|success|disabled|custom>"
@@ -33,6 +56,16 @@ screen_states:
       component_type: "screen"
       role: "<root-role>"
       required: true
+      extraction:
+        source_node_type: "<FRAME|INSTANCE|GROUP|TEXT|VECTOR|RECTANGLE|IMAGE|COMPONENT|unknown>"
+        source_node_name: "<source node name>"
+        wrapper_role: "semantic-component"
+        retained_from_source_node_ids:
+          - "<figma-node-id>"
+        collapsed_source_node_ids: []
+        retention_reason: "<why this source boundary must remain for 1:1 UI truth>"
+        collapse_reason: null
+        extraction_confidence: "<high|medium|blocked>"
       layout:
         mode: "<vertical-stack|horizontal-stack|grid|absolute|overlay|list|leaf>"
         primary_axis: "<vertical|horizontal|none>"
@@ -87,6 +120,16 @@ screen_states:
           component_type: "<container|card|list|list-item|form|text|text-input|button|image|icon|tab|navigation|divider|badge|modal|sheet|toast|custom>"
           role: "<semantic-role>"
           required: true
+          extraction:
+            source_node_type: "<FRAME|INSTANCE|GROUP|TEXT|VECTOR|RECTANGLE|IMAGE|COMPONENT|unknown>"
+            source_node_name: "<source node name>"
+            wrapper_role: "<semantic-component|layout-wrapper|visual-wrapper|hit-target-wrapper|content-leaf|asset-leaf|decoration-only|implementation-noise>"
+            retained_from_source_node_ids:
+              - "<figma-node-id>"
+            collapsed_source_node_ids: []
+            retention_reason: "<why this source boundary remains or how it was safely folded>"
+            collapse_reason: null
+            extraction_confidence: "<high|medium|blocked>"
           layout:
             mode: "leaf"
             positioning: "in-flow"

@@ -12,6 +12,8 @@ grep -Fq '"status": "slices_ready"' "$SUBREQ/status.json" || { echo "status.json
 grep -Fq '"ui_acceptance_contract"' "$SUBREQ/traceability.json" || { echo "traceability missing ui_acceptance_contract"; exit 1; }
 grep -Fq 'screen_states:' "$SUBREQ/ui-acceptance-contract.yaml" || { echo "yaml contract missing screen_states"; exit 1; }
 grep -Fq 'component_tree:' "$SUBREQ/ui-acceptance-contract.yaml" || { echo "yaml contract missing component_tree"; exit 1; }
+grep -Fq 'tree_extraction:' "$SUBREQ/ui-acceptance-contract.yaml" || { echo "yaml contract missing tree_extraction"; exit 1; }
+grep -Fq 'collapsed_source_node_ids:' "$SUBREQ/ui-acceptance-contract.yaml" || { echo "yaml contract missing collapsed_source_node_ids"; exit 1; }
 grep -Fq 'verification_targets:' "$SUBREQ/ui-acceptance-contract.yaml" || { echo "yaml contract missing verification_targets"; exit 1; }
 grep -Fq 'Action Side Effects Matrix' "$SUBREQ/api-contract-mapping.md" || { echo "api mapping missing side effects matrix"; exit 1; }
 grep -Fq 'Executable Screen States' "$SUBREQ/figma-mapping.md" || { echo "figma mapping missing executable states"; exit 1; }

@@ -283,6 +283,11 @@ validate_ui_acceptance_contract_skill() {
   require_contains "$skill_file" 'component_tree'
   require_contains "$skill_file" 'spacing_policy'
   require_contains "$skill_file" 'special UI-provided icon'
+  require_contains "$skill_file" 'Component Tree Extraction Workflow'
+  require_contains "$skill_file" 'tree_extraction'
+  require_contains "$skill_file" 'wrapper_retention_policy'
+  require_contains "$skill_file" 'collapsed_source_node_ids'
+  require_contains "$skill_file" 'block_on_unfetched_descendants'
 }
 
 validate_ui_requirement_mapping_skill() {
