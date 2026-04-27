@@ -49,21 +49,29 @@ function Assert-NotContains {
 function New-StubExecutable {
   param([string]$Path)
 
-  $source = @"
-using System;
-using System.IO;
-public static class Program {
-  public static int Main(string[] args) {
-    var output = Environment.GetEnvironmentVariable("AI_DELIVERY_TEST_OUTPUT");
-    if (!string.IsNullOrEmpty(output)) {
-      File.WriteAllText(output, string.Join(" ", args));
-    }
-    return 0;
+  $sourcePath = [System.IO.Path]::ChangeExtension($Path, ".go")
+  $source = @'
+package main
+
+import (
+  "os"
+  "strings"
+)
+
+func main() {
+  output := os.Getenv("AI_DELIVERY_TEST_OUTPUT")
+  if output != "" {
+    _ = os.WriteFile(output, []byte(strings.Join(os.Args[1:], " ")), 0644)
   }
 }
-"@
+'@
 
-  Add-Type -TypeDefinition $source -OutputAssembly $Path -OutputType ConsoleApplication | Out-Null
+  Set-Content -LiteralPath $sourcePath -Value $source -NoNewline
+  & go build -o $Path $sourcePath
+  if ($LASTEXITCODE -ne 0) {
+    Fail "failed to build stub executable with go"
+  }
+  Remove-Item -LiteralPath $sourcePath -Force
 }
 
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
