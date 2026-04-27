@@ -5,6 +5,8 @@ AI_DELIVERY_REPO="${AI_DELIVERY_REPO:-s-charvin/ai-delivery-kit}"
 AI_DELIVERY_VERSION="${AI_DELIVERY_VERSION:-latest}"
 AI_DELIVERY_INSTALL_DIR="${AI_DELIVERY_INSTALL_DIR:-${HOME}/.local/bin}"
 AI_DELIVERY_DOWNLOAD_BASE_URL="${AI_DELIVERY_DOWNLOAD_BASE_URL:-}"
+AI_DELIVERY_INIT_TARGET_REPO="${AI_DELIVERY_INIT_TARGET_REPO:-}"
+AI_DELIVERY_UPGRADE_INIT_TARGET_REPO="${AI_DELIVERY_UPGRADE_INIT_TARGET_REPO:-}"
 AI_DELIVERY_TEMP_DIR=""
 
 usage() {
@@ -16,7 +18,18 @@ Environment overrides:
   AI_DELIVERY_VERSION           Release tag or latest. Default: latest
   AI_DELIVERY_INSTALL_DIR       Install destination. Default: $HOME/.local/bin
   AI_DELIVERY_DOWNLOAD_BASE_URL Override release asset base URL for testing or mirrors
+  AI_DELIVERY_INIT_TARGET_REPO  Optional repo path to initialize after install
+  AI_DELIVERY_UPGRADE_INIT_TARGET_REPO Optional repo path to refresh with 'init --upgrade' after install
   GITHUB_TOKEN                  Optional GitHub token used for authenticated downloads
+
+Flags:
+  --repo <owner/repo>
+  --version <tag|latest>
+  --install-dir <path>
+  --download-base-url <url>
+  --init-target <path>
+  --upgrade-init <path>
+  -h, --help
 EOF
 }
 
@@ -27,6 +40,54 @@ log() {
 fail() {
   printf '[install-ai-delivery] %s\n' "$1" >&2
   exit 1
+}
+
+parse_args() {
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --repo)
+        [[ $# -ge 2 ]] || fail "Missing value for --repo"
+        AI_DELIVERY_REPO=$2
+        shift 2
+        ;;
+      --version)
+        [[ $# -ge 2 ]] || fail "Missing value for --version"
+        AI_DELIVERY_VERSION=$2
+        shift 2
+        ;;
+      --install-dir)
+        [[ $# -ge 2 ]] || fail "Missing value for --install-dir"
+        AI_DELIVERY_INSTALL_DIR=$2
+        shift 2
+        ;;
+      --download-base-url)
+        [[ $# -ge 2 ]] || fail "Missing value for --download-base-url"
+        AI_DELIVERY_DOWNLOAD_BASE_URL=$2
+        shift 2
+        ;;
+      --init-target)
+        [[ $# -ge 2 ]] || fail "Missing value for --init-target"
+        AI_DELIVERY_INIT_TARGET_REPO=$2
+        shift 2
+        ;;
+      --upgrade-init)
+        [[ $# -ge 2 ]] || fail "Missing value for --upgrade-init"
+        AI_DELIVERY_UPGRADE_INIT_TARGET_REPO=$2
+        shift 2
+        ;;
+      -h|--help)
+        usage
+        exit 0
+        ;;
+      *)
+        fail "Unknown argument: $1"
+        ;;
+    esac
+  done
+
+  if [[ -n "$AI_DELIVERY_INIT_TARGET_REPO" && -n "$AI_DELIVERY_UPGRADE_INIT_TARGET_REPO" ]]; then
+    fail "Use only one of --init-target or --upgrade-init"
+  fi
 }
 
 cleanup() {
@@ -276,13 +337,25 @@ verify_checksum() {
   rm -f "$verify_file"
 }
 
+run_post_install_init() {
+  local target_path=$1
+
+  if [[ -n "$AI_DELIVERY_INIT_TARGET_REPO" ]]; then
+    log "Running: $target_path init $AI_DELIVERY_INIT_TARGET_REPO"
+    "$target_path" init "$AI_DELIVERY_INIT_TARGET_REPO"
+    return 0
+  fi
+
+  if [[ -n "$AI_DELIVERY_UPGRADE_INIT_TARGET_REPO" ]]; then
+    log "Running: $target_path init --upgrade $AI_DELIVERY_UPGRADE_INIT_TARGET_REPO"
+    "$target_path" init --upgrade "$AI_DELIVERY_UPGRADE_INIT_TARGET_REPO"
+  fi
+}
+
 main() {
   local os arch archive_name source_desc archive_path checksums_path extracted_dir binary_path target_path
 
-  if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-    usage
-    exit 0
-  fi
+  parse_args "$@"
 
   need_cmd tar
   os=$(detect_os)
@@ -312,12 +385,18 @@ main() {
   binary_path=$(find "$extracted_dir" -type f -name 'ai-delivery' | head -n 1)
   [[ -n "$binary_path" ]] || fail "Extracted archive did not contain ai-delivery"
 
+  if [[ -e "$target_path" ]]; then
+    log "Replacing existing ai-delivery at $target_path"
+  fi
   install -m 0755 "$binary_path" "$target_path"
 
   log "Installed ai-delivery to $target_path"
   log "Add $AI_DELIVERY_INSTALL_DIR to PATH if it is not already available:"
   log "  export PATH=\"$AI_DELIVERY_INSTALL_DIR:\$PATH\""
   log "Run: ai-delivery init /path/to/repo"
+  log "Upgrade an existing initialized repo: ai-delivery init --upgrade /path/to/repo"
+  log "Upgrade the installed CLI later by rerunning this installer."
+  run_post_install_init "$target_path"
 }
 
 main "$@"

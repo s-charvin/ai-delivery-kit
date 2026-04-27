@@ -25,6 +25,7 @@ type Bootstrapper interface {
 type Input struct {
 	TargetPath  string
 	Interactive bool
+	Upgrade     bool
 }
 
 type Result struct {
@@ -33,6 +34,7 @@ type Result struct {
 	InstalledTools []string
 	Bootstrapped   bool
 	RanSpecifyInit bool
+	Upgraded       bool
 }
 
 type Service struct {
@@ -61,7 +63,7 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	if err != nil {
 		return Result{}, err
 	}
-	if len(info.ManagedConflicts) > 0 {
+	if len(info.ManagedConflicts) > 0 && !input.Upgrade {
 		return Result{}, fmt.Errorf("managed asset already exists: %s", info.ManagedConflicts[0])
 	}
 
@@ -137,13 +139,15 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 		bootstrapper = bootstrap.Engine{}
 	}
 	if err := bootstrapper.Run(bootstrap.Config{
-		RepoRoot:   info.Root,
-		ProjectID:  projectID,
-		MainBranch: mainBranch,
+		RepoRoot:           info.Root,
+		ProjectID:          projectID,
+		MainBranch:         mainBranch,
+		AllowManagedUpdate: input.Upgrade,
 	}); err != nil {
 		return Result{}, err
 	}
 	result.Bootstrapped = true
+	result.Upgraded = input.Upgrade
 
 	if !info.HasSpecify && (hasSpecify || specifyInstalledNow) {
 		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx), s.GOOS); len(cmd) > 0 {

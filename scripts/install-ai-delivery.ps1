@@ -3,7 +3,9 @@ param(
   [string]$Version = $env:AI_DELIVERY_VERSION,
   [string]$Repo = $env:AI_DELIVERY_REPO,
   [string]$InstallDir = $env:AI_DELIVERY_INSTALL_DIR,
-  [string]$DownloadBaseUrl = $env:AI_DELIVERY_DOWNLOAD_BASE_URL
+  [string]$DownloadBaseUrl = $env:AI_DELIVERY_DOWNLOAD_BASE_URL,
+  [string]$InitTargetRepo = $env:AI_DELIVERY_INIT_TARGET_REPO,
+  [string]$UpgradeInitTargetRepo = $env:AI_DELIVERY_UPGRADE_INIT_TARGET_REPO
 )
 
 Set-StrictMode -Version Latest
@@ -187,6 +189,25 @@ function Verify-Checksum {
   }
 }
 
+function Invoke-PostInstallInit {
+  param([string]$TargetPath)
+
+  if (-not [string]::IsNullOrWhiteSpace($InitTargetRepo) -and -not [string]::IsNullOrWhiteSpace($UpgradeInitTargetRepo)) {
+    throw "Use only one of -InitTargetRepo or -UpgradeInitTargetRepo"
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($InitTargetRepo)) {
+    Write-Log "Running: $TargetPath init $InitTargetRepo"
+    & $TargetPath init $InitTargetRepo
+    return
+  }
+
+  if (-not [string]::IsNullOrWhiteSpace($UpgradeInitTargetRepo)) {
+    Write-Log "Running: $TargetPath init --upgrade $UpgradeInitTargetRepo"
+    & $TargetPath init --upgrade $UpgradeInitTargetRepo
+  }
+}
+
 $archiveName = Get-ArchiveName
 $sourceDescription = Get-ReleaseSourceDescription
 $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
@@ -216,11 +237,17 @@ try {
   }
 
   $targetPath = Join-Path $InstallDir "ai-delivery.exe"
+  if (Test-Path -LiteralPath $targetPath) {
+    Write-Log "Replacing existing ai-delivery at $targetPath"
+  }
   Copy-Item -LiteralPath $binaryPath.FullName -Destination $targetPath -Force
 
   Write-Log "Installed ai-delivery to $targetPath"
   Write-Log "Add $InstallDir to PATH if needed."
   Write-Log "Run: ai-delivery init C:\path\to\repo"
+  Write-Log "Upgrade an existing initialized repo: ai-delivery init --upgrade C:\path\to\repo"
+  Write-Log "Upgrade the installed CLI later by rerunning this installer."
+  Invoke-PostInstallInit -TargetPath $targetPath
 } finally {
   if (Test-Path -LiteralPath $tempDir) {
     Remove-Item -LiteralPath $tempDir -Recurse -Force

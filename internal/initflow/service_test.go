@@ -475,6 +475,45 @@ func TestRunStopsBeforeInstallOrBootstrapOnPreflightConflict(t *testing.T) {
 	}
 }
 
+func TestRunUpgradeModeAllowsManagedConflicts(t *testing.T) {
+	bootstrapper := &fakeBootstrapper{}
+	runner := &fakeRunner{paths: map[string]string{
+		"uv":  "uv",
+		"git": "git",
+	}}
+	service := Service{
+		Prompt:       staticPrompt(true),
+		Runner:       runner,
+		Bootstrapper: bootstrapper,
+		Discover: func(string) (repo.Info, error) {
+			return repo.Info{
+				Root:             "/tmp/project",
+				ManagedConflicts: []string{"/tmp/project/.agents/skills/requirement-breakdown"},
+			}, nil
+		},
+		HomeDir: "/tmp/home",
+		GOOS:    "linux",
+		StatPath: func(string) error {
+			return errors.New("missing")
+		},
+	}
+
+	if _, err := service.Run(context.Background(), Input{
+		TargetPath:  "/tmp/project",
+		Interactive: true,
+		Upgrade:     true,
+	}); err != nil {
+		t.Fatalf("expected upgrade mode to bypass managed conflicts, got %v", err)
+	}
+
+	if !bootstrapper.called {
+		t.Fatal("expected bootstrap to run in upgrade mode")
+	}
+	if !bootstrapper.config.AllowManagedUpdate {
+		t.Fatalf("expected upgrade bootstrap config, got %#v", bootstrapper.config)
+	}
+}
+
 type staticPrompt bool
 
 func (s staticPrompt) Confirm(string, bool) (bool, error) {

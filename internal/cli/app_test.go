@@ -51,6 +51,25 @@ func TestRunInitCommandParsesOnlyTargetPath(t *testing.T) {
 	}
 }
 
+func TestRunInitUpgradeCommandParsesUpgradeFlag(t *testing.T) {
+	var out bytes.Buffer
+	fake := &fakeInitRunner{}
+	app := New(&out, &out)
+	app.initRunner = fake
+
+	exitCode := app.Run([]string{"init", "--upgrade", "/tmp/demo-repo"})
+	if exitCode != 0 {
+		t.Fatalf("expected exit code 0, got %d", exitCode)
+	}
+
+	if fake.input.TargetPath != "/tmp/demo-repo" {
+		t.Fatalf("expected target path to be parsed, got %#v", fake.input)
+	}
+	if !fake.input.Upgrade {
+		t.Fatalf("expected upgrade flag to be parsed, got %#v", fake.input)
+	}
+}
+
 type fakeInitRunner struct {
 	input initflow.Input
 }

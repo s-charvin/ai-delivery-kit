@@ -61,7 +61,11 @@ mkdir -p "$STUB_DIR"
 cat >"$STUB_BIN" <<EOF
 #!/usr/bin/env bash
 set -euo pipefail
-printf '%s\n' "installed-stub" >"$OUTPUT_LOG"
+if [[ \$# -eq 0 ]]; then
+  printf '%s\n' "installed-stub" >"$OUTPUT_LOG"
+else
+  printf '%s\n' "\$*" >"$OUTPUT_LOG"
+fi
 EOF
 chmod +x "$STUB_BIN"
 
@@ -157,3 +161,14 @@ assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-r
 assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-repo/releases/assets/101'
 assert_file_contains "$CURL_LOG" 'https://api.github.com/repos/example/private-repo/releases/assets/102'
 assert_file_not_contains "$CURL_LOG" "https://github.com/example/private-repo/releases/latest/download/$ARCHIVE_NAME"
+
+UPGRADE_INSTALL_DIR="$TEMP_DIR/upgrade-bin"
+mkdir -p "$UPGRADE_INSTALL_DIR"
+
+bash "$INSTALL_SCRIPT" \
+  --install-dir "$UPGRADE_INSTALL_DIR" \
+  --download-base-url "file://$TEMP_DIR" \
+  --version "v9.9.9" \
+  --upgrade-init /tmp/managed-repo
+
+assert_file_contains "$OUTPUT_LOG" 'init --upgrade /tmp/managed-repo'

@@ -69,6 +69,7 @@ public static class Program {
 $TempDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.IO.Path]::GetRandomFileName())
 $InstallDir = Join-Path $TempDir "bin"
 $StubExe = Join-Path $TempDir "ai-delivery.exe"
+$RunOutput = Join-Path $TempDir "ai-delivery-run.txt"
 $WebRequestLog = New-Object System.Collections.Generic.List[object]
 $ArchiveName = "ai-delivery_windows_amd64.zip"
 $ArchivePath = Join-Path $TempDir $ArchiveName
@@ -142,6 +143,7 @@ try {
   }
 
   Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue
+  $env:AI_DELIVERY_TEST_OUTPUT = $RunOutput
   & $InstallScript -InstallDir $InstallDir -DownloadBaseUrl "file://$TempDir" -Version "v9.9.9"
 
   $InstalledExe = Join-Path $InstallDir "ai-delivery.exe"
@@ -159,8 +161,13 @@ try {
   Assert-Contains $requestText "https://api.github.com/repos/example/private-repo/releases/assets/101"
   Assert-Contains $requestText "https://api.github.com/repos/example/private-repo/releases/assets/102"
   Assert-NotContains $requestText "https://github.com/example/private-repo/releases/latest/download/$ArchiveName"
+
+  & $InstallScript -InstallDir $InstallDir -DownloadBaseUrl "file://$TempDir" -Version "v9.9.9" -UpgradeInitTargetRepo "C:\repo"
+  $runText = Get-Content -LiteralPath $RunOutput -Raw
+  Assert-Contains $runText "init --upgrade C:\repo"
 } finally {
   Remove-Item Env:GITHUB_TOKEN -ErrorAction SilentlyContinue
+  Remove-Item Env:AI_DELIVERY_TEST_OUTPUT -ErrorAction SilentlyContinue
   if (Test-Path -LiteralPath $TempDir) {
     Remove-Item -LiteralPath $TempDir -Recurse -Force
   }

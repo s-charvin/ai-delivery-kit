@@ -57,8 +57,22 @@ func (a *App) Run(args []string) int {
 }
 
 func (a *App) runInit(args []string) int {
-	if len(args) != 1 {
-		_, _ = fmt.Fprintln(a.stderr, "init requires exactly one target repository path")
+	targetPath := ""
+	upgrade := false
+
+	switch len(args) {
+	case 1:
+		targetPath = args[0]
+	case 2:
+		if args[0] != "--upgrade" {
+			_, _ = fmt.Fprintln(a.stderr, "init accepts only an optional --upgrade flag before the target repository path")
+			a.printUsage()
+			return 1
+		}
+		upgrade = true
+		targetPath = args[1]
+	default:
+		_, _ = fmt.Fprintln(a.stderr, "init requires a target repository path and accepts an optional --upgrade flag")
 		a.printUsage()
 		return 1
 	}
@@ -83,15 +97,20 @@ func (a *App) runInit(args []string) int {
 	}
 
 	result, err := runner.Run(context.Background(), initflow.Input{
-		TargetPath:  args[0],
+		TargetPath:  targetPath,
 		Interactive: true,
+		Upgrade:     upgrade,
 	})
 	if err != nil {
 		_, _ = fmt.Fprintln(a.stderr, err)
 		return 1
 	}
 
-	_, _ = fmt.Fprintf(a.stdout, "Initialized ai-delivery in %s\n", result.RepoRoot)
+	if result.Upgraded {
+		_, _ = fmt.Fprintf(a.stdout, "Upgraded ai-delivery managed assets in %s\n", result.RepoRoot)
+	} else {
+		_, _ = fmt.Fprintf(a.stdout, "Initialized ai-delivery in %s\n", result.RepoRoot)
+	}
 	for _, link := range result.DocsLinks {
 		_, _ = fmt.Fprintln(a.stdout, link)
 	}
@@ -104,4 +123,5 @@ func (a *App) printUsage() {
 	_, _ = fmt.Fprintln(a.stderr, "Commands:")
 	_, _ = fmt.Fprintln(a.stderr, "  version   Print the CLI version")
 	_, _ = fmt.Fprintln(a.stderr, "  init      Initialize ai-delivery in a target repository")
+	_, _ = fmt.Fprintln(a.stderr, "            Use: ai-delivery init --upgrade /path/to/repo to refresh managed assets in an existing repo")
 }

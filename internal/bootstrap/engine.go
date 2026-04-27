@@ -15,9 +15,10 @@ import (
 const updatedBy = "bootstrap-ai-delivery-project"
 
 type Config struct {
-	RepoRoot   string
-	ProjectID  string
-	MainBranch string
+	RepoRoot           string
+	ProjectID          string
+	MainBranch         string
+	AllowManagedUpdate bool
 }
 
 type Engine struct {
@@ -25,10 +26,12 @@ type Engine struct {
 }
 
 func (e Engine) Run(cfg Config) error {
-	for _, relPath := range ManagedConflictPaths() {
-		target := filepath.Join(cfg.RepoRoot, filepath.FromSlash(relPath))
-		if _, err := os.Stat(target); err == nil {
-			return fmt.Errorf("managed asset already exists: %s", target)
+	if !cfg.AllowManagedUpdate {
+		for _, relPath := range ManagedConflictPaths() {
+			target := filepath.Join(cfg.RepoRoot, filepath.FromSlash(relPath))
+			if _, err := os.Stat(target); err == nil {
+				return fmt.Errorf("managed asset already exists: %s", target)
+			}
 		}
 	}
 

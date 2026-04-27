@@ -19,6 +19,28 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 The bootstrap script downloads a temporary release binary and runs the same canonical `ai-delivery init` logic.
 
+## Upgrade
+
+Upgrade the installed CLI by rerunning the installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash
+```
+
+If a repository was initialized by an older `ai-delivery init`, first upgrade the CLI, then refresh the managed project assets:
+
+```bash
+ai-delivery init --upgrade /path/to/repo
+```
+
+Or do both in one step:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash -s -- --upgrade-init /path/to/repo
+```
+
+`init --upgrade` refreshes the managed `ai-delivery` assets in the target repository while preserving requirement and runtime data.
+
 ## What `ai-delivery init` Does
 
 `ai-delivery init` is the repository onboarding command only. It:

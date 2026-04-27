@@ -116,3 +116,52 @@ func TestRunFailsOnSeededManagedFileConflictWithoutMutatingRepo(t *testing.T) {
 		t.Fatalf("expected no bootstrap mutation on seeded file preflight failure, got stat err %v", statErr)
 	}
 }
+
+func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRuntimeData(t *testing.T) {
+	target := t.TempDir()
+	if err := os.Mkdir(filepath.Join(target, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	skillPath := filepath.Join(target, ".agents/skills/requirement-breakdown/SKILL.md")
+	if err := os.MkdirAll(filepath.Dir(skillPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(skillPath, []byte("outdated-skill\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	runtimePath := filepath.Join(target, ".ai-delivery/runtime/task-board.json")
+	if err := os.MkdirAll(filepath.Dir(runtimePath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(runtimePath, []byte("{\"version\":99}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	engine := Engine{}
+	if err := engine.Run(Config{
+		RepoRoot:           target,
+		ProjectID:          "demo-project",
+		MainBranch:         "main",
+		AllowManagedUpdate: true,
+	}); err != nil {
+		t.Fatalf("upgrade run failed: %v", err)
+	}
+
+	skillBody, err := os.ReadFile(skillPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(skillBody), "outdated-skill") {
+		t.Fatalf("expected upgrade mode to refresh managed skills, got %s", string(skillBody))
+	}
+
+	runtimeBody, err := os.ReadFile(runtimePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.TrimSpace(string(runtimeBody)) != "{\"version\":99}" {
+		t.Fatalf("expected runtime data to be preserved, got %s", string(runtimeBody))
+	}
+}
