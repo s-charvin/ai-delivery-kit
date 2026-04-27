@@ -166,7 +166,7 @@ try {
   & $InstallScript -InstallDir $InstallDir -Repo "example/private-repo" -Version "latest"
 
   $requestText = ($WebRequestLog | ForEach-Object {
-      "$($_.Uri) $($_.Authorization) $($_.Accept)"
+      "$($_.Uri) Authorization: $($_.Authorization) Accept: $($_.Accept)"
     }) -join "`n"
   Assert-Contains $requestText "Authorization: Bearer test-token"
   Assert-Contains $requestText "Accept: application/octet-stream"
