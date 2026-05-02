@@ -65,6 +65,11 @@ Required local references:
 - Do not let a blocked queue entry swallow later queue entries that are still safe to run.
 - Do not turn checkpoints into a second truth store.
 - Do not let subagents advance gates, decide blockers, or merge changes.
+- Do not use subagents outside Stage 2 development for the currently active `SR-*`.
+- Do not let delegated work escape the current `SR-*` boundary or recurse into a deeper child requirement tier below `SR-*`.
+- Do not dispatch a subagent when fewer than two independent runnable implementation tasks remain after dependency review.
+- Do not apply one large multi-file patch during implementation; patch one file at a time and re-check context between files.
+- Do not reintegrate delegated worktree branches with merge commits; rebase them back onto the current development branch in sequence so history stays linear.
 - Do not skip source index, agent session, or slice closure records when a governed admin support surface is available.
 - Do not fork official `speckit-specify`, `speckit-plan`, or `speckit-tasks` just to restate repo-local contracts.
 - Do not treat `spec-kit-input.md` or `spec-kit-binding.json` as new truth stores; they are derived bridge artifacts only.
@@ -230,6 +235,10 @@ Use the stage mapping and bridge references as supporting shorthand for fixed in
 - Development execution
   - Inputs: `slice-contract.md`, `tasks.md`, `spec-kit-binding.json`, traceability refs
   - Optional context: project-local `.agents/AGENTS.md` when the host repository already provides one
+  - Scope: the currently active `SR-*` only; delegated work, if used, stays inside Stage 2 for that sub-requirement and must not create a deeper governed sub-requirement tier
+  - Rule: edit code with file-scoped patches; do not send one patch that rewrites multiple files at once
+  - Rule: use subagents only when at least two independent runnable implementation tasks inside the current `SR-*` already satisfy their dependencies; otherwise stay in the main session
+  - Rule: if delegated work uses worktrees, finish coding in those worktrees first, then rebase and reintegrate them back to the current development branch one by one in dependency order so commit history stays linear
   - Guard: slice reaches `merged`; UI-bearing slices must reach `visual_acceptance_passed` before merge completion
 
 ## Queue Compression
@@ -284,19 +293,24 @@ Stage 2:
 ## Subagent Budget
 
 - Default to the main session.
-- Only use subagents for independent, frozen, reviewable work.
-- Default concurrency is one active subagent.
-- Temporary concurrency two is allowed only for independent slices with satisfied dependencies.
-- Main session owns gate decisions, worktree ordering, blocker classification, and merge readiness.
-- If official Spec Kit work is delegated, run `prepare-speckit-context` first so the delegated input is frozen and reviewable.
+- Subagents are a Stage 2 development-only tool. Do not use them in routing, reconcile, mapping, acceptance freeze, interaction design, Spec Kit generation, or gate decisions.
+- Scope delegation to one active `SR-*` at a time. Delivery slices remain implementation units inside that `SR-*`, not a second governed child requirement tier.
+- Only use subagents for independent, frozen, reviewable implementation work.
+- Only use subagents when at least two independent runnable implementation tasks inside the active `SR-*` can move forward in parallel after dependency review.
+- If fewer than two independent runnable implementation tasks exist, stay in the main session.
+- When the threshold is met, allow at most two active subagents.
+- Main session owns dependency analysis, worktree ordering, blocker classification, and merge readiness.
+- Never allow a subagent to spawn deeper subagents under the same `SR-*`.
 
 ## Development Ordering Rules
 
 - Order slice execution from `delivery-slices/index.json`, not from ad-hoc prompt order.
 - A slice can only enter `using-git-worktrees` after every `depends_on_slices` entry is already `merged`.
+- Parallelism is allowed only when at least two independent runnable implementation tasks inside the current `SR-*` already satisfy their dependencies.
 - Do not pre-create worktrees for future slices whose dependencies are still unresolved.
+- If worktrees are used for delegated development, complete the coding work first, then have the main session rebase each finished worktree branch onto the current development branch and reintegrate them one by one in dependency order.
+- Keep the resulting history linear; do not use merge commits for worktree reintegration.
 - Worktree creation order, conflict handling, and merge decisions always return to the main session.
-- Parallelism is allowed only for independent slices whose dependencies are already satisfied and still remains subject to the subagent budget rules.
 
 ## Pause And Retry
 

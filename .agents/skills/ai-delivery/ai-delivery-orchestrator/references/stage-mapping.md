@@ -110,6 +110,15 @@
   - traceability refs
 - Optional context:
   - project-local `.agents/AGENTS.md` when the host repository already provides one
+- Scope boundary:
+  - development delegation is allowed only for the currently active `SR-*`
+  - delivery slices remain implementation units inside that `SR-*`, not a deeper governed child requirement tier
+- Fixed execution rules:
+  - edit code with file-scoped patches only; do not send one patch that rewrites multiple files at once
+  - use subagents only in Stage 2 and only when at least two independent runnable implementation tasks inside the active `SR-*` already satisfy their dependencies
+  - if fewer than two independent runnable implementation tasks exist, stay in the main session
+  - if delegated work uses worktrees, complete coding first, then rebase and reintegrate finished worktree branches back to the current development branch one by one in dependency order
+  - keep commit history linear during worktree reintegration; do not use merge commits
 - Ordered stages:
   - `using-git-worktrees`
   - `test-driven-development`

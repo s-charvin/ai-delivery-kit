@@ -28,6 +28,9 @@ This skill separates two concerns:
 - Do not replace `traceability.json` with a sidecar note or second bridge artifact.
 - Do not create a second UI acceptance source beside `ui-acceptance-contract.yaml`.
 - Do not hand-edit blocked states to look recovered.
+- Do not freeze a child carrier inside a larger route shell without explicit shell composition truth.
+- Do not accept `children: []` when source-backed evidence already proves multiple visible blocks, lanes, clusters, rows, slots, or CTA groupings inside that carrier.
+- Do not leave `typography`, `icon`, or `image` empty when visible source-backed text or assets are present.
 
 If a required screen state, executable frame, component tree branch, layout, visual style, icon asset, or other 1:1-impacting UI truth cannot be supported by trustworthy evidence, stop and block instead of pushing uncertain truth downstream.
 
@@ -87,6 +90,11 @@ If a source or artifact is missing:
 - If a critical 1:1 visual truth gap remains unresolved, block on `blocked_missing_design`.
 - If Requirement truth and Figma truth conflict inside the executable screen contract, block on `blocked_requirement_figma_conflict`.
 - If API truth is incomplete but does not change the frozen screen-state contract, keep that gap explicit for later interaction or integration work instead of blocking acceptance on API completeness alone.
+- If evidence or spacing semantics mentions 2+ visible blocks/lanes/clusters/rows, `children: []` is forbidden. Fetch descendants or block acceptance.
+- If `parent_shell_node_id` exists, `parent_shell_contract_ref` and `mount_path` are required.
+- If visible text exists, `typography` cannot be empty. If visible icon/image exists, `icon/image` cannot be empty. Otherwise block.
+- If a section is only one owned subtree inside a larger route shell, the contract must include `composed_screen_context` rather than only companion/shared prose.
+- If the source proves a full page shell elsewhere in the same selection, the current subreq must link to that frozen shell contract explicitly; `governed by SR-xxx` is not enough.
 - If a special UI-provided icon is required and the icon can be downloaded from MCP or another trusted structured provider, download and reference that asset in the YAML contract.
 - If a special UI-provided icon is required but cannot be downloaded or otherwise source-backed, block acceptance until the user provides the icon asset or a retrievable design source.
 - If `traceability.json` is missing in a legacy folder, repair only the governed contract and record the repair in `decisions.md`.
@@ -99,6 +107,7 @@ Produce an acceptance package that downstream stages can consume directly withou
 - an updated `traceability.json.ui_acceptance_contract` subtree whose path points to the YAML file
 - existing non-acceptance traceability fields such as `requirement_refs`, `api_contract_mapping`, `figma_nodes`, and `spec_kit_refs`
 - explicit `screen_states`, nested `component_tree`, `verification_targets`, `unresolved_ui_truth`, and frozen screen-state boundaries
+- explicit parent-shell linkage and composed screen context when the owned subtree mounts inside a larger route shell
 
 ## Default Output Paths
 
@@ -158,6 +167,12 @@ Each `screen_states[*].component_tree` node should include the fields that apply
 - `children`
 
 Keep related truth next to the node it governs. Do not split required elements, layout constraints, typography, and component props into separate tables that downstream readers must mentally join.
+
+When a screen state mounts inside a larger route shell, `screen_states[*]` must also include:
+
+- `parent_shell_contract_ref`
+- `mount_path`
+- `composed_screen_context`
 
 ## Component Tree Extraction Workflow
 
@@ -270,6 +285,10 @@ Freeze every final screen state's UI hierarchy as a nested tree.
 - Parent, companion, and shared UI relationships may be represented with node-local `source_refs`, `role`, or `implementation_mapping`, but the acceptance truth must still be readable from the tree itself.
 - Use stable, implementation-friendly `component_id` values, but do not let invented ids replace the source `node_id`.
 - Use `tree_extraction` plus node-local `extraction` to prove how complex source nodes were preserved, folded, or blocked.
+- If evidence or spacing semantics mentions 2+ visible blocks/lanes/clusters/rows, `children: []` is forbidden. Fetch descendants or block acceptance.
+- If `parent_shell_node_id` exists, `parent_shell_contract_ref` and `mount_path` are required.
+- If a section is only one owned subtree inside a larger route shell, the contract must include `composed_screen_context` rather than only companion/shared prose.
+- If the source proves a full page shell elsewhere in the same selection, the current subreq must link to that frozen shell contract explicitly; `governed by SR-xxx` is not enough.
 
 Component type vocabulary should be specific enough to guide implementation:
 
@@ -381,6 +400,7 @@ Text truth:
 - Record `content.text_source`, `content.text_value` when source-backed, `content.max_lines`, and `content.overflow`.
 - Record `typography.font_family`, `font_size`, `font_weight`, `line_height`, and `color_token`.
 - If text is runtime-provided, record the runtime source and still freeze max-lines and overflow behavior.
+- If visible text exists, `typography` cannot be empty. Otherwise block.
 
 Icon truth:
 
@@ -388,6 +408,7 @@ Icon truth:
 - Record `icon.asset_ref`, `icon.asset_source`, `icon.download_status`, `icon.size`, `icon.color_token`, and `icon.semantic_role`.
 - If the design requires a special icon and no asset can be downloaded or verified, add a blocking `unresolved_ui_truth` item with `blocks: acceptance_frozen`.
 - Generic system icons may use the existing design-system component only when the source design clearly maps to that component and no special asset is required.
+- If visible icon/image exists, `icon/image` cannot be empty. Otherwise block.
 
 Image truth:
 
@@ -451,7 +472,7 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - Read the executable-state evidence already established upstream.
 - Require a trustworthy executable frame node for every final screen state.
 - Require trustworthy `get_code` evidence for every final screen state before freezing the contract.
-- Record frozen state ids, parent shells, required hierarchy, component tree roots, and verification targets.
+- Record frozen state ids, parent shells, parent shell contract refs, mount paths, composed screen context, required hierarchy, component tree roots, and verification targets.
 
 ### 3. Extract and audit the component tree
 
@@ -460,6 +481,7 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - Preserve every wrapper that owns 1:1-impacting layout, visual, state, hit-target, overflow, asset, or responsive truth.
 - Collapse only proven-safe implementation-noise nodes, and record every collapsed source id in `tree_extraction.audit.collapsed_source_node_ids` and node-local `extraction.collapsed_source_node_ids`.
 - Set `tree_extraction.wrapper_retention_policy.block_on_unfetched_descendants` to `true`; if required descendants are omitted or depth-capped and cannot be fetched, block instead of approximating the component tree.
+- If evidence or spacing semantics mentions 2+ visible blocks/lanes/clusters/rows, `children: []` is forbidden. Fetch descendants or block acceptance.
 
 ### 4. Freeze the YAML UI truth tree
 
@@ -492,6 +514,8 @@ If an API gap does not change the visible screen-state contract, do not block ac
 - If requirement, API, and visual truth conflict in a way that changes the executable screen contract, block on the narrowest matching blocker and stop short of `acceptance_frozen`.
 - If a required special UI-provided icon cannot be downloaded from MCP or another trusted provider and the user has not provided it, block on `blocked_missing_design` or the narrowest available visual-evidence blocker.
 - If a required descendant was omitted by depth cap, shell truncation, or provider fetch failure and may affect 1:1 layout or style, block instead of approximating the component tree.
+- If `parent_shell_node_id` exists but `parent_shell_contract_ref`, `mount_path`, or `composed_screen_context` is missing, block on `blocked_missing_visual_truth`.
+- If visible text exists but `typography` is empty, or visible icon/image exists but `icon` or `image` is empty, block on `blocked_missing_visual_truth`.
 - Do not block acceptance only because later action semantics or server side effects are still incomplete when those gaps do not alter the frozen screen-state contract.
 - Only move the sub-requirement to `acceptance_frozen` when the YAML contract is fully source-backed and safe for downstream consumption.
 
@@ -513,6 +537,7 @@ Every YAML acceptance contract must define:
 - top-level `tree_extraction` audit with wrapper retention policy
 - frozen `screen_states`
 - nested `component_tree` for every final screen state
+- explicit `parent_shell_contract_ref`, `mount_path`, and `composed_screen_context` for child carriers inside a larger route shell
 - node-local `extraction` evidence for retained or collapsed source nodes
 - component identity, type, role, hierarchy, and requiredness
 - layout mode, axis, alignment, gap, positioning, wrap, and constraints
@@ -539,10 +564,13 @@ Before reporting completion, confirm all of the following:
 - [ ] `traceability.json.ui_acceptance_contract` was updated without overwriting other fields
 - [ ] `status.json` only moved to `acceptance_frozen` when the YAML contract became source-backed
 - [ ] `screen_states[*].component_tree` carries hierarchy, layout, box model, component type, and key style truth
+- [ ] Any child carrier inside a larger route shell includes `parent_shell_contract_ref`, `mount_path`, and `composed_screen_context`
+- [ ] No carrier with source-backed multi-block structure was frozen as `children: []`
 - [ ] `tree_extraction` records reviewed, preserved, collapsed, and blocked source nodes
 - [ ] Every collapsed wrapper has `collapsed_source_node_ids` and a source-backed collapse reason
 - [ ] Required descendants hidden by depth cap or shell omission were fetched or blocked
 - [ ] `spacing_policy` and node-level `box_model.spacing_semantics` make padding, margin, and gap ownership explicit
+- [ ] Visible text never ships with empty `typography`, and visible icon/image never ships with empty `icon` or `image`
 - [ ] Special UI-provided icons are downloaded and referenced, or blocked until provided
 - [ ] `verification_targets` are explicit
 - [ ] No 1:1-impacting unknown was silently left as a soft note
