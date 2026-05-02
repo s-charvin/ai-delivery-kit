@@ -1,0 +1,27 @@
+# 需求分解检查清单
+
+- 确认顶层需求材料是当前已批准的来源
+- 在总结之前捕获确切的来源引用或行范围
+- 在将关键顶层需求文本规范化为子需求之前，先复制或引用它
+- 尽可能复用现有需求包；否则在 `.ai-delivery/requirements/` 下引导相同的受治理契约
+- 在编写下游分解工件之前确保 `requirement.md` 存在
+- 在承载页面的模块吸收跨页面真相之前，提取共享基础或跨功能基础设施切片
+- 将跨领域规则提取到 `global-rules.md` 中
+- 生成 `breakdown-summary.md`
+- 生成无环的 `dependency-graph.json`
+- 创建或更新子需求文件夹，包含 `README.md`、`requirement-slice.md`、`dependency.json`、`status.json`、`traceability.json`、`api-contract-mapping.md` 和 `decisions.md`
+- 在每个子需求中记录能力概况，包含 `contains_page_states`、`contains_shared_state`、`contains_integration` 和 `contains_infra_only`
+- 记录交付切片候选，但不要过早冻结最终的页面状态切片
+- 保持 `README.md` 有来源支持，包含覆盖范围、关键逐字摘录、边界、验收链接和压缩警告
+- 保持 `requirement-slice.md` 详尽，包含来源覆盖、逐字摘录、规范化陈述、范围边界、交付切片候选、歧义和来源参考索引
+- 保持 `status.json` 中的阻塞恢复字段，如 `blocked_from_status` 和 `resume_target_status`
+- 保持 `traceability.json` 作为一等公民的受治理工件，包括当仓库期望时现有的桥接字段
+- 将 `traceability.json.api_contract_mapping` 初始化为 `missing_nonblocking` 或 `pending`
+- 播种 `traceability.json.source_index`，包含可用的需求、API 和 Spec Kit 桥接引用
+- 编写 `api-contract-mapping.md` 作为专用 API 阶段的事实占位符
+- 严格分级未解决问题：对屏幕契约真相缺口使用 `blocks_acceptance_contract`，对传播或集成真相缺口使用 `blocks_slice_synthesis`
+- 仅当切片对下游 UI 映射安全且通过覆盖、逐字摘录和来源链接的验收信号保留了关键来源真相时，才设置 `split_ready`
+- 验证拆分过程中没有需求部分被静默丢弃或过度压缩
+- 遇到 `blocked_requirement_conflict` 或 `blocked_missing_requirement` 时停止
+- 当后期文件（如 `figma-mapping.md` 和 `interaction-design.md`）已存在时，保留它们
+- 不要凭空编造产品真相

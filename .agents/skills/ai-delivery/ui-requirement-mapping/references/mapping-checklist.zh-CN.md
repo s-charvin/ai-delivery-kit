@@ -1,0 +1,26 @@
+# UI 需求映射检查清单
+
+- 在接触设计证据之前，先读取 `requirement-slice.md`、`api-contract-mapping.md`（如存在）、`traceability.json` 和 `status.json`
+- 优先从 `split_ready` 开始；如果片段仍不稳定则停止并将工作交回 `requirement-breakdown`
+- 遵循 Figma 检索顺序
+- 优先使用 `.ai-delivery/figma-cache/` 中的缓存证据
+- 仅使用 `SECTION` 缩小范围，然后要求对每个最终状态级目标执行 `get_code`
+- 要求每个声称的可执行节点都有可信的结构化节点证据
+- 在 `figma-mapping.md` 中记录提供商、节点 ID 和原始产物引用
+- 保持缓存的产物具有提供商感知能力，附带兼容性元数据以及 `provider`、`artifact_type` 和提供商原生 `raw_payload`
+- 编写 `figma-mapping.md`
+- 包含带有 `required_get_code_artifact_refs` 的"可执行屏幕状态"
+- 包含"映射就绪判定"，值为 `ready_for_acceptance_contract`、`blocked_missing_state_code` 或 `blocked_missing_visual_truth`
+- 原地更新 `traceability.json`
+- 保留现有的 API 契约映射字段如 `api_contract_mapping`
+- 保留现有的桥接字段如 `spec_kit_refs`
+- 显式记录配套 UI
+- 显式记录共享节点
+- 当后续阶段文件已存在时（如 `interaction-design.md`）予以保留
+- 通过受治理恢复（而非手动编辑）保留 `blocked_from_status` 和 `resume_target_status`
+- 遇到 `blocked_missing_design` 时停止
+- 遇到 `blocked_requirement_figma_conflict` 时停止
+- 当最终状态缺少 `get_code` 时，遇到 `blocked_missing_state_code` 时停止
+- 当默认/搜索/行组合/父容器/资产形式真值缺失时，遇到 `blocked_missing_visual_truth` 时停止
+- 当结构化证据不可信时，遇到 `blocked_figma_conflict` 或 `blocked_verification_failure` 时停止
+- 不得编造视觉真值
