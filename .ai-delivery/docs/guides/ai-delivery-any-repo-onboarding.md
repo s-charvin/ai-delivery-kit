@@ -5,15 +5,12 @@
 只要你的目标仓库满足下面两点，就可以接入这套架构：
 
 1. 该仓库是实际业务仓库，后续会承载 `.ai-delivery/`、`.specify/` 和 project-local skills。
-2. 你手里有一个“参考仓库”，里面已经维护好这套 project AI delivery skill 源码与 helper script。
+2. 你手里有一个"参考仓库"，里面已经维护好这套 project AI delivery skill 源码与 helper script。
 
 当前参考仓库就是本仓库，它提供：
 
 - `requirement-breakdown`
-- `api-contract-mapping`
-- `ui-requirement-mapping`
-- `ui-acceptance-contract`
-- `ui-interaction-design`
+- `ui-truth-mapping`
 - `ai-delivery-orchestrator`
 - helper script
 - onboarding guide
@@ -21,7 +18,7 @@
 注意：
 
 - 参考仓库里的 source helper script 仍位于仓库根目录，方便作为 bootstrap 来源使用。
-- 参考仓库里的 source skill 则位于 `.agents/skills/ai-delivery/`。
+- 参考仓库里的 source skill 则位于 `.agents/skills/`（扁平三 skill 结构）。
 - 一旦 bootstrap 到目标仓库，这些 workflow skills 会直接落在 `.agents/skills/`，而验证脚本、测试和 onboarding guide 会落在 `.ai-delivery/` 下面，避免污染目标仓库根目录。
 
 ## 这套架构的职责边界
@@ -32,18 +29,17 @@
 - `Figma` 是视觉真相
 - `Spec Kit` 只负责 `constitution / spec / plan / tasks`
 - `Superpowers` 只负责 agent 执行纪律
-- `.ai-delivery/` 负责需求拆分、映射、交互、状态、日志、依赖和追踪
-- `ai-delivery-admin` 负责控制面、展示、治理写入、MCP 和 admin support skill
+- `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、日志、依赖和追踪
 
 推荐主链路：
 
-`Requirement Intake -> Requirement Breakdown -> API Contract Mapping (optional but governed) -> UI Mapping -> UI Acceptance Contract -> Interaction Design -> Spec Kit -> Superpowers Execution -> Slice Closure`
+`Requirement Intake → Requirement Breakdown → UI Truth Mapping → Spec Kit → Implementation → Merge`
 
 说明：
 
-- API contract mapping 是受治理的，但不是前期前端工作的默认门禁。
-- 缺 Swagger / OpenAPI、缺字段、字段未定、接口晚到，在这套链路里都默认记录为 `missing_nonblocking` 或后续集成上下文。
-- 只有当 API 已知事实会让当前需求、UI 或交互结论失真时，才应该 blocker 或触发重校验。
+- API 文档直接传递给实现阶段作为参考，不做独立的 API contract mapping 阶段。
+- 缺 Swagger / OpenAPI、缺字段、字段未定、接口晚到，默认记录为 `integration_deferred`。
+- 只有当 API 已知事实会让当前需求或 UI 结论失真时，才应该 blocker 或触发重校验。
 
 ## 一次性接入任意仓库
 
@@ -72,14 +68,12 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 这一步会把下面这些内容落进目标仓库：
 
 - `.agents/skills/requirement-breakdown/`
-- `.agents/skills/api-contract-mapping/`
-- `.agents/skills/ui-requirement-mapping/`
-- `.agents/skills/ui-acceptance-contract/`
-- `.agents/skills/ui-interaction-design/`
+- `.agents/skills/ui-truth-mapping/`
 - `.agents/skills/ai-delivery-orchestrator/`
 - `.ai-delivery/scripts/validate-project-ai-delivery-skills.sh`
 - `.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh`
-- `.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md`
+- `.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh`
+- `.ai-delivery/tests/ai-delivery-skills/ui-composition-guardrails.test.sh`
 - 最小 `.ai-delivery/` 目录契约与基础 meta/runtime 文件
 
 也就是说，`project-local skills` 的初始化已经并入 bootstrap 本身，目标仓库不再需要额外执行单独的 skill 安装步骤。
@@ -135,9 +129,7 @@ specify init --here --force --ai codex --ai-skills --script sh
 bootstrap 完成后，当前仓库内应该已经具备并可识别：
 
 - `$requirement-breakdown`
-- `$api-contract-mapping`
-- `$ui-requirement-mapping`
-- `$ui-interaction-design`
+- `$ui-truth-mapping`
 
 如需确认 bootstrap 结果，可以额外执行：
 
@@ -168,10 +160,7 @@ bootstrap 完成后，目标仓库至少具备：
 ├── .agents/
 │   └── skills/
 │       ├── requirement-breakdown/
-│       ├── api-contract-mapping/
-│       ├── ui-requirement-mapping/
-│       ├── ui-acceptance-contract/
-│       ├── ui-interaction-design/
+│       ├── ui-truth-mapping/
 │       └── ai-delivery-orchestrator/
 ├── .ai-delivery/
 │   ├── docs/
@@ -191,7 +180,9 @@ bootstrap 完成后，目标仓库至少具备：
 │   │   └── validate-project-ai-delivery-skills.sh
 │   ├── tests/
 │   │   └── ai-delivery-skills/
-│   │       └── validate-sources.test.sh
+│   │       ├── validate-sources.test.sh
+│   │       ├── api-nonblocking-policy.test.sh
+│   │       └── ui-composition-guardrails.test.sh
 │   └── runtime/
 │       ├── main-branch.json
 │       ├── worktrees.json
@@ -238,74 +229,35 @@ bootstrap 完成后，目标仓库至少具备：
 - requirement_id 使用 req-project-rename
 - 如果 .ai-delivery/requirements/req-project-rename 不存在，就按当前 governed contract bootstrap
 - 生成 breakdown-summary.md、global-rules.md、dependency-graph.json 和 sub-requirements
-- 初始化 api-contract-mapping.md、traceability.json.api_contract_mapping 和 traceability.json.source_index
-- 只做需求拆分和 API stage 初始化，不做详细 API 映射，不做 Figma 映射，不做交互设计，不做 Spec Kit spec/plan/tasks
+- 初始化 traceability.json 和 source_index
+- 只做需求拆分，不做 Figma 映射，不做 Spec Kit spec/plan/tasks
 - 不允许脑补缺失业务规则
 ```
 
-### 第 2 步：API Contract Mapping（可选但受治理）
+### 第 2 步：UI Truth Mapping
 
-如果已经提供 Swagger / OpenAPI / 接口协议：
+如果需求包含 UI 且 Figma 设计可用：
 
 ```text
-使用 $api-contract-mapping 处理子需求 SR-001。
+使用 $ui-truth-mapping 处理子需求 SR-001。
 
 输入：
 - requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
 - requirement-slice: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
-- api contract: contracts/project-rename.openapi.yaml
-
-要求：
-- 生成 api-contract-mapping.md
-- 只更新 traceability.json.api_contract_mapping
-- 如果接口协议晚到，可以在 UI mapping 前补跑，或者与 UI mapping 并行补跑
-- 如果接口结论会影响 UI 或 interaction，则写入 downstream_revalidation
-- 普通缺字段、缺错误码、缺接口、字段未定，只记录 known gaps / integration risks / reservation points，不阻塞前几个 frontend pre-dev 阶段
-- 不允许根据服务端内部实现细节脑补 client-facing contract
-```
-
-如果当前没有 API contract，可以跳过这一步，后续在协议补充后单独补跑。
-
-### 第 3 步：UI Requirement Mapping
-
-```text
-使用 $ui-requirement-mapping 处理子需求 SR-001。
-
-输入：
-- requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
-- requirement-slice: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
-- api contract mapping: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/api-contract-mapping.md
 - figma file: https://www.figma.com/file/abc123/Project-Settings
 - target node: 120:88
 
 要求：
 - 基于结构化 node payload 完成映射
-- 生成 figma-mapping.md
+- 生成 ui-acceptance-contract.yaml 和 section-map.json
 - 更新 traceability.json
-- 保留现有 traceability.json.api_contract_mapping 子树
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
 ```
 
-### 第 4 步：UI Interaction Design
+如果当前没有 Figma 设计，或需求不含 UI，可以跳过这一步。非 UI 子需求直接进入 Spec Kit。
 
-```text
-使用 $ui-interaction-design 处理子需求 SR-001。
-
-输入：
-- requirement-slice.md
-- api-contract-mapping.md（如果已存在）
-- figma-mapping.md
-- traceability.json
-
-要求：
-- 输出 interaction-design.md
-- 明确 success / loading / error / disabled / focus / a11y
-- 只允许 bounded micro-interaction assumptions
-- 不允许新增业务步骤、字段、弹窗或页面跳转
-```
-
-### 第 5 步：Spec Kit Phase
+### 第 3 步：Spec Kit Phase
 
 先生成 spec：
 
@@ -314,9 +266,8 @@ bootstrap 完成后，目标仓库至少具备：
 
 上游输入必须以这些文件为准：
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/api-contract-mapping.md
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/figma-mapping.md
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/interaction-design.md
+- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/ui-acceptance-contract.yaml（如有 UI）
+- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/section-map.json（如有 UI）
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json
 
 要求：
@@ -341,7 +292,7 @@ bootstrap 完成后，目标仓库至少具备：
 使用 $speckit-tasks 为 feature 001-project-rename 生成可执行任务列表。
 ```
 
-### 第 6 步：Superpowers Execution
+### 第 4 步：Implementation
 
 这套架构里，执行层默认交给 `Superpowers`，不是 `Spec Kit`。
 
@@ -357,21 +308,13 @@ bootstrap 完成后，目标仓库至少具备：
 - 不允许跳过测试、review 和完成前验证
 ```
 
-## Spec Kit bridge 的处理方式
+## API Policy
 
-bootstrap 脚本不会替目标仓库强行规定 `traceability.json.spec_kit_refs` 的最终路径策略。
+API 文档直接传递给实现阶段作为参考，不做独立的 API contract mapping 阶段。
 
-原因很直接：
-
-- 有的仓库会先用 stub bridge
-- 有的仓库会直接接 live `Spec Kit`
-- 不同仓库对 `spec_path / plan_path / tasks_path` 的约束可能不同
-
-推荐做法：
-
-1. 先把 `Requirement -> Mapping -> Interaction -> Spec Kit -> Execution` 主链路接起来。
-2. 再在目标仓库里正式定义 `spec_kit_refs` 契约。
-3. 如果仓库已经有 `traceability.json.spec_kit_refs` 规则，就按仓库自己的 bridge contract 继续，不要让 bootstrap 脚本擅自改写。
+- API 缺口记录为 `integration_deferred` — 不阻塞 UI mapping 或 page-state 实现。
+- 只有当缺少 API 真相会导致无法确定 visual carrier 本身时，才阻塞。
+- 如果 API 结论会影响 UI 或交互，在实现阶段处理。
 
 ## 最少要记住的命令
 
@@ -393,6 +336,7 @@ zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 cd <target-repo-root>
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 zsh .ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh
+zsh .ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh
 specify check
 ```
 

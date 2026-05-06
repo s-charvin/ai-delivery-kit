@@ -1,31 +1,29 @@
 # Contract-Gated Stage Checklists
 
-## Outward Seven-Stage Checklist
+## Outward Six-Stage Checklist
 
 1. Requirement
-2. API
-3. UI
-4. Interaction
-5. TDD
-6. Review
-7. Verification
+2. UI Truth Mapping
+3. Spec Kit (spec → plan → tasks)
+4. TDD
+5. Review
+6. Verification
 
-## Internal Eight Gates
+## Internal Six Gates
 
-1. Requirement Gate
-2. API Contract Gate
-3. UI Evidence Gate
-4. UI Acceptance Freeze Gate
-5. Interaction Gate
-6. Execution Prep / Spec Kit Bridge Gate
-7. Development And Review Gate
-8. Visual Acceptance And Final Verification Gate
+1. Requirement Gate (`split_ready`)
+2. UI Truth Mapping Gate (`acceptance_frozen` — UI slices only; non-UI skip)
+3. Spec Kit Gate (`spec_ready` → `plan_ready` → `tasks_ready`)
+4. Development Gate (`in_dev`)
+5. Visual Acceptance Gate (`visual_acceptance_passed` — UI slices only; non-UI skip)
+6. Merge Gate (`merged`)
 
-## Execution Prep Gate Notes
+## UI Truth Mapping Gate Notes
 
-- `prepare-speckit-context` writes `spec-kit-input.md` from governed `.ai-delivery` slice artifacts.
-- Official `speckit-specify`, `speckit-plan`, and `speckit-tasks` run unchanged against that reduced bundle.
-- Local audit/bind writes `spec-kit-binding.json` and only then advances `spec_ready`, `plan_ready`, or `tasks_ready`.
+- `ui-truth-mapping` produces `ui-acceptance-contract.yaml` with frozen component tree, layout, spacing, typography, and states for all screen states.
+- `section-map.json` defines delivery slice ordering (`shared-shell` → `page` → `modal`).
+- All screen states must be source-backed before `acceptance_frozen` can be set.
+- API docs are passed directly to implementation — not part of this gate.
 
 ## Review Extension
 

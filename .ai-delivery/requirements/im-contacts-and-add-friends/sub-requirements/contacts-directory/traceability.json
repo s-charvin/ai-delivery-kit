@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "requirement_refs": [
     "im-contacts-and-add-friends"
   ],
@@ -11,35 +11,6 @@
   "confidence": "high",
   "conflicts": [],
   "last_verified_at": "2026-04-25T00:00:00.000Z",
-  "api_contract_mapping": {
-    "status": "mapped",
-    "source_refs": [
-      {
-        "source_type": "openapi",
-        "source_path_or_ref": "contracts/im-contacts.openapi.json"
-      }
-    ],
-    "operation_refs": [
-      {
-        "method": "GET",
-        "path": "/im/contacts",
-        "operation_id": "listContacts"
-      },
-      {
-        "method": "POST",
-        "path": "/im/friends/invitations",
-        "operation_id": "createFriendInvitation"
-      }
-    ],
-    "field_gaps": [],
-    "requirement_conflicts": [],
-    "last_verified_at": "2026-04-25T00:00:00.000Z",
-    "downstream_revalidation": {
-      "recommended_targets": [],
-      "reason": null,
-      "triggered_at": null
-    }
-  },
   "ui_acceptance_contract": {
     "status": "frozen",
     "path": ".ai-delivery/requirements/im-contacts-and-add-friends/sub-requirements/contacts-directory/ui-acceptance-contract.yaml",
@@ -52,9 +23,7 @@
     "feature_id": "contacts-friends-idle",
     "spec_path": ".specify/features/contacts-friends-idle/spec.md",
     "plan_path": ".specify/features/contacts-friends-idle/plan.md",
-    "tasks_path": ".specify/features/contacts-friends-idle/tasks.md",
-    "bridge_status": "tasks_ready",
-    "last_synced_at": "2026-04-25T00:00:00.000Z"
+    "tasks_path": ".specify/features/contacts-friends-idle/tasks.md"
   },
   "source_index": {
     "requirement": [],

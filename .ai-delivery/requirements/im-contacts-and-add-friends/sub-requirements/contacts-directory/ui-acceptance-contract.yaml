@@ -8,7 +8,7 @@ contract:
   source_requirements:
     - "requirement-slice.md"
   source_design:
-    figma_mapping: "figma-mapping.md"
+    figma_mapping: "requirement-slice.md"
     get_code_artifacts:
       - ".ai-delivery/figma-cache/im-contacts/artifacts/contacts-friends-idle-code.json"
     token_artifacts: []
@@ -27,7 +27,7 @@ tree_extraction:
   source_node_id: "12:34"
   extraction_mode: "source-tree-first"
   evidence_artifacts:
-    - "figma-mapping.md"
+    - "requirement-slice.md"
     - ".ai-delivery/figma-cache/im-contacts/artifacts/contacts-friends-idle-code.json"
   wrapper_retention_policy:
     block_on_unfetched_descendants: true
@@ -119,7 +119,7 @@ screen_states:
         allowed_substitution: false
         prop_mapping: {}
       source_refs:
-        - artifact: "figma-mapping.md"
+        - artifact: "requirement-slice.md"
           evidence: "Executable screen state contacts-friends-idle maps to node 12:34."
       blocking_unknowns: []
       children:
@@ -169,7 +169,7 @@ screen_states:
               border: "none"
           visual_style: {}
           source_refs:
-            - artifact: "figma-mapping.md"
+            - artifact: "requirement-slice.md"
               evidence: "Header belongs to the contacts directory executable frame."
           blocking_unknowns: []
           children:
@@ -218,7 +218,7 @@ screen_states:
                 line_height: "24px"
                 color_token: "--color-text-primary"
               source_refs:
-                - artifact: "figma-mapping.md"
+                - artifact: "requirement-slice.md"
                   evidence: "Title text is required in the idle directory state."
               blocking_unknowns: []
               children: []
@@ -293,7 +293,7 @@ screen_states:
               title: "Add friend"
               onTap: "open add friend flow"
           source_refs:
-            - artifact: "figma-mapping.md"
+            - artifact: "requirement-slice.md"
               evidence: "Add Friend Entry is a required element in contacts-friends-idle."
           blocking_unknowns: []
           children:
@@ -345,7 +345,7 @@ screen_states:
                   color_token: "--color-icon-primary"
                   semantic_role: "add"
               source_refs:
-                - artifact: "figma-mapping.md"
+                - artifact: "requirement-slice.md"
                   evidence: "The add friend row includes a leading add icon."
               blocking_unknowns: []
               children: []
@@ -355,9 +355,9 @@ verification_targets:
     golden_name: "contacts-friends-idle"
     screenshot_size: "390x844"
     artifact_refs:
-      - "figma-mapping.md"
+      - "requirement-slice.md"
       - "ui-acceptance-contract.yaml"
-      - "interaction-design.md"
+    
     manual_side_by_side_points:
       - "Directory title typography and header padding match source evidence."
       - "Add friend row uses row-owned tap-target padding and parent-owned icon/text gap."
