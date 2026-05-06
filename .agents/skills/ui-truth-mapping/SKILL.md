@@ -55,6 +55,7 @@ templates/
 - Do not include system UI in contracts: status bars, system navigation bars, soft keyboards, device chrome, or OS-level overlays must not appear in the component tree. Use `safe_area` on the affected region to declare system UI overlap instead.
 - Do not assign functional roles to empty containers; any UI component needs visible icons, styles, or textual evidence.
 - Do not map empty spacer. Containers with no visible child elements, no text, no icons, no images, and no background are only used for layout symmetry design considerations and are captured by `layout`, and are not worth recording.
+- Do not generate YAML contracts or `section-map.json` from memory. Locate the corresponding template file under `templates/`, copy it verbatim to the output path, then fill in values field by field. Preserve all field keys, ordering, YAML comments, and structure. Only change values — never add, remove, or rename fields. Every populated value must be source-backed; leave template defaults (`null`, `{}`, `[]`) unchanged when no evidence exists.
 
 ## Workflow
 
@@ -85,7 +86,7 @@ Read the requirement-slice to understand what UI elements are needed before touc
 
 **Verification:** After classification, confirm every enumerated frame has been assigned to a unit. No frame left unclassified. If a frame doesn't fit, re-examine — it may be a state variant you overlooked.
 
-**Output:** a `section-map.json` following the template in `templates/section-map-template.json`.
+**Output:** Copy `templates/section-map-template.json` to the output path, then fill in values for each classified frame. Preserve all field keys, ordering, and structure exactly as the template defines them — never regenerate from memory.
 
 ### 3. Gather design evidence
 - Check cache first if available.
@@ -96,6 +97,11 @@ Read the requirement-slice to understand what UI elements are needed before touc
 - **Calculate offsets from anchor bottom:** Region offset = child's top-y − (anchor's top-y + anchor's height). The offset is the gap between the bottom edge of the anchor and the top edge of the child — not the distance between their top edges.
 
 ### 4. Freeze YAML contract
+
+**First, copy the template.** Locate `templates/ui-acceptance-contract-template.yaml` and copy it verbatim to the output path for each unit. Never regenerate the structure from memory — the template's field keys, ordering, YAML comments, and default values are the source of truth.
+
+**Then fill in values** from design evidence. Only change template values — never add, remove, or rename fields. Leave defaults (`null`, `{}`, `[]`) where no evidence exists.
+
 Produce one `ui-acceptance-contract.yaml` per independent unit (each `page` or `modal` classification from step 2).
 
 This is a single page with a single component tree. States toggle component visibility and style — they do NOT duplicate the tree.

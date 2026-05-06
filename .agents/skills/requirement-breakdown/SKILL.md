@@ -43,6 +43,7 @@ Rules:
 - Do not over-split for implementation convenience.
 
 ### 3. Write artifacts
+- **Copy template first.** For each `requirement-slice.md`, copy `templates/requirement-slice-template.md` verbatim to the output path, then fill in values. Do not regenerate the structure from memory — the template's section keys, field names, ordering, and comments are the source of truth. Only change values; never add, remove, or rename sections or fields.
 - `requirement-slice.md` references source document line ranges (sections). Do NOT copy the original text verbatim — that wastes tokens.
 - `dependency-graph.json` must be acyclic. Only lists `depends_on` — `blocks` is managed by the orchestrator, not this skill.
 
@@ -66,3 +67,11 @@ Normalized Statement:
 ```
 
 Do NOT copy the original text into the slice. The `source_ref` is sufficient — downstream tools and humans can open the original document.
+
+## Hard Boundary
+
+- Do not split requirements without source line-range coverage for every slice.
+- Do not duplicate cross-cutting rules across slices — they belong in `global-rules.md`.
+- Do not generate `requirement-slice.md` from memory. Locate `templates/requirement-slice-template.md`, copy it verbatim to the output path, then fill in values. Preserve all section keys, field names, ordering, and HTML comments. Only change values — never add, remove, or rename template sections or fields.
+- Do not produce circular dependencies. The dependency graph must be a DAG.
+- Do not manage `blocks` — that is the orchestrator's responsibility.

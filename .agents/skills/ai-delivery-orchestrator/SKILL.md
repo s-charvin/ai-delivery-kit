@@ -8,20 +8,24 @@ description: Use as the single entry point for requirement development. Provide 
 Single entry point for the full requirement-to-implementation pipeline:
 
 ```
-Requirement Doc → [Breakdown?] → UI Truth Mapping → Spec Kit → Implementation → Merge
-                      ↑ auto-decided                        ↑ TDD + review + visual acceptance
+Requirement Doc → [Breakdown? & Brainstorming Audit] → UI Truth Mapping → [Brainstorming Design] + Spec Kit → Superpowers Dev → Merge
+                            ↑ auto-decided                                                    ↑ subagent-driven TDD, review, visual acceptance
 ```
 
 The orchestrator owns all state transitions, blocker handling, gate decisions, and coupling between skills. Each pipeline skill (`requirement-breakdown`, `ui-truth-mapping`) is a pure, independent tool — it receives inputs, produces outputs, and has no knowledge of the pipeline or of each other.
+
+`superpowers:brainstorming` is used at two checkpoints: after breakdown (requirement audit — find gaps early) and before Spec Kit (solution design — shape the approach before spec-driven skeleton). Implementation uses the full Superpowers development suite (`using-git-worktrees`, `test-driven-development`, `subagent-driven-development`, `dispatching-parallel-agents`, `requesting-code-review`, `finishing-a-development-branch`, `verification-before-completion`).
 
 ## Pipeline Overview
 
 | Stage | Skill | Input | Output | Gate |
 |---|---|---|---|---|
-| 1 | `requirement-breakdown` | Requirement doc | sub-requirements + dependency graph | `split_ready` per subreq |
+| 1a | `requirement-breakdown` | Requirement doc | sub-requirements + dependency graph | `split_ready` per subreq |
+| 1b | `superpowers:brainstorming` | requirement-slice + breakdown artifacts | requirement audit (gaps, ambiguities, conflicts) | pre-spec quality gate |
 | 2 | `ui-truth-mapping` | requirement-slice + Figma design source | `ui-acceptance-contract.yaml` + `section-map.json` | `acceptance_frozen` |
-| 3 | `speckit-specify` → `speckit-plan` → `speckit-tasks` | YAML contract + requirement-slice + section-map | `spec.md` → `plan.md` → `tasks.md` | `spec_ready` → `plan_ready` → `tasks_ready` |
-| 4 | TDD + implement + review + visual acceptance | tasks + YAML contract + API docs | implemented code | `visual_acceptance_passed` → `merged` |
+| 3a | `superpowers:brainstorming` | YAML contract + requirement-slice + API docs | solution design (architecture, data flow, component strategy) | design approval |
+| 3b | `speckit-specify` → `speckit-plan` → `speckit-tasks` | solution design + YAML contract + requirement-slice + section-map | `spec.md` → `plan.md` → `tasks.md` | `spec_ready` → `plan_ready` → `tasks_ready` |
+| 4 | Superpowers dev suite | tasks + YAML contract + API docs | implemented code | `visual_acceptance_passed` → `merged` |
 
 ## State Model
 
@@ -117,6 +121,7 @@ After routing confirmed:
 - Do not apply one large multi-file patch during implementation; edit one file at a time.
 - Do not use merge commits to reintegrate worktree branches; rebase to keep history linear.
 - Do not fork official `speckit-specify`, `speckit-plan`, or `speckit-tasks` to restate repo-local contracts.
+- Do not generate `status.json` from memory. Locate `templates/status-template.json`, copy it verbatim to the output path, then fill in sub-requirement entries. Preserve all `_`-prefixed metadata keys, field structure, and default values. Only change values — never add, remove, or rename keys.
 
 ## Auto-Decision: Split Or Skip?
 
@@ -151,8 +156,23 @@ Feed it the requirement document path. It produces sub-requirements with `requir
 
 **After completion:**
 - For each sub-requirement: if scope is complete with verbatim excerpts and clear dependencies → set `split_ready`. If scope is uncertain → leave as `draft`.
-- Initialize `status.json` at the requirement level with all sub-requirements and their determined statuses.
+- Initialize `status.json`: copy `templates/status-template.json` verbatim to `.ai-delivery/requirements/<req-id>/status.json`, then fill in `requirement_id`, sub-requirement entries, and their statuses. Do not regenerate structure from memory — preserve all `_`-prefixed metadata keys and default field structure.
 - Record the dependency graph in `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
+
+**Brainstorming audit (run after `split_ready`):**
+Use `superpowers:brainstorming` to audit each requirement-slice before proceeding to UI Truth Mapping or Spec Kit. Feed it:
+- The requirement-slice.md
+- The dependency graph
+- Any known API contracts or constraints
+
+The brainstorming session should:
+- Identify ambiguities, gaps, and edge cases the breakdown may have missed
+- Surface conflicting or implicit assumptions
+- Flag missing error states, empty states, loading states, and permission boundaries
+- Produce a concrete list of issues — if any are critical, set `blocked_missing_requirement` or `blocked_requirement_conflict` as appropriate
+- If no critical issues, document findings in the sub-requirement's `notes` field and proceed
+
+This checkpoint prevents bad requirements from reaching Spec Kit where they'd become expensive to fix.
 
 **Skip path:** When breakdown is skipped, create a minimal single sub-requirement package directly:
 ```
@@ -192,8 +212,27 @@ Feed it the requirement-slice and design source. It produces `ui-acceptance-cont
 - Collect: `ui-acceptance-contract.yaml` (UI slices), `requirement-slice.md`, `section-map.json`.
 - If API docs exist, pass them directly — no intermediate mapping.
 
+**Brainstorming design (run before Spec Kit):**
+Use `superpowers:brainstorming` to design the solution approach. Feed it:
+- The requirement-slice.md
+- `ui-acceptance-contract.yaml` (if UI-bearing)
+- API docs (if available)
+- The dependency graph
+
+The brainstorming session should produce:
+- Architecture decisions (component tree, data flow, state management)
+- Route/navigation design (if multi-screen)
+- Component decomposition strategy
+- Data model sketch (entities, relationships, loading strategy)
+- Error/empty/loading state handling plan
+- Key technical decisions and trade-offs
+
+The brainstorming output becomes the design foundation that `speckit-specify` builds upon — it provides the "why" and "how" so Spec Kit can produce a precise, well-grounded spec skeleton. Store the brainstorming summary in the sub-requirement's `notes` field for traceability.
+
+If brainstorming surfaces a design-level conflict with the YAML contract or requirement, set `blocked_spec_mismatch` and pause.
+
 **Run Spec Kit pipeline:**
-1. Feed input artifacts directly to `speckit-specify` → produces `spec.md`. Verify the spec covers all screen states from the YAML contract.
+1. Feed brainstorming output + input artifacts to `speckit-specify` → produces `spec.md`. Verify the spec covers all screen states from the YAML contract.
 2. Feed `spec.md` + input artifacts to `speckit-plan` → produces `plan.md`. Verify the plan respects delivery slice ordering.
 3. Feed `plan.md` + input artifacts to `speckit-tasks` → produces `tasks.md`. Verify tasks are granular, ordered by dependency, and file-scoped.
 
@@ -210,14 +249,21 @@ Feed it the requirement-slice and design source. It produces `ui-acceptance-cont
 
 **Slice execution order:** determined from `section-map.json`. Execute `shared-shell` units first, then `page` units, then `modal` units (each after its trigger page). A unit starts only when all its structural dependencies are `merged`.
 
-**Implement each slice:**
-1. **Create worktree** — `using-git-worktrees`, one worktree per slice.
-2. **TDD cycle** — `test-driven-development`: write failing test first, then implement.
-3. **Implementation** — edit one file at a time, re-check context between files. UI slices: implement against the YAML contract component tree, layout, spacing, typography, and states. API slices: wire real endpoints; keep deferred integration explicit.
-4. **Code review** — `requesting-code-review`: first failure enters auto-fix loop before escalation.
-5. **Visual acceptance** (UI slices only) — compare implementation screenshot side-by-side against YAML contract screen states. First failure enters auto-fix loop.
-6. **Verification** — `verification-before-completion`: final checks before merge.
-7. **Merge** — rebase worktree branch onto development branch (no merge commits).
+**Implement each slice using the Superpowers development suite:**
+
+1. **Create worktree** — `superpowers:using-git-worktrees`: creates an isolated worktree for the slice (or verifies an existing one). One worktree per slice ensures clean isolation from other in-progress work.
+
+2. **Plan subagent dispatch** — `superpowers:dispatching-parallel-agents`: analyze the slice's tasks and identify which can run in parallel. Only dispatch when at least two tasks are independent and their dependencies are satisfied. Main session owns dependency analysis and dispatch decisions.
+
+3. **Execute with subagents** — `superpowers:subagent-driven-development`: each parallel task runs in its own subagent. Each subagent follows TDD internally via `superpowers:test-driven-development` (write failing test → implement → verify). At most two active subagents at a time. Subagents never advance gates, decide blockers, or merge changes.
+
+4. **Code review** — `superpowers:requesting-code-review`: review all changes produced by subagents. First failure enters auto-fix loop (return to subagent with review feedback) before escalating to the user. Review checks: contract compliance, test coverage, edge cases, regressions.
+
+5. **Visual acceptance** (UI slices only) — compare implementation screenshot side-by-side against YAML contract screen states. First failure enters auto-fix loop. Only set `visual_acceptance_passed` when screenshots match.
+
+6. **Verification** — `superpowers:verification-before-completion`: final integration checks — all tests pass, no regressions, contract fidelity confirmed, merge readiness verified.
+
+7. **Finish branch** — `superpowers:finishing-a-development-branch`: clean up, final diff review, prepare for merge. Rebase worktree branch onto development branch (no merge commits).
 
 Set `in_dev` when implementation starts.
 Set `visual_acceptance_passed` after screenshot matches YAML (UI slices only; non-UI skip).
