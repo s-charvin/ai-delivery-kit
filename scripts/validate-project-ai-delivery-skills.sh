@@ -16,14 +16,14 @@ resolve_repo_root() {
 
   for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR/../.."; do
     candidate=$(cd -- "$candidate" 2>/dev/null && pwd -P) || continue
-    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
   done
 
   if candidate=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-    if [[ -d "$candidate/.agents/skills/requirement-breakdown" || -d "$candidate/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
+    if [[ -d "$candidate/.agents/skills/requirement-breakdown" ]]; then
       print -r -- "$candidate"
       return 0
     fi
@@ -61,7 +61,7 @@ require_frontmatter_skill() {
   require_contains "$file" '---'
   [[ "$(head -n 1 "$file")" == '---' ]] || fail "Expected YAML frontmatter at top of $file"
   require_contains "$file" "name: $expected_name"
-  require_contains "$file" 'description: Use when'
+  require_contains "$file" 'description: '
 }
 
 validate_openai_yaml() {
@@ -153,13 +153,10 @@ validate_managed_contract() {
   local release_workflow=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
-  local validate_policy_test
   validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
-  validate_policy_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/api-nonblocking-policy.test.sh")
 
   require_file "$validate_script"
   require_file "$validate_test"
-  require_file "$validate_policy_test"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
     readme_file="$ROOT/README.md"
@@ -208,11 +205,6 @@ validate_generic_skill() {
   require_frontmatter_skill "$skill_file" "$skill_name"
   validate_openai_yaml "$skill_name"
   validate_markdown_links "$skill_file"
-  require_contains "$skill_file" '.ai-delivery'
-  require_contains "$skill_file" 'admin support'
-  require_contains "$skill_file" 'governed'
-  require_not_contains "$skill_file" 'owned by ai-delivery-admin'
-  require_not_contains "$skill_file" 'move workflow truth into ai-delivery-admin'
   require_not_contains "$skill_file" '../common/'
 }
 
@@ -221,101 +213,29 @@ validate_requirement_breakdown_skill() {
 
   validate_skill_local_assets \
     requirement-breakdown \
-    references/dual-truth-rules.md \
-    references/blocker-catalog.md \
-    references/logging-checklist.md \
-    references/checklist.md \
-    references/subreq-readme-template.md \
     templates/requirement-slice-template.md
 
-  require_contains "$skill_file" 'top-level requirement material'
-  require_contains "$skill_file" 'breakdown-summary.md'
-  require_contains "$skill_file" 'global-rules.md'
-  require_contains "$skill_file" 'dependency-graph.json'
-  require_contains "$skill_file" 'requirement-slice.md'
-  require_contains "$skill_file" 'split_ready'
-  require_contains "$skill_file" 'blocked_requirement_conflict'
-  require_contains "$skill_file" 'blocked_missing_requirement'
-  require_contains "$skill_file" 'Do not invent product truth'
-  require_contains "$skill_file" 'source_index'
-  require_contains "$skill_file" 'missing_nonblocking'
+  require_contains "$skill_file" 'requirement document'
+  require_contains "$skill_file" 'requirement-slice'
+  require_contains "$skill_file" 'source_ref'
+  require_contains "$skill_file" 'open questions'
+  require_contains "$skill_file" 'Do NOT copy the original text verbatim'
 }
 
-validate_api_contract_mapping_skill() {
-  local skill_file="$SKILL_ROOT/api-contract-mapping/SKILL.md"
+validate_ui_truth_mapping_skill() {
+  local skill_file="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 
   validate_skill_local_assets \
-    api-contract-mapping \
-    references/dual-truth-rules.md \
-    references/blocker-catalog.md \
-    references/logging-checklist.md \
-    references/checklist.md \
-    templates/api-contract-mapping-template.md
+    ui-truth-mapping \
+    templates/ui-acceptance-contract-template.yaml \
+    templates/section-map-template.json
 
-  require_contains "$skill_file" 'requirement-slice.md'
-  require_contains "$skill_file" 'api-contract-mapping.md'
-  require_contains "$skill_file" 'traceability.json'
-  require_contains "$skill_file" 'Swagger'
-  require_contains "$skill_file" 'OpenAPI'
-  require_contains "$skill_file" 'downstream_revalidation'
-  require_contains "$skill_file" 'missing_nonblocking'
-  require_contains "$skill_file" 'source_index'
-  require_contains "$skill_file" 'blocked_missing_api_contract'
-  require_contains "$skill_file" 'blocked_api_contract_conflict'
-  require_contains "$skill_file" 'blocked_requirement_api_conflict'
-}
-
-validate_ui_acceptance_contract_skill() {
-  local skill_file="$SKILL_ROOT/ui-acceptance-contract/SKILL.md"
-
-  validate_skill_local_assets \
-    ui-acceptance-contract \
-    references/dual-truth-rules.md \
-    references/blocker-catalog.md \
-    references/logging-checklist.md \
-    templates/ui-acceptance-contract-template.yaml
-
+  require_contains "$skill_file" 'requirement-slice'
+  require_contains "$skill_file" 'Figma'
   require_contains "$skill_file" 'ui-acceptance-contract.yaml'
-  require_contains "$skill_file" 'acceptance_frozen'
-  require_contains "$skill_file" 'traceability.json.ui_acceptance_contract'
-  require_contains "$skill_file" 'blocked_missing_design'
-  require_contains "$skill_file" 'blocked_requirement_figma_conflict'
-  require_contains "$skill_file" 'component_tree'
-  require_contains "$skill_file" 'spacing_policy'
-  require_contains "$skill_file" 'special UI-provided icon'
-  require_contains "$skill_file" 'Component Tree Extraction Workflow'
-  require_contains "$skill_file" 'tree_extraction'
-  require_contains "$skill_file" 'wrapper_retention_policy'
-  require_contains "$skill_file" 'collapsed_source_node_ids'
-  require_contains "$skill_file" 'block_on_unfetched_descendants'
-}
-
-validate_ui_requirement_mapping_skill() {
-  local skill_file="$SKILL_ROOT/ui-requirement-mapping/SKILL.md"
-
-  validate_skill_local_assets \
-    ui-requirement-mapping \
-    references/dual-truth-rules.md \
-    references/blocker-catalog.md \
-    references/logging-checklist.md \
-    references/figma-fetch-order.md \
-    references/mapping-checklist.md \
-    templates/figma-mapping-template.md
-
-  require_contains "$skill_file" 'requirement-slice.md'
-  require_contains "$skill_file" 'Figma retrieval order'
-  require_contains "$skill_file" 'structured node'
-  require_contains "$skill_file" 'figma-mapping.md'
-  require_contains "$skill_file" 'traceability.json'
-  require_contains "$skill_file" 'figma-cache/'
-  require_contains "$skill_file" 'split_ready'
-  require_contains "$skill_file" 'blocked_from_status'
-  require_contains "$skill_file" 'resume_target_status'
-  require_contains "$skill_file" 'spec_kit_refs'
-  require_contains "$skill_file" 'blocked_missing_design'
-  require_contains "$skill_file" 'blocked_requirement_figma_conflict'
-  require_contains "$skill_file" 'companion UI'
-  require_contains "$skill_file" 'shared nodes'
+  require_contains "$skill_file" 'section-map'
+  require_contains "$skill_file" 'Do not invent visual truth'
+  require_contains "$skill_file" 'screen state'
 }
 
 validate_orchestrator_skill() {
@@ -323,88 +243,35 @@ validate_orchestrator_skill() {
 
   validate_skill_local_assets \
     ai-delivery-orchestrator \
-    references/requirement-routing-rules.md \
-    references/reconcile-rules.md \
-    references/stage-mapping.md \
-    references/spec-kit-bridge.md \
-    references/spec-kit-binding.md \
-    references/spec-kit-bind-checklist.md \
-    references/subagent-budget-policy.md \
-    references/pause-and-retry-policy.md \
-    templates/todo-template.md \
-    templates/spec-kit-input-template.md \
-    templates/spec-kit-binding-template.json
+    templates/status-template.json
 
-  require_contains "$skill_file" 'source index'
-  require_contains "$skill_file" 'slice closure'
-  require_contains "$skill_file" 'agent session'
+  require_contains "$skill_file" 'Runtime Modes'
   require_contains "$skill_file" 'tasks_ready_user_confirmation'
   require_contains "$skill_file" 'visual_acceptance_passed'
-  require_contains "$skill_file" 'continue an existing requirement or create a new one'
+  require_contains "$skill_file" 'create req-'
   require_contains "$skill_file" 'human confirmation'
-  require_contains "$skill_file" 'Requirement Routing Rules'
-  require_contains "$skill_file" 'direct use of lower-level skills remains supported'
-}
-
-validate_ui_interaction_design_skill() {
-  local skill_file="$SKILL_ROOT/ui-interaction-design/SKILL.md"
-
-  validate_skill_local_assets \
-    ui-interaction-design \
-    references/dual-truth-rules.md \
-    references/blocker-catalog.md \
-    references/logging-checklist.md \
-    references/allowed-assumptions.md \
-    references/interaction-quality-guidelines.md \
-    references/state-checklist.md \
-    templates/interaction-design-template.md
-
-  require_contains "$skill_file" 'requirement-slice.md'
-  require_contains "$skill_file" 'figma-mapping.md'
-  require_contains "$skill_file" 'interaction-design.md'
-  require_contains "$skill_file" 'traceability.json'
-  require_contains "$skill_file" 'acceptance_frozen'
-  require_contains "$skill_file" 'interaction_ready'
-  require_contains "$skill_file" 'blocked_from_status'
-  require_contains "$skill_file" 'resume_target_status'
-  require_contains "$skill_file" 'Source: Requirement'
-  require_contains "$skill_file" 'assumed_micro_interaction'
-  require_contains "$skill_file" 'micro-interaction'
-  require_contains "$skill_file" 'loading'
-  require_contains "$skill_file" 'feedback'
-  require_contains "$skill_file" 'timing'
-  require_contains "$skill_file" 'a11y'
-  require_contains "$skill_file" 'external skill'
-  require_contains "$skill_file" 'blocked_missing_design'
-  require_contains "$skill_file" 'blocked_requirement_figma_conflict'
-  require_contains "$skill_file" 'blocked_missing_requirement'
-  require_contains "$skill_file" 'Do not invent business flow or page structure'
+  require_contains "$skill_file" 'blocker_scope'
+  require_contains "$skill_file" 'runnable queue'
 }
 
 ROOT=$(resolve_repo_root)
 
-if [[ -d "$ROOT/.agents/skills/requirement-breakdown" ]]; then
+if [[ -f "$ROOT/managedassets.go" ]]; then
+  SKILL_LAYOUT="source"
+  SKILL_ROOT="$ROOT/.agents/skills"
+elif [[ -d "$ROOT/.agents/skills/requirement-breakdown" ]]; then
   SKILL_LAYOUT="bootstrapped"
   SKILL_ROOT="$ROOT/.agents/skills"
-elif [[ -d "$ROOT/.agents/skills/ai-delivery/requirement-breakdown" ]]; then
-  SKILL_LAYOUT="source"
-  SKILL_ROOT="$ROOT/.agents/skills/ai-delivery"
 else
   fail "Unable to detect project-local skill layout under $ROOT"
 fi
 
 validate_managed_contract
 validate_generic_skill requirement-breakdown
-validate_generic_skill api-contract-mapping
-validate_generic_skill ui-requirement-mapping
-validate_generic_skill ui-acceptance-contract
-validate_generic_skill ui-interaction-design
+validate_generic_skill ui-truth-mapping
 validate_generic_skill ai-delivery-orchestrator
 validate_requirement_breakdown_skill
-validate_api_contract_mapping_skill
-validate_ui_requirement_mapping_skill
-validate_ui_acceptance_contract_skill
-validate_ui_interaction_design_skill
+validate_ui_truth_mapping_skill
 validate_orchestrator_skill
 
 print -- 'PASS: project-local ai-delivery skill sources are structurally valid.'

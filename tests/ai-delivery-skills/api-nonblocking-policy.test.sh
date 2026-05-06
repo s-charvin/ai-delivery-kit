@@ -9,11 +9,7 @@ else
   ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 fi
 
-if [[ -d "$ROOT/.agents/skills/ai-delivery" ]]; then
-  SKILL_ROOT="$ROOT/.agents/skills/ai-delivery"
-else
-  SKILL_ROOT="$ROOT/.agents/skills"
-fi
+SKILL_ROOT="$ROOT/.agents/skills"
 
 fail() {
   print -u2 -- "[api-nonblocking-policy-test] $1"
@@ -33,50 +29,24 @@ require_contains() {
   fi
 }
 
-require_not_contains() {
-  local file=$1
-  local needle=$2
-
-  if grep -Fq -- "$needle" "$file"; then
-    fail "Unexpected '$needle' in $file"
-  fi
-}
-
-require_file "$SKILL_ROOT/api-contract-mapping/SKILL.md"
+require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
-require_file "$SKILL_ROOT/ui-requirement-mapping/SKILL.md"
-require_file "$SKILL_ROOT/ui-interaction-design/SKILL.md"
-
-require_not_contains \
-  "$SKILL_ROOT/api-contract-mapping/SKILL.md" \
-  'If the user asked for API mapping but no trustworthy client-facing API contract source exists, block on `blocked_missing_api_contract`.'
-
-require_not_contains \
-  "$SKILL_ROOT/requirement-breakdown/SKILL.md" \
-  'traceability.json.api_contract_mapping.status` as `not_provided`'
+require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 
 require_contains \
-  "$SKILL_ROOT/api-contract-mapping/SKILL.md" \
-  "Missing or partial API contract material does not block early frontend stages by default."
+  "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \
+  "API docs are passed directly to implementation"
 
 require_contains \
-  "$SKILL_ROOT/api-contract-mapping/SKILL.md" \
-  "missing_nonblocking"
+  "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \
+  "integration_deferred"
+
+require_contains \
+  "$SKILL_ROOT/ui-truth-mapping/SKILL.md" \
+  "Do not invent visual truth"
 
 require_contains \
   "$SKILL_ROOT/requirement-breakdown/SKILL.md" \
-  "source_index"
-
-require_contains \
-  "$SKILL_ROOT/requirement-breakdown/SKILL.md" \
-  "Do not let API incompleteness reduce a safe requirement slice."
-
-require_contains \
-  "$SKILL_ROOT/ui-requirement-mapping/SKILL.md" \
-  "Do not require complete API mapping to finish UI mapping."
-
-require_contains \
-  "$SKILL_ROOT/ui-interaction-design/SKILL.md" \
-  "Do not wait for request or response field finality to finish interaction design."
+  "Do not invent product truth"
 
 print -- "PASS: non-blocking API policy is documented across governed skill stages."

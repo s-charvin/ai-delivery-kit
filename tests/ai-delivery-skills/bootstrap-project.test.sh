@@ -73,10 +73,7 @@ chmod +x "$TEMP_BIN/specify"
 PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
-[[ -d "$TARGET_REPO/.agents/skills/api-contract-mapping" ]]
-[[ -d "$TARGET_REPO/.agents/skills/ui-requirement-mapping" ]]
-[[ -d "$TARGET_REPO/.agents/skills/ui-acceptance-contract" ]]
-[[ -d "$TARGET_REPO/.agents/skills/ui-interaction-design" ]]
+[[ -d "$TARGET_REPO/.agents/skills/ui-truth-mapping" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/meta/project-binding.json" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/runtime/main-branch.json" ]]
@@ -86,16 +83,13 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh" ]]
 [[ ! -e "$TARGET_REPO/.ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/references/dual-truth-rules.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/references/dual-truth-rules.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/api-contract-mapping/templates/api-contract-mapping-template.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/references/dual-truth-rules.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-requirement-mapping/templates/figma-mapping-template.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-acceptance-contract/templates/ui-acceptance-contract-template.yaml" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/references/dual-truth-rules.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-interaction-design/templates/interaction-design-template.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/reconcile-rules.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/section-map-template.json" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
 [[ ! -e "$TARGET_REPO/.codex/skills/README.md" ]]
@@ -111,7 +105,7 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
-grep -Fq '"missing_nonblocking"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 
 zsh "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
 zsh "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"

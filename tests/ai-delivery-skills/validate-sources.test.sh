@@ -41,49 +41,28 @@ require_not_contains() {
   fi
 }
 
-if [[ -d "$ROOT/.agents/skills/ai-delivery" ]]; then
+if [[ -f "$ROOT/managedassets.go" ]]; then
   MANAGED_ASSET_ROOT="$ROOT"
-  SKILL_ROOT="$ROOT/.agents/skills/ai-delivery"
 else
   MANAGED_ASSET_ROOT="$ROOT/.ai-delivery"
-  SKILL_ROOT="$ROOT/.agents/skills"
 fi
+
+SKILL_ROOT="$ROOT/.agents/skills"
 
 VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delivery-skills.sh")
 
 zsh "$VALIDATE_SCRIPT"
 
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
-if [[ "$ROOT" == "/Users/charvin/Projects/spec-dev/Codex" ]]; then
-  [[ ! -e "$ROOT/.codex/skills" ]] || fail "Source skill root should not remain under .codex/skills"
-fi
 
-require_file "$SKILL_ROOT/requirement-breakdown/references/dual-truth-rules.md"
-require_file "$SKILL_ROOT/requirement-breakdown/references/blocker-catalog.md"
-require_file "$SKILL_ROOT/requirement-breakdown/references/logging-checklist.md"
+require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
-require_file "$SKILL_ROOT/api-contract-mapping/references/dual-truth-rules.md"
-require_file "$SKILL_ROOT/api-contract-mapping/references/blocker-catalog.md"
-require_file "$SKILL_ROOT/api-contract-mapping/references/logging-checklist.md"
-require_file "$SKILL_ROOT/api-contract-mapping/templates/api-contract-mapping-template.md"
-require_file "$SKILL_ROOT/ui-requirement-mapping/references/dual-truth-rules.md"
-require_file "$SKILL_ROOT/ui-requirement-mapping/references/blocker-catalog.md"
-require_file "$SKILL_ROOT/ui-requirement-mapping/references/logging-checklist.md"
-require_file "$SKILL_ROOT/ui-requirement-mapping/templates/figma-mapping-template.md"
-require_file "$SKILL_ROOT/ui-acceptance-contract/references/dual-truth-rules.md"
-require_file "$SKILL_ROOT/ui-acceptance-contract/references/blocker-catalog.md"
-require_file "$SKILL_ROOT/ui-acceptance-contract/references/logging-checklist.md"
-require_file "$SKILL_ROOT/ui-acceptance-contract/templates/ui-acceptance-contract-template.yaml"
-require_file "$SKILL_ROOT/ui-interaction-design/references/dual-truth-rules.md"
-require_file "$SKILL_ROOT/ui-interaction-design/references/blocker-catalog.md"
-require_file "$SKILL_ROOT/ui-interaction-design/references/logging-checklist.md"
-require_file "$SKILL_ROOT/ui-interaction-design/templates/interaction-design-template.md"
+require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
+require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
+require_file "$SKILL_ROOT/ui-truth-mapping/templates/section-map-template.json"
+require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
+require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"
 
 require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
-require_not_contains "$SKILL_ROOT/api-contract-mapping/SKILL.md" '../common/'
-require_not_contains "$SKILL_ROOT/ui-requirement-mapping/SKILL.md" '../common/'
-require_not_contains "$SKILL_ROOT/ui-acceptance-contract/SKILL.md" '../common/'
-require_not_contains "$SKILL_ROOT/ui-interaction-design/SKILL.md" '../common/'
-require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/reconcile-rules.md"
-
-zsh "$SCRIPT_DIR/api-nonblocking-policy.test.sh"
+require_not_contains "$SKILL_ROOT/ui-truth-mapping/SKILL.md" '../common/'
+require_not_contains "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" '../common/'

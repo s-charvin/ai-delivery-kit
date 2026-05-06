@@ -8,12 +8,9 @@ type ManagedAsset struct {
 
 func Manifest() []ManagedAsset {
 	return []ManagedAsset{
-		{Source: ".agents/skills/ai-delivery/requirement-breakdown", Target: ".agents/skills/requirement-breakdown", Kind: "dir"},
-		{Source: ".agents/skills/ai-delivery/api-contract-mapping", Target: ".agents/skills/api-contract-mapping", Kind: "dir"},
-		{Source: ".agents/skills/ai-delivery/ui-requirement-mapping", Target: ".agents/skills/ui-requirement-mapping", Kind: "dir"},
-		{Source: ".agents/skills/ai-delivery/ui-acceptance-contract", Target: ".agents/skills/ui-acceptance-contract", Kind: "dir"},
-		{Source: ".agents/skills/ai-delivery/ui-interaction-design", Target: ".agents/skills/ui-interaction-design", Kind: "dir"},
-		{Source: ".agents/skills/ai-delivery/ai-delivery-orchestrator", Target: ".agents/skills/ai-delivery-orchestrator", Kind: "dir"},
+		{Source: ".agents/skills/ai-delivery-orchestrator", Target: ".agents/skills/ai-delivery-orchestrator", Kind: "dir"},
+		{Source: ".agents/skills/requirement-breakdown", Target: ".agents/skills/requirement-breakdown", Kind: "dir"},
+		{Source: ".agents/skills/ui-truth-mapping", Target: ".agents/skills/ui-truth-mapping", Kind: "dir"},
 		{Source: "scripts/validate-project-ai-delivery-skills.sh", Target: ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/validate-sources.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh", Kind: "file"},

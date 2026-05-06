@@ -24,7 +24,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 
 	required := []string{
 		filepath.Join(target, ".agents/skills/requirement-breakdown/SKILL.md"),
-		filepath.Join(target, ".agents/skills/api-contract-mapping/references/dual-truth-rules.md"),
+		filepath.Join(target, ".agents/skills/ui-truth-mapping/SKILL.md"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
