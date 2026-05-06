@@ -1,0 +1,35 @@
+{
+  "_schema": "1.0",
+  "_description": "Maps each top-level design frame to its classification and assigned unit. Generated during section analysis.",
+  "source": {
+    "provider": "<figma|sketch|...>",
+    "file_key": "<file-key>",
+    "root_node_id": "<node-id>"
+  },
+  "units": [
+    {
+      "unit_id": "<kebab-case-id>",
+      "unit_type": "page | modal | shared-shell",
+      "title": "<human-readable name>",
+      "route_or_trigger": "<URL route for page, trigger action for modal>",
+      "frames": [
+        {
+          "frame_id": "<unique-frame-id>",
+          "source_node": "<provider-node-id>",
+          "name": "<frame-name-from-design>",
+          "classification": "page | page-state | modal | shared-shell",
+          "state_type": "idle | loading | empty | error | success | null",
+          "notes": "<optional, e.g. why classified this way>"
+        }
+      ]
+    }
+  ],
+  "shared_components": [
+    {
+      "component_id": "<kebab-case-id>",
+      "source_node": "<provider-node-id>",
+      "name": "<human-readable>",
+      "referenced_by": ["<unit_id>"]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "UI Truth Mapping"
+  short_description: "Map Figma design to canonical YAML UI truth and delivery slices"
+  default_prompt: "Use $ui-truth-mapping to bind Figma design evidence to this sub-requirement, freeze the YAML UI acceptance contract, and define delivery slices."
