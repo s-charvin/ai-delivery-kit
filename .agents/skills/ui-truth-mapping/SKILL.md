@@ -56,6 +56,7 @@ templates/
 - Do not assign functional roles to empty containers; any UI component needs visible icons, styles, or textual evidence.
 - Do not map empty spacer. Containers with no visible child elements, no text, no icons, no images, and no background are only used for layout symmetry design considerations and are captured by `layout`, and are not worth recording.
 - Do not generate YAML contracts or `section-map.json` from memory. Locate the corresponding template file under `templates/`, copy it verbatim to the output path, then fill in values field by field. Preserve all field keys, ordering, YAML comments, and structure. Only change values — never add, remove, or rename fields. Every populated value must be source-backed; leave template defaults (`null`, `{}`, `[]`) unchanged when no evidence exists.
+- Do not generate contracts for multiple units in the main session's context. For each independent unit (page, modal, shared-shell) identified in the section-map, spawn a separate subagent that gathers evidence and freezes the YAML for that unit alone. Only exception: skip subagent dispatch when the user explicitly requests no subagent usage, or when there is exactly one unit with ≤2 state frames — those are simple enough for inline handling without quality loss.
 
 ## Workflow
 
@@ -88,7 +89,11 @@ Read the requirement-slice to understand what UI elements are needed before touc
 
 **Output:** Copy `templates/section-map-template.json` to the output path, then fill in values for each classified frame. Preserve all field keys, ordering, and structure exactly as the template defines them — never regenerate from memory.
 
-### 3. Gather design evidence
+**After section-map is written — dispatch per-unit subagents.** For each independent unit (page, modal, shared-shell) in the section-map, spawn a subagent. Each subagent receives only its unit's frames (with source_node ids), the requirement-slice, the design source locator, and the template path. It independently executes Steps 3+4 for its assigned unit — gathering evidence only for its frames, then freezing one YAML contract. Dispatch all units in parallel. The main session does not gather evidence or freeze YAML; it only dispatches, collects results, then runs Step 5 review.
+
+Skip subagent dispatch only when the user explicitly requested no subagent usage, or when there is exactly one unit with ≤2 state frames.
+
+### 3. Gather design evidence *(runs inside per-unit subagent)*
 - Check cache first if available.
 - Use structured design data from the provider (structure-level query first, then drill to code-level evidence per frame).
 - **Every state frame must have evidence.** A page classified with N state frames in step 2 must produce N screen_state entries, each backed by structured evidence from its source_node. Do not map only the simplest/idle state and skip the rest.
@@ -96,9 +101,11 @@ Read the requirement-slice to understand what UI elements are needed before touc
 - **Distinguish fill vs fixed width:** A pixel value that equals (frame_width − symmetrical_horizontal_margins) is a design-tool snapshot, not layout intent. Use `fill` when an element spans the full width with consistent margins; reserve fixed px for intentionally sized elements (icons, avatars, fixed buttons).
 - **Calculate offsets from anchor bottom:** Region offset = child's top-y − (anchor's top-y + anchor's height). The offset is the gap between the bottom edge of the anchor and the top edge of the child — not the distance between their top edges.
 
-### 4. Freeze YAML contract
+### 4. Freeze YAML contract *(runs inside per-unit subagent)*
 
-**First, copy the template.** Locate `templates/ui-acceptance-contract-template.yaml` and copy it verbatim to the output path for each unit. Never regenerate the structure from memory — the template's field keys, ordering, YAML comments, and default values are the source of truth.
+This step runs inside each per-unit subagent. The subagent has access only to its assigned unit's frames and evidence — no cross-contamination from other units.
+
+**First, copy the template.** Locate `templates/ui-acceptance-contract-template.yaml` and copy it verbatim to the output path for this unit. Never regenerate the structure from memory — the template's field keys, ordering, YAML comments, and default values are the source of truth.
 
 **Then fill in values** from design evidence. Only change template values — never add, remove, or rename fields. Leave defaults (`null`, `{}`, `[]`) where no evidence exists.
 
