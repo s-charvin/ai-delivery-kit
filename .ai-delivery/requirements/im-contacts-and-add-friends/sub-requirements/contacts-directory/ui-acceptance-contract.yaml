@@ -104,6 +104,7 @@ screen_states:
         max_width: null
         min_height: null
         max_height: null
+      safe_area: "top"
       component_props: {}
       visual_style:
         background:

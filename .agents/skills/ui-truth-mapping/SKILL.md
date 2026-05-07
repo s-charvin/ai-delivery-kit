@@ -159,6 +159,40 @@ Components handle state differences using two fields:
 - **Text with `font.size` uses `height: auto`.** Fixed heights on text elements conflict with font rendering across platforms. Containers (buttons, cards, inputs) that wrap text may keep fixed heights for touch targets or layout.
 - **Keyboard-aware regions use `safe_area: "bottom"` with `offset: "0px"`.** When a design frame includes a system keyboard and a region sits directly above it, the region's pixel position is a design-tool snapshot — it will move with the keyboard at runtime. Anchor it to `bottom`; the system handles keyboard avoidance. Do NOT calculate an offset from the frame bottom.
 
+### 5. Final Contract Review
+
+**Mandatory — run after every YAML freeze.** Review EVERY contract produced (page, page-state, modal, shared-shell). Do not skip any unit. Use a subagent for clean isolation — the subagent receives all contracts plus `section-map.json` and returns optimized contracts.
+
+This review normalizes layout semantics and sizing only. It does NOT add or remove source-backed components, states, `visible_when` conditions, or `source_node` values.
+
+**Review order (follow strictly):**
+
+**A. Safe areas & system UI**
+- A region whose top edge sits under the system status bar → `safe_area: "top"`.
+- A region sitting above the system navigation bar, home indicator, or soft keyboard → `safe_area: "bottom"`, anchor to `bottom` with `offset: "0px"`.
+- Never model status bars, navigation bars, keyboards, or device chrome as components in the tree.
+
+**B. Keyboard adaptation**
+- Pages with text inputs, codes, passwords, or email fields → the region containing the input area must anchor to `bottom` with `safe_area: "bottom"`. The system handles keyboard avoidance at runtime.
+- Do not use fixed pixel offsets to simulate keyboard-pushed positions. Do not model the keyboard as a component or fixed-height spacer.
+
+**C. Width/height convergence — hardcoded px → auto / fill**
+- Text, labels, descriptions, value displays → `width: "auto"`, `height: "auto"`.
+- Cards, rows, list containers spanning available width → `width: "fill"`.
+- **fill detection rule**: if a component's px width equals (parent_width − symmetrical horizontal margins), it is a design-snapshot value — use `fill`, not a fixed px.
+- Fixed px kept only for: icon sizes, avatar sizes, minimum touch targets (≥44px), modal widths with explicit design intent, and visually intentional fixed baselines.
+
+**D. Fixed-value preservation**
+- Keep fixed sizes for: icons, avatars, explicit button/touch heights, modal width baselines, and row heights that anchor visual rhythm.
+- Do not force `auto` where the design clearly requires a fixed dimension for visual stability.
+
+**E. Component tree constraints**
+- Do not add pages, components, states, or copy absent from the design source.
+- Do not delete source-backed components for layout convenience.
+- Do not alter `source_node`, state `id`, or `visible_when` conditions.
+
+**Output**: overwrite each `ui-acceptance-contract.yaml` with the optimized version. Update `section-map.json` only if unit classification changes. If a fixed value is source-justified, keep it. If `auto`/`fill` is semantically correct, apply it. Surface any ambiguous case in the subagent's response.
+
 ## Component Type Vocabulary
 
 `container`, `card`, `list`, `list-item`, `form`, `text`, `text-input`, `button`, `image`, `icon`, `tab`, `navigation`, `divider`, `badge`, `modal`, `sheet`, `toast`, `custom`
