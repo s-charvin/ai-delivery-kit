@@ -211,48 +211,76 @@ For EACH frame in the unit's frame list, one at a time:
 
 ### 4. Final Contract Review
 
-**Mandatory — run after every YAML freeze.** Review EVERY contract produced (page, page-state, modal, shared-shell). Do not skip any unit. Use a subagent for clean isolation — the subagent receives all contracts plus `section-map.json` and returns optimized contracts.
+**Mandatory — run after every YAML freeze.** Review EVERY contract produced (page, modal, shared-shell). Do not skip any unit. Use a subagent for clean isolation — the subagent receives all contracts plus `section-map.json` and returns optimized contracts.
 
 This review normalizes layout semantics and sizing only. It does NOT add or remove source-backed components, states, `visible_when` conditions, or `source_node` values.
 
-**Review order (follow strictly):**
+**Review order (follow strictly, organized by pass layer):**
 
-**A. Safe areas & system UI**
-- A region whose top edge sits under the system status bar → `safe_area: "top"`.
-- A region sitting above the system navigation bar, home indicator, or soft keyboard → `safe_area: "bottom"`, anchor to `bottom` with `offset: "0px"`.
-- Never model status bars, navigation bars, keyboards, or device chrome as components in the tree.
+**Skeleton quality (Pass 1 output):**
 
-**B. Keyboard adaptation**
-- Pages with text inputs, codes, passwords, or email fields → the region containing the input area must anchor to `bottom` with `safe_area: "bottom"`. The system handles keyboard avoidance at runtime.
-- Do not use fixed pixel offsets to simulate keyboard-pushed positions. Do not model the keyboard as a component or fixed-height spacer.
+**S1. Component tree completeness**
+- Every frame's `source_node` enumerated in `section-map.json` must have at least one corresponding component node in the tree.
+- No frame left without representation.
 
-**C. Width/height convergence — hardcoded px → auto / fill**
-- Text, labels, descriptions, value displays → `width: "auto"`, `height: "auto"`.
-- Cards, rows, list containers spanning available width → `width: "fill"`.
-- **fill detection rule**: if a component's px width equals (parent_width − symmetrical horizontal padding), it is a design-snapshot value — use `fill`, not a fixed px.
-- Fixed px kept only for: icon sizes, avatar sizes, minimum touch targets (≥44px), modal widths with explicit design intent, and visually intentional fixed baselines.
-- **Fixed-value justification**: every component that retains a fixed `width` or `height` px value must have a `description` that explains why `auto` was not applicable (e.g. "icon baseline size", "touch target minimum", "image intrinsic dimension").
+**S2. visible_when coverage**
+- All non-default state components must have a `visible_when` condition.
+- Conditions use semantic language (e.g. "input is filled"), not mechanical state-ID checks.
 
-**D. Fixed-value preservation**
-- Keep fixed sizes for: icons, avatars, explicit button/touch heights, modal width baselines, and row heights that anchor visual rhythm.
-- Do not force `auto` where the design clearly requires a fixed dimension for visual stability.
+**S3. states list consistency**
+- The `states` list in the YAML must match the frames declared in `section-map.json` — same count, each state has `id` + `source_node`.
 
-**E. Component tree constraints**
-- Do not add pages, components, states, or copy absent from the design source.
-- Do not delete source-backed components for layout convenience.
-- Do not alter `source_node`, state `id`, or `visible_when` conditions.
+**S4. source metadata completeness**
+- `source.requirement`, `source.design_file`, `source.root_node`, `source.cache` are all populated.
 
-**F. Padding completeness**
-- Audit every component's `padding`. All 4 directions (`top`, `right`, `bottom`, `left`) must have explicit values.
+**Layout quality (Pass 2 output):**
+
+**L1. anchor 4-direction completeness**
+- Every component has all 4 anchor entries (`start`, `end`, `top`, `bottom`).
+- Each entry has explicit `to`, `direction`, and `offset` — no nulls, no empty strings.
+- `offset: "0px"` for flush attachment to the reference edge.
+- `offset: "auto"` must have a `note` explaining the calculation. Every component below a sibling → anchor `top` to that sibling's `bottom` with the measured gap as `offset`.
+
+**L2. padding 4-direction completeness**
+- Every component's `padding` has explicit values for all 4 directions (`top`, `right`, `bottom`, `left`).
 - Use `0` where design shows flush edges — never leave a padding field `null` or omitted.
 - Containers with visible children at a consistent inset → padding reflects that inset on the container, not fixed dimensions on children.
 
-**G. Anchor completeness**
-- Audit every component's `anchor`. All 4 directions (`start`, `end`, `top`, `bottom`) must be present — no missing entries.
-- Each entry must have explicit `to`, `direction`, and `offset` — no nulls, no empty strings.
-- `offset: "0px"` for flush attachment to the reference edge.
-- `offset: "auto"` when the parent layout controls positioning (e.g. list item spacing, flex distribution). Every `auto` offset must include a `note` explaining how the value is calculated.
-- Components below a sibling → anchor `top` to that sibling's `bottom` with the measured gap as `offset`.
+**L3. width/height convergence**
+- Text, labels, descriptions → `width: "auto"`, `height: "auto"`.
+- Cards, rows spanning available width → `width: "fill"`.
+- **fill detection rule**: if a component's px width equals (parent_width − symmetrical horizontal padding), use `fill`, not fixed px.
+- Fixed px kept only for: icons, avatars, minimum touch targets (≥44px), modal widths with explicit design intent.
+
+**L4. gap/align consistency**
+- `layout.gap` and `layout.align` values are consistent with the Figma auto-layout data.
+
+**Style/content quality (Pass 3 output):**
+
+**C1. content slot — exactly one**
+- Every leaf component has exactly one content slot populated: `text`+`font`, `icon`, or `image`.
+- Empty containers with no visible children, no text, no icons, no images → should not exist in the tree.
+
+**C2. background source traceability**
+- `background.color`, `border`, `shadow`, `opacity` values are traceable to Figma fill/stroke/effect data.
+- No invented colors or effects.
+
+**C3. interaction completeness**
+- Components with `interaction.on` set must have a corresponding `action` and `note` when non-trivial.
+
+**C4. fixed px justification**
+- Every component that retains a fixed `width` or `height` px value must have a `description` explaining why `auto` was not applicable (e.g. "icon baseline size", "touch target minimum").
+
+**Global checks:**
+
+**G1. Safe areas & system UI**
+- Regions with top edge under system status bar → `safe_area: "top"`.
+- Regions above system navigation bar, home indicator, or soft keyboard → `safe_area: "bottom"`, anchor to `bottom` with `offset: "0px"`.
+- Never model status bars, navigation bars, keyboards, or device chrome as components in the tree.
+
+**G2. Keyboard adaptation**
+- Pages with text inputs, codes, passwords, or email fields → the region containing the input area must anchor to `bottom` with `safe_area: "bottom"`. The system handles keyboard avoidance at runtime.
+- Do not use fixed pixel offsets to simulate keyboard-pushed positions. Do not model the keyboard as a component or fixed-height spacer.
 
 **Output**: overwrite each `ui-acceptance-contract.yaml` with the optimized version. Update `section-map.json` only if unit classification changes. If a fixed value is source-justified, keep it. If `auto`/`fill` is semantically correct, apply it. Surface any ambiguous case in the subagent's response.
 
