@@ -95,7 +95,7 @@ Read the requirement-slice to understand what UI elements are needed before touc
 
 **Output:** Copy `templates/section-map-template.json` to the output path, then fill in values for each classified frame. Preserve all field keys, ordering, and structure exactly as the template defines them — never regenerate from memory.
 
-**After section-map is written — dispatch per-unit subagents.** For each independent unit (page, modal, shared-shell) in the section-map, spawn a subagent. Each subagent receives only its unit's frames (with source_node ids), the requirement-slice, the design source locator, and the template path. It independently executes Steps 3+4 for its assigned unit — gathering evidence only for its frames, then freezing one YAML contract. Dispatch all units in parallel. The main session does not gather evidence or freeze YAML; it only dispatches, collects results, then runs Step 5 review.
+**After section-map is written — dispatch per-unit subagents.** For each independent unit (page, modal, shared-shell) in the section-map, spawn a subagent. Each subagent receives only its unit's frames (each with a `source_node` for Figma queries and a `state_type` for the YAML state id), the requirement-slice, the design source locator, and the template path. It independently executes Stage 3 for its assigned unit — running three incremental passes (skeleton → layout → style/content), each pass processing frames ONE AT A TIME, and editing a single YAML file. Dispatch all units in parallel. The main session does not gather evidence or freeze YAML; it only dispatches, collects results, then runs Stage 4 review.
 
 Skip subagent dispatch only when the user explicitly requested no subagent usage, or when there is exactly one unit with ≤2 state frames.
 
