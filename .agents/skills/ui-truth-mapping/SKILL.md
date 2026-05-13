@@ -99,80 +99,117 @@ Read the requirement-slice to understand what UI elements are needed before touc
 
 Skip subagent dispatch only when the user explicitly requested no subagent usage, or when there is exactly one unit with ≤2 state frames.
 
-### 3. Gather design evidence *(runs inside per-unit subagent)*
-- Check cache first if available.
-- Use structured design data from the provider (structure-level query first, then drill to code-level evidence per frame).
-- **Every state frame must have evidence.** A page classified with N state frames in step 2 must produce N screen_state entries, each backed by structured evidence from its source_node. Do not map only the simplest/idle state and skip the rest.
-- **Ignore system UI:** status bars, system navigation bars, soft keyboards, device chrome, and OS-level overlays are not part of the application UI. Exclude them from evidence and contracts. Only map the application-controlled viewport.
-- **Distinguish fill vs fixed width:** A pixel value that equals (frame_width − symmetrical_horizontal_margins) is a design-tool snapshot, not layout intent. Use `fill` when an element spans the full width with consistent margins; reserve fixed px for intentionally sized elements (icons, avatars, fixed buttons).
-- **Calculate offsets from anchor bottom:** Region offset = child's top-y − (anchor's top-y + anchor's height). The offset is the gap between the bottom edge of the anchor and the top edge of the child — not the distance between their top edges.
-
-### 4. Freeze YAML contract *(runs inside per-unit subagent)*
+### 3. Three-Pass Incremental Contract Construction *(runs inside per-unit subagent)*
 
 This step runs inside each per-unit subagent. The subagent has access only to its assigned unit's frames and evidence — no cross-contamination from other units.
 
-**First, copy the template.** Locate `templates/ui-acceptance-contract-template.yaml` and copy it verbatim to the output path for this unit. Never regenerate the structure from memory — the template's field keys, ordering, YAML comments, and default values are the source of truth.
+**Execution model:** Three sequential passes over the same YAML file. Each pass processes frames ONE AT A TIME — never batch all frames into a single Figma query. Each pass fills ONLY its assigned fields and does not touch fields owned by other passes.
 
-**Then fill in values** from design evidence. Only change template values — never add, remove, or rename fields. Leave defaults (`null`, `{}`, `[]`) where no evidence exists.
+**First, copy the template.** Locate `templates/ui-acceptance-contract-template.yaml` and copy it verbatim to the output path for this unit. All three passes edit this single file.
 
-Produce one `ui-acceptance-contract.yaml` per independent unit (each `page` or `modal` classification from step 2).
+#### Pass 1 — Skeleton Layer
 
-This is a single page with a single component tree. States toggle component visibility and style — they do NOT duplicate the tree.
+**Purpose:** Build the component tree structure and state declarations.
 
-**States** — top-level declaration of which visual states this page can be in. A page with N state frames from step 2 produces N `states` entries:
-- Each state has an `id` and a `source_node` pointing to its specific design frame. Nothing else — no duplicated regions.
-- Common state ids: `idle` (default), plus domain-specific states like `male-selected`, `female-selected`, `filled`, `empty`, `loading`, `error`.
-- Every state frame enumerated in step 2 must appear here.
+**Figma queries:** `get_structure(frame_source_node)` — once per frame, structure-level only. Do NOT use `get_code` in this pass.
 
-**`background`** — page-level fill color/image (extracted from the idle/default frame unless evidence shows it changes per state).
+**FIELDS YOU FILL:**
+- `version`, `contract_id`
+- `source` — requirement filename, figma file key, root node id, cache path
+- `states` — one entry per frame: `id` (from frame's `state_type` classification) and `source_node`
+- `background` — page-level color only, from the default/idle frame
+- `regions[].children[]` — component tree skeleton: `id`, `type`, `name`, `source_node`, `visible_when`, recursive `children`
 
-**Regions** — single shared component tree for the entire page. Components from ALL state frames are merged into this one tree:
-- `id`, `name` (human-readable), `source_node` (from the default/idle frame where this component exists; for state-specific additions, use the frame where it first appears)
-- `safe_area`: `"top"` | `"bottom"` — declare when system UI overlaps this region's edge; omit if not applicable
-- `anchor`: list of 4 attachment entries, one per direction (`start`, `end`, `top`, `bottom`). All 4 must be present. Each entry has `to` (reference component or page edge), `direction`, `offset` (explicit `<Npx>` gap from the reference edge, or `auto` when parent layout controls the position), and `note` (required when `offset` is `auto` — explain how the value is calculated). Anchors replace `margin` — spacing from a reference edge is expressed as `offset`, not as `margin` on the component.
-- `layout`: direction, alignment, gap between children
-- `box`: width (auto/fill/<Npx>), height (auto/<Npx>), padding (all 4 sides required). Layout spacing is expressed through `anchor.offset`, not `margin`.
-- `background`: color, image
-- `children`: recursive component list
+**DO NOT TOUCH:** `anchor`, `layout`, `box` (width/height/padding), `background` (component-level), `content` (text/icon/image/font), `interaction`, `description`. Leave these as template defaults (`null`, `{}`, `[]`, `0`).
 
-**State handling across the single tree:**
+**Per-frame iteration:**
 
-Components handle state differences using two fields:
-- `visible_when`: condition under which this component is rendered. Use semantic conditions (`"gender is selected"`, `"input is not empty"`), not mechanical state-ID checks. `null` means always visible.
-- `states`: per-state style diffs for this component, keyed by semantic component state (`selected`, `active`, `disabled`, etc.), each value a diff from the component's default properties. The page-state transition logic maps page states to these component states. Example: when page is `male-selected` → `btn-male` goes to `selected` state (blue border), `btn-next-step` goes to `active` state (blue bg).
+For EACH frame in the unit's frame list, one at a time:
 
-**Merging components from multiple frames:**
-- Components present in all states → use the idle/default frame's `source_node`, specify no `visible_when`.
-- Components present only in some states → use the `source_node` from a frame where they ARE visible, set `visible_when` to the semantic condition that causes them to appear.
-- Components that differ only in style between states → one component entry with default = idle style, `states` = the diffs for non-default states.
-- Never create two component entries with the same `id` for different states.
+1. Call `get_structure(<frame-source-node>)`.
+2. Extract the component hierarchy — component types, nesting relationships, visible elements.
+3. **First frame processed:** Create all component nodes in `regions[].children[]`. Fill `id`, `type`, `name`, `source_node`. Set `visible_when: null` (default state components are always visible). Recursively populate `children` using the Figma parent-child structure.
+4. **Subsequent frames:** For each component found in this frame:
+   - If a component with the same `source_node` already exists in the tree → it is the same component in a different state. Do NOT create a duplicate. Set or refine the `visible_when` condition if it is state-specific.
+   - If a component has a new `source_node` not yet in the tree → it is state-specific content. Append it to the appropriate parent's `children` with `visible_when` set to the semantic condition that makes it appear.
+5. Add the frame's state entry to the `states` list at the top of the YAML — one `id` + `source_node` per frame.
 
-**Components** — recursive, same shape at every level:
-- `id`, `type` (text|icon|image|button|input|list|container|custom), `name`, `source_node`
-- `visible_when`: condition for conditional visibility. Use semantic conditions. `null` = always visible.
-- `description`: implementation hint
-- `layout`: direction, align, gap
-- `box`: width (auto/fill/<Npx>), height (auto/<Npx>), padding (all 4 sides required; 0 where no visual gap). Layout spacing is expressed through `anchor.offset`, not `margin`.
-- `background`: color, border (radius/width/color), shadow, opacity
-- Content — exactly one slot populated:
-  - `text` + `font` (family, size, weight, color, height, align)
-  - `icon` (src, size)
-  - `image` (src, width, height, fit)
-- `interaction`: on (click/long-press), action, note
-- `states`: per-state diffs from default. Component-state keys (e.g. `selected`, `active`, `disabled`), each a partial component diff. Example: `{ selected: { background: { border: { color: "#41B8F4" } } } }`
-- `children`: recursive
+**Merging rules across states:**
+- Components present in all states: use the default/idle frame's `source_node`, `visible_when: null`.
+- Components present only in some states: use a frame where they ARE visible as `source_node`, set `visible_when` to the semantic condition.
+- Components that differ only in style between states: one component entry, style diffs go into `states` — filled in Pass 3.
+- Never create two component entries with the same `id`.
 
-**Rules:**
-- Never invent values. Leave fields null when source provides no evidence.
-- `children: []` only valid for leaf nodes with no visible children.
-- `states` records only the diff from default (the component's top-level properties are the default state).
-- `visible_when` uses semantic conditions, not state IDs. Prefer `"gender is selected"` over `"state == 'male-selected' or state == 'female-selected'"`.
-- `width: fill` for elements that span their parent's full width (including descendants inside a fill parent). Fixed px only for intentionally sized elements (icons, avatars, fixed buttons) — when used, document the reason in `description`. The design tool's pixel value is a frame-size snapshot, not layout intent. Judge by visual context: is this element meant to span the available space, or is it intentionally fixed?
-- **Font align uses `start`/`end`** (not `left`/`right`) for RTL compatibility. `layout.align` already follows this convention.
-- **Text with `font.size` uses `height: auto`.** Fixed heights on text elements conflict with font rendering across platforms. Containers (buttons, cards, inputs) that wrap text may keep fixed heights for touch targets or layout.
-- **Keyboard-aware regions use `safe_area: "bottom"` with `offset: "0px"`.** When a design frame includes a system keyboard and a region sits directly above it, the region's pixel position is a design-tool snapshot — it will move with the keyboard at runtime. Anchor it to `bottom`; the system handles keyboard avoidance. Do NOT calculate an offset from the frame bottom.
+**After Pass 1:** The YAML has a complete `states` list and a complete component tree with `id`, `type`, `name`, `source_node`, `visible_when`. All other fields are template defaults.
 
-### 5. Final Contract Review
+#### Pass 2 — Layout Layer
+
+**Purpose:** Fill positioning, sizing, and layout for every component.
+
+**Figma queries:** `get_code(frame_source_node)` — once per frame, code-level. Read the YAML from Pass 1 to find components by `source_node`.
+
+**FIELDS YOU FILL:**
+- `anchor` — exactly 4 entries per component: `start`, `end`, `top`, `bottom`. Each has:
+  - `to`: reference component id, `screen_start`, `screen_end`, `screen_top`, `screen_bottom`
+  - `direction`: which edge of the reference to attach to
+  - `offset`: `<Npx>` gap from the reference edge, or `auto` when parent layout controls position
+  - `note`: required when `offset` is `auto` — explain how the offset is calculated
+- `layout` — `direction` (vertical/horizontal/none), `align`, `gap`
+- `box` — `width` (auto/fill/<Npx>), `height` (auto/<Npx>), `padding` (all 4 required: top/right/bottom/left; use `0` when flush)
+
+**DO NOT TOUCH:** All Pass 1 fields (`id`, `type`, `name`, `source_node`, `visible_when`, `states`). Also: `background` (component-level), `content` (text/icon/image/font), `interaction`, `description`. Do NOT write `description` here — Pass 3 handles it even for fixed px.
+
+**Per-frame iteration:**
+
+For EACH frame in the unit's frame list, one at a time:
+
+1. Read the current YAML file. Find all components whose `source_node` belongs to this frame.
+2. Call `get_code(<frame-source-node>)` for precise positioning data.
+3. For each component found in this frame, extract and fill:
+   - **anchor**: Compute all 4 anchor entries. Offset from reference bottom edge formula: `offset = child.topY − (ref.topY + ref.height)`. Use `0px` for flush attachment. Use `auto` when the parent layout (e.g. a list) controls positioning — add a `note` explaining the calculation.
+   - **layout**: Extract direction, alignment, and gap from Figma auto-layout or manual positioning data.
+   - **box**: `width` prefer `auto` > `fill` > `<Npx>`. `height` prefer `auto` > `<Npx>`. `padding` all 4 directions from measured insets; use `0` where the design shows flush edges.
+4. Move to the next frame. Repeat until all frames processed.
+
+**After Pass 2:** Every component has complete anchor, layout, and box. `background` (component-level), `content`, `interaction`, and `description` remain as template defaults.
+
+#### Pass 3 — Style/Content Layer
+
+**Purpose:** Fill visual styling, content, and interactions for every component.
+
+**Figma queries:** `get_code(frame_source_node)` — once per frame, code-level. May reuse cached data from Pass 2 (same `get_code` query). Read the YAML from Pass 2 to find components.
+
+**FIELDS YOU FILL:**
+- `background` — component-level: `color`, `border` (radius/width/color), `shadow`, `opacity`
+- `content` — exactly ONE slot populated per component:
+  - Text components: `text` (visible text content) + `font` (family, size, weight, color, height, align)
+  - Icon components: `icon` (src — asset filename, size — display size)
+  - Image components: `image` (src, width, height, fit)
+- `interaction` — `on` (click/long-press/none), `action`, `note`
+- `states` — per-state diffs from default. Component-state keys (e.g. `selected`, `active`, `disabled`), each a partial component diff. Example: `{ selected: { background: { border: { color: "#41B8F4" } } } }`.
+- `description` — required when `box.width` or `box.height` uses fixed `<Npx>`; explain why `auto` was not applicable (e.g. "icon baseline size", "touch target minimum").
+
+**DO NOT TOUCH:** All Pass 1 fields, all Pass 2 fields (`anchor`, `layout`, `box`). DO NOT modify component tree structure, add/remove nodes, or change `source_node` values. DO NOT change `visible_when` conditions.
+
+**Per-frame iteration:**
+
+For EACH frame in the unit's frame list, one at a time:
+
+1. Read the current YAML file. Find all components whose `source_node` belongs to this frame.
+2. Call `get_code(<frame-source-node>)` — reuse cached results from Pass 2 if available in `.ai-delivery/figma-cache/<file-key>/code/<node-id>.json`; fetch if not cached.
+3. For each component in this frame, extract and fill:
+   - **background**: Color fill, border styling, shadow, opacity.
+   - **content**: Determine content type from the Figma node — text node → `text`+`font`; vector/icon node → `icon`; image fill node → `image`. Populate exactly one slot.
+   - **interaction**: If the component is interactive (has click/long-press behavior in the design), fill `on`, `action`, and `note`.
+   - **states**: If this component has style variations across states identified in Pass 1, write the per-state diffs. Each diff contains only the changed properties from the component's default (Pass 3) values.
+   - **description**: If `box.width` or `box.height` uses fixed `<Npx>`, write a brief justification.
+4. Move to the next frame. Repeat until all frames processed.
+
+**After Pass 3:** The YAML contract is COMPLETE. All fields are populated with source-backed values.
+
+**After all three passes:** The subagent returns the completed `ui-acceptance-contract.yaml` to the main session. The main session collects all unit contracts and proceeds to Stage 4.
+
+### 4. Final Contract Review
 
 **Mandatory — run after every YAML freeze.** Review EVERY contract produced (page, page-state, modal, shared-shell). Do not skip any unit. Use a subagent for clean isolation — the subagent receives all contracts plus `section-map.json` and returns optimized contracts.
 
