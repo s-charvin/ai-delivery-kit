@@ -95,110 +95,188 @@ templates/
 
 仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态帧时，跳过子代理派发。
 
-### 3. 收集设计证据 *（在逐单元子代理内运行）*
-- 如果可用，先检查缓存。
-- 使用来自提供方的结构化设计数据（先结构级查询，再按框架深入到代码级证据）。
-- **每个状态框架都必须有证据。** 步骤 2 中分类为具有 N 个状态框架的页面，必须生成 N 个 screen_state 条目，每个都有其 source_node 的结构化证据支持。不要只映射最简单/空闲状态而跳过其余。
-- **忽略系统 UI：** 状态栏、系统导航栏、软键盘、设备边框和系统级覆盖层不属于应用 UI。将它们从证据和契约中排除。仅映射应用控制的视口区域。
-- **区分 fill 与 fixed 宽度：** 等于（画板宽度 − 对称水平间距）的像素值是设计工具快照，不是布局意图。当元素以一致间距横跨屏幕时使用 `fill`；固定 px 仅用于有意固定大小的元素（图标、头像、固定按钮）。
-- **从锚点底部计算偏移：** 区域偏移 = 子元素顶部y − (锚点顶部y + 锚点高度)。偏移是锚点底部边缘到子元素顶部边缘的间距 — 不是顶部之间的距离。
-
-### 4. 冻结 YAML 契约 *（在逐单元子代理内运行）*
+### 3. 三层增量契约构建 *（在逐单元子代理内运行）*
 
 此步骤在每个逐单元子代理内运行。子代理只能访问其分配单元的帧和证据 — 无其他单元的交叉污染。
 
-**首先，复制模板。** 找到 `templates/ui-acceptance-contract-template.yaml`，将其逐字复制到本单元的输出路径。绝不凭记忆重新生成结构 — 模板的字段键、顺序、YAML 注释和默认值是唯一真值。
+**执行模型：** 在同一 YAML 文件上执行三层顺序编辑。每层一次只处理一个帧 — 永远不要将所有帧批量塞入单个 Figma 查询。每层只填充其分配的字段，不触碰其他层拥有的字段。
 
-**然后根据设计证据填充值。** 只能修改模板值 — 不添加、删除或重命名字段。无证据时保留默认值（`null`、`{}`、`[]`）。
+**首先，复制模板。** 找到 `templates/ui-acceptance-contract-template.yaml`，将其逐字复制到本单元的输出路径。三层全部编辑同一个文件。
 
-为每个独立单元（步骤 2 中的每个 `page` 或 `modal` 分类）生成一个 `ui-acceptance-contract.yaml`。
+#### Pass 1 — 骨架层
 
-一个页面只有一棵组件树。状态切换组件的可见性和样式 — 不复制整棵树。
+**用途：** 构建组件树结构和状态声明。
 
-**States** — 顶层声明页面可以处于哪些视觉状态。步骤 2 中具有 N 个状态框架的页面生成 N 个 `states` 条目：
-- 每个状态有 `id` 和指向特定设计框架的 `source_node`。仅此而已 — 不包含重复的 regions。
-- 常见状态 id：`idle`（默认），以及领域特定状态如 `male-selected`、`female-selected`、`filled`、`empty`、`loading`、`error`。
-- 步骤 2 中枚举的每个状态框架都必须出现在这里。
+**Figma 查询：** `get_structure(frame_source_node)` — 每帧一次，仅结构级。此层不要使用 `get_code`。
 
-**`background`** — 页面级填充颜色/图片（从 idle/默认框架提取，除非设计证据显示背景随状态变化）。
+**你填充的字段：**
+- `version`、`contract_id`
+- `source` — 需求文件名、Figma 文件 key、根节点 ID、缓存路径
+- `states` — 每帧一个条目：`id`（来自帧的 `state_type` 分类）和 `source_node`
+- `background` — 仅页面级颜色，来自默认/idle 帧
+- `regions[].children[]` — 组件树骨架：`id`、`type`、`name`、`source_node`、`visible_when`、递归 `children`
 
-**Regions** — 整个页面共享一棵组件树。所有状态框架的组件合并到这一棵树中：
-- `id`、`name`（人类可读）、`source_node`（若组件存于所有状态则用默认/idle 框架的节点；若仅在特定状态出现则用其存在的框架节点）
-- `safe_area`：`"top"` | `"bottom"` — 当系统 UI 与该区域边缘重叠时声明；如不适用则省略
-- `anchor`：`top` | `bottom` | `<region-id>` — 锚定点和偏移。**偏移 = 子元素.y − (锚点.y + 锚点.height)** — 始终从锚点元素底部边缘测量，绝不从顶部测量。
-- `layout`：方向、对齐、子元素之间的间距
-- `box`：宽度（fill/fixed/auto）、高度、内边距、外边距
-- `background`：颜色、图片
-- `children`：递归组件列表
+**不要触碰：** `anchor`、`layout`、`box`（width/height/padding）、`background`（组件级）、`content`（text/icon/image/font）、`interaction`、`description`。保持这些为模板默认值（`null`、`{}`、`[]`、`0`）。
 
-**状态处理（单树内）：**
+**逐帧迭代：**
 
-组件使用两个字段处理状态差异：
-- `visible_when`：组件渲染的条件。使用语义条件（如 `"gender is selected"`、`"input is not empty"`），而非机械地检查状态 ID。`null` 表示始终可见。
-- `states`：该组件的每种状态样式差异，用语义化组件状态键名（`selected`、`active`、`disabled` 等），每个值与组件默认属性的差异部分。页面状态转换逻辑将页面状态映射到这些组件状态。例如：页面进入 `male-selected` → `btn-male` 变为 `selected` 状态（蓝色边框），`btn-next-step` 变为 `active` 状态（蓝色背景）。
+对于该单元帧列表中的每一帧，一次处理一个：
 
-**合并来自多个框架的组件：**
-- 在所有状态中都存在的组件 → 使用 idle/默认框架的 `source_node`，不设 `visible_when`。
-- 仅在部分状态中存在的组件 → 使用其**可见**框架的 `source_node`，设置 `visible_when` 为导致其出现的语义条件。
-- 不同状态间仅样式有差异的组件 → 一个组件条目，默认值 = idle 样式，`states` = 非默认状态的差异。
-- 绝不为不同状态创建具有相同 `id` 的两个组件条目。
+1. 调用 `get_structure(<frame-source-node>)`。
+2. 提取组件层级 — 组件类型、嵌套关系、可见元素。
+3. **第一个处理的帧：** 在 `regions[].children[]` 中创建所有组件节点。填充 `id`、`type`、`name`、`source_node`。设置 `visible_when: null`（默认状态组件始终可见）。使用 Figma 父子结构递归填充 `children`。
+4. **后续帧：** 对此帧中发现的每个组件：
+   - 若组件具有相同的 `source_node` 且已存在于树中 → 同一组件在不同状态。不要创建重复项。若其仅特定状态可见则设置或细化 `visible_when` 条件。
+   - 若组件具有新的 `source_node` 且树中不存在 → 特定于状态的内容。将其追加到适当父组件的 `children` 中，并设置导致其出现的语义条件的 `visible_when`。
+5. 将帧的状态条目添加到 YAML 顶部的 `states` 列表 — 每帧一个 `id` + `source_node`。
 
-**组件** — 递归的，每一层形状相同：
-- `id`、`type`（text|icon|image|button|input|list|container|custom）、`name`（人类可读）、`source_node`
-- `visible_when`：条件渲染条件。使用语义条件。`null` 表示始终可见。
-- `description`：实现提示
-- `layout`：方向、对齐、间距
-- `box`：宽度、高度、内边距、外边距
-- `background`：颜色、边框（半径/宽度/颜色）、阴影、透明度
-- 内容 — 恰好填充一个插槽：
-  - `text` + `font`（字体族、大小、粗细、颜色、行高、对齐）
-  - `icon`（源、大小）
-  - `image`（源、宽度、高度、填充方式）
-- `interaction`：触发方式（点击/长按）、动作、备注
-- `states`：与默认状态的差异。组件状态键名（如 `selected`、`active`、`disabled`），每个是部分组件差异。例如：`{ selected: { background: { border: { color: "#41B8F4" } } } }`
-- `children`：递归
+**跨状态合并规则：**
+- 所有状态中存在的组件：使用默认/idle 帧的 `source_node`，`visible_when: null`。
+- 仅部分状态中存在的组件：使用其可见帧的 `source_node`，设置语义条件的 `visible_when`。
+- 仅样式在不同状态间变化的组件：单个组件条目，样式差异写入 `states` — 在 Pass 3 中填充。
+- 绝不为不同状态创建相同 `id` 的两个组件条目。
 
-**规则：**
-- 绝不发明值。当源无证据时字段留空。
-- `children: []` 仅对无可视子元素的叶子节点有效。
-- `states` 仅记录与默认状态的差异（组件的顶层属性即默认状态）。
-- `visible_when` 使用语义条件，不用状态 ID。优先使用 `"gender is selected"` 而非 `"state == 'male-selected' or state == 'female-selected'"`。
-- 填满父级宽度的元素使用 `width: fill`（包括 fill 父级内的子元素）。固定 px 仅用于有意固定大小的元素（图标、头像、固定按钮）。设计工具的像素值是画板快照，不是布局意图。通过视觉上下文判断：该元素是撑满可用空间，还是故意固定大小？
-- **字体 align 使用 `start`/`end`**（而非 `left`/`right`）以兼容 RTL。`layout.align` 已遵循此约定。
-- **有 `font.size` 的文本使用 `height: auto`。** 文本元素上的固定高度会与不同平台的字体渲染冲突。包裹文本的容器（按钮、卡片、输入框）可保留固定高度以维持触控区域或布局。
-- **跟随键盘的区域使用 `safe_area: "bottom"` 和 `offset: "0px"`。** 当设计帧包含系统键盘且某个区域紧贴键盘上方时，该区域的像素位置只是设计工具快照 — 运行时它会随键盘一起移动。将其锚定到 `bottom`；系统自动处理键盘避让。不要从帧底部计算偏移量。
+**Pass 1 完成后：** YAML 具有完整的 `states` 列表和完整的组件树，包含 `id`、`type`、`name`、`source_node`、`visible_when`。所有其他字段为模板默认值。
 
-### 5. 最终契约审校
+#### Pass 2 — 布局层
 
-**强制执行 — 每次 YAML 冻结后运行。** 审校生成的每一份契约（page、page-state、modal、shared-shell），不得跳过任何单元。使用子代理纯净执行 — 子代理接收所有契约和 `section-map.json`，返回优化后的契约。
+**用途：** 为每个组件填充定位、尺寸和布局。
+
+**Figma 查询：** `get_code(frame_source_node)` — 每帧一次，代码级。读取 Pass 1 的 YAML，按 `source_node` 查找组件。
+
+**你填充的字段：**
+- `anchor` — 每个组件恰好 4 个条目：`start`、`end`、`top`、`bottom`。每个包含：
+  - `to`：引用组件 ID、`screen_start`、`screen_end`、`screen_top`、`screen_bottom`
+  - `direction`：附着到引用边缘的哪个方向
+  - `offset`：与引用边缘的 `<Npx>` 间距，或 `auto` 当父布局控制定位时
+  - `note`：当 `offset` 为 `auto` 时必须填写 — 解释偏移量如何计算
+- `layout` — `direction`（vertical/horizontal/none）、`align`、`gap`
+- `box` — `width`（auto/fill/<Npx>）、`height`（auto/<Npx>）、`padding`（全部 4 方向必需：top/right/bottom/left；无视觉间距时使用 `0`）
+
+**不要触碰：** 所有 Pass 1 字段（`id`、`type`、`name`、`source_node`、`visible_when`、`states`）。同时：`background`（组件级）、`content`（text/icon/image/font）、`interaction`、`description`。即使存在固定 px 也不要在此处写 `description` — Pass 3 会处理。
+
+**逐帧迭代：**
+
+对于该单元帧列表中的每一帧，一次处理一个：
+
+1. 读取当前 YAML 文件。找到所有 `source_node` 属于此帧的组件。
+2. 调用 `get_code(<frame-source-node>)` 获取精确的定位数据。
+3. 为此帧中找到的每个组件提取并填充：
+   - **anchor**：计算全部 4 个锚点条目。从参考底部边缘的偏移公式：`offset = 子元素.y − (参考元素.y + 参考元素.height)`。与参考边缘齐平时使用 `0px`。使用 `auto` 当父布局（如列表）控制定位时 — 添加 `note` 解释计算方式。
+   - **layout**：从 Figma 自动布局或手动定位数据中提取方向、对齐和间距。
+   - **box**：`width` 优先 `auto` > `fill` > `<Npx>`。`height` 优先 `auto` > `<Npx>`。`padding` 全部 4 方向从测量内边距中获取；设计显示齐平时使用 `0`。
+4. 移动到下一帧。重复直到所有帧处理完毕。
+
+**Pass 2 完成后：** 每个组件具有完整的 anchor、layout 和 box。`background`（组件级）、`content`、`interaction` 和 `description` 保持为模板默认值。
+
+#### Pass 3 — 样式内容层
+
+**用途：** 为每个组件填充视觉样式、内容和交互。
+
+**Figma 查询：** `get_code(frame_source_node)` — 每帧一次，代码级。可复用 Pass 2 的缓存数据（相同的 `get_code` 查询）。读取 Pass 2 的 YAML 查找组件。
+
+**你填充的字段：**
+- `background` — 组件级：`color`、`border`（radius/width/color）、`shadow`、`opacity`
+- `content` — 每个组件恰好填充一个插槽：
+  - 文本组件：`text`（可见文本内容）+ `font`（family、size、weight、color、height、align）
+  - 图标组件：`icon`（src — 资源文件名，size — 显示尺寸）
+  - 图片组件：`image`（src、width、height、fit）
+- `interaction` — `on`（click/long-press/none）、`action`、`note`
+- `states` — 与默认状态的差异。组件状态键名（如 `selected`、`active`、`disabled`），每个为部分组件差异。示例：`{ selected: { background: { border: { color: "#41B8F4" } } } }`。
+- `description` — 当 `box.width` 或 `box.height` 使用固定 `<Npx>` 时必须填写；解释为何 `auto` 不适用（如"图标基准尺寸"、"触控目标最小值"）。
+
+**不要触碰：** 所有 Pass 1 字段，所有 Pass 2 字段（`anchor`、`layout`、`box`）。不要修改组件树结构、增加/删除节点或更改 `source_node` 值。不要更改 `visible_when` 条件。
+
+**逐帧迭代：**
+
+对于该单元帧列表中的每一帧，一次处理一个：
+
+1. 读取当前 YAML 文件。找到所有 `source_node` 属于此帧的组件。
+2. 调用 `get_code(<frame-source-node>)` — 若 Pass 2 已有缓存在 `.ai-delivery/figma-cache/<file-key>/code/<node-id>.json` 中则复用；如未缓存则重新获取。
+3. 为此帧中找到的每个组件提取并填充：
+   - **background**：颜色填充、边框样式、阴影、透明度。
+   - **content**：从 Figma 节点确定内容类型 — 文本节点 → `text`+`font`；矢量/图标节点 → `icon`；图片填充节点 → `image`。恰好填充一个插槽。
+   - **interaction**：若组件是交互式的（设计中有 click/long-press 行为），填充 `on`、`action` 和 `note`。
+   - **states**：若此组件在 Pass 1 确定的状态间有样式变化，写入各状态的差异。每个差异仅包含组件默认值（Pass 3）中变化的属性。
+   - **description**：若 `box.width` 或 `box.height` 使用固定 `<Npx>`，写简要的理由说明。
+4. 移动到下一帧。重复直到所有帧处理完毕。
+
+**Pass 3 完成后：** YAML 契约完整。所有字段均使用 design-backed 值填充。
+
+**全部三层完成后：** 子代理将完成的 `ui-acceptance-contract.yaml` 返回给主会话。主会话收集所有单元契约后进入阶段 4。
+
+### 4. 最终契约审校
+
+**强制执行 — 每次 YAML 冻结后运行。** 审校生成的每一份契约（page、modal、shared-shell），不得跳过任何单元。使用子代理纯净执行 — 子代理接收所有契约和 `section-map.json`，返回优化后的契约。
 
 此审校仅规范化布局语义和尺寸。不新增或删除 source-backed 组件、状态、`visible_when` 条件或 `source_node` 值。
 
-**审校顺序（严格遵循）：**
+**审校顺序（严格遵循，按 pass 层组织）：**
 
-**A. 安全区与系统 UI**
-- 顶部边缘与系统状态栏重叠的区域 → `safe_area: "top"`。
+**骨架质量（Pass 1 产出）：**
+
+**S1. 组件树完整性**
+- `section-map.json` 中枚举的每个帧的 `source_node` 必须在树中至少有一个对应的组件节点。
+- 没有帧被遗漏。
+
+**S2. visible_when 覆盖率**
+- 所有非默认状态组件必须有 `visible_when` 条件。
+- 条件使用语义化语言（如"选项已被选中"），不使用机械的状态 ID 检查。
+
+**S3. states 列表一致性**
+- YAML 中的 `states` 列表必须与 `section-map.json` 中声明的帧一致 — 相同的数量，每个状态有 `id` + `source_node`。
+
+**S4. source 元数据完整性**
+- `source.requirement`、`source.design_file`、`source.root_node`、`source.cache` 全部已填充。
+
+**布局质量（Pass 2 产出）：**
+
+**L1. anchor 4 方向完整性**
+- 每个组件有全部 4 个 anchor 条目（`start`、`end`、`top`、`bottom`）。
+- 每个条目有明确的 `to`、`direction` 和 `offset` — 无 null、无空字符串。
+- `offset: "0px"` 用于齐平附着；`offset: "auto"` 必须有 `note` 解释计算方式。
+- 组件位于兄弟组件下方 → anchor `top` 到该兄弟组件的 `bottom`，间距为测量值。
+
+**L2. padding 4 方向完整性**
+- 每个组件的 `padding` 在全部 4 方向（`top`、`right`、`bottom`、`left`）有明确值。
+- 设计显示齐平时使用 `0` — 永远不要让 padding 字段为 `null` 或缺失。
+- 含有可见子元素且内边距一致的容器 → padding 反映该容器上的内边距，而非子元素上的固定尺寸。
+
+**L3. width/height 收敛**
+- 文字、标签、说明 → `width: "auto"`、`height: "auto"`。
+- 横跨可用宽度的卡片、行 → `width: "fill"`。
+- **fill 判定规则**：若组件的 px 宽度等于（父容器宽度 − 对称水平间距），使用 `fill` 而非固定 px。
+- 仅保留固定 px：图标、头像、最小触控目标（≥44px）、明确设计要求固定宽度的弹窗。
+
+**L4. gap/align 一致性**
+- `layout.gap` 和 `layout.align` 值与 Figma 自动布局数据一致。
+
+**样式内容质量（Pass 3 产出）：**
+
+**C1. content slot — 恰好一个**
+- 每个叶子节点组件恰好填充一个内容插槽：`text`+`font`、`icon` 或 `image`。
+- 无可视子元素、无文字、无图标、无图片的空容器 → 不应存在于树中。
+
+**C2. background 来源可追溯**
+- `background.color`、`border`、`shadow`、`opacity` 值可追溯到 Figma fill/stroke/effect 数据。
+- 无凭空编造的颜色或效果。
+
+**C3. interaction 完整性**
+- 设置了 `interaction.on` 的组件必须有对应的 `action` 和（非平凡时的）`note`。
+
+**C4. fixed px 理由说明**
+- 每个保留固定 `width` 或 `height` px 值的组件必须有 `description` 解释为何 `auto` 不适用（如"图标基准尺寸"、"触控目标最小值"）。
+
+**全局检查：**
+
+**G1. 安全区与系统 UI**
+- 顶部边缘在系统状态栏下的区域 → `safe_area: "top"`。
 - 位于系统导航栏、主页指示条或软键盘上方的区域 → `safe_area: "bottom"`，锚定到 `bottom`，`offset: "0px"`。
-- 绝不将状态栏、导航栏、键盘或设备壳层作为组件写入组件树。
+- 组件树中无状态栏、导航栏、键盘或设备壳层。
 
-**B. 键盘适配**
+**G2. 键盘适配**
 - 含文本输入框、验证码、密码或邮箱字段的页面 → 包含输入区域的 region 必须锚定到 `bottom` 并设 `safe_area: "bottom"`。系统在运行时处理键盘避让。
 - 不要用固定像素偏移模拟键盘顶起后的位置。不要把键盘建模为组件或固定高度 spacer。
-
-**C. 宽高收敛 — 硬编码 px → auto / fill**
-- 文字、标签、说明、值显示 → `width: "auto"`、`height: "auto"`。
-- 横跨可用宽度的卡片、行容器、列表容器 → `width: "fill"`。
-- **fill 判定规则**：若组件的 px 宽度等于（父容器宽度 − 对称水平间距），则为设计快照值 — 改用 `fill`，不用固定 px。
-- 仅保留固定 px：图标尺寸、头像尺寸、最小触控目标（≥44px）、明确设计要求固定宽度的弹窗、以及需要稳定视觉基线的元素。
-
-**D. 固定值保留原则**
-- 保留：图标、头像、明确的按钮/触控高度、弹窗宽度基线、锚定视觉节奏的行高。
-- 不要对设计要求固定尺寸以维持视觉稳定性的元素强行改为 `auto`。
-
-**E. 组件树约束**
-- 不新增设计源中不存在的页面、组件、状态或文案。
-- 不因适配方便而删除 source-backed 组件。
-- 不修改 `source_node`、状态 `id` 或 `visible_when` 条件。
 
 **输出**：用优化后的版本覆盖每个 `ui-acceptance-contract.yaml`。仅在单元分类变更时更新 `section-map.json`。若固定值有源依据则保留，若 `auto`/`fill` 语义正确则应用。在子代理响应中标注任何模棱两可的情况。
 
