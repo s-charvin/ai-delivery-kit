@@ -79,6 +79,7 @@ EOF
 AI_DELIVERY_INSTALL_DIR="$INSTALL_DIR" \
   AI_DELIVERY_DOWNLOAD_BASE_URL="file://$TEMP_DIR" \
   AI_DELIVERY_VERSION="v9.9.9" \
+  AI_DELIVERY_SKIP_SKILLS="1" \
   bash "$INSTALL_SCRIPT"
 
 [[ -x "$INSTALL_DIR/ai-delivery" ]] || fail "expected installed ai-delivery binary"
@@ -153,6 +154,7 @@ PATH="$STUB_DIR:$PATH" \
   AI_DELIVERY_INSTALL_DIR="$AUTH_INSTALL_DIR" \
   AI_DELIVERY_REPO="example/private-repo" \
   AI_DELIVERY_VERSION="latest" \
+  AI_DELIVERY_SKIP_SKILLS="1" \
   bash "$INSTALL_SCRIPT"
 
 assert_file_contains "$CURL_LOG" 'Authorization: Bearer test-token'
@@ -169,6 +171,7 @@ bash "$INSTALL_SCRIPT" \
   --install-dir "$UPGRADE_INSTALL_DIR" \
   --download-base-url "file://$TEMP_DIR" \
   --version "v9.9.9" \
-  --upgrade-init /tmp/managed-repo
+  --upgrade-init /tmp/managed-repo \
+  --skip-skills
 
 assert_file_contains "$OUTPUT_LOG" 'init --upgrade /tmp/managed-repo'

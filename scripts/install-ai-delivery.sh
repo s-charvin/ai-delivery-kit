@@ -84,6 +84,10 @@ parse_args() {
         AI_DELIVERY_UPGRADE_INIT_TARGET_REPO=$2
         shift 2
         ;;
+      --skip-skills)
+        AI_DELIVERY_SKIP_SKILLS=1
+        shift
+        ;;
       --ide)
         [[ $# -ge 2 ]] || fail "Missing value for --ide"
         case "$2" in
@@ -377,6 +381,11 @@ resolve_ides() {
 }
 
 install_user_skills() {
+  if [[ "${AI_DELIVERY_SKIP_SKILLS:-0}" == "1" ]]; then
+    log "Skipping skill installation (AI_DELIVERY_SKIP_SKILLS=1)"
+    return 0
+  fi
+
   ensure_cmds git
 
   local skills_repo_dir="${HOME}/ai-delivery-kit"
