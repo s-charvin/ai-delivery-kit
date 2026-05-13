@@ -61,6 +61,8 @@ templates/
 - Prefer `auto` width/height over fixed px values. Layout spacing between siblings uses `margin` or `padding` on the parent container, not fixed dimensions on children. Reserve fixed px for intentionally sized elements: icons, avatars, explicit button sizes, and baseline-anchoring rows only.
 - When a component must use a fixed `width` or `height` px value, document the reason in the component's `description` field so reviewers understand why `auto` was not applicable.
 - Do not ship empty or partial `anchor` on any component. Every component must declare all 4 anchor directions (`start`, `end`, `top`, `bottom`), each with explicit `to`, `direction`, and `offset`. Use `offset: 0px` when flush to the reference edge. Use `offset: auto` when the parent layout (e.g. a list with multiple items) controls positioning — when `auto`, document how the offset is calculated in the anchor entry's `note` field.
+- Within a per-unit subagent, process frames ONE AT A TIME — never batch all frames into a single Figma query. Each pass iterates frame by frame: query one frame, fill its fields, move to the next. This keeps context focused and prevents missed details.
+- Each of the three passes fills ONLY its assigned fields. Never touch fields owned by a different pass. Pass 1 owns id/type/name/source_node/visible_when/states. Pass 2 owns anchor/layout/box. Pass 3 owns background/content/interaction/description.
 
 ## Workflow
 
