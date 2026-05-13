@@ -110,7 +110,7 @@ func TestRunUpgradePullsExistingRepo(t *testing.T) {
 
 	// Set up a minimal git repo so git pull doesn't fail.
 	runCmd(t, exec.Command("git", "-C", tmpDir, "init", repoPath))
-	runCmd(t, exec.Command("git", "-C", repoPath, "commit", "--allow-empty", "-m", "init"))
+	runCmd(t, exec.Command("git", "-C", repoPath, "-c", "user.name=test", "-c", "user.email=test@test.com", "commit", "--allow-empty", "-m", "init"))
 
 	// Point master/main to itself so pull has a remote.
 	runCmd(t, exec.Command("git", "-C", repoPath, "remote", "add", "origin", repoPath))
