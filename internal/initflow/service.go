@@ -192,6 +192,10 @@ func (s Service) hasCommand(name string) bool {
 }
 
 func (s Service) hasSuperpowers() bool {
+	if s.HomeDir == "" {
+		return false
+	}
+
 	statPath := s.StatPath
 	if statPath == nil {
 		statPath = func(path string) error {
@@ -200,9 +204,14 @@ func (s Service) hasSuperpowers() bool {
 		}
 	}
 
-	if s.HomeDir == "" {
-		return false
+	// Check user-level IDE paths first (claude, cursor, codex).
+	for _, ide := range prereq.SupportedIDEs {
+		if statPath(filepath.Join(s.HomeDir, "."+ide, "skills", "superpowers")) == nil {
+			return true
+		}
 	}
+
+	// Legacy path for backward compatibility.
 	return statPath(filepath.Join(s.HomeDir, ".agents", "skills", "superpowers")) == nil
 }
 

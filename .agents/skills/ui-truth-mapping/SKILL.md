@@ -57,6 +57,10 @@ templates/
 - Do not map empty spacer. Containers with no visible child elements, no text, no icons, no images, and no background are only used for layout symmetry design considerations and are captured by `layout`, and are not worth recording.
 - Do not generate YAML contracts or `section-map.json` from memory. Locate the corresponding template file under `templates/`, copy it verbatim to the output path, then fill in values field by field. Preserve all field keys, ordering, YAML comments, and structure. Only change values — never add, remove, or rename fields. Every populated value must be source-backed; leave template defaults (`null`, `{}`, `[]`) unchanged when no evidence exists.
 - Do not generate contracts for multiple units in the main session's context. For each independent unit (page, modal, shared-shell) identified in the section-map, spawn a separate subagent that gathers evidence and freezes the YAML for that unit alone. Only exception: skip subagent dispatch when the user explicitly requests no subagent usage, or when there is exactly one unit with ≤2 state frames — those are simple enough for inline handling without quality loss.
+- Do not ship empty or partial `padding` on any component. Every component must declare explicit padding values for all 4 directions (`top`, `right`, `bottom`, `left`). Use `0` where the design shows no visual spacing — silence is ambiguity, not evidence.
+- Prefer `auto` width/height over fixed px values. Layout spacing between siblings uses `margin` or `padding` on the parent container, not fixed dimensions on children. Reserve fixed px for intentionally sized elements: icons, avatars, explicit button sizes, and baseline-anchoring rows only.
+- When a component must use a fixed `width` or `height` px value, document the reason in the component's `description` field so reviewers understand why `auto` was not applicable.
+- Do not ship empty or partial `anchor` on any component. Every component must declare all 4 anchor directions (`start`, `end`, `top`, `bottom`), each with explicit `to`, `direction`, and `offset`. Use `offset: 0px` when flush to the reference edge. Use `offset: auto` when the parent layout (e.g. a list with multiple items) controls positioning — when `auto`, document how the offset is calculated in the anchor entry's `note` field.
 
 ## Workflow
 
@@ -123,9 +127,9 @@ This is a single page with a single component tree. States toggle component visi
 **Regions** — single shared component tree for the entire page. Components from ALL state frames are merged into this one tree:
 - `id`, `name` (human-readable), `source_node` (from the default/idle frame where this component exists; for state-specific additions, use the frame where it first appears)
 - `safe_area`: `"top"` | `"bottom"` — declare when system UI overlaps this region's edge; omit if not applicable
-- `anchor`: `top` | `bottom` | `<region-id>` — attachment point and offset. **Offset = child.top − (anchor.top + anchor.height)** — always measured from the anchor's bottom edge, never from its top edge.
+- `anchor`: list of 4 attachment entries, one per direction (`start`, `end`, `top`, `bottom`). All 4 must be present. Each entry has `to` (reference component or page edge), `direction`, `offset` (explicit `<Npx>` gap from the reference edge, or `auto` when parent layout controls the position), and `note` (required when `offset` is `auto` — explain how the value is calculated). Anchors replace `margin` — spacing from a reference edge is expressed as `offset`, not as `margin` on the component.
 - `layout`: direction, alignment, gap between children
-- `box`: width (fill/fixed/auto), height, padding, margin
+- `box`: width (auto/fill/<Npx>), height (auto/<Npx>), padding (all 4 sides required). Layout spacing is expressed through `anchor.offset`, not `margin`.
 - `background`: color, image
 - `children`: recursive component list
 
@@ -146,7 +150,7 @@ Components handle state differences using two fields:
 - `visible_when`: condition for conditional visibility. Use semantic conditions. `null` = always visible.
 - `description`: implementation hint
 - `layout`: direction, align, gap
-- `box`: width, height, padding, margin
+- `box`: width (auto/fill/<Npx>), height (auto/<Npx>), padding (all 4 sides required; 0 where no visual gap). Layout spacing is expressed through `anchor.offset`, not `margin`.
 - `background`: color, border (radius/width/color), shadow, opacity
 - Content — exactly one slot populated:
   - `text` + `font` (family, size, weight, color, height, align)
@@ -161,7 +165,7 @@ Components handle state differences using two fields:
 - `children: []` only valid for leaf nodes with no visible children.
 - `states` records only the diff from default (the component's top-level properties are the default state).
 - `visible_when` uses semantic conditions, not state IDs. Prefer `"gender is selected"` over `"state == 'male-selected' or state == 'female-selected'"`.
-- `width: fill` for elements that span their parent's full width (including descendants inside a fill parent). Fixed px only for intentionally sized elements (icons, avatars, fixed buttons). The design tool's pixel value is a frame-size snapshot, not layout intent. Judge by visual context: is this element meant to span the available space, or is it intentionally fixed?
+- `width: fill` for elements that span their parent's full width (including descendants inside a fill parent). Fixed px only for intentionally sized elements (icons, avatars, fixed buttons) — when used, document the reason in `description`. The design tool's pixel value is a frame-size snapshot, not layout intent. Judge by visual context: is this element meant to span the available space, or is it intentionally fixed?
 - **Font align uses `start`/`end`** (not `left`/`right`) for RTL compatibility. `layout.align` already follows this convention.
 - **Text with `font.size` uses `height: auto`.** Fixed heights on text elements conflict with font rendering across platforms. Containers (buttons, cards, inputs) that wrap text may keep fixed heights for touch targets or layout.
 - **Keyboard-aware regions use `safe_area: "bottom"` with `offset: "0px"`.** When a design frame includes a system keyboard and a region sits directly above it, the region's pixel position is a design-tool snapshot — it will move with the keyboard at runtime. Anchor it to `bottom`; the system handles keyboard avoidance. Do NOT calculate an offset from the frame bottom.
@@ -186,8 +190,9 @@ This review normalizes layout semantics and sizing only. It does NOT add or remo
 **C. Width/height convergence — hardcoded px → auto / fill**
 - Text, labels, descriptions, value displays → `width: "auto"`, `height: "auto"`.
 - Cards, rows, list containers spanning available width → `width: "fill"`.
-- **fill detection rule**: if a component's px width equals (parent_width − symmetrical horizontal margins), it is a design-snapshot value — use `fill`, not a fixed px.
+- **fill detection rule**: if a component's px width equals (parent_width − symmetrical horizontal padding), it is a design-snapshot value — use `fill`, not a fixed px.
 - Fixed px kept only for: icon sizes, avatar sizes, minimum touch targets (≥44px), modal widths with explicit design intent, and visually intentional fixed baselines.
+- **Fixed-value justification**: every component that retains a fixed `width` or `height` px value must have a `description` that explains why `auto` was not applicable (e.g. "icon baseline size", "touch target minimum", "image intrinsic dimension").
 
 **D. Fixed-value preservation**
 - Keep fixed sizes for: icons, avatars, explicit button/touch heights, modal width baselines, and row heights that anchor visual rhythm.
@@ -197,6 +202,18 @@ This review normalizes layout semantics and sizing only. It does NOT add or remo
 - Do not add pages, components, states, or copy absent from the design source.
 - Do not delete source-backed components for layout convenience.
 - Do not alter `source_node`, state `id`, or `visible_when` conditions.
+
+**F. Padding completeness**
+- Audit every component's `padding`. All 4 directions (`top`, `right`, `bottom`, `left`) must have explicit values.
+- Use `0` where design shows flush edges — never leave a padding field `null` or omitted.
+- Containers with visible children at a consistent inset → padding reflects that inset on the container, not fixed dimensions on children.
+
+**G. Anchor completeness**
+- Audit every component's `anchor`. All 4 directions (`start`, `end`, `top`, `bottom`) must be present — no missing entries.
+- Each entry must have explicit `to`, `direction`, and `offset` — no nulls, no empty strings.
+- `offset: "0px"` for flush attachment to the reference edge.
+- `offset: "auto"` when the parent layout controls positioning (e.g. list item spacing, flex distribution). Every `auto` offset must include a `note` explaining how the value is calculated.
+- Components below a sibling → anchor `top` to that sibling's `bottom` with the measured gap as `offset`.
 
 **Output**: overwrite each `ui-acceptance-contract.yaml` with the optimized version. Update `section-map.json` only if unit classification changes. If a fixed value is source-justified, keep it. If `auto`/`fill` is semantically correct, apply it. Surface any ambiguous case in the subagent's response.
 

@@ -132,8 +132,9 @@ func TestRunAcceptInstallExecutesInstallCommandsOnly(t *testing.T) {
 		t.Fatalf("run failed: %v", err)
 	}
 
-	if len(runner.calls) != 4 {
-		t.Fatalf("expected specify install, superpowers install, and specify init, got %#v", runner.calls)
+	// 1 git clone + 6 superpowers symlink commands (mkdir+ln per IDE) + 1 specify init = 8
+	if len(runner.calls) != 8 {
+		t.Fatalf("expected specify install, superpowers install (3 IDEs), and specify init, got %#v", runner.calls)
 	}
 
 	last := runner.calls[len(runner.calls)-1]

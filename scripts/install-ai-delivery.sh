@@ -7,6 +7,8 @@ AI_DELIVERY_INSTALL_DIR="${AI_DELIVERY_INSTALL_DIR:-${HOME}/.local/bin}"
 AI_DELIVERY_DOWNLOAD_BASE_URL="${AI_DELIVERY_DOWNLOAD_BASE_URL:-}"
 AI_DELIVERY_INIT_TARGET_REPO="${AI_DELIVERY_INIT_TARGET_REPO:-}"
 AI_DELIVERY_UPGRADE_INIT_TARGET_REPO="${AI_DELIVERY_UPGRADE_INIT_TARGET_REPO:-}"
+AI_DELIVERY_IDE="${AI_DELIVERY_IDE:-all}"
+AI_DELIVERY_SKILLS_REPO="${AI_DELIVERY_SKILLS_REPO:-https://github.com/s-charvin/ai-delivery-kit.git}"
 AI_DELIVERY_TEMP_DIR=""
 
 usage() {
@@ -20,6 +22,8 @@ Environment overrides:
   AI_DELIVERY_DOWNLOAD_BASE_URL Override release asset base URL for testing or mirrors
   AI_DELIVERY_INIT_TARGET_REPO  Optional repo path to initialize after install
   AI_DELIVERY_UPGRADE_INIT_TARGET_REPO Optional repo path to refresh with 'init --upgrade' after install
+  AI_DELIVERY_IDE               Target IDE(s) for skills: claude, cursor, codex, all. Default: all
+  AI_DELIVERY_SKILLS_REPO       Git URL for skills repo. Default: https://github.com/s-charvin/ai-delivery-kit.git
   GITHUB_TOKEN                  Optional GitHub token used for authenticated downloads
 
 Flags:
@@ -29,6 +33,7 @@ Flags:
   --download-base-url <url>
   --init-target <path>
   --upgrade-init <path>
+  --ide <claude|cursor|codex|all>
   -h, --help
 EOF
 }
@@ -40,6 +45,10 @@ log() {
 fail() {
   printf '[install-ai-delivery] %s\n' "$1" >&2
   exit 1
+}
+
+warn() {
+  printf '[install-ai-delivery] WARNING: %s\n' "$1" >&2
 }
 
 parse_args() {
@@ -75,6 +84,14 @@ parse_args() {
         AI_DELIVERY_UPGRADE_INIT_TARGET_REPO=$2
         shift 2
         ;;
+      --ide)
+        [[ $# -ge 2 ]] || fail "Missing value for --ide"
+        case "$2" in
+          claude|cursor|codex|all) AI_DELIVERY_IDE=$2 ;;
+          *) fail "Unknown IDE: $2 (use: claude, cursor, codex, all)" ;;
+        esac
+        shift 2
+        ;;
       -h|--help)
         usage
         exit 0
@@ -97,7 +114,17 @@ cleanup() {
 }
 
 need_cmd() {
-  command -v "$1" >/dev/null 2>&1 || fail "Missing required command: $1"
+  command -v "$1" >/dev/null 2>&1 || missing+=("$1")
+}
+
+ensure_cmds() {
+  local -a missing=()
+  for cmd in "$@"; do
+    command -v "$cmd" >/dev/null 2>&1 || missing+=("$cmd")
+  done
+  if [[ ${#missing[@]} -gt 0 ]]; then
+    fail "Missing required command(s): ${missing[*]}"
+  fi
 }
 
 should_use_github_auth() {
@@ -337,6 +364,63 @@ verify_checksum() {
   rm -f "$verify_file"
 }
 
+# ---------------------------------------------------------------------------
+# User-level skill installation (clone repo + symlink to IDE dirs)
+# ---------------------------------------------------------------------------
+
+resolve_ides() {
+  case "$AI_DELIVERY_IDE" in
+    all) printf 'claude\ncursor\ncodex\n' ;;
+    claude|cursor|codex) printf '%s\n' "$AI_DELIVERY_IDE" ;;
+    *) fail "Unknown IDE: $AI_DELIVERY_IDE" ;;
+  esac
+}
+
+install_user_skills() {
+  ensure_cmds git
+
+  local skills_repo_dir="${HOME}/ai-delivery-kit"
+
+  if [[ -d "$skills_repo_dir/.git" ]]; then
+    log "Skills repo already exists at $skills_repo_dir (git pull to update)"
+  else
+    log "Cloning skills repo to $skills_repo_dir"
+    git clone "$AI_DELIVERY_SKILLS_REPO" "$skills_repo_dir"
+  fi
+
+  local skills_src="${skills_repo_dir}/.agents/skills"
+  if [[ ! -d "$skills_src" ]]; then
+    warn "Skills source not found at $skills_src — skipping IDE symlinks"
+    return 0
+  fi
+
+  while IFS= read -r ide; do
+    local ide_skills_dir="${HOME}/.${ide}/skills"
+    mkdir -p "$ide_skills_dir"
+
+    for skill_dir in "$skills_src"/*/; do
+      local skill_name
+      skill_name="$(basename "$skill_dir")"
+      [[ -f "$skill_dir/SKILL.md" ]] || continue
+
+      local symlink_path="${ide_skills_dir}/${skill_name}"
+
+      # Remove existing symlink or directory.
+      rm -rf "$symlink_path"
+
+      ln -sfn "$skill_dir" "$symlink_path"
+      log "[$ide] Linked: $skill_name"
+    done
+  done < <(resolve_ides)
+
+  log "Skills installed — each IDE symlinks to $skills_src"
+  log "Update skills later with: ai-delivery upgrade"
+}
+
+# ---------------------------------------------------------------------------
+# Post-install hooks
+# ---------------------------------------------------------------------------
+
 run_post_install_init() {
   local target_path=$1
 
@@ -352,12 +436,16 @@ run_post_install_init() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 main() {
   local os arch archive_name source_desc archive_path checksums_path extracted_dir binary_path target_path
 
   parse_args "$@"
 
-  need_cmd tar
+  ensure_cmds tar
   os=$(detect_os)
   arch=$(detect_arch)
   archive_name="ai-delivery_${os}_${arch}.tar.gz"
@@ -393,9 +481,12 @@ main() {
   log "Installed ai-delivery to $target_path"
   log "Add $AI_DELIVERY_INSTALL_DIR to PATH if it is not already available:"
   log "  export PATH=\"$AI_DELIVERY_INSTALL_DIR:\$PATH\""
+
+  # Install user-level skills (clone repo + symlinks).
+  install_user_skills
+
   log "Run: ai-delivery init /path/to/repo"
-  log "Upgrade an existing initialized repo: ai-delivery init --upgrade /path/to/repo"
-  log "Upgrade the installed CLI later by rerunning this installer."
+  log "Update skills later: ai-delivery upgrade"
   run_post_install_init "$target_path"
 }
 

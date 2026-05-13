@@ -35,7 +35,8 @@ func TestDetectCodexSuperpowersMissingBuildsClonePlan(t *testing.T) {
 		t.Fatalf("expected symlink command last on unix, got %q", got)
 	}
 
-	wantSkillPath := filepath.Join("/tmp/home", ".agents", "skills", "superpowers")
+	// Last symlink points to the last IDE (codex).
+	wantSkillPath := filepath.Join("/tmp/home", ".codex", "skills", "superpowers")
 	if got := tool.InstallCommands[len(tool.InstallCommands)-1][len(tool.InstallCommands[len(tool.InstallCommands)-1])-1]; got != wantSkillPath {
 		t.Fatalf("expected symlink target path %q, got %q", wantSkillPath, got)
 	}
@@ -61,7 +62,7 @@ func TestDetectCodexSuperpowersWindowsUsesJunction(t *testing.T) {
 		t.Fatalf("expected parent directory creation command before junction, got %#v", tool.InstallCommands[1])
 	}
 
-	if got := tool.InstallCommands[1][2]; got != "if not exist \""+filepath.Join(`C:\Users\demo`, ".agents", "skills")+"\" mkdir \""+filepath.Join(`C:\Users\demo`, ".agents", "skills")+"\"" {
+	if got := tool.InstallCommands[1][2]; got != "if not exist \""+filepath.Join(`C:\Users\demo`, ".claude", "skills")+"\" mkdir \""+filepath.Join(`C:\Users\demo`, ".claude", "skills")+"\"" {
 		t.Fatalf("expected windows parent-directory bootstrap command, got %#v", tool.InstallCommands[1])
 	}
 }

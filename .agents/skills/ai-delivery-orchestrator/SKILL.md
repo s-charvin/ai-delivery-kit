@@ -263,7 +263,9 @@ If brainstorming surfaces a design-level conflict with the YAML contract or requ
 
 6. **Verification** — `superpowers:verification-before-completion`: final integration checks — all tests pass, no regressions, contract fidelity confirmed, merge readiness verified.
 
-7. **Finish branch** — `superpowers:finishing-a-development-branch`: clean up, final diff review, prepare for merge. Rebase worktree branch onto development branch (no merge commits).
+7. **Full analyze + full test** — run the project's full static analysis and test suite. Both must pass clean before merge. UI slices: also run visual regression tests if configured. A single failing check blocks the merge — return to the failing task for auto-fix, then re-run this step from scratch.
+
+8. **Finish branch** — `superpowers:finishing-a-development-branch`: clean up, final diff review, prepare for merge. Rebase worktree branch onto development branch (no merge commits).
 
 Set `in_dev` when implementation starts.
 Set `visual_acceptance_passed` after screenshot matches YAML (UI slices only; non-UI skip).

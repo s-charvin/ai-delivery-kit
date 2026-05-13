@@ -5,8 +5,14 @@ param(
   [string]$InstallDir = $env:AI_DELIVERY_INSTALL_DIR,
   [string]$DownloadBaseUrl = $env:AI_DELIVERY_DOWNLOAD_BASE_URL,
   [string]$InitTargetRepo = $env:AI_DELIVERY_INIT_TARGET_REPO,
-  [string]$UpgradeInitTargetRepo = $env:AI_DELIVERY_UPGRADE_INIT_TARGET_REPO
+  [string]$UpgradeInitTargetRepo = $env:AI_DELIVERY_UPGRADE_INIT_TARGET_REPO,
+  [ValidateSet("claude","cursor","codex","all")]
+  [string]$Ide = $env:AI_DELIVERY_IDE
 )
+
+if ([string]::IsNullOrWhiteSpace($Ide)) {
+  $Ide = "all"
+}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -189,6 +195,46 @@ function Verify-Checksum {
   }
 }
 
+function Install-UserSkills {
+  $skillsDir = Join-Path $HOME "ai-delivery-kit"
+  $skillsSrc = Join-Path $skillsDir ".agents\skills"
+
+  if (Test-Path (Join-Path $skillsDir ".git")) {
+    Write-Log "Skills repo already exists at $skillsDir (git pull to update)"
+  } else {
+    Write-Log "Cloning skills repo to $skillsDir"
+    git clone "https://github.com/s-charvin/ai-delivery-kit.git" $skillsDir
+  }
+
+  if (-not (Test-Path $skillsSrc)) {
+    Write-Log "Skills source not found — skipping IDE symlinks"
+    return
+  }
+
+  $ides = if ($Ide -eq "all") { @("claude", "cursor", "codex") } else { @($Ide) }
+
+  foreach ($ideName in $ides) {
+    $ideSkillsDir = Join-Path $HOME ".$ideName\skills"
+    New-Item -ItemType Directory -Force -Path $ideSkillsDir | Out-Null
+
+    foreach ($skillDir in Get-ChildItem -Path $skillsSrc -Directory) {
+      $skillMd = Join-Path $skillDir.FullName "SKILL.md"
+      if (-not (Test-Path $skillMd)) { continue }
+
+      $target = Join-Path $ideSkillsDir $skillDir.Name
+      if (Test-Path $target) {
+        Remove-Item -Recurse -Force $target
+      }
+
+      New-Item -ItemType Junction -Path $target -Target $skillDir.FullName -Force | Out-Null
+      Write-Log "[$ideName] Linked: $($skillDir.Name)"
+    }
+  }
+
+  Write-Log "Skills installed — each IDE symlinks to $skillsSrc"
+  Write-Log "Update skills later with: ai-delivery upgrade"
+}
+
 function Invoke-PostInstallInit {
   param([string]$TargetPath)
 
@@ -244,9 +290,12 @@ try {
 
   Write-Log "Installed ai-delivery to $targetPath"
   Write-Log "Add $InstallDir to PATH if needed."
+
+  Install-UserSkills
+
   Write-Log "Run: ai-delivery init C:\path\to\repo"
-  Write-Log "Upgrade an existing initialized repo: ai-delivery init --upgrade C:\path\to\repo"
-  Write-Log "Upgrade the installed CLI later by rerunning this installer."
+  Write-Log "Update skills later: ai-delivery upgrade"
+
   Invoke-PostInstallInit -TargetPath $targetPath
 } finally {
   if (Test-Path -LiteralPath $tempDir) {

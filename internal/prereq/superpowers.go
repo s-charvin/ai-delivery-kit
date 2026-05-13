@@ -8,6 +8,14 @@ const (
 	SuperpowersGitURL          = "https://github.com/obra/superpowers.git"
 )
 
+// SupportedIDEs lists the IDE identifiers for user-level skill discovery.
+var SupportedIDEs = []string{"claude", "cursor", "codex"}
+
+// SkillDir returns the user-level skills directory for a given IDE.
+func SkillDir(homeDir, ide string) string {
+	return filepath.Join(homeDir, "."+ide, "skills")
+}
+
 type SuperpowersInput struct {
 	SkillLinkExists bool
 	HasGit          bool
@@ -33,23 +41,27 @@ func DetectSuperpowers(input SuperpowersInput) ToolPlan {
 	}
 
 	repoPath := filepath.Join(input.HomeDir, ".codex", "superpowers")
-	skillRoot := filepath.Join(input.HomeDir, ".agents", "skills")
-	skillPath := filepath.Join(skillRoot, "superpowers")
 
 	commands := [][]string{
 		{"git", "clone", SuperpowersGitURL, repoPath},
 	}
 
-	if input.GOOS == "windows" {
-		commands = append(commands,
-			[]string{"cmd", "/c", "if not exist \"" + skillRoot + "\" mkdir \"" + skillRoot + "\""},
-			[]string{"cmd", "/c", "mklink", "/J", skillPath, filepath.Join(repoPath, "skills")},
-		)
-	} else {
-		commands = append(commands,
-			[]string{"mkdir", "-p", skillRoot},
-			[]string{"ln", "-sfn", filepath.Join(repoPath, "skills"), skillPath},
-		)
+	// Install symlinks to all supported IDE skill directories.
+	for _, ide := range SupportedIDEs {
+		skillRoot := SkillDir(input.HomeDir, ide)
+		skillPath := filepath.Join(skillRoot, "superpowers")
+
+		if input.GOOS == "windows" {
+			commands = append(commands,
+				[]string{"cmd", "/c", "if not exist \"" + skillRoot + "\" mkdir \"" + skillRoot + "\""},
+				[]string{"cmd", "/c", "mklink", "/J", skillPath, filepath.Join(repoPath, "skills")},
+			)
+		} else {
+			commands = append(commands,
+				[]string{"mkdir", "-p", skillRoot},
+				[]string{"ln", "-sfn", filepath.Join(repoPath, "skills"), skillPath},
+			)
+		}
 	}
 
 	base.Status = StatusMissing

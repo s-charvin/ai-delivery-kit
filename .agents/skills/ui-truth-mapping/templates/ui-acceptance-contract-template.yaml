@@ -39,8 +39,22 @@ regions:
     source_node: "<figma-node-id>"
     safe_area: "top"                     # "top" | "bottom" — only when system UI overlaps this region's edge
     anchor:
-      to: "top"                          # top | bottom | <region-id>
-      offset: "0px"                      # distance from anchor point
+      - to: "region"                         # screen_start | <region-id>
+        direction: "start"                  # start | end | top | bottom — which edge of the reference to attach to
+        offset: "0px"                     # auto | <Npx> — auto requires note explaining calculation
+        note: null                       # required when offset is auto — how is the offset computed?
+      - to: "region"                         # screen_end | <region-id>
+        direction: "end"
+        offset: "0px"
+        note: null
+      - to: "region"                         # screen_top | <region-id>
+        direction: "top"
+        offset: "0px"
+        note: null
+      - to: "region"                         # screen_bottom | <region-id>
+        direction: "bottom"
+        offset: "0px"
+        note: null
 
     layout:
       direction: "vertical"              # vertical | horizontal | none
@@ -48,10 +62,9 @@ regions:
       gap: "0px"                         # spacing between children
 
     box:
-      width: "fill"                      # fill (spans full width with margins) | <Npx> (intentionally fixed: icons, avatars, buttons) | auto (content-sized)
-      height: "58px"                     # <Npx> | auto
-      padding: { top: 0, right: "16px", bottom: 0, left: "16px" }
-      margin: {}                         # only set non-zero values
+      width: "fill"                      # auto | fill | <Npx> — prefer auto; fixed px requires reason in description
+      height: "auto"                     # auto | <Npx>
+      padding: { top: 0, right: "16px", bottom: 0, left: "16px" }  # all 4 required; 0 where no visual gap
 
     background:
       color: null                        # fill color
@@ -65,7 +78,25 @@ regions:
         source_node: "<figma-node-id>"
         visible_when: null               # condition for conditional visibility, null = always visible
 
-        description: null                # implementation hint, e.g. "可点击，目前触发 toast 提示"
+        description: null                # implementation hint; required when fixed width/height px is used — explain why auto was not applicable
+
+        anchor:
+          - to: "<parent-id>"             # parent | sibling component id | top | bottom
+            direction: "start"
+            offset: "0px"                 # auto | <Npx> — auto requires note explaining calculation
+            note: null                    # required when offset is auto
+          - to: "<parent-id>"
+            direction: "end"
+            offset: "0px"
+            note: null
+          - to: "<parent-id>"
+            direction: "top"
+            offset: "0px"
+            note: null
+          - to: "<parent-id>"
+            direction: "bottom"
+            offset: "0px"
+            note: null
 
         layout:
           direction: "none"
@@ -73,10 +104,9 @@ regions:
           gap: "0px"
 
         box:
-          width: "24px"
-          height: "24px"
-          padding: {}
-          margin: {}
+          width: "auto"                   # auto | fill | <Npx> — prefer auto; fixed px requires reason in description
+          height: "auto"                  # auto | <Npx>
+          padding: { top: 0, right: 0, bottom: 0, left: 0 }  # all 4 required; 0 where no visual gap
 
         background:
           color: null
