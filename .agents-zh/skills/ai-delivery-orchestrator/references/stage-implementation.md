@@ -1,52 +1,52 @@
-# Stage 4: Implementation
+# 阶段 4：实现
 
-## When to run
+## 何时运行
 
-Each sub-requirement at `tasks_ready` after CP-001 user confirmation.
+CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。
 
-## Slice execution order
+## 切片执行顺序
 
-From `section-map.json`: `shared-shell` → `page` → `modal` (each modal after its trigger page). A unit starts only when structural dependencies are `merged`.
+按 `section-map.json`：`shared-shell` → `page` → `modal`（每个 modal 在其触发 page 之后）。结构依赖 `merged` 后才启动单元。
 
-## Subagent policy
+## 子代理策略
 
 ```
-Slice tasks independent AND non-overlapping files?
-  → NO (default): subagent-driven-development — one implementer per task, sequential, dual review
-  → YES (rare): dispatching-parallel-agents only for independent test/bug domains
-Never: two implementers parallel-editing the same slice file set
+切片内任务独立且文件不重叠？
+  → 否（默认）：subagent-driven-development — 每任务一个 implementer，顺序执行，双阶段评审
+  → 是（少见）：dispatching-parallel-agents 仅用于独立 test/bug 域
+禁止：两个 implementer 并行编辑同一切片的同一文件集
 ```
 
-Gate / blocker / status / merge decisions stay in the main session always.
+门禁 / 阻塞 / 状态 / 合并决策始终在主会话。
 
-## Implementation chain (per slice)
+## 实现链路（每切片）
 
-1. **`using-git-worktrees`** — one worktree per slice.
-2. **`subagent-driven-development`** (default) — each task in a fresh subagent; TDD via `test-driven-development` inside each subagent.
-3. **`requesting-code-review`** — first failure → auto-fix loop before user escalation.
-4. **Visual acceptance** (UI only) — screenshot vs YAML contract states; auto-fix on first failure.
-5. **`verification-before-completion`** — integration checks before merge.
-6. **Full analyze + full test** — project static analysis and test suite must pass clean.
-7. **`finishing-a-development-branch`** — structured merge options; rebase onto development branch (no merge commits).
+1. **`using-git-worktrees`** — 每切片一个 worktree。
+2. **`subagent-driven-development`**（默认）— 每任务新子代理；内部用 `test-driven-development`。
+3. **`requesting-code-review`** — 首次失败进入自动修复循环，再升级给用户。
+4. **视觉验收**（仅 UI）— 截图对照 YAML 契约状态；首次失败自动修复。
+5. **`verification-before-completion`** — 合并前集成检查。
+6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须全部通过。
+7. **`finishing-a-development-branch`** — 结构化合并选项；rebase 到开发分支（无 merge commit）。
 
-## Status updates
+## 状态更新
 
-- `in_dev` when implementation starts.
-- `visual_acceptance_passed` after screenshot matches YAML (UI only).
-- `merged` after successful rebase.
+- 开始实现时设 `in_dev`。
+- 截图匹配 YAML 后设 `visual_acceptance_passed`（仅 UI）。
+- rebase 成功后设 `merged`。
 
-## Progress ledger (optional)
+## 进度账本（可选）
 
-Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to survive context compaction. Do not treat progress.md as source of truth — reconcile from artifacts and `status.json`.
+已完成任务追加到 `.ai-delivery/requirements/<req-id>/progress.md`，以应对上下文压缩。不要把 progress.md 当真相源 — 以产物与 `status.json` 对账。
 
-## Blockers
+## 阻塞项
 
-| Trigger | Blocker |
-|---------|---------|
-| Upstream slice not merged | `blocked_dependency_slice` |
-| Rebase failed | `blocked_merge_conflict` |
-| Tests/review/visual failed after auto-fix | `blocked_verification_failure` |
+| 触发条件 | 阻塞 |
+|----------|------|
+| 上游切片未合并 | `blocked_dependency_slice` |
+| rebase 失败 | `blocked_merge_conflict` |
+| 自动修复后测试/评审/视觉仍失败 | `blocked_verification_failure` |
 
-## Next handoff
+## 下一 handoff
 
-Slice complete → `finishing-a-development-branch` → `merged`. See [handoff-table.md](handoff-table.md).
+切片完成 → `finishing-a-development-branch` → `merged`。见 [handoff-table.md](handoff-table.md)。

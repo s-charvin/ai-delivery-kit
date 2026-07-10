@@ -55,8 +55,12 @@ zsh "$VALIDATE_SCRIPT"
 
 CONTRACT_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
 PRESSURE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
+RECONCILE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/reconcile-delivery.test.sh")
+SYNC_ZH_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/sync-agents-zh.test.sh")
 zsh "$CONTRACT_TEST"
 zsh "$PRESSURE_TEST"
+zsh "$RECONCILE_TEST"
+zsh "$SYNC_ZH_TEST"
 
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
 

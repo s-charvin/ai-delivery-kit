@@ -1,6 +1,6 @@
-# AI Delivery Orchestrator — Execution Panel
+# AI 交付编排器 — 执行面板
 
-> **Not source of truth.** If this file conflicts with `.ai-delivery/requirements/<req-id>/status.json`, trust `status.json` and rewrite this file's headers.
+> **非真相源。** 若与本文件冲突，以 `.ai-delivery/requirements/<req-id>/status.json` 为准，并重写本文件头部。
 
 - requirement_id: `<req-id>`
 - requirement_root: `.ai-delivery/requirements/<req-id>/`
@@ -12,30 +12,30 @@
 - next_skill: `requirement-breakdown`
 - next_subreq: `<subreq-id>`
 
-## Reconcile Command
+## 对账命令
 
 ```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+python3 .agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-Run reconcile before trusting this panel on every resume or continue.
+每次恢复或继续前，在信任本面板前先运行对账。
 
-## Queue
+## 队列
 
 - [ ] TD-001 | stage=requirement-breakdown | scope=subreq:<subreq-id> | guard=split_ready | agent=main | note=ready
 
-## Checkpoints
+## 检查点
 
-- [ ] CP-DESIGN | checkpoint=design_approval | condition=brainstorming design approved per subreq | action=pause for user approval
-- [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=all executable subreqs at tasks_ready | action=pause before development
-- [ ] CP-002 | checkpoint=hard_blocker_pause | condition=no safe runnable queue item remains | action=pause and surface blocker
+- [ ] CP-DESIGN | checkpoint=design_approval | condition=各子需求 brainstorming 设计已批准 | action=暂停等待用户批准
+- [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=所有可执行子需求已达 tasks_ready | action=开发前暂停
+- [ ] CP-002 | checkpoint=hard_blocker_pause | condition=无安全可运行队列项剩余 | action=暂停并呈现阻塞
 
-## Active Blockers
+## 活跃阻塞
 
 - none
 
-## Retry Log
+## 重试日志
 
 - none

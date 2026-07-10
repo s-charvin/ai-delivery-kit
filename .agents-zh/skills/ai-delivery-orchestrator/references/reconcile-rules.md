@@ -1,54 +1,54 @@
-# Reconcile Rules
+# 对账规则
 
-Run reconcile before trusting `todo.md` on every resume or continue.
+每次恢复或继续前，在信任 `todo.md` 之前运行对账。
 
-## Command
+## 命令
 
 ```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+python3 .agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path works in the kit repo.
+Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内可用 skill 本地路径。
 
-## Steps (script implements; main session verifies)
+## 步骤（脚本实现；主会话验证）
 
-1. Re-read `status.json` and scan requirement artifacts.
-2. Re-check guards (contract validators for post-freeze statuses).
-3. Classify every blocker by `blocker_scope`.
-4. If a guard is already satisfied, do not re-run the stage.
-5. If outputs exist but guard fails, re-run or open narrowest blocker.
-6. Keep blocked items in queue; continue later items that do not depend on them.
-7. Emit `RUNTIME_MODE`, `RUNNABLE`, `BLOCKED`, `NEXT_SKILL`, `NEXT_SUBREQ`.
+1. 重读 `status.json` 并扫描需求产物。
+2. 重检守卫（post-freeze 状态的契约校验）。
+3. 按 `blocker_scope` 分类每个阻塞。
+4. 守卫已满足则不重跑该阶段。
+5. 产物存在但守卫失败 → 重跑或开最窄阻塞。
+6. 阻塞项留在队列；不依赖它的后续项继续。
+7. 输出 `RUNTIME_MODE`、`RUNNABLE`、`BLOCKED`、`NEXT_SKILL`、`NEXT_SUBREQ`。
 
-## Runtime mode resolution
+## 运行时模式判定
 
-| Mode | Condition |
-|------|-----------|
-| `completed` | All executable subreqs are `merged` |
-| `bootstrap` | Missing/incomplete `status.json` or no sub_requirements |
-| `confirm_to_dev` | `current_checkpoint=CP-001` and user intent is proceed to dev |
-| `blocker_recovery` | `current_checkpoint=CP-002` and blocker cleared |
-| `resume` | At least one runnable or unresolved item; no blocking checkpoint |
+| 模式 | 条件 |
+|------|------|
+| `completed` | 所有可执行子需求均为 `merged` |
+| `bootstrap` | `status.json` 缺失/不完整或无 `sub_requirements` |
+| `confirm_to_dev` | `current_checkpoint=CP-001` 且用户意图为进入开发 |
+| `blocker_recovery` | `current_checkpoint=CP-002` 且阻塞已清除 |
+| `resume` | 至少一个可运行或未解决项；无检查点阻止 |
 
-## Truth hierarchy
+## 真相层级
 
-1. `.ai-delivery/requirements/<req-id>/status.json` and governed artifacts
-2. `reconcile-delivery.py` output
-3. `todo.md` execution panel (rewrite headers if drift)
+1. `.ai-delivery/requirements/<req-id>/status.json` 与治理产物
+2. `reconcile-delivery.py` 输出
+3. `todo.md` 执行面板（漂移时重写头部）
 
-## User entry mapping
+## 用户入口映射
 
-| User intent | Action |
-|-------------|--------|
-| New requirement + sources | reconcile → `bootstrap` or `resume` |
-| Continue orchestrating | reconcile → `resume` (unless checkpoint active) |
-| tasks_ready, continue to dev | reconcile → require CP-001 + all `tasks_ready` → `confirm_to_dev` |
-| Blocker resolved | reconcile → CP-002 → `blocker_recovery` |
+| 用户意图 | 动作 |
+|----------|------|
+| 新需求 + 素材 | 对账 → `bootstrap` 或 `resume` |
+| 继续编排 | 对账 → `resume`（除非检查点激活）|
+| tasks_ready，继续开发 | 对账 → 要求 CP-001 + 全部 `tasks_ready` → `confirm_to_dev` |
+| 阻塞已解决 | 对账 → CP-002 → `blocker_recovery` |
 
-## Runnable queue
+## 可运行队列
 
-A runnable item can advance safely under current governed truth without inventing facts. Examples: Figma evidence capture, page shell, local state skeletons, navigation flow, mock wiring, read-only paths.
+可运行项指在当前治理真值下可安全推进、无需编造事实的工作。例如：Figma 证据采集、页面外壳、本地状态骨架、导航流、mock 接线、只读路径。
 
-API gaps alone do not trigger CP-002 if UI truth capture or safe partial development can continue.
+仅有 API 缺口不足以触发 CP-002，若 UI 真值采集或安全局部开发仍可继续。

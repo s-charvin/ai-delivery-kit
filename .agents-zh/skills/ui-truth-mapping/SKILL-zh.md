@@ -57,8 +57,57 @@ templates/
 - 不要映射空 spacer。没有可见子元素、无文字、无图标、无图片、无背景的容器仅用于布局对称设计考虑, 由 `layout` 捕获，不值得记录。
 - 不要凭记忆生成 YAML 契约或 `section-map.json`。在 `templates/` 下找到对应模板文件，逐字复制到输出路径，然后逐字段填充值。保留所有字段键、顺序、YAML 注释和结构。只改动值 — 不添加、删除或重命名字段。每个填充的值必须有设计源依据；无证据时保持模板默认值（`null`、`{}`、`[]`）不变。
 - 不要在主会话上下文中为多个单元生成契约。对于 section-map 中识别的每个独立单元（page、modal、shared-shell），派发一个单独的子代理，仅为该单元收集证据并冻结 YAML。唯一例外：仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态帧时跳过子代理派发 — 这些情况简单到可以内联处理而无质量损失。
-- 在逐单元子代理内部，一次只处理一个帧 — 永远不要将所有帧批量塞入单个 Figma 查询。每一层逐帧迭代：查询一个帧，填充该帧的字段，然后处理下一个。保持上下文聚焦，防止细节遗漏。
+- 任何组件都不要交付空或部分 `padding`。每个组件必须在全部 4 个方向（`top`、`right`、`bottom`、`left`）声明明确的 padding。设计无视觉间距时使用 `0` — 沉默是歧义，不是证据。
+- 优先使用 `auto` 宽高，而非固定 px。兄弟间距用父容器的 `margin` 或 `padding`，而非子元素固定尺寸。固定 px 仅用于有意定尺寸元素：图标、头像、明确按钮尺寸、仅用于基准对齐的行。
+- 当组件必须使用固定 `width` 或 `height` px 时，在组件 `description` 中记录原因，便于评审理解为何不能用 `auto`。
+- 任何组件都不要交付空或部分 `anchor`。每个组件必须声明全部 4 个锚点方向（`start`、`end`、`top`、`bottom`），每项含明确的 `to`、`direction`、`offset`。与参考边缘齐平时用 `offset: 0px`。父布局（如多行列表）控制定位时用 `offset: auto` — 此时在 anchor 的 `note` 中说明偏移如何计算。
+- 在逐单元子代理内部，一次只处理一个帧 — 永远不要将所有帧批量塞入单个 Figma 查询。每一层逐帧迭代：查询一个帧，填充其字段，然后处理下一个。保持上下文聚焦，防止细节遗漏。
 - 三层各自只填充其分配的字段。绝不触碰其他层拥有的字段。Pass 1 拥有 id/type/name/source_node/visible_when/states。Pass 2 拥有 anchor/layout/box。Pass 3 拥有 background/content/interaction/description。
+
+## 预检（创建或覆盖 ui-acceptance-contract.yaml 之前必须执行）
+
+写入任何契约之前，向用户输出此清单。任一项不完整则 STOP — 不要生成或覆盖 YAML。
+
+- [ ] 已阅读 `templates/ui-acceptance-contract-template.yaml`
+- [ ] 已阅读 `templates/section-map-template.json`
+- [ ] 已运行 `get_structure` 并列出每个顶层帧（`nodeId` + 名称）
+- [ ] 已将契约模板逐字复制到输出路径（非手写结构）
+- [ ] **未**使用其他需求的 `ui-acceptance-contract.yaml` 作为格式参考
+
+**唯一权威格式参考：**
+- `templates/ui-acceptance-contract-template.yaml`
+- `fixtures/ui-acceptance-contract-good.yaml`（最小有效示例）
+
+## 反模式（视为流程失败）
+
+- 使用扁平 `screen.visual_truth` 或顶层 `requirement_id`，而非模板 `regions[]` 树
+- 写 `code-baseline`、`layout_note` 或 `implementation_reference` 为实现漂移辩护
+- 在 `regions[].children[].anchor` 缺少四向锚点时标记 `acceptance_frozen`
+- 从遗留需求复制格式（如 login-code-entry 简化 YAML）
+- 主会话无子代理或用户未豁免时手写多单元完整 Pass 2/3
+- 把 YAML 当摘要/笔记文件，而非规范化 UI 真值
+
+## acceptance_frozen 完成定义
+
+仅当以下全部为真时才允许 `acceptance_frozen`：
+
+- `section-map.json` 结构与 `section-map-template.json` 一致，且 `units[]` 已分类
+- 每个 UI 单元有 `version` + `regions` + 恰有一个内容插槽的叶子组件
+- `section-map.json` 中每个帧在契约中有匹配的 `states[].source_node`
+- 无反模式中的禁止字段
+- 契约校验器通过（见下方反馈循环）
+
+## 反馈循环（交接编排器之前必须执行）
+
+向编排器报告完成之前运行：
+
+```bash
+python3 scripts/validate-ui-contract.py <path-to-ui-acceptance-contract.yaml>
+```
+
+若契约旁有 `section-map.json`，传入 `--section-map <path>`。
+
+仅当命令输出 `OK` 时继续。失败则修复契约或设 `blocked_verification_failure` — 绝不声称 `acceptance_frozen`。
 
 ## 工作流
 

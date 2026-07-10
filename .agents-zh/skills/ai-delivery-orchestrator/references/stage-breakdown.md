@@ -1,43 +1,43 @@
-# Stage 1: Requirement Breakdown
+# 阶段 1：需求拆分
 
-## When to run
+## 何时运行
 
-- Auto-decision says "split", or any sub-requirement is at `draft` with unresolved scope.
+- 自动决策为「拆分」，或任一子需求处于 `draft` 且范围未确定。
 
-## Prepare inputs
+## 准备输入
 
-- Read the requirement document.
-- Output directory: `.ai-delivery/requirements/<req-id>/`.
+- 阅读需求文档。
+- 输出目录：`.ai-delivery/requirements/<req-id>/`。
 
-## Run `requirement-breakdown`
+## 运行 `requirement-breakdown`
 
-Feed the requirement document path. It produces sub-requirements with `requirement-slice.md`, `dependency.json`, and the artifact set.
+传入需求文档路径。产出子需求、`requirement-slice.md`、`dependency.json` 及完整产物集。
 
-## After completion
+## 完成后
 
-- For each sub-requirement: if scope has complete source_ref coverage, normalized statements, and clear dependencies → set `split_ready`. If uncertain → leave `draft`.
-- Set `ui_bearing` on each subreq entry: `true` if the slice owns page/screen states; `false` if infra-only or no UI surfaces.
-- Initialize `status.json`: copy `templates/status-template.json` verbatim, then fill `requirement_id`, sub-requirement entries, and statuses. Preserve all `_`-prefixed metadata keys.
-- Record dependency graph at `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
+- 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
+- 为每个子需求设置 `ui_bearing`：拥有页面/屏幕状态 → `true`；纯基础设施或无 UI → `false`。
+- 初始化 `status.json`：逐字复制 `templates/status-template.json`，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键。
+- 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。
 
-## Light audit checklist (inline — do not invoke brainstorming)
+## 轻量审计清单（inline — 不要 invoke brainstorming）
 
-For each `split_ready` sub-requirement, main session outputs four checks:
+对每个 `split_ready` 子需求，主会话输出四项检查：
 
-1. **Gaps** — missing critical business facts?
-2. **Conflicts** — contradictions with `global-rules.md` or other slices?
-3. **States** — missing error, empty, loading, or permission boundaries?
-4. **Permissions** — auth boundaries clear?
+1. **缺口** — 是否缺少关键业务事实？
+2. **冲突** — 是否与 `global-rules.md` 或其他切片矛盾？
+3. **状态** — 是否缺少 error/empty/loading/权限边界？
+4. **权限** — 鉴权边界是否清晰？
 
-Outcomes:
+结果：
 
-- Critical gap → `blocked_missing_requirement`
-- Critical conflict → `blocked_requirement_conflict`
-- No critical issues → append audit findings to `notes`, proceed
+- 严重缺口 → `blocked_missing_requirement`
+- 严重冲突 → `blocked_requirement_conflict`
+- 无严重问题 → 审计结论写入 `notes`，继续
 
-## Skip path
+## 跳过路径
 
-When breakdown is skipped, create a minimal single sub-requirement package:
+跳过拆分时，创建最小单切片包：
 
 ```
 .ai-delivery/requirements/<req-id>/
@@ -47,8 +47,8 @@ When breakdown is skipped, create a minimal single sub-requirement package:
     └── requirement-slice.md
 ```
 
-Do not create a per-subreq `status.json`.
+不要创建子需求级 `status.json`。
 
-## Pause
+## 暂停
 
-Confirm the split plan (or skip decision) with the user before proceeding.
+继续前与用户确认拆分方案（或跳过决策）。

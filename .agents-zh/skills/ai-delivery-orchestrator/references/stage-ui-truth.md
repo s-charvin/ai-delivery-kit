@@ -1,43 +1,43 @@
-# Stage 2: UI Truth Mapping
+# 阶段 2：UI 真值映射
 
-## When to run
+## 何时运行
 
-For each sub-requirement where `ui_bearing: true` and a Figma design source is available.
+对每个 `ui_bearing: true` 且有 Figma 设计源的子需求。
 
-## Prepare inputs
+## 准备输入
 
-- Read `requirement-slice.md` from `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`.
-- Gather Figma file key and target node id.
-- Set output directory to the sub-requirement directory.
+- 阅读 `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/requirement-slice.md`。
+- 收集 Figma file key 与目标 node id。
+- 输出目录设为子需求目录。
 
-## Run `ui-truth-mapping`
+## 运行 `ui-truth-mapping`
 
-Feed requirement-slice and design source. Produces `ui-acceptance-contract.yaml` and `section-map.json`.
+传入需求切片与设计源。产出 `ui-acceptance-contract.yaml` 与 `section-map.json`。
 
-`ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.
+`ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
-## After completion
+## 完成后
 
 ```bash
 python3 scripts/validate-ui-contract.py <contract-path> [--section-map <section-map.json>]
 ```
 
-- Set `acceptance_frozen` only when every validator run prints `OK`.
-- On failure → `blocked_verification_failure` with validator output; do not advance status.
-- Update `status.json`.
+- 仅当每次校验输出 `OK` 时设置 `acceptance_frozen`。
+- 失败 → `blocked_verification_failure` 并附校验输出；不推进状态。
+- 更新 `status.json`。
 
-Optional batch check:
+可选批量检查：
 
 ```bash
 python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-## If no Figma link
+## 无 Figma 链接时
 
-- Non-UI sub-requirements: skip (already handled at breakdown).
-- UI sub-requirements without design: `blocked_missing_design` (`blocker_scope: slice_local`).
+- 非 UI 子需求：跳过（拆分阶段已处理）。
+- 无设计的 UI 子需求：`blocked_missing_design`（`blocker_scope: slice_local`）。
 
-## Next handoff
+## 下一 handoff
 
-`acceptance_frozen` → `superpowers:brainstorming` (design mode). See [handoff-table.md](handoff-table.md).
+`acceptance_frozen` → `superpowers:brainstorming`（设计模式）。见 [handoff-table.md](handoff-table.md)。

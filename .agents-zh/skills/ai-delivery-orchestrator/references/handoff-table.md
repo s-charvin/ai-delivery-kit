@@ -1,38 +1,38 @@
-# Handoff Table
+# Handoff 表
 
-Each stage has exactly one legal next skill. Do not improvise jumps.
+每个阶段恰好有一个合法的下一站技能。不要即兴跳步。
 
-| Current completion state | Unique next skill | Forbidden |
-|--------------------------|-------------------|-----------|
-| Split decision pending | User confirms → `requirement-breakdown` or skip single-slice package | `ui-truth-mapping`, `speckit-*` |
-| `split_ready` + light audit OK (UI-bearing) | `ui-truth-mapping` | `speckit-*`, implementation |
-| `split_ready` + light audit OK (non-UI) | `superpowers:brainstorming` (design mode) | Skip design approval |
-| `acceptance_frozen` (validator OK) | `superpowers:brainstorming` (design mode) | `speckit-*` before design approval |
-| Design approved (`design_approved: true`) | `speckit-specify` → `speckit-plan` → `speckit-tasks` | Business code before `tasks_ready` |
-| All executable subreqs at `tasks_ready` | CP-001 pause → user confirms | Silent entry to development |
-| CP-001 confirmed | Stage 4: `using-git-worktrees` + `subagent-driven-development` | Parallel implementers on same slice files |
-| Slice implementation complete | `finishing-a-development-branch` → set `merged` | Subagent merge or gate promotion |
+| 当前完成态 | 唯一下一站 | 禁止 |
+|------------|-----------|------|
+| 拆分决策待定 | 用户确认后 → `requirement-breakdown` 或跳过单切片包 | `ui-truth-mapping`、`speckit-*` |
+| `split_ready` + 轻量审计通过（UI） | `ui-truth-mapping` | `speckit-*`、实现 |
+| `split_ready` + 轻量审计通过（非 UI） | `superpowers:brainstorming`（设计模式） | 跳过设计批准 |
+| `acceptance_frozen`（校验器 OK） | `superpowers:brainstorming`（设计模式） | 设计批准前 `speckit-*` |
+| 设计已批准（`design_approved: true`） | `speckit-specify` → `plan` → `tasks` | `tasks_ready` 前写业务代码 |
+| 所有可执行子需求达 `tasks_ready` | CP-001 暂停 → 用户确认 | 静默进入开发 |
+| CP-001 已确认 | Stage 4：`using-git-worktrees` + `subagent-driven-development` | 同切片文件并行 implementer |
+| 切片实现完成 | `finishing-a-development-branch` → 设置 `merged` | 子代理合并或推进门禁 |
 
-## Status → next skill mapping (for reconcile)
+## 状态 → 下一站映射（供 reconcile 使用）
 
-| Subreq status | ui_bearing | design_approved | Next skill |
-|---------------|------------|-----------------|------------|
-| `draft` | any | any | `requirement-breakdown` |
-| `split_ready` | true | any | `ui-truth-mapping` |
+| 子需求状态 | ui_bearing | design_approved | 下一站 |
+|------------|------------|-----------------|--------|
+| `draft` | 任意 | 任意 | `requirement-breakdown` |
+| `split_ready` | true | 任意 | `ui-truth-mapping` |
 | `split_ready` | false | false | `superpowers:brainstorming` |
 | `split_ready` | false | true | `speckit-specify` |
 | `acceptance_frozen` | true | false | `superpowers:brainstorming` |
 | `acceptance_frozen` | true | true | `speckit-specify` |
-| `spec_ready` | any | true | `speckit-plan` |
-| `plan_ready` | any | true | `speckit-tasks` |
-| `tasks_ready` | any | true | (await CP-001 or Stage 4) |
-| `in_dev` | any | true | `subagent-driven-development` |
+| `spec_ready` | 任意 | true | `speckit-plan` |
+| `plan_ready` | 任意 | true | `speckit-tasks` |
+| `tasks_ready` | 任意 | true |（等待 CP-001 或 Stage 4）|
+| `in_dev` | 任意 | true | `subagent-driven-development` |
 | `visual_acceptance_passed` | true | true | `finishing-a-development-branch` |
-| `merged` | any | any | none |
-| `blocked_*` | any | any | resolve blocker first; continue other runnable subreqs |
+| `merged` | 任意 | 任意 | 无 |
+| `blocked_*` | 任意 | 任意 | 先解决阻塞；继续其他可运行子需求 |
 
-## Design approval
+## 设计批准
 
-- Set `design_approved: true` on the sub-requirement entry only after `superpowers:brainstorming` design session and explicit user approval.
-- Store design summary in `notes`.
-- Do not enter `speckit-*` while `design_approved` is false.
+- 仅在 `superpowers:brainstorming` 设计会话且用户明确批准后，将子需求条目的 `design_approved` 设为 `true`。
+- 设计摘要存入 `notes`。
+- `design_approved` 为 false 时不得进入 `speckit-*`。

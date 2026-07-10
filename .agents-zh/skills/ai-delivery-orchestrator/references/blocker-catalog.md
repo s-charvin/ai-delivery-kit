@@ -1,43 +1,43 @@
-# Blocker Catalog
+# 阻塞项目录
 
-When a blocker occurs, record the narrowest matching blocker, continue other runnable sub-requirements, and pause the entire requirement only when no safe runnable item remains.
+发生阻塞时，记录最窄匹配的阻塞项，继续其他可运行子需求；仅当无安全可运行项时才暂停整个需求。
 
-## Requirement breakdown
+## 需求拆分
 
-| Blocker | Trigger |
-|---------|---------|
-| `blocked_missing_requirement` | Critical business fact missing from source |
-| `blocked_requirement_conflict` | Two approved sources contradict each other |
-| `blocked_dependency` | Upstream sub-requirement not ready |
+| 阻塞 | 触发条件 |
+|------|----------|
+| `blocked_missing_requirement` | 源中缺少关键业务事实 |
+| `blocked_requirement_conflict` | 两个已批准来源互相矛盾 |
+| `blocked_dependency` | 上游子需求未就绪 |
 
-## UI truth mapping
+## UI 真值映射
 
-| Blocker | Trigger |
-|---------|---------|
-| `blocked_missing_design` | Required visual carrier missing from design evidence |
-| `blocked_requirement_figma_conflict` | Requirement and visual truth irreconcilable |
-| `blocked_figma_conflict` | Design evidence contradicts itself |
-| `blocked_missing_state_code` | Final screen state lacks structured frame evidence |
-| `blocked_missing_visual_truth` | Missing default state, row composition, parent shell, or key asset |
-| `blocked_verification_failure` | Contract validator failed or evidence cannot be validated |
+| 阻塞 | 触发条件 |
+|------|----------|
+| `blocked_missing_design` | 设计证据中缺少所需视觉载体 |
+| `blocked_requirement_figma_conflict` | 需求与视觉真值不可调和 |
+| `blocked_figma_conflict` | 设计证据自相矛盾 |
+| `blocked_missing_state_code` | 最终屏幕状态缺少结构化帧证据 |
+| `blocked_missing_visual_truth` | 缺少默认状态、行组合、父外壳或关键资源 |
+| `blocked_verification_failure` | 契约校验失败或证据无法验证 |
 
-## Spec Kit and implementation
+## Spec Kit 与实现
 
-| Blocker | Trigger |
-|---------|---------|
-| `blocked_spec_mismatch` | Spec output conflicts with governed truth |
-| `blocked_dependency_slice` | Upstream slice not merged |
-| `blocked_merge_conflict` | Rebase/integration failed |
-| `blocked_verification_failure` | Tests, review, or visual acceptance failed after auto-fix |
+| 阻塞 | 触发条件 |
+|------|----------|
+| `blocked_spec_mismatch` | Spec 产出与治理真值冲突 |
+| `blocked_dependency_slice` | 上游切片未合并 |
+| `blocked_merge_conflict` | rebase/集成失败 |
+| `blocked_verification_failure` | 自动修复后测试/评审/视觉验收仍失败 |
 
-## Recording a blocker
+## 记录阻塞
 
-Update the sub-requirement entry in `status.json`:
+更新 `status.json` 中的子需求条目：
 
 ```json
 {
   "status": "blocked_missing_design",
-  "detail": "Figma file lacks the confirmation dialog frame",
+  "detail": "Figma 文件缺少确认对话框帧",
   "blocked_from_status": "acceptance_frozen",
   "blocker_scope": "slice_local",
   "resume_target_status": "acceptance_frozen",
@@ -45,20 +45,20 @@ Update the sub-requirement entry in `status.json`:
 }
 ```
 
-## Recovery
+## 恢复
 
-When the user resolves the blocker, resume toward `resume_target_status`.
+用户解决阻塞后，朝 `resume_target_status` 恢复。
 
-## Narrowest-blocker rule
+## 最窄阻塞规则
 
-- Prefer `blocked_missing_state_code` over `blocked_missing_design`.
-- Prefer `blocked_requirement_figma_conflict` over `blocked_missing_visual_truth`.
-- Never promote to `requirement_global` while any safe runnable queue item exists across all subreqs.
+- 优先 `blocked_missing_state_code` 而非 `blocked_missing_design`。
+- 优先 `blocked_requirement_figma_conflict` 而非 `blocked_missing_visual_truth`。
+- 跨子需求仍有安全可运行项时，不得升级为 `requirement_global`。
 
-## Blocker scope
+## 阻塞范围
 
-- **`slice_local`** — blocks one slice/stage only.
-- **`action_level_integration`** — blocks real API wiring for one action; does not block shell, navigation, or read-only paths.
-- **`requirement_global`** — only when every derivable queue item is non-runnable.
+- **`slice_local`** — 仅阻塞一个切片/阶段。
+- **`action_level_integration`** — 仅阻塞一个操作的真实 API 连线；不阻塞外壳、导航或只读路径。
+- **`requirement_global`** — 仅当所有可推导队列项均不可运行。
 
-Default: **continue safest runnable work first**.
+默认策略：**优先继续最安全的可运行工作**。
