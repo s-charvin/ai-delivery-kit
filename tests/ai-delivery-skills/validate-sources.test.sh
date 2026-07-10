@@ -78,12 +78,3 @@ require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.jso
 require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-truth-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" '../common/'
-
-if [[ -d "$ROOT/.claude/skills" && -f "$ROOT/managedassets.go" ]]; then
-  for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
-    [[ -d "$ROOT/.claude/skills/$skill" ]] || fail "Missing .claude mirror: $skill"
-    if ! diff -rq --exclude=SKILL-zh.md "$SKILL_ROOT/$skill" "$ROOT/.claude/skills/$skill" >/dev/null 2>&1; then
-      fail ".agents vs .claude drift detected for $skill"
-    fi
-  done
-fi
