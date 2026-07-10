@@ -1,4 +1,0 @@
-interface:
-  display_name: "UI Requirement Mapping"
-  short_description: "Map requirement slices to structured design evidence"
-  default_prompt: "Use $ui-requirement-mapping to bind this sub-requirement to structured design evidence from Figma MCP or compatible providers and update the mapping artifacts."

@@ -1,4 +1,0 @@
-interface:
-  display_name: "UI Acceptance Contract"
-  short_description: "Freeze YAML screen-state UI truth for UI slices"
-  default_prompt: "Use $ui-acceptance-contract to freeze ui-acceptance-contract.yaml, update traceability, and block downstream work until acceptance is frozen."

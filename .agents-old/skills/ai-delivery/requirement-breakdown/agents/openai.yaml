@@ -1,4 +1,0 @@
-interface:
-  display_name: "Requirement Breakdown"
-  short_description: "Break requirement sources into tracked slices"
-  default_prompt: "Use $requirement-breakdown to split this requirement into `.ai-delivery` sub-requirements, dependency metadata, and downstream-ready slices."

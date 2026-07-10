@@ -1,4 +1,0 @@
-interface:
-  display_name: "UI Interaction Design"
-  short_description: "Turn mapped UI into interaction contracts"
-  default_prompt: "Use $ui-interaction-design to turn this mapped sub-requirement into an interaction contract with only bounded micro-interaction assumptions."

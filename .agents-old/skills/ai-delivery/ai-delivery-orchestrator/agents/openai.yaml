@@ -1,4 +1,0 @@
-interface:
-  display_name: "AI Delivery Orchestrator"
-  short_description: "Drive gated todo orchestration with a thin Spec Kit bridge"
-  default_prompt: "Use $ai-delivery-orchestrator to reconcile a requirement-level todo.md against .ai-delivery truth, prepare `spec-kit-input.md` bridge artifacts for official Spec Kit steps, bind outputs back through `spec-kit-binding.json`, and pause only at tasks_ready or hard blockers."
