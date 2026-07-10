@@ -2,6 +2,8 @@
 
 Bootstrap governed `ai-delivery` workflows into arbitrary business repositories, then advance new work through `ai-delivery-orchestrator` instead of manual stage-by-stage dispatch.
 
+中文版：[README.zh-CN.md](README.zh-CN.md)
+
 ## Quick Start
 
 Install the CLI:
