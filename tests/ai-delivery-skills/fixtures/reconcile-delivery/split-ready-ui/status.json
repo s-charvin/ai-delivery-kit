@@ -1,0 +1,18 @@
+{
+  "requirement_id": "split-ready-ui",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "contacts-directory": {
+      "status": "split_ready",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "ui_bearing": true,
+      "design_approved": false,
+      "notes": "light audit passed"
+    }
+  }
+}

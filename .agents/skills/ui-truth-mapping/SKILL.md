@@ -64,6 +64,51 @@ templates/
 - Within a per-unit subagent, process frames ONE AT A TIME — never batch all frames into a single Figma query. Each pass iterates frame by frame: query one frame, fill its fields, move to the next. This keeps context focused and prevents missed details.
 - Each of the three passes fills ONLY its assigned fields. Never touch fields owned by a different pass. Pass 1 owns id/type/name/source_node/visible_when/states. Pass 2 owns anchor/layout/box. Pass 3 owns background/content/interaction/description.
 
+## Preflight (required before creating or overwriting ui-acceptance-contract.yaml)
+
+Output this checklist to the user before writing any contract. If any item is incomplete, STOP — do not generate or overwrite YAML.
+
+- [ ] Read `templates/ui-acceptance-contract-template.yaml`
+- [ ] Read `templates/section-map-template.json`
+- [ ] Ran `get_structure` and listed every top-level frame (`nodeId` + name)
+- [ ] Copied the contract template verbatim to the output path (not a hand-written structure)
+- [ ] Did **not** use another requirement's `ui-acceptance-contract.yaml` as a format reference
+
+**Authoritative format references only:**
+- `templates/ui-acceptance-contract-template.yaml`
+- `fixtures/ui-acceptance-contract-good.yaml` (minimal valid example)
+
+## Anti-patterns (treat as process failure)
+
+- Using flat `screen.visual_truth` or top-level `requirement_id` instead of the template `regions[]` tree
+- Writing `code-baseline`, `layout_note`, or `implementation_reference` to justify implementation drift
+- Marking `acceptance_frozen` when `regions[].children[].anchor` lacks all four directions
+- Copying format from legacy requirements (for example login-code-entry simplified YAML)
+- Hand-writing full Pass 2/3 for multiple units in the main session without subagents or explicit user exemption
+- Treating YAML as a summary/notes file instead of canonical UI truth
+
+## Definition of Done for acceptance_frozen
+
+`acceptance_frozen` is allowed only when ALL are true:
+
+- `section-map.json` matches `section-map-template.json` structure with classified `units[]`
+- Every UI unit has `version` + `regions` + leaf components with exactly one content slot
+- Every frame in `section-map.json` has a matching `states[].source_node` in the contract
+- No forbidden fields from Anti-patterns
+- Contract validator passes (see Feedback Loop below)
+
+## Feedback Loop (required before handoff)
+
+Before reporting completion to the orchestrator, run:
+
+```bash
+python3 scripts/validate-ui-contract.py <path-to-ui-acceptance-contract.yaml>
+```
+
+If a `section-map.json` sits beside the contract, pass `--section-map <path>`.
+
+Only continue when the command prints `OK`. On failure, fix the contract or set `blocked_verification_failure` — never claim `acceptance_frozen`.
+
 ## Workflow
 
 ### 1. Confirm upstream

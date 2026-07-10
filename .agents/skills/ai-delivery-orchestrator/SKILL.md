@@ -1,344 +1,145 @@
 ---
 name: ai-delivery-orchestrator
-description: Use as the single entry point for requirement development. Provide a requirement document and this skill auto-decides whether to split, then chains through UI truth mapping to Spec Kit implementation. All state, blockers, and gates are managed here.
+description: Use when a requirement document needs governed end-to-end delivery through Figma UI contracts, Spec Kit, and merge gates. Use as the single entry when `.ai-delivery` state exists or the user provides a new requirement doc.
 ---
 
 # AI Delivery Orchestrator
 
-Single entry point for the full requirement-to-implementation pipeline:
+Single entry for requirement → implementation. Leaf skills (`requirement-breakdown`, `ui-truth-mapping`) are pure tools — no pipeline awareness. This skill owns state, gates, blockers, and handoffs.
 
 ```
-Requirement Doc → [Breakdown? & Brainstorming Audit] → UI Truth Mapping → [Brainstorming Design] + Spec Kit → Superpowers Dev → Merge
-                            ↑ auto-decided                                                    ↑ subagent-driven TDD, review, visual acceptance
+Requirement → [Breakdown?] → UI Truth → Design → Spec Kit → SDD Implementation → Merge
 ```
 
-The orchestrator owns all state transitions, blocker handling, gate decisions, and coupling between skills. Each pipeline skill (`requirement-breakdown`, `ui-truth-mapping`) is a pure, independent tool — it receives inputs, produces outputs, and has no knowledge of the pipeline or of each other.
+## Pipeline
 
-`superpowers:brainstorming` is used at two checkpoints: after breakdown (requirement audit — find gaps early) and before Spec Kit (solution design — shape the approach before spec-driven skeleton). Implementation uses the full Superpowers development suite (`using-git-worktrees`, `test-driven-development`, `subagent-driven-development`, `dispatching-parallel-agents`, `requesting-code-review`, `finishing-a-development-branch`, `verification-before-completion`).
+| Stage | Skill | Gate |
+|-------|-------|------|
+| 1 | `requirement-breakdown` + light audit | `split_ready` |
+| 2 | `ui-truth-mapping` (UI only) | `acceptance_frozen` |
+| 3a | `superpowers:brainstorming` (design) | `design_approved` |
+| 3b | `speckit-specify` → `plan` → `tasks` | `spec/plan/tasks_ready` |
+| 4 | Superpowers SDD suite | `visual_acceptance_passed` → `merged` |
 
-## Pipeline Overview
+Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-speckit.md](references/stage-design-and-speckit.md), [stage-implementation.md](references/stage-implementation.md).
 
-| Stage | Skill | Input | Output | Gate |
-|---|---|---|---|---|
-| 1a | `requirement-breakdown` | Requirement doc | sub-requirements + dependency graph | `split_ready` per subreq |
-| 1b | `superpowers:brainstorming` | requirement-slice + breakdown artifacts | requirement audit (gaps, ambiguities, conflicts) | pre-spec quality gate |
-| 2 | `ui-truth-mapping` | requirement-slice + Figma design source | `ui-acceptance-contract.yaml` + `section-map.json` | `acceptance_frozen` |
-| 3a | `superpowers:brainstorming` | YAML contract + requirement-slice + API docs | solution design (architecture, data flow, component strategy) | design approval |
-| 3b | `speckit-specify` → `speckit-plan` → `speckit-tasks` | solution design + YAML contract + requirement-slice + section-map | `spec.md` → `plan.md` → `tasks.md` | `spec_ready` → `plan_ready` → `tasks_ready` |
-| 4 | Superpowers dev suite | tasks + YAML contract + API docs | implemented code | `visual_acceptance_passed` → `merged` |
-
-## State Model
-
-Every sub-requirement tracks its own state independently. States advance in order:
+## State model
 
 ```
 draft → split_ready → acceptance_frozen → spec_ready → plan_ready → tasks_ready → in_dev → visual_acceptance_passed → merged
 ```
 
-- `draft`: just created, boundaries uncertain
-- `split_ready`: complete source coverage, verbatim excerpts, clear scope and dependencies
-- `acceptance_frozen`: YAML contract frozen, all screen states source-backed
-- `spec_ready` / `plan_ready` / `tasks_ready`: Spec Kit artifacts generated and audited
-- `in_dev`: implementation in progress
-- `visual_acceptance_passed`: screenshot matches YAML contract (UI slices only; non-UI slices skip this)
-- `merged`: code rebased and merged to development branch
+Non-UI subreqs skip `acceptance_frozen` and `visual_acceptance_passed`.
 
-State is recorded in a single `status.json` at the requirement level. Use `templates/status-template.json` as the starting point — it documents all status meanings, blocker scopes, checkpoints, and runtime modes inline as `_`-prefixed metadata keys.
-
-Each sub-requirement entry:
+Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy [templates/status-template.json](templates/status-template.json) verbatim — never regenerate structure from memory. Execution panel: [templates/todo-template.md](templates/todo-template.md) (not source of truth).
 
 | Field | Purpose |
-|---|---|
-| `status` | Current state (one of the status values above, or a `blocked_*` value) |
-| `detail` | Granular human-readable description of what's happening inside this state |
-| `blocked_from_status` | The status the sub-requirement was targeting before the block |
-| `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` — how wide the block reaches |
-| `resume_target_status` | The status to resume toward after the blocker is cleared |
-| `notes` | Free-form context for handoff between sessions |
+|-------|---------|
+| `status` | Current state or `blocked_*` |
+| `ui_bearing` | `true` / `false` / `null` — whether slice owns UI surfaces |
+| `design_approved` | User approved brainstorming design |
+| `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
+| `resume_target_status` | Resume target after blocker cleared |
 
-## Runnable Queue & Blocker Scope
+## Reconcile first
 
-These terms are used in `status.json` blocker classification and reconcile decisions:
+On every resume or continue, run reconcile before trusting `todo.md`:
 
-- **Runnable queue item** — Any item that can still advance safely under current governed truth without inventing missing facts. Examples: Figma evidence capture, page shell implementation, local state skeletons, navigation flow, mock wiring, read-only presentation paths.
-- **`slice_local`** — Blocks only one slice, stage, or capability surface. Must not block unrelated slices.
-- **`action_level_integration`** — Blocks real API wiring or final semantic closure for one action only. Does not block visual mapping, shell work, local state work, or navigation skeletons.
-- **`requirement_global`** — Valid only when every derivable queue item is non-runnable. If one safe runnable item remains, the blocker is not requirement-global.
+```bash
+python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+  .ai-delivery/requirements/<req-id>/status.json \
+  --req-root .ai-delivery/requirements/<req-id>
+```
 
-Default strategy: **continue safest runnable work first**, not "pause on first blocker."
+Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
 
-## Runtime Modes, Checkpoints & Resolution
+## Handoff table
 
-After every reconcile, determine the active mode:
+Each stage has one legal next skill. Full table: [references/handoff-table.md](references/handoff-table.md).
 
-1. **`completed`** — All executable slices are `merged`. Do not dispatch new work.
-2. **`bootstrap`** — No `todo.md` exists, or requirement package too incomplete to derive a queue. Build from first governed stage.
-3. **`confirm_to_dev`** — `todo.md` exists, `current_checkpoint` is `CP-001`, all executable slices at `tasks_ready`, user intent means "proceed to development."
-4. **`blocker_recovery`** — `todo.md` exists, `current_checkpoint` is `CP-002`, blocker cleared. Reconcile, clear blocker only if guard now satisfiable, resume from blocked step.
-5. **`resume`** — `todo.md` exists, no checkpoint holding, at least one queue item unresolved or runnable. Continue from safest runnable unresolved item.
+| Done | Next |
+|------|------|
+| `split_ready` + audit (UI) | `ui-truth-mapping` |
+| `split_ready` + audit (non-UI) | `superpowers:brainstorming` |
+| `acceptance_frozen` | `superpowers:brainstorming` |
+| `design_approved` | `speckit-specify` |
+| All `tasks_ready` + CP-001 | Stage 4 SDD |
+| Slice done | `finishing-a-development-branch` |
 
-Checkpoints:
-- **`CP-001` tasks_ready_user_confirmation** — All executable slices at `tasks_ready`; pause for user confirmation before development.
-- **`CP-002` hard_blocker_pause** — Only valid when no safe runnable queue item remains. API blockers alone do not qualify if UI truth capture, shell work, or safe partial development can continue.
+## Pause points (3)
 
-`current_phase` and `current_checkpoint` are execution-panel hints. If they conflict with `.ai-delivery`, trust `.ai-delivery` and rewrite `todo.md` headers.
+1. After split/skip decision — confirm with user
+2. After brainstorming design — CP-DESIGN, explicit approval before `speckit-*`
+3. After `tasks_ready` — CP-001, confirm before development
 
-## Reconcile Rules
-
-On every resume or continue, before trusting `todo.md`:
-
-1. Re-read `.ai-delivery` status and artifacts.
-2. Re-check every guard against governed artifacts.
-3. Classify every blocker as `slice_local`, `action_level_integration`, or `requirement_global` before choosing a checkpoint.
-4. Re-check what the blocker actually blocks: visual truth, acceptance freeze, integration, or final delivery.
-5. If a guard is already satisfied, mark the item complete without re-running the stage.
-6. If outputs exist but guard is not satisfied, re-run or open the narrowest blocker. Keep blocked items in queue; continue later items that don't depend on them.
-
-## User Entry Mapping
-
-Map user intent to runtime mode — don't ask the user to name the next skill:
-
-1. Inspect existing `.ai-delivery/requirements/*`, `todo.md`, `status.json`.
-2. Produce one recommendation: `continue req-xxx` or `create req-yyy`.
-3. Pause for human confirmation before either path.
-
-After routing confirmed:
-- "Here's the requirement doc, Figma is open, let's go" → `bootstrap` if no valid `todo.md`, otherwise reconcile → `resume`.
-- "Continue orchestrating this requirement" → reconcile → `resume` (unless a checkpoint is active).
-- "tasks_ready, continue to development" → reconcile, require `CP-001` + all slices `tasks_ready` → `confirm_to_dev`.
-- "I've resolved this blocker, keep going" → reconcile, require `CP-002` → `blocker_recovery`.
-
-## Hard Boundary
+## Hard boundary
 
 - Do not move workflow truth out of `.ai-delivery`.
-- Do not require the user to manually choose the first low-level skill in the normal path.
-- Do not let UI-bearing sub-requirements enter `speckit-*` before `acceptance_frozen`.
-- Do not let UI-bearing slices claim merge completion before `visual_acceptance_passed`.
-- Do not promote a slice-local blocker to requirement-wide while any safe runnable item exists.
-- Do not let a blocked queue entry swallow later entries that are still safe to run.
-- Do not let subagents advance gates, decide blockers, or merge changes.
-- Do not use subagents outside Stage 4 implementation.
-- Do not apply one large multi-file patch during implementation; edit one file at a time.
-- Do not use merge commits to reintegrate worktree branches; rebase to keep history linear.
-- Do not fork official `speckit-specify`, `speckit-plan`, or `speckit-tasks` to restate repo-local contracts.
-- Do not generate `status.json` from memory. Locate `templates/status-template.json`, copy it verbatim to the output path, then fill in sub-requirement entries. Preserve all `_`-prefixed metadata keys, field structure, and default values. Only change values — never add, remove, or rename keys.
-
-## Auto-Decision: Split Or Skip?
-
-Before running `requirement-breakdown`, analyze the requirement. **Skip breakdown** when ALL are true:
-- Single page or single screen
-- No shared state across pages or features
-- Can be built by one developer without coordination
-- No cross-cutting rules (auth, permissions, shared validation)
-- Requirement doc is under ~300 words with a single clear scope
-
-**Run breakdown** when ANY are true:
-- Spans 2+ pages or screens
-- Has shared state (global store, cross-page propagation)
-- Needs coordination between multiple developers
-- Contains cross-feature infrastructure or shared components
-- Has rules that apply across multiple feature areas
-
-State your decision explicitly with reasoning, then proceed.
-
-## Workflow
-
-### Stage 1: Requirement Breakdown
-
-**When to run:** auto-decision says "split", or any sub-requirement is at `draft` with unresolved scope.
-
-**Prepare inputs:**
-- Read the requirement document.
-- Determine the requirement id and output directory: `.ai-delivery/requirements/<req-id>/`.
+- Do not require the user to pick low-level skills on the normal path.
+- Do not let UI subreqs enter `speckit-*` before `acceptance_frozen`.
+- Do not let UI slices claim `merged` before `visual_acceptance_passed`.
+- Do not promote slice-local blockers to requirement-global while any runnable item exists.
+- Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per SDD).
+- Do not fork official `speckit-*` skills.
+- Do not set `acceptance_frozen` until `scripts/validate-ui-contract.py` exits 0 for every UI contract.
+- Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
+- Edit one file at a time during implementation; rebase worktrees (no merge commits).
 
-**Run `requirement-breakdown`:**
-Feed it the requirement document path. It produces sub-requirements with `requirement-slice.md`, `dependency.json`, and the full artifact set.
+## Status transition gates
 
-**After completion:**
-- For each sub-requirement: if scope is complete with verbatim excerpts and clear dependencies → set `split_ready`. If scope is uncertain → leave as `draft`.
-- Initialize `status.json`: copy `templates/status-template.json` verbatim to `.ai-delivery/requirements/<req-id>/status.json`, then fill in `requirement_id`, sub-requirement entries, and their statuses. Do not regenerate structure from memory — preserve all `_`-prefixed metadata keys and default field structure.
-- Record the dependency graph in `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
+| Target | Requirement |
+|--------|-------------|
+| `acceptance_frozen` | All contracts pass `validate-ui-contract.py` |
+| `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; contracts still pass |
+| `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + contracts pass |
 
-**Brainstorming audit (run after `split_ready`):**
-Use `superpowers:brainstorming` to audit each requirement-slice before proceeding to UI Truth Mapping or Spec Kit. Feed it:
-- The requirement-slice.md
-- The dependency graph
-- Any known API contracts or constraints
+## Split decision
 
-The brainstorming session should:
-- Identify ambiguities, gaps, and edge cases the breakdown may have missed
-- Surface conflicting or implicit assumptions
-- Flag missing error states, empty states, loading states, and permission boundaries
-- Produce a concrete list of issues — if any are critical, set `blocked_missing_requirement` or `blocked_requirement_conflict` as appropriate
-- If no critical issues, document findings in the sub-requirement's `notes` field and proceed
+**Skip** when ALL: single screen, no shared state, one developer, no cross-cutting rules, doc under ~300 words.
 
-This checkpoint prevents bad requirements from reaching Spec Kit where they'd become expensive to fix.
+**Split** when ANY: 2+ screens, shared state, multi-developer coordination, cross-feature infrastructure.
 
-**Skip path:** When breakdown is skipped, create a minimal single sub-requirement package directly:
-```
-.ai-delivery/requirements/<req-id>/
-├── requirement.md
-└── sub-requirements/<subreq-id>/
-    ├── requirement-slice.md
-    └── status.json
-```
+State decision with reasoning, then proceed. Details: [references/stage-breakdown.md](references/stage-breakdown.md).
 
-**Pause:** Confirm the split plan (or skip decision) with the user before proceeding.
+## Light audit (not brainstorming)
 
-### Stage 2: UI Truth Mapping
+After `split_ready`, main session runs inline 4-check audit per subreq (gaps, conflicts, states, permissions). Critical issues → blockers; otherwise append to `notes`. Do not invoke `superpowers:brainstorming` here.
 
-**When to run:** for each sub-requirement where `contains_page_states: true` AND a Figma design source is available.
+## Stage 4 (summary)
 
-**Prepare inputs:**
-- Read `requirement-slice.md` from `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`.
-- Gather the Figma file key and target node id.
-- Set output directory to the sub-requirement directory.
+Default: `subagent-driven-development` — sequential tasks, fresh subagent each, TDD inside. `dispatching-parallel-agents` only for independent non-overlapping test/bug domains. Never parallel implementers on the same slice files.
 
-**Run `ui-truth-mapping`:**
-Feed it the requirement-slice and design source. It produces `ui-acceptance-contract.yaml` and `section-map.json`.
+Chain: `using-git-worktrees` → SDD → `requesting-code-review` → visual acceptance (UI) → `verification-before-completion` → full test → `finishing-a-development-branch`.
 
-**After completion:**
-- Verify all screen states in the YAML are source-backed.
-- Set `acceptance_frozen` when all screen states have source evidence.
-- Update `status.json`.
+Full runbook: [references/stage-implementation.md](references/stage-implementation.md).
 
-**If no Figma link:** skip this stage. Non-UI sub-requirements proceed directly to Spec Kit. UI sub-requirements without design go to `blocked_missing_design`.
+## Blockers
 
-### Stage 3: Spec Kit Pipeline
+Narrowest blocker wins; continue safest runnable work first. On validator failure use `blocked_verification_failure`. Catalog: [references/blocker-catalog.md](references/blocker-catalog.md).
 
-**When to run:** for each sub-requirement at `acceptance_frozen` (UI) or `split_ready` (non-UI).
+## API policy
 
-**Prepare inputs:**
-- Collect: `ui-acceptance-contract.yaml` (UI slices), `requirement-slice.md`, `section-map.json`.
-- If API docs exist, pass them directly — no intermediate mapping.
+API docs pass directly to Spec Kit and implementation. Gaps → `integration_deferred` in notes; they do not block UI mapping or shell work.
 
-**Brainstorming design (run before Spec Kit):**
-Use `superpowers:brainstorming` to design the solution approach. Feed it:
-- The requirement-slice.md
-- `ui-acceptance-contract.yaml` (if UI-bearing)
-- API docs (if available)
-- The dependency graph
+## User entry
 
-The brainstorming session should produce:
-- Architecture decisions (component tree, data flow, state management)
-- Route/navigation design (if multi-screen)
-- Component decomposition strategy
-- Data model sketch (entities, relationships, loading strategy)
-- Error/empty/loading state handling plan
-- Key technical decisions and trade-offs
+1. Inspect `.ai-delivery/requirements/*`, `status.json`, run reconcile.
+2. Recommend `continue req-xxx` or `create req-yyy`.
+3. Pause for human confirmation before routing.
 
-The brainstorming output becomes the design foundation that `speckit-specify` builds upon — it provides the "why" and "how" so Spec Kit can produce a precise, well-grounded spec skeleton. Store the brainstorming summary in the sub-requirement's `notes` field for traceability.
+| Intent | Mode |
+|--------|------|
+| New requirement + sources | `bootstrap` or `resume` |
+| Continue orchestrating | `resume` |
+| tasks_ready, proceed to dev | `confirm_to_dev` (CP-001) |
+| Blocker resolved | `blocker_recovery` (CP-002) |
 
-If brainstorming surfaces a design-level conflict with the YAML contract or requirement, set `blocked_spec_mismatch` and pause.
+## Runtime modes
 
-**Run Spec Kit pipeline:**
-1. Feed brainstorming output + input artifacts to `speckit-specify` → produces `spec.md`. Verify the spec covers all screen states from the YAML contract.
-2. Feed `spec.md` + input artifacts to `speckit-plan` → produces `plan.md`. Verify the plan respects delivery slice ordering.
-3. Feed `plan.md` + input artifacts to `speckit-tasks` → produces `tasks.md`. Verify tasks are granular, ordered by dependency, and file-scoped.
+`bootstrap` | `resume` | `confirm_to_dev` | `blocker_recovery` | `completed`
 
-**After each Spec Kit step:**
-- `spec.md` generated → audit against YAML contract screen states → set `spec_ready`.
-- `plan.md` generated → audit against delivery slice ordering → set `plan_ready`.
-- `tasks.md` generated → audit task granularity and dependency order → set `tasks_ready`.
+Checkpoints: CP-DESIGN (design approval), CP-001 (pre-dev), CP-002 (hard blocker, only when no runnable items remain).
 
-**Pause:** After `tasks_ready`, confirm with the user before starting implementation.
+## Completion
 
-### Stage 4: Implementation
-
-**When to run:** for each sub-requirement at `tasks_ready`.
-
-**Slice execution order:** determined from `section-map.json`. Execute `shared-shell` units first, then `page` units, then `modal` units (each after its trigger page). A unit starts only when all its structural dependencies are `merged`.
-
-**Implement each slice using the Superpowers development suite:**
-
-1. **Create worktree** — `superpowers:using-git-worktrees`: creates an isolated worktree for the slice (or verifies an existing one). One worktree per slice ensures clean isolation from other in-progress work.
-
-2. **Plan subagent dispatch** — `superpowers:dispatching-parallel-agents`: analyze the slice's tasks and identify which can run in parallel. Only dispatch when at least two tasks are independent and their dependencies are satisfied. Main session owns dependency analysis and dispatch decisions.
-
-3. **Execute with subagents** — `superpowers:subagent-driven-development`: each parallel task runs in its own subagent. Each subagent follows TDD internally via `superpowers:test-driven-development` (write failing test → implement → verify). At most two active subagents at a time. Subagents never advance gates, decide blockers, or merge changes.
-
-4. **Code review** — `superpowers:requesting-code-review`: review all changes produced by subagents. First failure enters auto-fix loop (return to subagent with review feedback) before escalating to the user. Review checks: contract compliance, test coverage, edge cases, regressions.
-
-5. **Visual acceptance** (UI slices only) — compare implementation screenshot side-by-side against YAML contract screen states. First failure enters auto-fix loop. Only set `visual_acceptance_passed` when screenshots match.
-
-6. **Verification** — `superpowers:verification-before-completion`: final integration checks — all tests pass, no regressions, contract fidelity confirmed, merge readiness verified.
-
-7. **Full analyze + full test** — run the project's full static analysis and test suite. Both must pass clean before merge. UI slices: also run visual regression tests if configured. A single failing check blocks the merge — return to the failing task for auto-fix, then re-run this step from scratch.
-
-8. **Finish branch** — `superpowers:finishing-a-development-branch`: clean up, final diff review, prepare for merge. Rebase worktree branch onto development branch (no merge commits).
-
-Set `in_dev` when implementation starts.
-Set `visual_acceptance_passed` after screenshot matches YAML (UI slices only; non-UI skip).
-Set `merged` after rebase.
-
-**Subagent rules (implementation only — never for gate decisions):**
-- Use subagents only when at least two independent runnable tasks exist inside the current slice.
-- Each task's dependencies must be satisfied before dispatch.
-- At most two active subagents at a time.
-- Main session owns: dependency analysis, worktree ordering, blocker classification, merge readiness.
-
-### Stage 5: Completion
-
-All slices `merged` → requirement complete. Update requirement-level status. No closing ceremony.
-
-## Blocker Catalog
-
-When a blocker occurs in any stage, record the narrowest matching blocker, move to the next runnable sub-requirement, and only pause the entire requirement when all sub-requirements are blocked.
-
-### Requirement Breakdown Blockers
-
-| Blocker | Trigger |
-|---|---|
-| `blocked_missing_requirement` | A critical business fact is missing from the source |
-| `blocked_requirement_conflict` | Two approved sources contradict each other |
-| `blocked_dependency` | An upstream sub-requirement is not yet ready |
-
-### UI Truth Mapping Blockers
-
-| Blocker | Trigger |
-|---|---|
-| `blocked_missing_design` | Required visual carrier is missing from design evidence |
-| `blocked_requirement_figma_conflict` | Requirement and visual truth disagree irreconcilably |
-| `blocked_figma_conflict` | Design evidence contradicts itself across providers |
-| `blocked_missing_state_code` | A final screen state lacks structured frame evidence |
-| `blocked_missing_visual_truth` | Missing default state, row composition, parent shell, or key asset |
-| `blocked_verification_failure` | Executable node cannot be validated from evidence |
-
-### Spec Kit & Implementation Blockers
-
-| Blocker | Trigger |
-|---|---|
-| `blocked_spec_mismatch` | Official spec output conflicts with governed truth |
-| `blocked_dependency_slice` | Upstream slice not yet merged |
-| `blocked_merge_conflict` | Rebase/integration failed |
-| `blocked_verification_failure` | Tests, review, or visual acceptance failed after auto-fix |
-
-### Blocker Recovery
-
-When a blocker is entered, update the sub-requirement's entry in `status.json`:
-```json
-{ "status": "blocked_missing_design", "detail": "Figma file lacks the confirmation dialog frame", "blocked_from_status": "acceptance_frozen", "blocker_scope": "slice_local", "resume_target_status": "acceptance_frozen", "notes": null }
-```
-
-When the user resolves the blocker, resume from `resume_target_status`.
-
-**Narrowest-blocker rule:** always choose the most specific blocker. Prefer `blocked_missing_state_code` over `blocked_missing_design`. Prefer `blocked_requirement_figma_conflict` over `blocked_missing_visual_truth`. Never promote a slice-local blocker to requirement-wide unless every runnable queue item across all slices is blocked.
-
-## Pause Points
-
-Only two explicit pauses:
-1. **After breakdown decision** — confirm the split plan (or skip) with the user
-2. **After tasks_ready** — confirm before starting implementation
-
-All other transitions are automatic.
-
-## API Policy
-
-API docs are passed directly to implementation as reference material. There is no separate API contract mapping stage. API gaps are recorded as `integration_deferred` — they do not block UI mapping or page-state implementation. Only block when missing API truth prevents identifying the visual carrier itself.
-
-## Non-UI Sub-Requirements
-
-Non-UI sub-requirements (`contains_infra_only: true` or `contains_page_states: false`):
-- Skip UI Truth Mapping (no `acceptance_frozen` gate).
-- Proceed directly from `split_ready` to Spec Kit Pipeline.
-- Skip visual acceptance gate — merge after code review and verification.
+All executable subreqs `merged` → requirement complete. No closing ceremony.

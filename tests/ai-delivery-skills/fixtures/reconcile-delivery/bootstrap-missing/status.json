@@ -1,0 +1,7 @@
+{
+  "requirement_id": "bootstrap-missing",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "bootstrap",
+  "sub_requirements": {}
+}

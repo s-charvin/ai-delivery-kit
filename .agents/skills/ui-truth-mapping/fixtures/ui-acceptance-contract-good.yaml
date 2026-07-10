@@ -1,0 +1,103 @@
+version: 1
+contract_id: "fixture-login-page"
+
+source:
+  requirement: "requirement-slice.md"
+  design_file: "fixture-file-key"
+  root_node: "1:100"
+  cache: ".ai-delivery/figma-cache/fixture-login-page"
+
+states:
+  - id: "idle"
+    source_node: "1:200"
+
+background:
+  color: "#F2F7FA"
+  image: null
+
+regions:
+  - id: "header-region"
+    name: "Header"
+    source_node: "1:201"
+    safe_area: "top"
+    anchor:
+      - to: "screen_start"
+        direction: "start"
+        offset: "0px"
+        note: null
+      - to: "screen_end"
+        direction: "end"
+        offset: "0px"
+        note: null
+      - to: "screen_top"
+        direction: "top"
+        offset: "0px"
+        note: null
+      - to: "screen_bottom"
+        direction: "bottom"
+        offset: "auto"
+        note: "fills remaining page height below header"
+    layout:
+      direction: "vertical"
+      align: "stretch"
+      gap: "0px"
+    box:
+      width: "fill"
+      height: "auto"
+      padding: { top: 0, right: 16, bottom: 0, left: 16 }
+    background:
+      color: null
+      image: null
+    children:
+      - id: "title-text"
+        type: "text"
+        name: "Title"
+        source_node: "1:202"
+        visible_when: null
+        description: null
+        anchor:
+          - to: "header-region"
+            direction: "start"
+            offset: "0px"
+            note: null
+          - to: "header-region"
+            direction: "end"
+            offset: "0px"
+            note: null
+          - to: "header-region"
+            direction: "top"
+            offset: "0px"
+            note: null
+          - to: "header-region"
+            direction: "bottom"
+            offset: "0px"
+            note: null
+        layout:
+          direction: "none"
+          align: "center"
+          gap: "0px"
+        box:
+          width: "auto"
+          height: "auto"
+          padding: { top: 0, right: 0, bottom: 0, left: 0 }
+        background:
+          color: null
+          border: { radius: 0, width: 0, color: null }
+          shadow: null
+          opacity: 1.0
+        text: "Sign in"
+        font:
+          family: "Inter"
+          size: "24px"
+          weight: "600"
+          color: "#111111"
+          height: "32px"
+          align: "center"
+        icon: null
+        image: null
+        interaction:
+          on: null
+          action: null
+          note: null
+        states: {}
+        children: []

@@ -3,8 +3,8 @@
   "_description": "需求级别的单文件状态追踪。每个子需求独立追踪自身状态、阻塞详情和恢复目标。",
 
   "_status_meanings": {
-    "draft": "刚创建，边界不确定 — 源覆盖、摘录或依赖尚不完整",
-    "split_ready": "完整的源覆盖、逐字摘录、明确的范围和依赖 — 已准备好进入下一阶段",
+    "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
+    "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
     "acceptance_frozen": "YAML 契约已冻结，所有屏幕状态有源依据（仅 UI 子需求；非 UI 子需求跳过此状态）",
     "spec_ready": "spec.md 已生成并对照契约审计通过",
     "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
@@ -35,15 +35,16 @@
 
   "_checkpoints": {
     "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
-    "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。"
+    "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
+    "CP-DESIGN": "design_approval — 方案设计已通过 brainstorming 并获得用户批准，方可进入 speckit-*"
   },
 
   "_runtime_modes": {
-    "bootstrap": "todo.md 缺失或需求包不完整，无法安全推导队列 — 从第一个受管控阶段开始构建",
-    "resume": "todo.md 存在，无检查点主动阻止运行，对账后至少还有一个未解决或可运行的队列项",
-    "confirm_to_dev": "todo.md 存在，current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
-    "blocker_recovery": "todo.md 存在，current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
-    "completed": "delivery-slices/index.json 中所有可执行切片均已 merged"
+    "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
+    "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
+    "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
+    "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
+    "completed": "所有可执行 sub_requirements 均已 merged"
   },
 
   "requirement_id": "<req-id>",
@@ -58,6 +59,8 @@
       "blocked_from_status": null,
       "blocker_scope": null,
       "resume_target_status": null,
+      "ui_bearing": null,
+      "design_approved": false,
       "notes": null
     }
   }

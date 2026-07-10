@@ -1,0 +1,14 @@
+version: 1
+requirement_id: "fixture-login-page"
+
+screen:
+  visual_truth:
+    title: "Sign in"
+    layout_note: "horizontal icons in code baseline"
+
+code-baseline: "existing LoginStep uses row layout"
+
+states:
+  - id: "idle"
+
+regions: []

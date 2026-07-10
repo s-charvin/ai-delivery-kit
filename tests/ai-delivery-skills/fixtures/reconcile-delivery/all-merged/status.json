@@ -1,0 +1,28 @@
+{
+  "requirement_id": "all-merged",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "merged",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "ui_bearing": true,
+      "design_approved": true,
+      "notes": null
+    },
+    "SR-002": {
+      "status": "merged",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "ui_bearing": false,
+      "design_approved": true,
+      "notes": null
+    }
+  }
+}

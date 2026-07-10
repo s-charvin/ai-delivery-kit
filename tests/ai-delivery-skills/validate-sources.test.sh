@@ -53,6 +53,11 @@ VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delive
 
 zsh "$VALIDATE_SCRIPT"
 
+CONTRACT_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
+PRESSURE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
+zsh "$CONTRACT_TEST"
+zsh "$PRESSURE_TEST"
+
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
 
 require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"

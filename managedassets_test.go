@@ -15,8 +15,12 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml",
 		".agents/skills/ui-truth-mapping/templates/section-map-template.json",
 		"scripts/validate-project-ai-delivery-skills.sh",
+		"scripts/validate-ui-contract.py",
+		"scripts/validate-delivery-status.py",
 		"tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
 		"tests/ai-delivery-skills/validate-sources.test.sh",
+		"tests/ai-delivery-skills/ui-contract-validator.test.sh",
+		"tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh",
 	}
 
 	for _, path := range required {

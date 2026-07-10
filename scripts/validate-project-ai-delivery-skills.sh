@@ -148,15 +148,20 @@ validate_managed_contract() {
   local readme_file=""
   local validate_script
   local validate_test
+  local contract_validator_test
   local bootstrap_script=""
   local ci_workflow=""
   local release_workflow=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
   validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
+  contract_validator_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
+  pressure_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
 
   require_file "$validate_script"
   require_file "$validate_test"
+  require_file "$contract_validator_test"
+  require_file "$pressure_test"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
     readme_file="$ROOT/README.md"
@@ -224,11 +229,18 @@ validate_requirement_breakdown_skill() {
 
 validate_ui_truth_mapping_skill() {
   local skill_file="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
+  local contract_validator
+  local good_fixture
+  local bad_fixture
+  local section_map_fixture
 
   validate_skill_local_assets \
     ui-truth-mapping \
     templates/ui-acceptance-contract-template.yaml \
-    templates/section-map-template.json
+    templates/section-map-template.json \
+    fixtures/ui-acceptance-contract-good.yaml \
+    fixtures/ui-acceptance-contract-bad.yaml \
+    fixtures/section-map-good.json
 
   require_contains "$skill_file" 'requirement-slice'
   require_contains "$skill_file" 'Figma'
@@ -236,22 +248,60 @@ validate_ui_truth_mapping_skill() {
   require_contains "$skill_file" 'section-map'
   require_contains "$skill_file" 'Do not invent visual truth'
   require_contains "$skill_file" 'screen state'
+  require_contains "$skill_file" 'Preflight'
+  require_contains "$skill_file" 'Anti-patterns'
+  require_contains "$skill_file" 'validate-ui-contract.py'
+
+  contract_validator=$(resolve_managed_asset_path "scripts/validate-ui-contract.py")
+  good_fixture="$SKILL_ROOT/ui-truth-mapping/fixtures/ui-acceptance-contract-good.yaml"
+  bad_fixture="$SKILL_ROOT/ui-truth-mapping/fixtures/ui-acceptance-contract-bad.yaml"
+  section_map_fixture="$SKILL_ROOT/ui-truth-mapping/fixtures/section-map-good.json"
+
+  require_file "$contract_validator"
+  require_file "$good_fixture"
+  require_file "$bad_fixture"
+  require_file "$section_map_fixture"
+
+  python3 -c 'import yaml' 2>/dev/null || python3 -m pip install pyyaml -q || pip3 install pyyaml -q || fail "PyYAML is required for ui contract validation"
+
+  python3 "$contract_validator" "$good_fixture" --section-map "$section_map_fixture" >/dev/null \
+    || fail "Good ui contract fixture must pass validation"
+
+  if python3 "$contract_validator" "$bad_fixture" >/dev/null 2>&1; then
+    fail "Bad ui contract fixture must fail validation"
+  fi
 }
 
 validate_orchestrator_skill() {
   local skill_file="$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
+  local reconcile_script="$SKILL_ROOT/ai-delivery-orchestrator/scripts/reconcile-delivery.py"
 
   validate_skill_local_assets \
     ai-delivery-orchestrator \
-    templates/status-template.json
+    templates/status-template.json \
+    templates/todo-template.md \
+    references/handoff-table.md \
+    references/reconcile-rules.md \
+    scripts/reconcile-delivery.py
 
-  require_contains "$skill_file" 'Runtime Modes'
-  require_contains "$skill_file" 'tasks_ready_user_confirmation'
+  require_contains "$skill_file" 'Runtime modes'
+  require_contains "$skill_file" 'reconcile-delivery.py'
+  require_contains "$skill_file" 'handoff-table'
+  require_contains "$skill_file" 'design_approved'
+  require_contains "$skill_file" 'Light audit'
+  require_contains "$skill_file" 'CP-001'
   require_contains "$skill_file" 'visual_acceptance_passed'
   require_contains "$skill_file" 'create req-'
   require_contains "$skill_file" 'human confirmation'
   require_contains "$skill_file" 'blocker_scope'
-  require_contains "$skill_file" 'runnable queue'
+  require_contains "$skill_file" 'runnable'
+  require_contains "$skill_file" 'validate-ui-contract.py'
+  require_contains "$skill_file" 'blocked_verification_failure'
+  require_contains "$skill_file" 'subagent-driven-development'
+
+  require_file "$reconcile_script"
+  python3 "$reconcile_script" /tmp/nonexistent-status-for-bootstrap-test.json 2>/dev/null | grep -q 'RUNTIME_MODE=bootstrap' \
+    || fail "reconcile-delivery.py must emit bootstrap for missing status"
 }
 
 ROOT=$(resolve_repo_root)

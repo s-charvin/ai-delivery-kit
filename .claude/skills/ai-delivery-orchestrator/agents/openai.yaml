@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI Delivery Orchestrator"
+  short_description: "Single entry point for requirement-to-implementation delivery"
+  default_prompt: "Use $ai-delivery-orchestrator to drive this requirement from analysis through UI mapping to Spec Kit implementation. Auto-decide if breakdown is needed."
