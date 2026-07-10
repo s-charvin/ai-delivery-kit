@@ -35,6 +35,7 @@ type Result struct {
 	Bootstrapped   bool
 	RanSpecifyInit bool
 	Upgraded       bool
+	IDEGateAmend   bootstrap.AmendReport
 }
 
 type Service struct {
@@ -138,16 +139,19 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	if bootstrapper == nil {
 		bootstrapper = bootstrap.Engine{}
 	}
+	amendReport := bootstrap.AmendReport{}
 	if err := bootstrapper.Run(bootstrap.Config{
 		RepoRoot:           info.Root,
 		ProjectID:          projectID,
 		MainBranch:         mainBranch,
 		AllowManagedUpdate: input.Upgrade,
+		Report:             &amendReport,
 	}); err != nil {
 		return Result{}, err
 	}
 	result.Bootstrapped = true
 	result.Upgraded = input.Upgrade
+	result.IDEGateAmend = amendReport
 
 	if !info.HasSpecify && (hasSpecify || specifyInstalledNow) {
 		preferredAI := prereq.DetectPreferredAI(os.Getenv("AI_DELIVERY_IDE"), s.HomeDir, s.StatPath)
@@ -160,9 +164,13 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 				return Result{}, err
 			}
 			result.RanSpecifyInit = true
-			// specify init may overwrite .claude/settings.json; restore IDE gates via merge.
-			if err := bootstrap.ReapplyIDEGates(info.Root); err != nil {
+			// specify init 可能覆盖 .claude/settings.json；合并恢复门禁并备份。
+			reapplyReport, err := bootstrap.ReapplyIDEGates(info.Root, nil)
+			if err != nil {
 				return Result{}, err
+			}
+			if !reapplyReport.Empty() {
+				result.IDEGateAmend = reapplyReport
 			}
 		}
 	}

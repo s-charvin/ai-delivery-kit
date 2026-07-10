@@ -19,6 +19,8 @@ type Config struct {
 	ProjectID          string
 	MainBranch         string
 	AllowManagedUpdate bool
+	// Report 若非 nil，Run 会填入本次 IDE gate amend/备份结果。
+	Report *AmendReport
 }
 
 type Engine struct {
@@ -41,6 +43,12 @@ func (e Engine) Run(cfg Config) error {
 		}
 	}
 
+	report := cfg.Report
+	if report == nil {
+		report = &AmendReport{}
+	}
+	session := newAmendSession(cfg.RepoRoot, e.Now, report)
+
 	for _, asset := range Manifest() {
 		target := filepath.Join(cfg.RepoRoot, filepath.FromSlash(asset.Target))
 		if asset.Kind == "dir" {
@@ -49,7 +57,7 @@ func (e Engine) Run(cfg Config) error {
 			}
 			continue
 		}
-		if err := copyEmbeddedFile(asset.Source, target); err != nil {
+		if err := copyEmbeddedFile(asset.Source, target, session); err != nil {
 			return err
 		}
 	}
@@ -208,17 +216,20 @@ func copyEmbeddedDir(source, target string) error {
 			return os.MkdirAll(destination, 0o755)
 		}
 
-		return copyEmbeddedFile(path, destination)
+		return copyEmbeddedFile(path, destination, nil)
 	})
 }
 
-func copyEmbeddedFile(source, target string) error {
+func copyEmbeddedFile(source, target string, session *amendSession) error {
 	body, err := kitassets.Embedded.ReadFile(source)
 	if err != nil {
 		return fmt.Errorf("read embedded asset %s: %w", source, err)
 	}
 	if isAmendableJSONTarget(source) {
-		return writeAmendableJSON(target, body)
+		if session == nil {
+			return fmt.Errorf("amendable JSON requires session: %s", source)
+		}
+		return session.writeAmendableJSON(source, target, body)
 	}
 
 	mode := fileModeForTarget(target)
@@ -231,47 +242,46 @@ func copyEmbeddedFile(source, target string) error {
 	return nil
 }
 
-// ReapplyIDEGates restores Cursor/Claude/Codex gate assets after tools like
-// specify init may have overwritten project IDE config. Amendable JSON configs
-// are merged; owned scripts/rules are rewritten.
-//
-// If repoRoot does not exist, this is a no-op. That protects unit tests with
-// synthetic roots and avoids creating accidental directory trees.
-func ReapplyIDEGates(repoRoot string) error {
+// ReapplyIDEGates 在 specify init 等可能覆盖 IDE 配置后，重新下发门禁资产。
+// amendable JSON 走合并+备份；自有 scripts/rules 直接覆盖。
+// repoRoot 不存在时 no-op，避免合成路径污染工作区。
+func ReapplyIDEGates(repoRoot string, now func() time.Time) (AmendReport, error) {
+	report := AmendReport{}
 	if repoRoot == "" {
-		return fmt.Errorf("reapply IDE gates requires a repo root")
+		return report, fmt.Errorf("reapply IDE gates requires a repo root")
 	}
 	root := filepath.Clean(repoRoot)
 	if !filepath.IsAbs(root) {
 		abs, err := filepath.Abs(root)
 		if err != nil {
-			return err
+			return report, err
 		}
 		root = abs
 	}
 	st, err := os.Stat(root)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return nil
+			return report, nil
 		}
-		return fmt.Errorf("stat repo root %s: %w", root, err)
+		return report, fmt.Errorf("stat repo root %s: %w", root, err)
 	}
 	if !st.IsDir() {
-		return fmt.Errorf("reapply IDE gates: %s is not a directory", root)
+		return report, fmt.Errorf("reapply IDE gates: %s is not a directory", root)
 	}
+	session := newAmendSession(root, now, &report)
 	for _, asset := range IDEGateAssets() {
 		target := filepath.Join(root, filepath.FromSlash(asset.Target))
 		if asset.Kind == "dir" {
 			if err := copyEmbeddedDir(asset.Source, target); err != nil {
-				return err
+				return report, err
 			}
 			continue
 		}
-		if err := copyEmbeddedFile(asset.Source, target); err != nil {
-			return err
+		if err := copyEmbeddedFile(asset.Source, target, session); err != nil {
+			return report, err
 		}
 	}
-	return nil
+	return report, nil
 }
 
 func seedFileIfMissing(target string, body []byte, mode os.FileMode) error {
