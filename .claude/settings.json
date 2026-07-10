@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-ui-contract.sh\"",
+            "timeout": 60,
+            "statusMessage": "Validating UI acceptance contract"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -160,6 +160,10 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 				return Result{}, err
 			}
 			result.RanSpecifyInit = true
+			// specify init may overwrite .claude/settings.json; restore IDE gates via merge.
+			if err := bootstrap.ReapplyIDEGates(info.Root); err != nil {
+				return Result{}, err
+			}
 		}
 	}
 

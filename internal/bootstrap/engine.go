@@ -217,12 +217,59 @@ func copyEmbeddedFile(source, target string) error {
 	if err != nil {
 		return fmt.Errorf("read embedded asset %s: %w", source, err)
 	}
+	if isAmendableJSONTarget(source) {
+		return writeAmendableJSON(target, body)
+	}
+
 	mode := fileModeForTarget(target)
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return fmt.Errorf("create parent for %s: %w", target, err)
 	}
 	if err := os.WriteFile(target, body, mode); err != nil {
 		return fmt.Errorf("write %s: %w", target, err)
+	}
+	return nil
+}
+
+// ReapplyIDEGates restores Cursor/Claude/Codex gate assets after tools like
+// specify init may have overwritten project IDE config. Amendable JSON configs
+// are merged; owned scripts/rules are rewritten.
+//
+// If repoRoot does not exist, this is a no-op. That protects unit tests with
+// synthetic roots and avoids creating accidental directory trees.
+func ReapplyIDEGates(repoRoot string) error {
+	if repoRoot == "" {
+		return fmt.Errorf("reapply IDE gates requires a repo root")
+	}
+	root := filepath.Clean(repoRoot)
+	if !filepath.IsAbs(root) {
+		abs, err := filepath.Abs(root)
+		if err != nil {
+			return err
+		}
+		root = abs
+	}
+	st, err := os.Stat(root)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("stat repo root %s: %w", root, err)
+	}
+	if !st.IsDir() {
+		return fmt.Errorf("reapply IDE gates: %s is not a directory", root)
+	}
+	for _, asset := range IDEGateAssets() {
+		target := filepath.Join(root, filepath.FromSlash(asset.Target))
+		if asset.Kind == "dir" {
+			if err := copyEmbeddedDir(asset.Source, target); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := copyEmbeddedFile(asset.Source, target); err != nil {
+			return err
+		}
 	}
 	return nil
 }

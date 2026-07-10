@@ -1,5 +1,6 @@
 #!/bin/bash
-# Cursor adapter: delegates to the shared UI contract gate.
+# Claude Code adapter: delegates to the shared UI contract gate.
+# Wired via .claude/settings.json PostToolUse (Edit|Write).
 set -euo pipefail
 ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
 SHARED="$ROOT/.ai-delivery/scripts/hooks/validate-ui-contract.sh"
