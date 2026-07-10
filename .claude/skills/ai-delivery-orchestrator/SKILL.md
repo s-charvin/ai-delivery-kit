@@ -21,7 +21,7 @@ Requirement → [Breakdown?] → UI Truth → Design → Spec Kit → SDD Implem
 | 3b | `speckit-specify` → `plan` → `tasks` | `spec/plan/tasks_ready` |
 | 4 | Superpowers SDD suite | `visual_acceptance_passed` → `merged` |
 
-Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-speckit.md](references/stage-design-and-speckit.md), [stage-implementation.md](references/stage-implementation.md).
+Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-speckit.md](references/stage-design-and-speckit.md), [stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md), [stage-implementation.md](references/stage-implementation.md).
 
 ## State model
 
@@ -80,6 +80,7 @@ Each stage has one legal next skill. Full table: [references/handoff-table.md](r
 - Do not let UI slices claim `merged` before `visual_acceptance_passed`.
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per SDD).
+- Do not invoke `writing-plans` or write design docs under `docs/superpowers/` during orchestrator design mode; store design summary in subreq `notes`.
 - Do not fork official `speckit-*` skills.
 - Do not set `acceptance_frozen` until `scripts/validate-ui-contract.py` exits 0 for every UI contract.
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
@@ -132,11 +133,12 @@ API docs pass directly to Spec Kit and implementation. Gaps → `integration_def
 | New requirement + sources | `bootstrap` or `resume` |
 | Continue orchestrating | `resume` |
 | tasks_ready, proceed to dev | `confirm_to_dev` (CP-001) |
+| Design pending approval | `confirm_design` (CP-DESIGN) |
 | Blocker resolved | `blocker_recovery` (CP-002) |
 
 ## Runtime modes
 
-`bootstrap` | `resume` | `confirm_to_dev` | `blocker_recovery` | `completed`
+`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `completed`
 
 Checkpoints: CP-DESIGN (design approval), CP-001 (pre-dev), CP-002 (hard blocker, only when no runnable items remain).
 

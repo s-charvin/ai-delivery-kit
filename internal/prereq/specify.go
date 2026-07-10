@@ -1,11 +1,49 @@
 package prereq
 
-import "runtime"
+import (
+	"os"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
 
 const (
 	SpecKitInstallDocsURL = "https://github.com/github/spec-kit/blob/main/docs/installation.md"
 	SpecKitGitRef         = "git+https://github.com/github/spec-kit.git"
 )
+
+func DetectPreferredAI(aiDeliveryIDE, homeDir string, statPath func(string) error) string {
+	ide := strings.ToLower(strings.TrimSpace(aiDeliveryIDE))
+	if ide == "" {
+		ide = strings.ToLower(strings.TrimSpace(os.Getenv("AI_DELIVERY_IDE")))
+	}
+
+	switch ide {
+	case "claude", "cursor", "codex":
+		return ide
+	case "all", "":
+		// fall through to probe
+	default:
+		// unknown value — probe then default
+	}
+
+	if statPath == nil {
+		statPath = func(path string) error {
+			_, err := os.Stat(path)
+			return err
+		}
+	}
+
+	if homeDir != "" {
+		for _, candidate := range SupportedIDEs {
+			if statPath(filepath.Join(homeDir, "."+candidate, "skills")) == nil {
+				return candidate
+			}
+		}
+	}
+
+	return "codex"
+}
 
 func DetectSpecify(input StatusInput) ToolPlan {
 	base := ToolPlan{
@@ -39,9 +77,13 @@ func DetectSpecify(input StatusInput) ToolPlan {
 	return base
 }
 
-func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool, goos string) []string {
+func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool, goos string, ai string) []string {
 	if hasSpecifyDir {
 		return nil
+	}
+	preferredAI := strings.TrimSpace(ai)
+	if preferredAI == "" {
+		preferredAI = "codex"
 	}
 	command := []string{
 		"specify",
@@ -49,7 +91,7 @@ func BuildSpecifyInitCommand(hasSpecifyDir bool, useAISkills bool, goos string) 
 		"--here",
 		"--force",
 		"--ai",
-		"codex",
+		preferredAI,
 	}
 	if useAISkills {
 		command = append(command, "--ai-skills")

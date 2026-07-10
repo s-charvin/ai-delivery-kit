@@ -200,7 +200,12 @@ function Install-UserSkills {
   $skillsSrc = Join-Path $skillsDir ".agents\skills"
 
   if (Test-Path (Join-Path $skillsDir ".git")) {
-    Write-Log "Skills repo already exists at $skillsDir (git pull to update)"
+    Write-Log "Updating skills repo at $skillsDir"
+    try {
+      git -C $skillsDir pull --ff-only | Out-Null
+    } catch {
+      Write-Warning "git pull --ff-only failed; continuing with existing checkout"
+    }
   } else {
     Write-Log "Cloning skills repo to $skillsDir"
     git clone "https://github.com/s-charvin/ai-delivery-kit.git" $skillsDir

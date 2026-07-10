@@ -1,0 +1,18 @@
+{
+  "requirement_id": "confirm-to-dev",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "current_checkpoint": "CP-001",
+  "runtime_mode": "confirm_to_dev",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "tasks_ready",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "ui_bearing": true,
+      "design_approved": true,
+      "notes": null
+    }
+  }
+}

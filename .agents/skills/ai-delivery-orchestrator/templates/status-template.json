@@ -42,6 +42,7 @@
   "_runtime_modes": {
     "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
     "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
+    "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需 brainstorming 设计批准后方可进入 speckit-*",
     "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
     "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
     "completed": "所有可执行 sub_requirements 均已 merged"

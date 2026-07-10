@@ -17,6 +17,10 @@ assert_file_contains() {
   grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
 }
 
+assert_install_script_pulls_existing_repo() {
+  assert_file_contains "$INSTALL_SCRIPT" 'git -C "$skills_repo_dir" pull --ff-only'
+}
+
 assert_file_not_contains() {
   local file=$1
   local needle=$2
@@ -25,6 +29,10 @@ assert_file_not_contains() {
     fail "did not expect '$needle' in $file"
   fi
 }
+
+[[ -f "$INSTALL_SCRIPT" ]] || fail "missing install script"
+
+assert_install_script_pulls_existing_repo
 
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-install-script.XXXXXX")
 INSTALL_DIR="$TEMP_DIR/bin"

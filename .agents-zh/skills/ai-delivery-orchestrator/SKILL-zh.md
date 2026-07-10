@@ -21,7 +21,7 @@ description: 当需求文档需要经 Figma UI 契约、Spec Kit 与合并门禁
 | 3b | `speckit-specify` → `plan` → `tasks` | `spec/plan/tasks_ready` |
 | 4 | Superpowers SDD 套件 | `visual_acceptance_passed` → `merged` |
 
-阶段细节：[references/stage-breakdown.md](references/stage-breakdown.md)、[stage-ui-truth.md](references/stage-ui-truth.md)、[stage-design-and-speckit.md](references/stage-design-and-speckit.md)、[stage-implementation.md](references/stage-implementation.md)。
+阶段细节：[references/stage-breakdown.md](references/stage-breakdown.md)、[stage-ui-truth.md](references/stage-ui-truth.md)、[stage-design-and-speckit.md](references/stage-design-and-speckit.md)、[stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md)、[stage-implementation.md](references/stage-implementation.md)。
 
 ## 状态模型
 
@@ -46,7 +46,7 @@ draft → split_ready → acceptance_frozen → spec_ready → plan_ready → ta
 每次恢复或继续前，在信任 `todo.md` 之前运行对账：
 
 ```bash
-python3 .agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
@@ -80,6 +80,7 @@ python3 .agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py
 - UI 切片未 `visual_acceptance_passed` 不得声称 `merged`。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按 SDD）。
+- 编排器设计模式不要 invoke `writing-plans`，不要在 `docs/superpowers/` 写设计文档；设计摘要存入子需求 `notes`。
 - 不要 fork 官方 `speckit-*` 技能。
 - 所有 UI 契约 `scripts/validate-ui-contract.py` 退出 0 之前，不得设置 `acceptance_frozen`。
 - UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且契约仍通过时，不得 `merged`。
@@ -132,11 +133,12 @@ API 文档直接传给 Spec Kit 与实现。缺口写入 `notes` 的 `integratio
 | 新需求 + 素材 | `bootstrap` 或 `resume` |
 | 继续编排 | `resume` |
 | tasks_ready，进入开发 | `confirm_to_dev`（CP-001） |
+| 设计待批准 | `confirm_design`（CP-DESIGN） |
 | 阻塞已解决 | `blocker_recovery`（CP-002） |
 
 ## 运行时模式
 
-`bootstrap` | `resume` | `confirm_to_dev` | `blocker_recovery` | `completed`
+`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `completed`
 
 检查点：CP-DESIGN（设计批准）、CP-001（开发前）、CP-002（硬阻塞，仅当无可运行项）。
 

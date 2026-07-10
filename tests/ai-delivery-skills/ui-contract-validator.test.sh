@@ -2,7 +2,12 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+
+if ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
+  :
+else
+  ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+fi
 
 fail() {
   print -u2 -- "[ui-contract-validator-test] $1"
@@ -15,8 +20,13 @@ require_python_yaml() {
   }
 }
 
-VALIDATOR="$ROOT/scripts/validate-ui-contract.py"
-STATUS_VALIDATOR="$ROOT/scripts/validate-delivery-status.py"
+if [[ -f "$ROOT/managedassets.go" ]]; then
+  VALIDATOR="$ROOT/scripts/validate-ui-contract.py"
+  STATUS_VALIDATOR="$ROOT/scripts/validate-delivery-status.py"
+else
+  VALIDATOR="$ROOT/.ai-delivery/scripts/validate-ui-contract.py"
+  STATUS_VALIDATOR="$ROOT/.ai-delivery/scripts/validate-delivery-status.py"
+fi
 GOOD="$ROOT/.agents/skills/ui-truth-mapping/fixtures/ui-acceptance-contract-good.yaml"
 BAD="$ROOT/.agents/skills/ui-truth-mapping/fixtures/ui-acceptance-contract-bad.yaml"
 SECTION_MAP="$ROOT/.agents/skills/ui-truth-mapping/fixtures/section-map-good.json"
@@ -40,6 +50,7 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 mkdir -p "$TMP_DIR/sub-requirements/sr-login"
 cp "$GOOD" "$TMP_DIR/sub-requirements/sr-login/ui-acceptance-contract.yaml"
 cp "$SECTION_MAP" "$TMP_DIR/sub-requirements/sr-login/section-map.json"
+echo '# visual acceptance evidence' >"$TMP_DIR/sub-requirements/sr-login/visual-acceptance.md"
 
 cat >"$TMP_DIR/status.json" <<'EOF'
 {

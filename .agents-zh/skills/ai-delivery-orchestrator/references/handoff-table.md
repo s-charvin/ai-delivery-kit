@@ -25,11 +25,11 @@
 | `acceptance_frozen` | true | true | `speckit-specify` |
 | `spec_ready` | 任意 | true | `speckit-plan` |
 | `plan_ready` | 任意 | true | `speckit-tasks` |
-| `tasks_ready` | 任意 | true |（等待 CP-001 或 Stage 4）|
+| `tasks_ready` | 任意 | true |（等待 CP-001；确认后对账输出 `using-git-worktrees`）|
 | `in_dev` | 任意 | true | `subagent-driven-development` |
 | `visual_acceptance_passed` | true | true | `finishing-a-development-branch` |
 | `merged` | 任意 | 任意 | 无 |
-| `blocked_*` | 任意 | 任意 | 先解决阻塞；继续其他可运行子需求 |
+| `blocked_*` | 任意 | 任意 | `NEXT_SKILL=none`；先解决阻塞；继续其他可运行子需求 |
 
 ## 设计批准
 

@@ -5,8 +5,18 @@ set -euo pipefail
 # This test encodes the failure mode as mechanical rejection, not agent behavior replay.
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
-VALIDATOR="$ROOT/scripts/validate-ui-contract.py"
+
+if ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
+  :
+else
+  ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+fi
+
+if [[ -f "$ROOT/managedassets.go" ]]; then
+  VALIDATOR="$ROOT/scripts/validate-ui-contract.py"
+else
+  VALIDATOR="$ROOT/.ai-delivery/scripts/validate-ui-contract.py"
+fi
 BAD="$ROOT/.agents/skills/ui-truth-mapping/fixtures/ui-acceptance-contract-bad.yaml"
 
 fail() {

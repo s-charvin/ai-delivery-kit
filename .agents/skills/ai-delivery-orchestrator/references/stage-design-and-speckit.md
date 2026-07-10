@@ -8,6 +8,12 @@
 ## Brainstorming design (HARD-GATE)
 
 <HARD-GATE>
+Orchestrator design-mode: after brainstorming, do NOT invoke `writing-plans`.
+Do NOT write design docs under `docs/superpowers/`.
+Store summary in subreq `notes`; set `design_approved=true` only after user approval; then invoke `speckit-specify`.
+</HARD-GATE>
+
+<HARD-GATE>
 Do not invoke `speckit-specify`, `speckit-plan`, or `speckit-tasks` until brainstorming design is presented and the user explicitly approves it.
 </HARD-GATE>
 

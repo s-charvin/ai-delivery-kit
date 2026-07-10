@@ -79,7 +79,7 @@ Everything else should default to AI-driven progression through the orchestrated
 
 ## Exception Path
 
-Lower-level skills such as `requirement-breakdown`, `api-contract-mapping`, `ui-requirement-mapping`, `ui-acceptance-contract`, and `ui-interaction-design` can still be used directly when their prerequisites are already satisfied.
+Lower-level skills such as `requirement-breakdown` and `ui-truth-mapping` can still be used directly when their prerequisites are already satisfied. `ai-delivery-orchestrator` remains the default entry for new requirements.
 
 That path is for surgical recovery or expert use. It is not the normal entry for new requirements.
 

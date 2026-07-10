@@ -15,7 +15,7 @@
 ## 对账命令
 
 ```bash
-python3 .agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```

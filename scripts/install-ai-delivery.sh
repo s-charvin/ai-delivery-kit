@@ -391,7 +391,10 @@ install_user_skills() {
   local skills_repo_dir="${HOME}/ai-delivery-kit"
 
   if [[ -d "$skills_repo_dir/.git" ]]; then
-    log "Skills repo already exists at $skills_repo_dir (git pull to update)"
+    log "Updating skills repo at $skills_repo_dir"
+    if ! git -C "$skills_repo_dir" pull --ff-only; then
+      warn "git pull --ff-only failed; continuing with existing checkout"
+    fi
   else
     log "Cloning skills repo to $skills_repo_dir"
     git clone "$AI_DELIVERY_SKILLS_REPO" "$skills_repo_dir"

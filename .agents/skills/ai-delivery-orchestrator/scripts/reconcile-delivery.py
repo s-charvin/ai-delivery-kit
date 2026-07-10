@@ -11,18 +11,7 @@ from pathlib import Path
 
 TERMINAL_STATUSES = frozenset({"merged"})
 BLOCKED_PREFIX = "blocked_"
-
-STATUS_ORDER = [
-    "draft",
-    "split_ready",
-    "acceptance_frozen",
-    "spec_ready",
-    "plan_ready",
-    "tasks_ready",
-    "in_dev",
-    "visual_acceptance_passed",
-    "merged",
-]
+DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
 
 SKILL_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
     ("draft", None, False): "requirement-breakdown",
@@ -33,7 +22,7 @@ SKILL_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
     ("acceptance_frozen", True, True): "speckit-specify",
     ("spec_ready", None, True): "speckit-plan",
     ("plan_ready", None, True): "speckit-tasks",
-    ("tasks_ready", None, True): "stage-4-implementation",
+    ("tasks_ready", None, True): "using-git-worktrees",
     ("in_dev", None, True): "subagent-driven-development",
     ("visual_acceptance_passed", None, True): "finishing-a-development-branch",
 }
@@ -67,6 +56,19 @@ def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:
         return True
     status = entry.get("status", "")
     if status in {"acceptance_frozen", "visual_acceptance_passed"}:
+        return True
+    return False
+
+
+def needs_design_approval(entry: dict, ui_bearing: bool) -> bool:
+    if bool(entry.get("design_approved")):
+        return False
+    status = entry.get("status")
+    if not isinstance(status, str) or is_blocked(status):
+        return False
+    if status == "split_ready" and not ui_bearing:
+        return True
+    if status == "acceptance_frozen" and ui_bearing:
         return True
     return False
 
@@ -144,22 +146,15 @@ def next_skill_for_entry(entry: dict, ui_bearing: bool) -> str | None:
     if status == "split_ready":
         if ui_bearing:
             return SKILL_BY_STATUS[("split_ready", True, False)]
-        key = ("split_ready", False, design_approved)
-        return SKILL_BY_STATUS[key]
+        return SKILL_BY_STATUS[("split_ready", False, design_approved)]
 
     if status == "acceptance_frozen":
-        key = ("acceptance_frozen", True, design_approved)
-        return SKILL_BY_STATUS[key]
+        return SKILL_BY_STATUS[("acceptance_frozen", True, design_approved)]
 
     if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed"}:
         if not design_approved and status not in {"in_dev", "visual_acceptance_passed"}:
             return "superpowers:brainstorming"
-        for key_status in STATUS_ORDER:
-            if key_status == status:
-                for key, skill in SKILL_BY_STATUS.items():
-                    if key[0] == status:
-                        return skill
-        return None
+        return SKILL_BY_STATUS.get((status, None, True))
 
     return None
 
@@ -205,6 +200,7 @@ def reconcile(
             "checkpoint": None,
             "runnable": [],
             "blocked": [],
+            "blocker_scopes": [],
             "next_skill": "requirement-breakdown",
             "next_subreq": None,
             "errors": ["status.json missing"],
@@ -218,6 +214,7 @@ def reconcile(
             "checkpoint": None,
             "runnable": [],
             "blocked": [],
+            "blocker_scopes": [],
             "next_skill": "requirement-breakdown",
             "next_subreq": None,
             "errors": [f"cannot read status.json: {exc}"],
@@ -230,6 +227,7 @@ def reconcile(
             "checkpoint": status_data.get("current_checkpoint"),
             "runnable": [],
             "blocked": [],
+            "blocker_scopes": [],
             "next_skill": "requirement-breakdown",
             "next_subreq": None,
             "errors": [],
@@ -241,7 +239,9 @@ def reconcile(
     deps = load_dependency_graph(req_root)
     runnable: list[str] = []
     blocked: list[str] = []
+    blocker_scopes: list[str] = []
     actionable: list[tuple[str, str]] = []
+    design_pending: list[tuple[str, str]] = []
 
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
@@ -252,6 +252,9 @@ def reconcile(
 
         if is_blocked(status):
             blocked.append(f"{subreq_id}:{status}")
+            scope = entry.get("blocker_scope")
+            if isinstance(scope, str) and scope:
+                blocker_scopes.append(f"{subreq_id}:{scope}")
             continue
 
         if status in TERMINAL_STATUSES:
@@ -262,6 +265,11 @@ def reconcile(
 
         subreq_dir = req_root / "sub-requirements" / subreq_id
         ui_bearing = infer_ui_bearing(entry, subreq_dir)
+
+        if needs_design_approval(entry, ui_bearing):
+            design_pending.append((subreq_id, "superpowers:brainstorming"))
+            continue
+
         skill = next_skill_for_entry(entry, ui_bearing)
         if skill:
             runnable.append(f"{subreq_id}:{status}->{skill}")
@@ -280,34 +288,45 @@ def reconcile(
         for sid in executable
     ) if executable else False
 
+    all_tasks_ready = bool(executable) and all(
+        isinstance(sub_requirements.get(sid), dict)
+        and sub_requirements[sid].get("status") == "tasks_ready"
+        for sid in executable
+    )
+
     checkpoint = status_data.get("current_checkpoint")
-    stored_mode = status_data.get("runtime_mode")
 
     if all_merged and executable:
         runtime_mode = "completed"
-    elif checkpoint == "CP-001":
-        runtime_mode = "confirm_to_dev"
+        checkpoint = None
     elif checkpoint == "CP-002":
         runtime_mode = "blocker_recovery"
-    elif not runnable and blocked and not actionable:
-        runtime_mode = "blocker_recovery" if checkpoint == "CP-002" else stored_mode or "resume"
+    elif checkpoint == "CP-001" or all_tasks_ready:
+        runtime_mode = "confirm_to_dev"
+        if checkpoint != "CP-001":
+            checkpoint = "CP-001"
+    elif design_pending:
+        runtime_mode = "confirm_design"
+        checkpoint = "CP-DESIGN"
+    elif not runnable and blocked:
+        runtime_mode = "blocker_recovery"
+        checkpoint = checkpoint or "CP-002"
     else:
-        runtime_mode = stored_mode if stored_mode in {
-            "bootstrap",
-            "resume",
-            "confirm_to_dev",
-            "blocker_recovery",
-            "completed",
-        } else "resume"
+        runtime_mode = "resume"
 
     if runtime_mode == "completed":
-        next_skill = None
+        next_skill = "none"
         next_subreq = None
+    elif runtime_mode == "confirm_design" and design_pending:
+        next_subreq, next_skill = design_pending[0]
+    elif runtime_mode == "confirm_to_dev":
+        next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
+        next_skill = "using-git-worktrees" if checkpoint == "CP-001" else "none"
+    elif runtime_mode == "blocker_recovery":
+        next_skill = "none"
+        next_subreq = blocked[0].split(":", 1)[0] if blocked else None
     elif actionable:
         next_subreq, next_skill = actionable[0]
-    elif blocked:
-        next_skill = "blocker-recovery"
-        next_subreq = blocked[0].split(":", 1)[0]
     else:
         next_skill = "requirement-breakdown"
         next_subreq = next(iter(sub_requirements.keys()), None)
@@ -317,6 +336,7 @@ def reconcile(
         "checkpoint": checkpoint,
         "runnable": runnable,
         "blocked": blocked,
+        "blocker_scopes": blocker_scopes,
         "next_skill": next_skill,
         "next_subreq": next_subreq,
         "errors": errors,
@@ -329,6 +349,7 @@ def format_output(result: dict) -> str:
         f"CHECKPOINT={result['checkpoint']}",
         f"RUNNABLE={','.join(result['runnable']) if result['runnable'] else 'none'}",
         f"BLOCKED={','.join(result['blocked']) if result['blocked'] else 'none'}",
+        f"BLOCKER_SCOPES={','.join(result['blocker_scopes']) if result['blocker_scopes'] else 'none'}",
         f"NEXT_SKILL={result['next_skill']}",
         f"NEXT_SUBREQ={result['next_subreq']}",
     ]

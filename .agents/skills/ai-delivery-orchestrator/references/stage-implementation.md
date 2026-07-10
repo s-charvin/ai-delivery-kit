@@ -2,7 +2,9 @@
 
 ## When to run
 
-Each sub-requirement at `tasks_ready` after CP-001 user confirmation.
+Each sub-requirement at `tasks_ready` after CP-001 user confirmation. See [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md) for SDD mapping and progress ledger rules.
+
+**Do not dispatch before CP-001 is confirmed.**
 
 ## Slice execution order
 
@@ -32,7 +34,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 ## Status updates
 
 - `in_dev` when implementation starts.
-- `visual_acceptance_passed` after screenshot matches YAML (UI only).
+- `visual_acceptance_passed` after screenshot matches YAML (UI only). Write `visual-acceptance.md` or `visual-acceptance/*.png` before promoting this status.
 - `merged` after successful rebase.
 
 ## Progress ledger (optional)
@@ -50,3 +52,15 @@ Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to su
 ## Next handoff
 
 Slice complete → `finishing-a-development-branch` → `merged`. See [handoff-table.md](handoff-table.md).
+
+## Finishing / PR
+
+After `finishing-a-development-branch`:
+
+| Environment | Recommended next step |
+|-------------|----------------------|
+| Cursor | `cursor:babysit` — triage PR comments, fix CI, keep merge-ready |
+| Cursor (multi-slice) | Optional `cursor:split-to-prs` to split parallel slices into reviewable PRs |
+| Claude / Codex / manual | Open PR, watch CI, address review comments, re-run project validators until green |
+
+Babysit and split-to-prs are handoff recommendations, not hard gates.

@@ -25,11 +25,11 @@ Each stage has exactly one legal next skill. Do not improvise jumps.
 | `acceptance_frozen` | true | true | `speckit-specify` |
 | `spec_ready` | any | true | `speckit-plan` |
 | `plan_ready` | any | true | `speckit-tasks` |
-| `tasks_ready` | any | true | (await CP-001 or Stage 4) |
+| `tasks_ready` | any | true | (await CP-001; reconcile emits `using-git-worktrees` after confirm) |
 | `in_dev` | any | true | `subagent-driven-development` |
 | `visual_acceptance_passed` | true | true | `finishing-a-development-branch` |
 | `merged` | any | any | none |
-| `blocked_*` | any | any | resolve blocker first; continue other runnable subreqs |
+| `blocked_*` | any | any | `NEXT_SKILL=none`; resolve blocker; continue other runnable subreqs |
 
 ## Design approval
 

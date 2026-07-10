@@ -2,7 +2,9 @@
 
 ## 何时运行
 
-CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。
+CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与进度账本见 [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md)。
+
+**CP-001 确认前禁止 dispatch。**
 
 ## 切片执行顺序
 
@@ -32,7 +34,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。
 ## 状态更新
 
 - 开始实现时设 `in_dev`。
-- 截图匹配 YAML 后设 `visual_acceptance_passed`（仅 UI）。
+- 截图匹配 YAML 后设 `visual_acceptance_passed`（仅 UI）。提升该状态前须写入 `visual-acceptance.md` 或 `visual-acceptance/*.png`。
 - rebase 成功后设 `merged`。
 
 ## 进度账本（可选）
@@ -50,3 +52,15 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。
 ## 下一 handoff
 
 切片完成 → `finishing-a-development-branch` → `merged`。见 [handoff-table.md](handoff-table.md)。
+
+## 收尾 / PR
+
+`finishing-a-development-branch` 之后：
+
+| 环境 | 推荐下一步 |
+|------|------------|
+| Cursor | `cursor:babysit` — 处理 PR 评论、修复 CI、保持 merge-ready |
+| Cursor（多切片） | 可选 `cursor:split-to-prs` 将并行切片拆成可审 PR |
+| Claude / Codex / 手动 | 开 PR、盯 CI、处理评审、重跑项目校验直至通过 |
+
+babysit 与 split-to-prs 为 handoff 推荐，非硬门禁。

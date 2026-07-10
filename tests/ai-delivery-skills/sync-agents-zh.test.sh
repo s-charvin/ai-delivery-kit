@@ -50,7 +50,7 @@ require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
 
 # Orchestrator reference parity (same filenames, zh tree translated)
-for ref in handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-speckit.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
+for ref in handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-speckit.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
   require_file "$SRC/ai-delivery-orchestrator/references/$ref"
   require_file "$DST/ai-delivery-orchestrator/references/$ref"
   grep -q '[\u4e00-\u9fff]' "$DST/ai-delivery-orchestrator/references/$ref" \
@@ -67,5 +67,10 @@ grep -q '[\u4e00-\u9fff]' "$DST/ai-delivery-orchestrator/templates/todo-template
 # ui-truth yaml template exists in both (structure synced; comments localized)
 require_file "$SRC/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
 require_file "$DST/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
+
+# zh tree must not advertise .agents-zh as a runtime command path
+if grep -R -- '.agents-zh/skills/.*/scripts/' "$DST" >/dev/null 2>&1; then
+  fail "Found forbidden runtime path .agents-zh/skills/.../scripts/ in zh mirror"
+fi
 
 print -- 'PASS: .agents and .agents-zh are structurally synced (non-locale identical, locale mirrored).'

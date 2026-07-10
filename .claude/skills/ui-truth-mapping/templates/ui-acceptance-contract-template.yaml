@@ -1,0 +1,142 @@
+# ── Contract Header ────────────────────────────────────────────────
+# This is the canonical UI truth for 1:1 implementation.
+# Every populated value must be source-backed from Figma structured data.
+# Empty fields (null, {}, []) mean "no evidence — do not invent".
+
+version: 1
+contract_id: "<subreq-id>"
+
+source:
+  requirement: "requirement-slice.md"
+  design_file: "<figma-file-key>"
+  root_node: "<figma-root-node-id>"
+  cache: "<figma-cache-path>"
+
+# ── States ─────────────────────────────────────────────────────────
+# Which visual states this page can be in. Each state has a source_node
+# pointing to its Figma frame for design evidence.
+# The component tree in `regions` is shared — components toggle
+# visibility (visible_when) and style (states) per page state.
+
+states:
+  - id: "<state-id>"
+    source_node: "<figma-frame-node-id>"
+
+# ── Page Background ─────────────────────────────────────────────────
+background:
+  color: "#F2F7FA"                       # page background fill color from design
+  image: null                             # background image ref
+
+# ── Regions ────────────────────────────────────────────────────────
+# Single component tree for the page. Regions capture the page-level
+# layout partitioning that a developer describes as "custom background / header
+# xxx / xxx". Each region anchors to a page
+# edge or a sibling region.
+
+regions:
+  - id: "<region-id>"
+    name: "<semantic name, e.g. Header区域>"   # human-readable
+    source_node: "<figma-node-id>"
+    safe_area: "top"                     # "top" | "bottom" — only when system UI overlaps this region's edge
+    anchor:
+      - to: "region"                         # screen_start | <region-id>
+        direction: "start"                  # start | end | top | bottom — which edge of the reference to attach to
+        offset: "0px"                     # auto | <Npx> — auto requires note explaining calculation
+        note: null                       # required when offset is auto — how is the offset computed?
+      - to: "region"                         # screen_end | <region-id>
+        direction: "end"
+        offset: "0px"
+        note: null
+      - to: "region"                         # screen_top | <region-id>
+        direction: "top"
+        offset: "0px"
+        note: null
+      - to: "region"                         # screen_bottom | <region-id>
+        direction: "bottom"
+        offset: "0px"
+        note: null
+
+    layout:
+      direction: "vertical"              # vertical | horizontal | none
+      align: "stretch"                   # start | center | end | stretch | space-between
+      gap: "0px"                         # spacing between children
+
+    box:
+      width: "fill"                      # auto | fill | <Npx> — prefer auto; fixed px requires reason in description
+      height: "auto"                     # auto | <Npx>
+      padding: { top: 0, right: "16px", bottom: 0, left: "16px" }  # all 4 required; 0 where no visual gap
+
+    background:
+      color: null                        # fill color
+      image: null                        # background image ref
+
+    # ── Component (recursive, any level) ──────────────────────
+    children:
+      - id: "<component-id>"
+        type: "icon"                     # text | icon | image | button | input | list | container | custom
+        name: "<human name>"
+        source_node: "<figma-node-id>"
+        visible_when: null               # condition for conditional visibility, null = always visible
+
+        description: null                # implementation hint; required when fixed width/height px is used — explain why auto was not applicable
+
+        anchor:
+          - to: "<parent-id>"             # parent | sibling component id | top | bottom
+            direction: "start"
+            offset: "0px"                 # auto | <Npx> — auto requires note explaining calculation
+            note: null                    # required when offset is auto
+          - to: "<parent-id>"
+            direction: "end"
+            offset: "0px"
+            note: null
+          - to: "<parent-id>"
+            direction: "top"
+            offset: "0px"
+            note: null
+          - to: "<parent-id>"
+            direction: "bottom"
+            offset: "0px"
+            note: null
+
+        layout:
+          direction: "none"
+          align: "center"
+          gap: "0px"
+
+        box:
+          width: "auto"                   # auto | fill | <Npx> — prefer auto; fixed px requires reason in description
+          height: "auto"                  # auto | <Npx>
+          padding: { top: 0, right: 0, bottom: 0, left: 0 }  # all 4 required; 0 where no visual gap
+
+        background:
+          color: null
+          border: { radius: 0, width: 0, color: null }
+          shadow: null
+          opacity: 1.0
+
+        # ── Content (exactly one slot populated) ──────────────
+        text: null
+        font:
+          family: null
+          size: null
+          weight: null
+          color: null
+          height: null                   # line-height
+          align: "center"                # start | center | end
+        icon:
+          src: null                      # asset file name
+          size: null                     # display size
+        image:
+          src: null
+          width: null
+          height: null
+          fit: "cover"                   # cover | contain | fill | none
+
+        interaction:
+          on: null                       # click | long-press | none
+          action: null                   # toast | navigate | toggle | submit | custom
+          note: null                     # detail for custom actions
+
+        states: {}                       # per-state diffs, e.g. { selected: { icon: { src: "ic_eye_s" } }, disabled: { opacity: 0.4 } }
+
+        children: []                     # recursive — same shape

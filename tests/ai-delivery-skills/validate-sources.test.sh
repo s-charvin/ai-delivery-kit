@@ -55,12 +55,15 @@ zsh "$VALIDATE_SCRIPT"
 
 CONTRACT_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
 PRESSURE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
-RECONCILE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/reconcile-delivery.test.sh")
-SYNC_ZH_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/sync-agents-zh.test.sh")
 zsh "$CONTRACT_TEST"
 zsh "$PRESSURE_TEST"
-zsh "$RECONCILE_TEST"
-zsh "$SYNC_ZH_TEST"
+
+if [[ -f "$ROOT/managedassets.go" ]]; then
+  RECONCILE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/reconcile-delivery.test.sh")
+  SYNC_ZH_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/sync-agents-zh.test.sh")
+  zsh "$RECONCILE_TEST"
+  zsh "$SYNC_ZH_TEST"
+fi
 
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
 
@@ -75,3 +78,12 @@ require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.jso
 require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-truth-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" '../common/'
+
+if [[ -d "$ROOT/.claude/skills" && -f "$ROOT/managedassets.go" ]]; then
+  for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
+    [[ -d "$ROOT/.claude/skills/$skill" ]] || fail "Missing .claude mirror: $skill"
+    if ! diff -rq --exclude=SKILL-zh.md "$SKILL_ROOT/$skill" "$ROOT/.claude/skills/$skill" >/dev/null 2>&1; then
+      fail ".agents vs .claude drift detected for $skill"
+    fi
+  done
+fi

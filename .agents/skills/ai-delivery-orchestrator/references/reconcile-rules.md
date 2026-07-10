@@ -20,7 +20,7 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 4. If a guard is already satisfied, do not re-run the stage.
 5. If outputs exist but guard fails, re-run or open narrowest blocker.
 6. Keep blocked items in queue; continue later items that do not depend on them.
-7. Emit `RUNTIME_MODE`, `RUNNABLE`, `BLOCKED`, `NEXT_SKILL`, `NEXT_SUBREQ`.
+7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_SKILL`, `NEXT_SUBREQ`.
 
 ## Runtime mode resolution
 
@@ -28,9 +28,10 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 |------|-----------|
 | `completed` | All executable subreqs are `merged` |
 | `bootstrap` | Missing/incomplete `status.json` or no sub_requirements |
-| `confirm_to_dev` | `current_checkpoint=CP-001` and user intent is proceed to dev |
-| `blocker_recovery` | `current_checkpoint=CP-002` and blocker cleared |
-| `resume` | At least one runnable or unresolved item; no blocking checkpoint |
+| `confirm_design` | Runnable subreq needs design and `design_approved=false` → `CHECKPOINT=CP-DESIGN` |
+| `confirm_to_dev` | All executable subreqs at `tasks_ready` → `CHECKPOINT=CP-001` |
+| `blocker_recovery` | `current_checkpoint=CP-002` or only blocked items remain |
+| `resume` | At least one runnable item; no blocking checkpoint |
 
 ## Truth hierarchy
 

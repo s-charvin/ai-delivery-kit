@@ -8,6 +8,12 @@
 ## Brainstorming 设计（HARD-GATE）
 
 <HARD-GATE>
+编排器设计模式：brainstorming 结束后不要 invoke `writing-plans`。
+不要在 `docs/superpowers/` 下写设计文档。
+摘要存入子需求 `notes`；仅用户批准后设 `design_approved=true`；再 invoke `speckit-specify`。
+</HARD-GATE>
+
+<HARD-GATE>
 在呈现 brainstorming 设计并获得用户明确批准之前，不要 invoke `speckit-specify`、`speckit-plan` 或 `speckit-tasks`。
 </HARD-GATE>
 

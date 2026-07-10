@@ -27,6 +27,7 @@ UI_IMPLIES_UI_STATUSES = frozenset(
         "merged",
     }
 )
+VISUAL_ACCEPTANCE_STATUSES = frozenset({"visual_acceptance_passed", "merged"})
 
 
 def find_contracts(subreq_dir: Path) -> list[Path]:
@@ -41,6 +42,29 @@ def has_ui_artifacts(subreq_dir: Path) -> bool:
     if find_contracts(subreq_dir):
         return True
     return (subreq_dir / "section-map.json").exists()
+
+
+def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:
+    ui_bearing = entry.get("ui_bearing")
+    if ui_bearing is True:
+        return True
+    if ui_bearing is False:
+        return False
+    if has_ui_artifacts(subreq_dir):
+        return True
+    status = entry.get("status", "")
+    if status in UI_IMPLIES_UI_STATUSES:
+        return True
+    return False
+
+
+def has_visual_acceptance_evidence(subreq_dir: Path) -> bool:
+    if (subreq_dir / "visual-acceptance.md").is_file():
+        return True
+    evidence_dir = subreq_dir / "visual-acceptance"
+    if evidence_dir.is_dir():
+        return any(evidence_dir.glob("*.png"))
+    return False
 
 
 def run_contract_validator(contract: Path, validator_script: Path) -> tuple[bool, str]:
@@ -82,6 +106,14 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
         subreq_dir = req_root / "sub-requirements" / subreq_id
         contracts = find_contracts(subreq_dir)
         ui_artifacts = has_ui_artifacts(subreq_dir)
+        ui_bearing = infer_ui_bearing(entry, subreq_dir)
+
+        if status in VISUAL_ACCEPTANCE_STATUSES and ui_bearing:
+            if not has_visual_acceptance_evidence(subreq_dir):
+                errors.append(
+                    f"[GATE] {subreq_id} status={status} requires visual-acceptance.md "
+                    f"or visual-acceptance/*.png"
+                )
 
         if status in POST_FREEZE_STATUSES:
             if status in UI_IMPLIES_UI_STATUSES and not contracts:

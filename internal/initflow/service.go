@@ -150,7 +150,8 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	result.Upgraded = input.Upgrade
 
 	if !info.HasSpecify && (hasSpecify || specifyInstalledNow) {
-		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx), s.GOOS); len(cmd) > 0 {
+		preferredAI := prereq.DetectPreferredAI(os.Getenv("AI_DELIVERY_IDE"), s.HomeDir, s.StatPath)
+		if cmd := prereq.BuildSpecifyInitCommand(false, s.specifyInitSupportsAISkills(ctx), s.GOOS, preferredAI); len(cmd) > 0 {
 			if err := s.Runner.Run(ctx, command.Command{
 				Name: cmd[0],
 				Args: cmd[1:],

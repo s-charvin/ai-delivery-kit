@@ -70,7 +70,7 @@ exit 0
 EOF
 chmod +x "$TEMP_BIN/specify"
 
-PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
+PATH="$TEMP_BIN:$PATH" printf 'n\n' | zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-truth-mapping" ]]
@@ -90,6 +90,9 @@ PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/section-map-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
+[[ -f "$TARGET_REPO/.cursor/hooks.json" ]]
+[[ -f "$TARGET_REPO/.cursor/hooks/validate-ui-contract.sh" ]]
+[[ -f "$TARGET_REPO/.cursor/rules/ui-contract-gate.mdc" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
 [[ ! -e "$TARGET_REPO/.codex/skills/README.md" ]]
