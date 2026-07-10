@@ -1,6 +1,7 @@
 ---
 description: UI contract gate — template-only YAML, validator required, no bypass fields
-alwaysApply: true
+paths:
+  - "**/ui-acceptance-contract.yaml"
 ---
 
 # UI Contract Gate

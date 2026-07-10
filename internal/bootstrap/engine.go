@@ -225,11 +225,23 @@ func copyEmbeddedFile(source, target string, session *amendSession) error {
 	if err != nil {
 		return fmt.Errorf("read embedded asset %s: %w", source, err)
 	}
-	if isAmendableJSONTarget(source) {
+	rel := filepath.ToSlash(source)
+	switch {
+	case isAmendableJSONTarget(rel):
 		if session == nil {
 			return fmt.Errorf("amendable JSON requires session: %s", source)
 		}
-		return session.writeAmendableJSON(source, target, body)
+		return session.writeAmendableJSON(rel, target, body)
+	case isAmendableAgentsMDTarget(rel):
+		if session == nil {
+			return fmt.Errorf("amendable AGENTS.md requires session: %s", source)
+		}
+		return session.writeAmendableAgentsMD(rel, target, body)
+	case isAmendableCodexConfigTarget(rel):
+		if session == nil {
+			return fmt.Errorf("amendable Codex config requires session: %s", source)
+		}
+		return session.writeAmendableCodexConfig(rel, target, body)
 	}
 
 	mode := fileModeForTarget(target)

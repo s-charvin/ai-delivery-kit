@@ -4,7 +4,7 @@
     "afterFileEdit": [
       {
         "command": ".cursor/hooks/validate-ui-contract.sh",
-        "matcher": "Write",
+        "matcher": "Write|TabWrite",
         "failClosed": true
       }
     ]

@@ -1,7 +1,9 @@
 #!/bin/bash
 # Shared UI acceptance contract gate for Cursor / Claude / Codex hooks.
-# Reads hook JSON from stdin. Skips non-contract files. On failure: stderr + exit 2
-# (and Cursor-compatible agent_message JSON on stdout).
+# Reads hook JSON from stdin. Skips non-contract files.
+# Failure feedback:
+#   - Cursor afterFileEdit: agent_message JSON + exit 2
+#   - Claude/Codex PostToolUse: hookSpecificOutput.additionalContext + exit 0
 
 set -euo pipefail
 
@@ -43,11 +45,38 @@ if [[ ! -f "$VALIDATOR" ]]; then
   VALIDATOR="$ROOT/.ai-delivery/scripts/validate-ui-contract.py"
 fi
 
-if [[ ! -f "$VALIDATOR" ]]; then
-  msg="UI contract validator missing; cannot enforce contract gate."
+emit_failure() {
+  local msg=$1
   printf '%s\n' "$msg" >&2
-  printf '%s\n' "{\"agent_message\":$(python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$msg")}"
-  exit 2
+  local escaped
+  escaped=$(printf '%s' "$msg" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
+
+  # Cursor afterFileEdit: file_path + edits, no tool_name/tool_input.
+  if printf '%s' "$input" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(1)
+if not isinstance(data, dict):
+    sys.exit(1)
+if isinstance(data.get("edits"), list):
+    sys.exit(0)
+if data.get("file_path") and "tool_name" not in data and "tool_input" not in data and "toolInput" not in data:
+    sys.exit(0)
+sys.exit(1)
+' 2>/dev/null; then
+    printf '{"agent_message":%s}\n' "$escaped"
+    exit 2
+  fi
+
+  # Claude Code / Codex PostToolUse: official additionalContext, exit 0.
+  printf '{"hookSpecificOutput":{"hookEventName":"PostToolUse","additionalContext":%s}}\n' "$escaped"
+  exit 0
+}
+
+if [[ ! -f "$VALIDATOR" ]]; then
+  emit_failure "UI contract validator missing; cannot enforce contract gate."
 fi
 
 python3 -c 'import yaml' 2>/dev/null || python3 -m pip install pyyaml -q 2>/dev/null || true
@@ -73,7 +102,4 @@ if [[ "$STATUS" -eq 0 ]]; then
   exit 0
 fi
 
-printf '%s\n' "$OUTPUT" >&2
-escaped=$(printf '%s' "$OUTPUT" | python3 -c 'import json,sys; print(json.dumps(sys.stdin.read()))')
-printf '{"agent_message":%s}\n' "$escaped"
-exit 2
+emit_failure "$OUTPUT"

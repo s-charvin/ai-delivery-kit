@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -287,11 +288,51 @@ func TestRestoreIDEGateBackupRestoresAndBacksUpCurrent(t *testing.T) {
 	}
 }
 
-func TestManagedConflictPathsSkipsAmendableJSON(t *testing.T) {
+func TestManagedConflictPathsSkipsAmendableManaged(t *testing.T) {
 	for _, path := range ManagedConflictPaths() {
-		if isAmendableJSONTarget(path) {
-			t.Fatalf("amendable JSON should not be a hard conflict: %s", path)
+		if isAmendableManagedTarget(path) {
+			t.Fatalf("amendable managed target should not be a hard conflict: %s", path)
 		}
+	}
+}
+
+func TestUpsertAgentsMDSectionPreservesForeignContent(t *testing.T) {
+	existing := []byte("# Project Agents\n\nKeep me.\n")
+	desired := []byte(agentsGateStart + "\n# UI Contract Gate\nrule\n" + agentsGateEnd + "\n")
+	merged := upsertAgentsMDSection(existing, desired)
+	if !strings.Contains(string(merged), "Keep me.") {
+		t.Fatalf("expected foreign content preserved, got %s", merged)
+	}
+	if !strings.Contains(string(merged), agentsGateStart) || !strings.Contains(string(merged), "UI Contract Gate") {
+		t.Fatalf("expected gate section inserted, got %s", merged)
+	}
+
+	updated := []byte(agentsGateStart + "\n# UI Contract Gate\nupdated\n" + agentsGateEnd + "\n")
+	again := upsertAgentsMDSection(merged, updated)
+	if strings.Count(string(again), agentsGateStart) != 1 {
+		t.Fatalf("expected single gate section, got %s", again)
+	}
+	if !strings.Contains(string(again), "updated") {
+		t.Fatalf("expected section replaced, got %s", again)
+	}
+}
+
+func TestEnsureCodexHooksEnabled(t *testing.T) {
+	desired := []byte("[features]\nhooks = true\n")
+	if got := string(ensureCodexHooksEnabled(nil, desired)); !strings.Contains(got, "hooks = true") {
+		t.Fatalf("expected desired written on create, got %q", got)
+	}
+	existingTrue := []byte("[features]\nhooks = true\nmodel = \"x\"\n")
+	if got := ensureCodexHooksEnabled(existingTrue, desired); !bytes.Equal(got, existingTrue) {
+		t.Fatalf("expected unchanged when already true")
+	}
+	existingFalse := []byte("[features]\nhooks = false\n")
+	if got := string(ensureCodexHooksEnabled(existingFalse, desired)); !strings.Contains(got, "hooks = true") || strings.Contains(got, "hooks = false") {
+		t.Fatalf("expected false flipped to true, got %q", got)
+	}
+	existingOther := []byte("model = \"gpt\"\n")
+	if got := string(ensureCodexHooksEnabled(existingOther, desired)); !strings.Contains(got, "model = \"gpt\"") || !strings.Contains(got, "hooks = true") {
+		t.Fatalf("expected append features, got %q", got)
 	}
 }
 

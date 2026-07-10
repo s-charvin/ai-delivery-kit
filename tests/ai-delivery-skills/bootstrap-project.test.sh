@@ -100,7 +100,13 @@ PATH="$TEMP_BIN:$PATH" printf 'n\n' | zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_RE
 [[ -f "$TARGET_REPO/.claude/rules/ui-contract-gate.md" ]]
 [[ -f "$TARGET_REPO/.codex/hooks.json" ]]
 [[ -f "$TARGET_REPO/.codex/hooks/validate-ui-contract.sh" ]]
-[[ -f "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
+[[ -f "$TARGET_REPO/.codex/config.toml" ]]
+grep -Fq 'hooks = true' "$TARGET_REPO/.codex/config.toml"
+[[ -f "$TARGET_REPO/AGENTS.md" ]]
+grep -Fq 'ai-delivery:ui-contract-gate:start' "$TARGET_REPO/AGENTS.md"
+[[ ! -e "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
+grep -Fq 'Write|TabWrite' "$TARGET_REPO/.cursor/hooks.json"
+grep -Fq 'CLAUDE_PROJECT_DIR' "$TARGET_REPO/.claude/settings.json"
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
 [[ ! -e "$TARGET_REPO/.codex/skills/README.md" ]]

@@ -1,0 +1,6 @@
+# Managed by ai-delivery-kit.
+# Codex project hooks (see .codex/hooks.json) require this flag.
+# Docs: https://developers.openai.com/codex/hooks
+
+[features]
+hooks = true

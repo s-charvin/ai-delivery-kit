@@ -427,6 +427,13 @@ install_user_skills() {
 
   log "Skills installed — each IDE symlinks to $skills_src"
   log "Update skills later with: ai-delivery upgrade"
+
+  case "$AI_DELIVERY_IDE" in
+    codex|all)
+      log "Codex note: project hooks need [features] hooks = true (ai-delivery init writes .codex/config.toml)."
+      log "Docs: https://developers.openai.com/codex/hooks"
+      ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------

@@ -1,3 +1,4 @@
+<!-- ai-delivery:ui-contract-gate:start -->
 # UI Contract Gate
 
 When editing `**/ui-acceptance-contract.yaml`:
@@ -12,3 +13,4 @@ When editing `**/ui-acceptance-contract.yaml`:
 Forbidden contract fields: `visual_truth`, `code-baseline`, `layout_note`, `implementation_reference`, `policy`, `screen_states`, top-level `requirement_id`.
 
 UI work enters through `ai-delivery-orchestrator`. TemPad MCP errors → STOP, do not guess.
+<!-- ai-delivery:ui-contract-gate:end -->

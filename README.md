@@ -93,6 +93,32 @@ During `ai-delivery init`, the CLI checks for `specify-cli` and `superpowers`.
 - If they are missing, the CLI prompts before using the official installation path.
 - If you decline installation, the CLI still initializes the governed `ai-delivery` assets and prints the official install links for manual follow-up.
 
+## IDE UI Contract Gates
+
+`ai-delivery init` installs project-local UI contract gates for Cursor, Claude Code, and Codex:
+
+| IDE | Config | Soft guidance |
+|-----|--------|---------------|
+| Cursor | `.cursor/hooks.json` (`afterFileEdit`, `Write\|TabWrite`) | `.cursor/rules/ui-contract-gate.mdc` |
+| Claude Code | `.claude/settings.json` (`PostToolUse`, `Edit\|Write`) | `.claude/rules/ui-contract-gate.md` |
+| Codex | `.codex/hooks.json` + `.codex/config.toml` | root `AGENTS.md` (not `.codex/rules`) |
+
+**Codex requires hooks enabled.** Project bootstrap writes `.codex/config.toml` with:
+
+```toml
+[features]
+hooks = true
+```
+
+If you maintain a user-level `~/.codex/config.toml`, also set `[features] hooks = true` there (or keep the project file trusted). Without this flag, `.codex/hooks.json` will not run. See [Codex hooks](https://developers.openai.com/codex/hooks).
+
+Amended IDE JSON / `AGENTS.md` / Codex config are backed up under `.ai-delivery/backups/ide-gates/`. Restore with:
+
+```bash
+ai-delivery ide-gates list
+ai-delivery ide-gates restore --to <timestamp>
+```
+
 ## Release Policy
 
 - `main` validates build and pre-release checks only.

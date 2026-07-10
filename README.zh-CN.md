@@ -93,6 +93,32 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 - 若缺失，会在走官方安装路径前征求确认。
 - 若拒绝安装，CLI 仍会初始化受治理的 `ai-delivery` 资产，并打印官方安装链接供手工跟进。
 
+## IDE UI 契约门禁
+
+`ai-delivery init` 会为 Cursor、Claude Code、Codex 安装项目级 UI 契约门禁：
+
+| IDE | 配置 | 软性指引 |
+|-----|------|----------|
+| Cursor | `.cursor/hooks.json`（`afterFileEdit`，`Write\|TabWrite`） | `.cursor/rules/ui-contract-gate.mdc` |
+| Claude Code | `.claude/settings.json`（`PostToolUse`，`Edit\|Write`） | `.claude/rules/ui-contract-gate.md` |
+| Codex | `.codex/hooks.json` + `.codex/config.toml` | 仓库根目录 `AGENTS.md`（不是 `.codex/rules`） |
+
+**Codex 必须开启 hooks。** 入驻会写入 `.codex/config.toml`：
+
+```toml
+[features]
+hooks = true
+```
+
+若你使用用户级 `~/.codex/config.toml`，也需设置 `[features] hooks = true`（或确保项目层配置受信任）。未开启时 `.codex/hooks.json` 不会执行。参见 [Codex hooks](https://developers.openai.com/codex/hooks)。
+
+被 amend 的 IDE JSON / `AGENTS.md` / Codex 配置会备份到 `.ai-delivery/backups/ide-gates/`。恢复：
+
+```bash
+ai-delivery ide-gates list
+ai-delivery ide-gates restore --to <timestamp>
+```
+
 ## 发布策略
 
 - `main` 只做构建与预发布校验。

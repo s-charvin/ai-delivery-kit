@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -59,11 +60,27 @@ func isAmendableJSONTarget(target string) bool {
 	}
 }
 
-func amendableJSONTargets() []string {
+func isAmendableAgentsMDTarget(target string) bool {
+	return filepath.ToSlash(target) == "AGENTS.md"
+}
+
+func isAmendableCodexConfigTarget(target string) bool {
+	return filepath.ToSlash(target) == ".codex/config.toml"
+}
+
+func isAmendableManagedTarget(target string) bool {
+	return isAmendableJSONTarget(target) ||
+		isAmendableAgentsMDTarget(target) ||
+		isAmendableCodexConfigTarget(target)
+}
+
+func amendableManagedTargets() []string {
 	return []string{
 		".cursor/hooks.json",
 		".claude/settings.json",
 		".codex/hooks.json",
+		".codex/config.toml",
+		"AGENTS.md",
 	}
 }
 
@@ -199,6 +216,118 @@ func (s *amendSession) writeAmendableJSON(relTarget, absTarget string, desired [
 	return nil
 }
 
+const (
+	agentsGateStart = "<!-- ai-delivery:ui-contract-gate:start -->"
+	agentsGateEnd   = "<!-- ai-delivery:ui-contract-gate:end -->"
+)
+
+// writeAmendableAgentsMD 将 kit 门禁段落 upsert 进 AGENTS.md（Codex 官方指令入口）。
+func (s *amendSession) writeAmendableAgentsMD(relTarget, absTarget string, desired []byte) error {
+	existing, err := os.ReadFile(absTarget)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read %s: %w", absTarget, err)
+		}
+		existing = nil
+	}
+
+	merged := upsertAgentsMDSection(existing, desired)
+	if existing != nil && bytes.Equal(existing, merged) {
+		return nil
+	}
+	if existing != nil {
+		if err := s.backupExisting(relTarget, absTarget, existing); err != nil {
+			return err
+		}
+	}
+	if err := atomicWriteFile(absTarget, merged, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", absTarget, err)
+	}
+	return nil
+}
+
+func upsertAgentsMDSection(existing, desired []byte) []byte {
+	section := bytes.TrimSpace(desired)
+	if !bytes.Contains(section, []byte(agentsGateStart)) {
+		section = []byte(agentsGateStart + "\n" + string(section) + "\n" + agentsGateEnd)
+	}
+	section = append(bytes.TrimRight(section, "\n"), '\n')
+
+	if len(bytes.TrimSpace(existing)) == 0 {
+		return section
+	}
+
+	start := bytes.Index(existing, []byte(agentsGateStart))
+	end := bytes.Index(existing, []byte(agentsGateEnd))
+	if start >= 0 && end > start {
+		end += len(agentsGateEnd)
+		for end < len(existing) && (existing[end] == '\n' || existing[end] == '\r') {
+			end++
+		}
+		var out bytes.Buffer
+		out.Write(existing[:start])
+		out.Write(section)
+		if !bytes.HasSuffix(section, []byte("\n")) {
+			out.WriteByte('\n')
+		}
+		out.Write(existing[end:])
+		return out.Bytes()
+	}
+
+	var out bytes.Buffer
+	out.Write(bytes.TrimRight(existing, "\n"))
+	out.WriteString("\n\n")
+	out.Write(section)
+	return out.Bytes()
+}
+
+// writeAmendableCodexConfig 确保项目 .codex/config.toml 开启 hooks。
+func (s *amendSession) writeAmendableCodexConfig(relTarget, absTarget string, desired []byte) error {
+	existing, err := os.ReadFile(absTarget)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("read %s: %w", absTarget, err)
+		}
+		existing = nil
+	}
+
+	merged := ensureCodexHooksEnabled(existing, desired)
+	if existing != nil && bytes.Equal(existing, merged) {
+		return nil
+	}
+	if existing != nil {
+		if err := s.backupExisting(relTarget, absTarget, existing); err != nil {
+			return err
+		}
+	}
+	if err := atomicWriteFile(absTarget, merged, 0o644); err != nil {
+		return fmt.Errorf("write %s: %w", absTarget, err)
+	}
+	return nil
+}
+
+var (
+	codexHooksTrueRE  = regexp.MustCompile(`(?m)^\s*hooks\s*=\s*true\s*$`)
+	codexHooksFalseRE = regexp.MustCompile(`(?m)^(\s*hooks\s*=\s*)false(\s*)$`)
+)
+
+func ensureCodexHooksEnabled(existing, desired []byte) []byte {
+	if len(bytes.TrimSpace(existing)) == 0 {
+		out := bytes.TrimRight(desired, "\n")
+		return append(out, '\n')
+	}
+	if codexHooksTrueRE.Match(existing) {
+		return existing
+	}
+	if codexHooksFalseRE.Match(existing) {
+		return codexHooksFalseRE.ReplaceAll(existing, []byte(`${1}true${2}`))
+	}
+	var out bytes.Buffer
+	out.Write(bytes.TrimRight(existing, "\n"))
+	out.WriteString("\n\n# ai-delivery-kit: enable Codex project hooks\n[features]\nhooks = true\n")
+	return out.Bytes()
+}
+
 func (s *amendSession) backupExisting(relTarget, absTarget string, existing []byte) error {
 	if s.stamp == "" {
 		s.stamp = s.now().UTC().Format("2006-01-02T15-04-05Z")
@@ -294,7 +423,7 @@ func ListIDEGateBackups(repoRoot string) ([]string, error) {
 	return stamps, nil
 }
 
-// RestoreIDEGateBackup 从指定时间戳恢复 amendable JSON。
+// RestoreIDEGateBackup 从指定时间戳恢复 amendable IDE 配置与 AGENTS.md。
 // 恢复前会先备份当前文件（再给一次回滚机会）。
 func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendReport, error) {
 	report := AmendReport{}
@@ -321,7 +450,7 @@ func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendRe
 
 	session := newAmendSession(root, now, &report)
 	restored := 0
-	for _, rel := range amendableJSONTargets() {
+	for _, rel := range amendableManagedTargets() {
 		src := filepath.Join(backupRoot, filepath.FromSlash(rel))
 		body, err := os.ReadFile(src)
 		if err != nil {

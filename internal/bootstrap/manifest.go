@@ -26,7 +26,8 @@ func Manifest() []ManagedAsset {
 		{Source: ".claude/rules/ui-contract-gate.md", Target: ".claude/rules/ui-contract-gate.md", Kind: "file"},
 		{Source: ".codex/hooks.json", Target: ".codex/hooks.json", Kind: "file"},
 		{Source: ".codex/hooks/validate-ui-contract.sh", Target: ".codex/hooks/validate-ui-contract.sh", Kind: "file"},
-		{Source: ".codex/rules/ui-contract-gate.md", Target: ".codex/rules/ui-contract-gate.md", Kind: "file"},
+		{Source: ".codex/config.toml", Target: ".codex/config.toml", Kind: "file"},
+		{Source: "AGENTS.md", Target: "AGENTS.md", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/validate-sources.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/ui-contract-validator.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/ui-contract-validator.test.sh", Kind: "file"},
@@ -43,7 +44,8 @@ func IDEGateAssets() []ManagedAsset {
 		case strings.HasPrefix(asset.Target, ".cursor/"),
 			strings.HasPrefix(asset.Target, ".claude/"),
 			strings.HasPrefix(asset.Target, ".codex/"),
-			strings.HasPrefix(asset.Target, ".ai-delivery/scripts/hooks/"):
+			strings.HasPrefix(asset.Target, ".ai-delivery/scripts/hooks/"),
+			asset.Target == "AGENTS.md":
 			assets = append(assets, asset)
 		}
 	}
@@ -88,8 +90,8 @@ func SeededJSONFiles() []string {
 func ManagedConflictPaths() []string {
 	paths := make([]string, 0, len(Manifest())+len(SeededManagedFiles()))
 	for _, asset := range Manifest() {
-		if isAmendableJSONTarget(asset.Target) {
-			// Existing IDE hook/settings JSON is amended in place, not a hard conflict.
+	if isAmendableManagedTarget(asset.Target) {
+			// Existing IDE configs / AGENTS.md are amended in place, not a hard conflict.
 			continue
 		}
 		paths = append(paths, asset.Target)

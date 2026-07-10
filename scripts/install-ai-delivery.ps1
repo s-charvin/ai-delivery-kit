@@ -238,6 +238,11 @@ function Install-UserSkills {
 
   Write-Log "Skills installed — each IDE symlinks to $skillsSrc"
   Write-Log "Update skills later with: ai-delivery upgrade"
+
+  if ($Ide -eq "codex" -or $Ide -eq "all" -or [string]::IsNullOrWhiteSpace($Ide)) {
+    Write-Log "Codex note: project hooks need [features] hooks = true (ai-delivery init writes .codex/config.toml)."
+    Write-Log "Docs: https://developers.openai.com/codex/hooks"
+  }
 }
 
 function Invoke-PostInstallInit {
