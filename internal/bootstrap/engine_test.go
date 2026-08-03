@@ -25,7 +25,9 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	required := []string{
 		filepath.Join(target, ".agents/skills/requirement-breakdown/SKILL.md"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/SKILL.md"),
+		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-contract-template.html"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
+		filepath.Join(target, ".ai-delivery/scripts/validate-ui-contract-html.py"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
 		filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"),
@@ -38,6 +40,13 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
 		}
+	}
+
+	if _, err := os.Stat(filepath.Join(target, ".ai-delivery/scripts/validate-ui-contract.py")); !os.IsNotExist(err) {
+		t.Fatalf("expected obsolete YAML validator to be absent from bootstrap output, got %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml")); !os.IsNotExist(err) {
+		t.Fatalf("expected obsolete YAML template to be absent from bootstrap output, got %v", err)
 	}
 
 	if _, err := os.Stat(filepath.Join(target, ".ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md")); !os.IsNotExist(err) {

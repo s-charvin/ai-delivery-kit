@@ -2,6 +2,7 @@ package kitassets
 
 import (
 	"io/fs"
+	"strings"
 	"testing"
 )
 
@@ -12,10 +13,9 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/requirement-breakdown/SKILL.md",
 		".agents/skills/requirement-breakdown/templates/requirement-slice-template.md",
 		".agents/skills/ui-truth-mapping/SKILL.md",
-		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml",
-		".agents/skills/ui-truth-mapping/templates/section-map-template.json",
+		".agents/skills/ui-truth-mapping/templates/ui-contract-template.html",
 		"scripts/validate-project-ai-delivery-skills.sh",
-		"scripts/validate-ui-contract.py",
+		"scripts/validate-ui-contract-html.py",
 		"scripts/validate-delivery-status.py",
 		"tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
 		"tests/ai-delivery-skills/validate-sources.test.sh",
@@ -30,6 +30,20 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 	}
 }
 
+func TestEmbeddedAssetsExcludeObsoleteYAMLContractAssets(t *testing.T) {
+	obsolete := []string{
+		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml",
+		".agents/skills/ui-truth-mapping/templates/section-map-template.json",
+		"scripts/validate-ui-contract.py",
+	}
+
+	for _, path := range obsolete {
+		if _, err := Embedded.ReadFile(path); err == nil {
+			t.Fatalf("expected obsolete asset %s to be absent from embedded assets", path)
+		}
+	}
+}
+
 func TestManagedSourcePathsAreEmbeddable(t *testing.T) {
 	for _, path := range ManagedSourcePaths() {
 		info, err := fs.Stat(Embedded, path)
@@ -38,6 +52,38 @@ func TestManagedSourcePathsAreEmbeddable(t *testing.T) {
 		}
 		if !info.IsDir() && info.Size() == 0 {
 			t.Fatalf("expected non-empty managed file for %s", path)
+		}
+	}
+}
+
+func TestManagedSourcePathsExcludeObsoleteYAMLContractAssets(t *testing.T) {
+	obsolete := map[string]bool{
+		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml": true,
+		".agents/skills/ui-truth-mapping/templates/section-map-template.json":            true,
+		"scripts/validate-ui-contract.py":                                                true,
+	}
+	for _, path := range ManagedSourcePaths() {
+		if obsolete[path] {
+			t.Fatalf("expected obsolete managed source path removed: %s", path)
+		}
+	}
+}
+
+func TestRestoredGateContentReferencesHTMLContract(t *testing.T) {
+	gateFiles := []string{
+		"AGENTS.md",
+		".cursor/rules/ui-contract-gate.mdc",
+		".claude/rules/ui-contract-gate.md",
+		"scripts/hooks/validate-ui-contract.sh",
+	}
+
+	for _, path := range gateFiles {
+		body, err := Embedded.ReadFile(path)
+		if err != nil {
+			t.Fatalf("expected embedded gate asset %s: %v", path, err)
+		}
+		if !strings.Contains(string(body), "ui-contract.html") {
+			t.Fatalf("expected %s to reference ui-contract.html, got:\n%s", path, string(body))
 		}
 	}
 }
