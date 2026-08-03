@@ -347,10 +347,11 @@ class ContractValidator:
             if not node.has("data-ui-id"):
                 continue
             ui_id = node.get("data-ui-id")
-            if ui_id in seen_ids:
-                self.add_error("DUPLICATE_ID", f'duplicate data-ui-id "{ui_id}" found')
-            else:
-                seen_ids.add(ui_id or "")
+            if is_nonempty_str(ui_id):
+                if ui_id in seen_ids:
+                    self.add_error("DUPLICATE_ID", f'duplicate data-ui-id "{ui_id}" found')
+                else:
+                    seen_ids.add(ui_id)
 
             if not is_nonempty_str(node.get("data-figma-node")):
                 self.add_error(
@@ -426,7 +427,7 @@ class ContractValidator:
             note = notes.get(ui_id, "")
             if not note:
                 self.add_error(
-                    "EVIDENCE",
+                    "DELIVERY",
                     f'element with data-ui-id "{ui_id}" has data-evidence="inferred" but no evidence '
                     "note was found in [data-ui-review-panel]",
                 )
