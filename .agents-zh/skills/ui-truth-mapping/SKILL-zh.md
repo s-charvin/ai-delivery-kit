@@ -1,334 +1,167 @@
 ---
 name: ui-truth-mapping
-description: 当需要从设计源（Figma）提取结构化 UI 真值为规范化的 YAML UI 契约以实现 1:1 映射的场景下使用。自动检测并拆分单个设计源中的多个 section（页面、弹窗、状态）。
+description: 当需要从设计源（Figma）提取结构化 UI 真值并冻结为单一规范化 HTML UI 契约（schema v2）以实现 1:1 映射时使用。自动检测并拆分单个设计源中的多个单元（页面、弹窗、共享组件）。
 ---
 
 # UI 真值映射
 
-从设计源（Figma）提取结构化 UI 真值并将其冻结为规范化的 YAML 契约。YAML 是唯一输出 — 没有单独的映射文档。
+从设计源（Figma）提取结构化 UI 真值，并将其冻结为每个单元一份的规范化 `ui-contract.html` 文件（schema v2）。HTML 文件是唯一输出 — 没有单独的映射文档，也没有与之并存的 YAML 或 JSON 伴生文件。
 
-单个设计源可能包含多个顶层 section：不同的页面、弹窗覆盖层或同一页面的多个状态。此技能自动检测并将它们拆分为独立结构化的单元。
+单个设计源可能包含多个独立单元：不同的页面、弹窗覆盖层，或共享组件（导航外壳、标签栏）。每个单元恰好对应一份 `ui-contract.html`。同一单元的多个状态（加载中、空、错误、已选择/未选择）都存放在这一个文件内，以 `<template data-ui-state>` 区块表达 — 它们永远不是独立契约。
 
-此技能只做一件事：读取需求切片 + 设计源 → 产生一个或多个 YAML UI 契约 + section-map。它不管理状态、不决定下一步运行什么、也不处理阻塞项。
+此技能只做一件事：给定需求切片 + 设计源，定位是否已存在匹配契约（有则复用），否则新建，然后冻结或增量修补每个单元恰好一份的 `ui-contract.html`。它不管理自身元数据以外的交付状态、不决定下一步运行什么，也不处理自身硬门禁之外的阻塞项。
 
 ## 输入
 
 - 需求切片文档（范围、字段、验收信号）
 - 设计源定位符（Figma 文件 key + 节点 ID，或等效）
+- 针对已有单元的后续需求：目标契约的任何线索（显式路径、单元 ID，或"尚无已知契约"）
 
 ## 输出
 
-当设计源包含单个页面时：
+每个独立单元一份 `ui-contract.html`：
+
 ```
 <output-dir>/
-└── ui-acceptance-contract.yaml   # 规范化 YAML — 组件树、布局、间距、排版、状态
+├── <unit-id>/
+│   └── ui-contract.html   # schema v2 — 元数据 + token + 语义化 DOM + 审查面板
+├── <unit-id>/
+│   └── ui-contract.html
 ```
 
-当设计源包含多个独立页面或弹窗时，每个单元一个契约：
-```
-<output-dir>/
-├── <page-or-modal-id>/
-│   └── ui-acceptance-contract.yaml
-├── <page-or-modal-id>/
-│   └── ui-acceptance-contract.yaml
-└── section-map.json              # 将每个 section 映射到其分类单元和页面
-```
+没有聚合索引文件。跨单元关系（例如某页面依赖某个共享组件）存放在各自单元自己的 `unit.dependencies` 元数据中。
 
 ## 模板
 
-使用提供的模板 — 不要发明字段或结构：
+使用提供的模板 — 不要发明结构：
 
 ```
 templates/
-├── ui-acceptance-contract-template.yaml   # YAML 契约模板
-└── section-map-template.json              # section → 单元映射模板
+└── ui-contract-template.html   # HTML 契约 v2 模板 — 元数据、token、DOM、审查面板
 ```
 
 ## 硬边界
 
-- 不要发明视觉真值 — 不添加页面、字段、组件或状态。
-- 不要仅将截图或节点名称视为充分证据。需要结构化载荷。
-- 不要使用顶层 `SECTION` 作为最终可执行节点目标。
-- 不要在 YAML 之外创建第二个 UI 验收源。
-- 当源证据显示多个可见块、通道或集群时，不要接受 `children: []`。
-- 当存在可见文本时不要交付空的 `font`，当存在可见资源时不要交付空的 `icon`/`image`。
-- 不要在契约中包含系统 UI：状态栏、系统导航栏、软键盘、设备边框或系统级覆盖层不得出现在组件树中。使用区域的 `safe_area` 来声明系统 UI 重叠。
-- 不要给空容器赋予功能角色, 任何 UI 组件需要可见的图标, 样式或文字证据。
-- 不要映射空 spacer。没有可见子元素、无文字、无图标、无图片、无背景的容器仅用于布局对称设计考虑, 由 `layout` 捕获，不值得记录。
-- 不要凭记忆生成 YAML 契约或 `section-map.json`。在 `templates/` 下找到对应模板文件，逐字复制到输出路径，然后逐字段填充值。保留所有字段键、顺序、YAML 注释和结构。只改动值 — 不添加、删除或重命名字段。每个填充的值必须有设计源依据；无证据时保持模板默认值（`null`、`{}`、`[]`）不变。
-- 不要在主会话上下文中为多个单元生成契约。对于 section-map 中识别的每个独立单元（page、modal、shared-shell），派发一个单独的子代理，仅为该单元收集证据并冻结 YAML。唯一例外：仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态帧时跳过子代理派发 — 这些情况简单到可以内联处理而无质量损失。
-- 任何组件都不要交付空或部分 `padding`。每个组件必须在全部 4 个方向（`top`、`right`、`bottom`、`left`）声明明确的 padding。设计无视觉间距时使用 `0` — 沉默是歧义，不是证据。
-- 优先使用 `auto` 宽高，而非固定 px。兄弟间距用父容器的 `margin` 或 `padding`，而非子元素固定尺寸。固定 px 仅用于有意定尺寸元素：图标、头像、明确按钮尺寸、仅用于基准对齐的行。
-- 当组件必须使用固定 `width` 或 `height` px 时，在组件 `description` 中记录原因，便于评审理解为何不能用 `auto`。
-- 任何组件都不要交付空或部分 `anchor`。每个组件必须声明全部 4 个锚点方向（`start`、`end`、`top`、`bottom`），每项含明确的 `to`、`direction`、`offset`。与参考边缘齐平时用 `offset: 0px`。父布局（如多行列表）控制定位时用 `offset: auto` — 此时在 anchor 的 `note` 中说明偏移如何计算。
-- 在逐单元子代理内部，一次只处理一个帧 — 永远不要将所有帧批量塞入单个 Figma 查询。每一层逐帧迭代：查询一个帧，填充其字段，然后处理下一个。保持上下文聚焦，防止细节遗漏。
-- 三层各自只填充其分配的字段。绝不触碰其他层拥有的字段。Pass 1 拥有 id/type/name/source_node/visible_when/states。Pass 2 拥有 anchor/layout/box。Pass 3 拥有 background/content/interaction/description。
+- 不要发明视觉真值 — 不添加超出 Figma 证据支持范围的单元、状态、组件或字段。
+- 不要仅将截图或节点名称视为充分证据。需要结构化的 `get_code`/`get_structure` 载荷。
+- 不要在 `ui-contract.html` 之外创建第二个 UI 真值源 — 不允许有并存的 YAML、JSON 或 markdown 映射/笔记文件。
+- 不要将系统 UI 建模为契约内容：状态栏、系统导航、软键盘和设备外壳绝不能作为 `data-ui-kind` 值出现。改用受影响单元上的 CSS 安全区处理。
+- 不要给空容器赋予功能性 `data-ui-kind`；每个 `data-ui-id` 元素都需要可见文字、图标、图片或明确的结构证据。
+- 不要让 `data-ui-id` 元素缺少 `data-figma-node` 或 `data-ui-kind` 中的任意一个 — 每份真值单元都必须可溯源。
+- 不要在没有 `[data-ui-review-panel]` 中匹配说明的情况下使用 `data-evidence="inferred"` — 静默推断是流程失败。
+- 不要凭记忆生成 `ui-contract.html`。将 `templates/ui-contract-template.html` 逐字复制到输出路径，然后逐字段填充值。保留四个受限区域（`#ui-contract-meta`、`<style>` token、`<main data-ui-contract>`、`[data-ui-review-panel]`）— 绝不新增第五个自由结构区域。
+- 不要将所有帧批量塞入单个 Figma 查询。一次处理一个帧：查询它、填充其证据、再处理下一个。
+- 不要为了寻找匹配项而扫描或比对仓库中每一份历史 `ui-contract.html`。通过需求 ID、组件/路由语义、已知的单元关系，或用户显式指定的路径来定位候选契约 — 绝不做全仓库盲扫。
+- 匹配存在歧义（存在多个可能候选）时，不要修补匹配到的契约 — 先停止并要求用户澄清，再触碰任何文件。
+- 不要在缺少完整 `delivery.implemented` 对象（`type`、`target`、`requirement`、`version`、`status`）的情况下声称 `delivery.status: "implemented"` 或 `"merged"`。
 
-## 预检（创建或覆盖 ui-acceptance-contract.yaml 之前必须执行）
+## 定位：需求查找与实现反查
 
-写入任何契约之前，向用户输出此清单。任一项不完整则 STOP — 不要生成或覆盖 YAML。
+在决定新建还是增量修补之前，先执行实现反查：检查该单元是否已存在匹配的 `ui-contract.html`。
 
-- [ ] 已阅读 `templates/ui-acceptance-contract-template.yaml`
-- [ ] 已阅读 `templates/section-map-template.json`
-- [ ] 已运行 `get_structure` 并列出每个顶层帧（`nodeId` + 名称）
-- [ ] 已将契约模板逐字复制到输出路径（非手写结构）
-- [ ] **未**使用其他需求的 `ui-acceptance-contract.yaml` 作为格式参考
+- 优先使用用户或需求切片已明确给出的路径。
+- 否则按需求 ID（`unit.requirements` 包含此子需求）、组件/路由语义（`unit.route_or_trigger`、`unit.title`），或已知的共享组件依赖关系进行搜索。
+- Figma 节点 ID 是**定位到文件之后的 patch 锚点** — 而不是跨全仓库的发现主键。不要仅凭节点 ID 在所有契约文件间搜索。
+- 恰好一个匹配 → 进入"决策"环节。零匹配 → 新建。多个可能匹配 → STOP，报告候选项，请用户选择。
 
-**唯一权威格式参考：**
-- `templates/ui-acceptance-contract-template.yaml`
-- `fixtures/ui-acceptance-contract-good.yaml`（最小有效示例）
+## 决策：新建 vs 增量修补
 
-## 反模式（视为流程失败）
-
-- 使用扁平 `screen.visual_truth` 或顶层 `requirement_id`，而非模板 `regions[]` 树
-- 写 `code-baseline`、`layout_note` 或 `implementation_reference` 为实现漂移辩护
-- 在 `regions[].children[].anchor` 缺少四向锚点时标记 `acceptance_frozen`
-- 从遗留需求复制格式（如 login-code-entry 简化 YAML）
-- 主会话无子代理或用户未豁免时手写多单元完整 Pass 2/3
-- 把 YAML 当摘要/笔记文件，而非规范化 UI 真值
-
-## acceptance_frozen 完成定义
-
-仅当以下全部为真时才允许 `acceptance_frozen`：
-
-- `section-map.json` 结构与 `section-map-template.json` 一致，且 `units[]` 已分类
-- 每个 UI 单元有 `version` + `regions` + 恰有一个内容插槽的叶子组件
-- `section-map.json` 中每个帧在契约中有匹配的 `states[].source_node`
-- 无反模式中的禁止字段
-- 契约校验器通过（见下方反馈循环）
-
-## 反馈循环（交接编排器之前必须执行）
-
-向编排器报告完成之前运行：
-
-```bash
-python3 scripts/validate-ui-contract.py <path-to-ui-acceptance-contract.yaml>
-```
-
-若契约旁有 `section-map.json`，传入 `--section-map <path>`。
-
-仅当命令输出 `OK` 时继续。失败则修复契约或设 `blocked_verification_failure` — 绝不声称 `acceptance_frozen`。
+| 情况 | 处理方式 |
+|---|---|
+| 没有既有契约匹配此单元 | **新建。** 复制模板，运行下方完整工作流。 |
+| 恰好一个契约匹配，且此次需求变更能容纳其中（新增状态、内容修改、微调布局） | **增量修补。** 仅原地编辑受影响的子树、状态和元数据字段。不触碰无关单元和无关子树。 |
+| 单元边界、路由或共享依赖发生根本性变化 | **重建**该单元的契约；若单元在概念上仍是同一个，保持其 `contract_id`/`unit.id` 不变。 |
+| 匹配存在歧义 | **阻塞。** 不要猜测；先请用户澄清，再触碰任何文件。 |
 
 ## 工作流
 
-### 1. 确认上游
-在接触设计数据之前，先阅读需求切片以理解需要哪些 UI 元素。
+### 1. 确认上游并定位
 
-### 2. 分析 section 并拆分
+阅读需求切片以理解 UI 范围，然后执行上方的"定位"步骤。在接触设计数据之前，先记录决策（新建 / 增量修补 / 重建）。
 
-**关键 — 先枚举所有框架：** 不要单独查询孤立节点。在**父级/选区级别**（不是特定节点）查询设计源，以获取顶层同级框架的完整列表。在做任何其他事之前，记录每个框架的 id、名称、类型和位置。跳过此步骤会导致整个状态变体被遗漏。
+### 2. 枚举帧并对单元分类
 
-**完整枚举后**，对每个框架进行分类：
+**先枚举所有帧：** 在父级/选区层级（而非特定节点）查询设计源，列出顶层同级帧的完整清单 — id、名称、类型、位置。跳过此步骤会导致状态变体被遗漏。
 
-**分类：**
+对每个帧分类：
+
 | 分类 | 含义 | 处理方式 |
 |---|---|---|
-| `page` | 全屏页面或屏幕路由 | 结构化为独立的页面级契约 |
-| `page-state` | 已分类为 `page` 的框架的替代状态（如加载中、空、错误、已选择、未选择） | 作为屏幕状态归入父 `page` — 不创建单独契约 |
-| `modal` | 模态对话框、底部弹出层、气泡或覆盖层 | 结构化为独立的页面级契约 — 不嵌套在页面内部 |
-| `shared-shell` | 共享的导航外壳、标签栏或包裹页面的持久框架 | 提取一次作为共享组件；在依赖页面中引用 |
+| `page` | 全屏页面或屏幕路由 | 一份 `unit.type: "page"` 的 `ui-contract.html` |
+| `page-state` | 已分类页面的替代状态（加载中、空、错误、已选择、未选择） | 该页面文件内的一个 `<template data-ui-state>` 区块 — 不创建单独契约 |
+| `modal` | 模态对话框、底部弹出层、气泡或覆盖层 | 一份 `unit.type: "modal"` 的 `ui-contract.html` — 绝不嵌套在页面内 |
+| `shared-component` | 共享的导航外壳、标签栏或包裹页面的持久框架 | 一份 `unit.type: "shared-component"` 的 `ui-contract.html`；被依赖它的页面通过 `unit.dependencies` 引用 |
 | `ignore` | 非 UI 内容（设计师备注、标注、辅助线） | 完全排除在契约之外 |
 
 **分组规则：**
-- 相同名称前缀、不同后缀的框架（如"性别-未选择"、"性别-男"、"性别-女"）→ 归为一个 `page` 下的 `page-state` 变体。它们共享相同外壳/布局，仅内容状态不同。
-- 共享相同外壳/布局、仅内容状态不同的 section → 归为一个 `page` 下的 `page-state` 变体。
-- 布局不同、导航上下文不同或入口点独立的 section → 拆分为单独的 `page` 单元。
-- 模态覆盖层、底部弹出层和对话框 → 始终拆分为独立单元。它们有自己的生命周期、入口触发器和关闭逻辑 — 不是页面的子组件。
-- 在 `page` 与 `page-state` 之间犹豫时：检查这些 section 是否通过同一路由/URL 到达。相同路由 → `page-state`。不同路由或由用户动作触发 → `page`。
+- 共享相同外壳/布局、仅内容状态不同的帧 → 归为同一单元的 `page-state` 变体。
+- 布局不同、导航上下文不同或入口点独立的帧 → 拆分为独立的 `page` 单元。
+- 模态覆盖层、底部弹出层和对话框 → 始终是独立单元。它们有自己的生命周期、入口触发器和关闭逻辑 — 绝不是某个页面契约内的子模板。
+- 在 `page` 与 `page-state` 之间犹豫时：检查这些帧是否通过同一路由/URL 到达。相同路由 → `page-state`。不同路由或由用户动作触发 → `page`。
 
-**验证：** 分类后，确认每个枚举的框架都已分配到某个单元。没有框架被遗漏。如果某个框架无法匹配，重新检查 — 它可能是你忽略的状态变体。
+**验证：** 确认每个枚举的帧都已分配到某个单元或状态。没有帧被遗漏。
 
-**输出：** 将 `templates/section-map-template.json` 复制到输出路径，然后为每个分类后的框架填充值。严格保留模板定义的所有字段键、顺序和结构 — 绝不凭记忆重新生成。
+**派发：** 对于多于一个的独立单元，派发逐单元子代理，使证据收集与 DOM 编写保持隔离 — 不产生跨单元污染。仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态时，才跳过子代理派发。
 
-**section-map 写入后 — 派发逐单元子代理。** 对于 section-map 中的每个独立单元（page、modal、shared-shell），派发一个子代理。每个子代理仅接收其所属单元的帧（每个帧含用于 Figma 查询的 `source_node` 和用于 YAML state id 的 `state_type`）、需求切片、设计源定位符和模板路径。子代理为其分配的单元独立执行阶段 3 — 运行三层增量编辑（骨架 → 布局 → 样式内容），每层一次只处理一个帧，编辑同一个 YAML 文件。所有单元并行派发。主会话不收集证据也不冻结 YAML；仅负责派发、收集结果，然后运行阶段 4 审校。
+### 3. 收集最小 TemPad 证据 *（派发时在逐单元子代理内运行）*
 
-仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态帧时，跳过子代理派发。
+对于该单元中的每一帧，一次处理一个：
 
-### 3. 三层增量契约构建 *（在逐单元子代理内运行）*
+1. 先调用 `get_code(frame_source_node)` — 它返回语义化 markup、布局样式、token 和资源引用。这是结构、定位和内容的主要证据来源。
+2. 仅当 `get_code` 之后层级、几何或重叠仍存在歧义时，才调用 `get_structure(frame_source_node)`。不要默认调用它 — 它是消歧工具，不是首选查询。
+3. 在编写 DOM 之前，记录你打算引用的每个 `data-figma-node` — 不得凭空捏造节点 ID。
 
-此步骤在每个逐单元子代理内运行。子代理只能访问其分配单元的帧和证据 — 无其他单元的交叉污染。
+### 4. 逐字复制模板（新建）或打开已匹配文件（修补）
 
-**执行模型：** 在同一 YAML 文件上执行三层顺序编辑。每层一次只处理一个帧 — 永远不要将所有帧批量塞入单个 Figma 查询。每层只填充其分配的字段，不触碰其他层拥有的字段。
+**新建：** 找到 `templates/ui-contract-template.html`，将其逐字复制到 `<output-dir>/<unit-id>/ui-contract.html`。四个区域（`#ui-contract-meta`、`<style>`、`<main data-ui-contract>`、`[data-ui-review-panel]`）保持完整；绝不新增第五个区域。
 
-**首先，复制模板。** 找到 `templates/ui-acceptance-contract-template.yaml`，将其逐字复制到本单元的输出路径。三层全部编辑同一个文件。
+**增量修补：** 直接打开定位到的文件。不要在已有契约上重新复制模板。
 
-#### Pass 1 — 骨架层
+### 5. 填充或修补单元 HTML
 
-**用途：** 构建组件树结构和状态声明。
+- `#ui-contract-meta` — 填充 `schema_version: 2`、`contract_id`、`source`（`requirement`/`design_file`/`root_node`/`cache`）、`unit`（`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`）、`states`（每帧一条，恰好一条 `default: true`）、`revision`、`delivery.status`。
+- `<style>` — 仅填写从 `get_code` 读取到的、有证据支撑的 CSS 自定义属性和规则。当 TemPad 返回规范 token 绑定时优先使用 `var(--token)`；否则保留 TemPad 返回的字面值。
+- `<main data-ui-contract>` — 构建语义化 DOM。`<main>` 上的 `data-ui-unit-id`/`data-ui-unit-type` 必须与 `meta.unit.id`/`meta.unit.type` 一致。每个承载真值的元素都要有唯一的 `data-ui-id`、来自组件词汇表的 `data-ui-kind`，以及 `data-figma-node`。将仅特定状态出现的内容包裹在匹配已声明状态 ID 的 `<template data-ui-state="<id>">` 中。
+- `[data-ui-review-panel]` — 一个默认折叠的 `<details>`，容纳来源节点、状态说明及任何推断理由。每个 `data-evidence="inferred"` 元素都必须在此处有匹配的 `dt[data-ui-evidence-for]`/`dd` 对。
+- 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关的 `data-ui-id` 子树、无关状态，以及其他单元的 `unit.dependencies`。
 
-**Figma 查询：** `get_structure(frame_source_node)` — 每帧一次，仅结构级。此层不要使用 `get_code`。
+一次处理一个帧 — 绝不将所有帧批量塞入单次查询或单次编辑。
 
-**你填充的字段：**
-- `version`、`contract_id`
-- `source` — 需求文件名、Figma 文件 key、根节点 ID、缓存路径
-- `states` — 每帧一个条目：`id`（来自帧的 `state_type` 分类）和 `source_node`
-- `background` — 仅页面级颜色，来自默认/idle 帧
-- `regions[].children[]` — 组件树骨架：`id`、`type`、`name`、`source_node`、`visible_when`、递归 `children`
+### 6. 浏览器审查
 
-**不要触碰：** `anchor`、`layout`、`box`（width/height/padding）、`background`（组件级）、`content`（text/icon/image/font）、`interaction`、`description`。保持这些为模板默认值（`null`、`{}`、`[]`、`0`）。
+在浏览器（或 IDE 的渲染预览）中打开契约 HTML，与 Figma 帧并排比对：
 
-**逐帧迭代：**
+- 在不展开审查面板的情况下，验证默认状态的布局是否匹配。
+- 展开 `[data-ui-review-panel]`，确认每个引用的 `data-figma-node` 和推断说明清晰准确。
+- 逐一检查每个 `<template data-ui-state>` 区块（或其渲染预览），确认每个状态的内容与其源帧一致。
 
-对于该单元帧列表中的每一帧，一次处理一个：
+### 7. 运行校验器
 
-1. 调用 `get_structure(<frame-source-node>)`。
-2. 提取组件层级 — 组件类型、嵌套关系、可见元素。
-3. **第一个处理的帧：** 在 `regions[].children[]` 中创建所有组件节点。填充 `id`、`type`、`name`、`source_node`。设置 `visible_when: null`（默认状态组件始终可见）。使用 Figma 父子结构递归填充 `children`。
-4. **后续帧：** 对此帧中发现的每个组件：
-   - 若组件具有相同的 `source_node` 且已存在于树中 → 同一组件在不同状态。不要创建重复项。若其仅特定状态可见则设置或细化 `visible_when` 条件。
-   - 若组件具有新的 `source_node` 且树中不存在 → 特定于状态的内容。将其追加到适当父组件的 `children` 中，并设置导致其出现的语义条件的 `visible_when`。
-5. 将帧的状态条目添加到 YAML 顶部的 `states` 列表 — 每帧一个 `id` + `source_node`。
+```bash
+python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
+```
 
-**跨状态合并规则：**
-- 所有状态中存在的组件：使用默认/idle 帧的 `source_node`，`visible_when: null`。
-- 仅部分状态中存在的组件：使用其可见帧的 `source_node`，设置语义条件的 `visible_when`。
-- 仅样式在不同状态间变化的组件：单个组件条目，样式差异写入 `states` — 在 Pass 3 中填充。
-- 绝不为不同状态创建相同 `id` 的两个组件条目。
+仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `frozen`/`acceptance_frozen`。
 
-**Pass 1 完成后：** YAML 具有完整的 `states` 列表和完整的组件树，包含 `id`、`type`、`name`、`source_node`、`visible_when`。所有其他字段为模板默认值。
+### 8. 开发完成后 — 回填交付信息并重新校验
 
-#### Pass 2 — 布局层
+单元实现完成后，编辑同一文件的 `#ui-contract-meta`：
 
-**用途：** 为每个组件填充定位、尺寸和布局。
+- 将 `delivery.status` 设为 `"implemented"`（合并后设为 `"merged"`）；
+- 填充 `delivery.implemented`：`type`、`target`（代码位置）、`requirement`、`version`、`status`。
 
-**Figma 查询：** `get_code(frame_source_node)` — 每帧一次，代码级。读取 Pass 1 的 YAML，按 `source_node` 查找组件。
-
-**你填充的字段：**
-- `anchor` — 每个组件恰好 4 个条目：`start`、`end`、`top`、`bottom`。每个包含：
-  - `to`：引用组件 ID、`screen_start`、`screen_end`、`screen_top`、`screen_bottom`
-  - `direction`：附着到引用边缘的哪个方向
-  - `offset`：与引用边缘的 `<Npx>` 间距，或 `auto` 当父布局控制定位时
-  - `note`：当 `offset` 为 `auto` 时必须填写 — 解释偏移量如何计算
-- `layout` — `direction`（vertical/horizontal/none）、`align`、`gap`
-- `box` — `width`（auto/fill/<Npx>）、`height`（auto/<Npx>）、`padding`（全部 4 方向必需：top/right/bottom/left；无视觉间距时使用 `0`）
-
-**不要触碰：** 所有 Pass 1 字段（`id`、`type`、`name`、`source_node`、`visible_when`、`states`）。同时：`background`（组件级）、`content`（text/icon/image/font）、`interaction`、`description`。即使存在固定 px 也不要在此处写 `description` — Pass 3 会处理。
-
-**逐帧迭代：**
-
-对于该单元帧列表中的每一帧，一次处理一个：
-
-1. 读取当前 YAML 文件。找到所有 `source_node` 属于此帧的组件。
-2. 调用 `get_code(<frame-source-node>)` 获取精确的定位数据。
-3. 为此帧中找到的每个组件提取并填充：
-   - **anchor**：计算全部 4 个锚点条目。从参考底部边缘的偏移公式：`offset = 子元素.y − (参考元素.y + 参考元素.height)`。与参考边缘齐平时使用 `0px`。使用 `auto` 当父布局（如列表）控制定位时 — 添加 `note` 解释计算方式。
-   - **layout**：从 Figma 自动布局或手动定位数据中提取方向、对齐和间距。
-   - **box**：`width` 优先 `auto` > `fill` > `<Npx>`。`height` 优先 `auto` > `<Npx>`。`padding` 全部 4 方向从测量内边距中获取；设计显示齐平时使用 `0`。
-4. 移动到下一帧。重复直到所有帧处理完毕。
-
-**Pass 2 完成后：** 每个组件具有完整的 anchor、layout 和 box。`background`（组件级）、`content`、`interaction` 和 `description` 保持为模板默认值。
-
-#### Pass 3 — 样式内容层
-
-**用途：** 为每个组件填充视觉样式、内容和交互。
-
-**Figma 查询：** `get_code(frame_source_node)` — 每帧一次，代码级。可复用 Pass 2 的缓存数据（相同的 `get_code` 查询）。读取 Pass 2 的 YAML 查找组件。
-
-**你填充的字段：**
-- `background` — 组件级：`color`、`border`（radius/width/color）、`shadow`、`opacity`
-- `content` — 每个组件恰好填充一个插槽：
-  - 文本组件：`text`（可见文本内容）+ `font`（family、size、weight、color、height、align）
-  - 图标组件：`icon`（src — 资源文件名，size — 显示尺寸）
-  - 图片组件：`image`（src、width、height、fit）
-- `interaction` — `on`（click/long-press/none）、`action`、`note`
-- `states` — 与默认状态的差异。组件状态键名（如 `selected`、`active`、`disabled`），每个为部分组件差异。示例：`{ selected: { background: { border: { color: "#41B8F4" } } } }`。
-- `description` — 当 `box.width` 或 `box.height` 使用固定 `<Npx>` 时必须填写；解释为何 `auto` 不适用（如"图标基准尺寸"、"触控目标最小值"）。
-
-**不要触碰：** 所有 Pass 1 字段，所有 Pass 2 字段（`anchor`、`layout`、`box`）。不要修改组件树结构、增加/删除节点或更改 `source_node` 值。不要更改 `visible_when` 条件。
-
-**逐帧迭代：**
-
-对于该单元帧列表中的每一帧，一次处理一个：
-
-1. 读取当前 YAML 文件。找到所有 `source_node` 属于此帧的组件。
-2. 调用 `get_code(<frame-source-node>)` — 若 Pass 2 已有缓存在 `.ai-delivery/figma-cache/<file-key>/code/<node-id>.json` 中则复用；如未缓存则重新获取。
-3. 为此帧中找到的每个组件提取并填充：
-   - **background**：颜色填充、边框样式、阴影、透明度。
-   - **content**：从 Figma 节点确定内容类型 — 文本节点 → `text`+`font`；矢量/图标节点 → `icon`；图片填充节点 → `image`。恰好填充一个插槽。
-   - **interaction**：若组件是交互式的（设计中有 click/long-press 行为），填充 `on`、`action` 和 `note`。
-   - **states**：若此组件在 Pass 1 确定的状态间有样式变化，写入各状态的差异。每个差异仅包含组件默认值（Pass 3）中变化的属性。
-   - **description**：若 `box.width` 或 `box.height` 使用固定 `<Npx>`，写简要的理由说明。
-4. 移动到下一帧。重复直到所有帧处理完毕。
-
-**Pass 3 完成后：** YAML 契约完整。所有字段均使用 design-backed 值填充。
-
-**全部三层完成后：** 子代理将完成的 `ui-acceptance-contract.yaml` 返回给主会话。主会话收集所有单元契约后进入阶段 4。
-
-### 4. 最终契约审校
-
-**强制执行 — 每次 YAML 冻结后运行。** 审校生成的每一份契约（page、modal、shared-shell），不得跳过任何单元。使用子代理纯净执行 — 子代理接收所有契约和 `section-map.json`，返回优化后的契约。
-
-此审校仅规范化布局语义和尺寸。不新增或删除 source-backed 组件、状态、`visible_when` 条件或 `source_node` 值。
-
-**审校顺序（严格遵循，按 pass 层组织）：**
-
-**骨架质量（Pass 1 产出）：**
-
-**S1. 组件树完整性**
-- `section-map.json` 中枚举的每个帧的 `source_node` 必须在树中至少有一个对应的组件节点。
-- 没有帧被遗漏。
-
-**S2. visible_when 覆盖率**
-- 所有非默认状态组件必须有 `visible_when` 条件。
-- 条件使用语义化语言（如"选项已被选中"），不使用机械的状态 ID 检查。
-
-**S3. states 列表一致性**
-- YAML 中的 `states` 列表必须与 `section-map.json` 中声明的帧一致 — 相同的数量，每个状态有 `id` + `source_node`。
-
-**S4. source 元数据完整性**
-- `source.requirement`、`source.design_file`、`source.root_node`、`source.cache` 全部已填充。
-
-**布局质量（Pass 2 产出）：**
-
-**L1. anchor 4 方向完整性**
-- 每个组件有全部 4 个 anchor 条目（`start`、`end`、`top`、`bottom`）。
-- 每个条目有明确的 `to`、`direction` 和 `offset` — 无 null、无空字符串。
-- `offset: "0px"` 用于齐平附着；`offset: "auto"` 必须有 `note` 解释计算方式。
-- 组件位于兄弟组件下方 → anchor `top` 到该兄弟组件的 `bottom`，间距为测量值。
-
-**L2. padding 4 方向完整性**
-- 每个组件的 `padding` 在全部 4 方向（`top`、`right`、`bottom`、`left`）有明确值。
-- 设计显示齐平时使用 `0` — 永远不要让 padding 字段为 `null` 或缺失。
-- 含有可见子元素且内边距一致的容器 → padding 反映该容器上的内边距，而非子元素上的固定尺寸。
-
-**L3. width/height 收敛**
-- 文字、标签、说明 → `width: "auto"`、`height: "auto"`。
-- 横跨可用宽度的卡片、行 → `width: "fill"`。
-- **fill 判定规则**：若组件的 px 宽度等于（父容器宽度 − 对称水平间距），使用 `fill` 而非固定 px。
-- 仅保留固定 px：图标、头像、最小触控目标（≥44px）、明确设计要求固定宽度的弹窗。
-
-**L4. gap/align 一致性**
-- `layout.gap` 和 `layout.align` 值与 Figma 自动布局数据一致。
-
-**样式内容质量（Pass 3 产出）：**
-
-**C1. content slot — 恰好一个**
-- 每个叶子节点组件恰好填充一个内容插槽：`text`+`font`、`icon` 或 `image`。
-- 无可视子元素、无文字、无图标、无图片的空容器 → 不应存在于树中。
-
-**C2. background 来源可追溯**
-- `background.color`、`border`、`shadow`、`opacity` 值可追溯到 Figma fill/stroke/effect 数据。
-- 无凭空编造的颜色或效果。
-
-**C3. interaction 完整性**
-- 设置了 `interaction.on` 的组件必须有对应的 `action` 和（非平凡时的）`note`。
-
-**C4. fixed px 理由说明**
-- 每个保留固定 `width` 或 `height` px 值的组件必须有 `description` 解释为何 `auto` 不适用（如"图标基准尺寸"、"触控目标最小值"）。
-
-**全局检查：**
-
-**G1. 安全区与系统 UI**
-- 顶部边缘在系统状态栏下的区域 → `safe_area: "top"`。
-- 位于系统导航栏、主页指示条或软键盘上方的区域 → `safe_area: "bottom"`，锚定到 `bottom`，`offset: "0px"`。
-- 组件树中无状态栏、导航栏、键盘或设备壳层。
-
-**G2. 键盘适配**
-- 含文本输入框、验证码、密码或邮箱字段的页面 → 包含输入区域的 region 必须锚定到 `bottom` 并设 `safe_area: "bottom"`。系统在运行时处理键盘避让。
-- 不要用固定像素偏移模拟键盘顶起后的位置。不要把键盘建模为组件或固定高度 spacer。
-
-**输出**：用优化后的版本覆盖每个 `ui-acceptance-contract.yaml`。仅在单元分类变更时更新 `section-map.json`。若固定值有源依据则保留，若 `auto`/`fill` 语义正确则应用。在子代理响应中标注任何模棱两可的情况。
+重新运行校验器 — 它会强制要求当 `delivery.status` 为 `"implemented"` 或 `"merged"` 时，`delivery.implemented` 必须完整。不要创建单独的实现追踪文件；同一份 HTML 内的这次回填就是唯一的实现记录。
 
 ## 组件类型词汇
 
 `container`、`card`、`list`、`list-item`、`form`、`text`、`text-input`、`button`、`image`、`icon`、`tab`、`navigation`、`divider`、`badge`、`modal`、`sheet`、`toast`、`custom`
+
+## 反模式（视为流程失败）
+
+- 在 `ui-contract.html` 之外再写一份 YAML、JSON 或 markdown 文件来承载 UI 真值。
+- 将状态栏、导航栏、键盘或设备外壳建模为 `data-ui-kind` 内容，而不是使用 CSS 安全区处理。
+- 使用 `data-evidence="inferred"` 却没有匹配的审查面板说明。
+- 扫描每一份历史契约文件来"寻找"某个单元，而不是使用需求 ID、语义或用户显式指定的路径。
+- 为一个很小的需求变更重写整份已匹配的契约，而不是做增量修补。
+- 未运行校验器得到 `OK` 就声称 `frozen`/`implemented`/`merged` 状态。
+- 不先复制模板就手写 DOM 结构。

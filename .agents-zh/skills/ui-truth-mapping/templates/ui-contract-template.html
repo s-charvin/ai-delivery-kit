@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>UI Contract: PLACEHOLDER-unit-id</title>
+<!--
+  ui-contract-template.html — HTML Contract v2 skeleton.
+
+  Copy this file verbatim to the output path
+  (<output-dir>/<unit-id>/ui-contract.html), then fill in values field by
+  field. Only fields backed by get_code/get_structure evidence may be
+  populated — leave placeholder tokens untouched when no evidence exists.
+  Never delete a required key, and never add a region beyond the four below.
+
+  ALLOWED regions (exactly these four, in this order):
+    1. <script id="ui-contract-meta" type="application/json">
+       — schema_version, contract_id, source, unit, states, revision, delivery
+    2. <style> — CSS custom properties + evidence-backed layout/visual rules
+    3. <main data-ui-contract> — the single unit's semantic, renderable DOM
+    4. [data-ui-review-panel] — collapsible source-node / inference evidence,
+       nested inside <main data-ui-contract> as the last child
+
+  FORBIDDEN:
+    - A second UI truth source next to this file (no companion YAML, JSON,
+      or markdown mapping document).
+    - System UI as contract content — data-ui-kind must never be
+      "status-bar", "system-navigation", "soft-keyboard", or "device-chrome".
+      Use CSS safe-area handling on the affected unit instead.
+    - Free-form markup outside the four regions above.
+    - Any value that is not traceable to a get_code/get_structure payload.
+-->
+<script type="application/json" id="ui-contract-meta">
+{
+  "schema_version": 2,
+  "contract_id": "PLACEHOLDER-unit-id",
+  "source": {
+    "requirement": "PLACEHOLDER-requirement-slice-filename",
+    "design_file": "PLACEHOLDER-figma-file-key",
+    "root_node": "PLACEHOLDER-figma-root-node-id",
+    "cache": "PLACEHOLDER-figma-cache-path"
+  },
+  "unit": {
+    "id": "PLACEHOLDER-unit-id",
+    "type": "page",
+    "title": "PLACEHOLDER-human-readable-title",
+    "route_or_trigger": "PLACEHOLDER-route-or-trigger",
+    "requirements": ["PLACEHOLDER-subreq-id"],
+    "source_node": "PLACEHOLDER-figma-unit-root-node-id",
+    "dependencies": []
+  },
+  "states": [
+    { "id": "PLACEHOLDER-state-id", "source_node": "PLACEHOLDER-figma-frame-node-id", "default": true }
+  ],
+  "revision": 1,
+  "delivery": {
+    "status": "frozen",
+    "implemented": null
+  }
+}
+</script>
+<style>
+  /*
+    Design tokens and evidence-backed styles only. Prefer var(--token) when
+    TemPad returns a canonical token binding; otherwise keep the literal
+    value TemPad returned. Never guess a value from a screenshot, a node
+    name, or a descendant that get_code/get_structure did not return.
+  */
+  :root {
+    --color-surface: #PLACEHOLDER;
+    --color-text: #PLACEHOLDER;
+    --space-unit-x: 0px;
+  }
+  [data-ui-contract] {
+    background: var(--color-surface);
+    color: var(--color-text);
+    min-height: 100vh;
+  }
+  /*
+    [data-ui-id="PLACEHOLDER-region-id"] { ...evidence-backed rules only... }
+  */
+</style>
+</head>
+<body>
+  <!--
+    Unit root: exactly one <main data-ui-contract> per file.
+    data-ui-unit-id must equal meta.unit.id.
+    data-ui-unit-type must equal meta.unit.type.
+    data-ui-state-default names the default state id from meta.states.
+  -->
+  <main data-ui-contract data-ui-unit-id="PLACEHOLDER-unit-id" data-ui-unit-type="page" data-ui-state-default="PLACEHOLDER-state-id">
+    <!--
+      Every truth-bearing node needs:
+        data-ui-id      — stable, unique within this file
+        data-ui-kind    — container | card | list | list-item | form | text |
+                           text-input | button | image | icon | tab |
+                           navigation | divider | badge | modal | sheet |
+                           toast | custom
+        data-figma-node — the Figma node id this element's evidence came from
+        data-evidence   — "code" | "structure" | "structure+code" | "inferred"
+                           ("inferred" requires a matching note in the review
+                           panel below — never leave an inference silent)
+      Nest child elements recursively the same way; there is no fixed depth.
+    -->
+    <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
+      <!-- children go here, one data-ui-id per truth-bearing element -->
+    </section>
+
+    <!--
+      State-only content: wrap in <template data-ui-state="<id>">, where
+      <id> matches one of meta.states[].id. Components always visible across
+      every state stay outside any <template>. Move a component inside a
+      <template> only when the design shows it appearing/changing for that
+      specific state.
+    -->
+    <template data-ui-state="PLACEHOLDER-state-id">
+      <div data-ui-id="PLACEHOLDER-state-only-id" data-ui-kind="text" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">PLACEHOLDER visible text from Figma</div>
+    </template>
+
+    <!--
+      Review panel: collapsed-by-default detail layer for source nodes,
+      state notes, and inference reasoning. Every data-evidence="inferred"
+      element above MUST have a matching dt[data-ui-evidence-for]/dd pair
+      here — silent inference is a process failure, not a shortcut.
+    -->
+    <details data-ui-review-panel>
+      <summary>Contract evidence</summary>
+      <dl>
+        <dt data-ui-evidence-for="PLACEHOLDER-region-id">Inference</dt>
+        <dd>PLACEHOLDER explanation of which Figma nodes this was derived from and why normalization was needed.</dd>
+      </dl>
+    </details>
+  </main>
+</body>
+</html>
