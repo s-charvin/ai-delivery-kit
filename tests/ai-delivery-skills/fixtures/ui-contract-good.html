@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>UI Contract: fixture-profile-page</title>
+  <script type="application/json" id="ui-contract-meta">
+  {
+    "schema_version": 2,
+    "contract_id": "fixture-profile-page",
+    "source": {
+      "requirement": "requirement-slice.md",
+      "design_file": "fixture-file-key",
+      "root_node": "1:100",
+      "cache": ".ai-delivery/figma-cache/fixture-file-key"
+    },
+    "unit": {
+      "id": "profile-page",
+      "type": "page",
+      "title": "Profile Page",
+      "route_or_trigger": "/profile",
+      "requirements": ["fixture-subreq-1"],
+      "source_node": "1:200",
+      "dependencies": []
+    },
+    "states": [
+      { "id": "idle", "source_node": "1:200", "default": true }
+    ],
+    "revision": 1,
+    "delivery": {
+      "status": "frozen",
+      "implemented": null
+    }
+  }
+  </script>
+  <style>
+    :root {
+      --color-surface: #F2F7FA;
+      --color-text: #111111;
+      --space-page-x: 16px;
+    }
+    [data-ui-contract] { background: var(--color-surface); color: var(--color-text); min-height: 100vh; }
+    [data-ui-id="profile-header"] { padding: 24px var(--space-page-x); }
+    [data-ui-id="profile-title"] { font-size: 24px; line-height: 32px; font-weight: 600; text-align: center; }
+  </style>
+</head>
+<body>
+  <main data-ui-contract data-ui-unit-id="profile-page" data-ui-unit-type="page" data-ui-state-default="idle">
+    <section data-ui-id="profile-header" data-ui-kind="container" data-figma-node="1:201" data-evidence="structure+code">
+      <h1 data-ui-id="profile-title" data-ui-kind="text" data-figma-node="1:202" data-evidence="code">Profile</h1>
+    </section>
+    <template data-ui-state="idle">
+      <div data-ui-id="profile-idle-note" data-ui-kind="text" data-figma-node="1:203" data-evidence="code">No notifications.</div>
+    </template>
+    <details data-ui-review-panel>
+      <summary>Contract evidence</summary>
+      <dl>
+        <dt data-ui-evidence-for="profile-header">Inference</dt>
+        <dd>Grouped repeated Figma rows into a semantic header container from nodes 1:201-1:202.</dd>
+      </dl>
+    </details>
+  </main>
+</body>
+</html>
