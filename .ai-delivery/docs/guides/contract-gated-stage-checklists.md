@@ -20,9 +20,9 @@
 
 ## UI Truth Mapping Gate Notes
 
-- `ui-truth-mapping` produces `ui-acceptance-contract.yaml` with frozen component tree, layout, spacing, typography, and states for all screen states.
-- `section-map.json` defines delivery slice ordering (`shared-shell` → `page` → `modal`).
-- All screen states must be source-backed before `acceptance_frozen` can be set.
+- `ui-truth-mapping` produces one `ui-contract.html` (schema v2) per independent unit, freezing that unit's component tree, layout, spacing, typography, and states (`<template data-ui-state>` blocks) — no companion YAML or JSON file.
+- Each unit's embedded `meta.unit.type` (`page` / `modal` / `shared-component`) and `meta.unit.dependencies` define delivery slice ordering (`shared-component` → `page` → `modal`).
+- All states must be source-backed before the contract's `delivery.status` can be `frozen`.
 - API docs are passed directly to implementation — not part of this gate.
 
 ## Review Extension

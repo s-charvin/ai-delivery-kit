@@ -33,17 +33,14 @@ def is_blocked(status: str) -> bool:
 
 
 def find_contracts(subreq_dir: Path) -> list[Path]:
+    """Find every ui-contract.html under a sub-requirement (one per unit)."""
     if not subreq_dir.is_dir():
         return []
-    return sorted(subreq_dir.rglob("ui-acceptance-contract.yaml"))
+    return sorted(subreq_dir.rglob("ui-contract.html"))
 
 
 def has_ui_artifacts(subreq_dir: Path) -> bool:
-    if not subreq_dir.is_dir():
-        return False
-    if find_contracts(subreq_dir):
-        return True
-    return (subreq_dir / "section-map.json").exists()
+    return bool(find_contracts(subreq_dir))
 
 
 def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:

@@ -12,15 +12,17 @@
 
 ## 运行 `ui-truth-mapping`
 
-传入需求切片与设计源。产出 `ui-acceptance-contract.yaml` 与 `section-map.json`。
+传入需求切片与设计源。每个独立 unit 产出一份 `ui-contract.html`（schema v2），各自位于子需求下自己的 `<unit-id>/` 目录中。不存在聚合索引文件或配套 YAML/JSON——跨 unit 关系与交付顺序唯一来自各 unit 自身的 `meta.unit.type`（`page` / `modal` / `shared-component`）与 `meta.unit.dependencies`。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
 ## 完成后
 
 ```bash
-python3 scripts/validate-ui-contract.py <contract-path> [--section-map <section-map.json>]
+python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
+
+每个 unit 的 `ui-contract.html` 各运行一次。
 
 - 仅当每次校验输出 `OK` 时设置 `acceptance_frozen`。
 - 失败 → `blocked_verification_failure` 并附校验输出；不推进状态。

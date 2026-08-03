@@ -1,4 +1,4 @@
 interface:
   display_name: "UI Truth Mapping"
-  short_description: "Map Figma design to a canonical HTML UI contract (schema v2) and delivery slices"
+  short_description: "Map Figma design into a canonical HTML UI contract v2"
   default_prompt: "Use $ui-truth-mapping to bind Figma design evidence to this sub-requirement, freeze the ui-contract.html HTML UI contract, and define delivery slices."

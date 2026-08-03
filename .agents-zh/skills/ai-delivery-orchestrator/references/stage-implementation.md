@@ -8,7 +8,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与
 
 ## 切片执行顺序
 
-按 `section-map.json`：`shared-shell` → `page` → `modal`（每个 modal 在其触发 page 之后）。结构依赖 `merged` 后才启动单元。
+来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`（无独立 section-map 文件）：`shared-component` → `page` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
 
 ## 子代理策略
 
@@ -26,7 +26,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与
 1. **`using-git-worktrees`** — 每切片一个 worktree。
 2. **`subagent-driven-development`**（默认）— 每任务新子代理；内部用 `test-driven-development`。
 3. **`requesting-code-review`** — 首次失败进入自动修复循环，再升级给用户。
-4. **视觉验收**（仅 UI）— 截图对照 YAML 契约状态；首次失败自动修复。
+4. **视觉验收**（仅 UI）— 将实现与经评审的 `ui-contract.html` 各状态对照，并参考可选的视觉回归报告；首次失败自动修复。
 5. **`verification-before-completion`** — 合并前集成检查。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须全部通过。
 7. **`finishing-a-development-branch`** — 结构化合并选项；rebase 到开发分支（无 merge commit）。
@@ -34,7 +34,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与
 ## 状态更新
 
 - 开始实现时设 `in_dev`。
-- 截图匹配 YAML 后设 `visual_acceptance_passed`（仅 UI）。提升该状态前须写入 `visual-acceptance.md` 或 `visual-acceptance/*.png`。
+- 截图匹配经评审的 `ui-contract.html` 后设 `visual_acceptance_passed`（仅 UI）。提升该状态前须写入 `visual-acceptance.md` 或 `visual-acceptance/*.png`。
 - rebase 成功后设 `merged`。
 
 ## 进度账本（可选）

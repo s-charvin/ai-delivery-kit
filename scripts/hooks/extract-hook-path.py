@@ -25,7 +25,7 @@ def from_mapping(obj: object) -> str:
 
 
 def fallback_from_text(raw: str) -> str:
-    needle = "ui-acceptance-contract.yaml"
+    needle = "ui-contract.html"
     idx = raw.find(needle)
     if idx < 0:
         return ""

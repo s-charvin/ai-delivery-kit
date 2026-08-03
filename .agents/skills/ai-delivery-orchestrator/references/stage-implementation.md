@@ -8,7 +8,7 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation. See [stage
 
 ## Slice execution order
 
-From `section-map.json`: `shared-shell` → `page` → `modal` (each modal after its trigger page). A unit starts only when structural dependencies are `merged`.
+Derived from each unit's embedded `meta.unit.type` and `meta.unit.dependencies` (no separate section-map file): `shared-component` → `page` → `modal` (each modal after its trigger page). A unit starts only when the units listed in its `meta.unit.dependencies` are `merged`.
 
 ## Subagent policy
 
@@ -26,7 +26,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 1. **`using-git-worktrees`** — one worktree per slice.
 2. **`subagent-driven-development`** (default) — each task in a fresh subagent; TDD via `test-driven-development` inside each subagent.
 3. **`requesting-code-review`** — first failure → auto-fix loop before user escalation.
-4. **Visual acceptance** (UI only) — screenshot vs YAML contract states; auto-fix on first failure.
+4. **Visual acceptance** (UI only) — compare implementation against the reviewed `ui-contract.html` states, plus any optional visual-regression report; auto-fix on first failure.
 5. **`verification-before-completion`** — integration checks before merge.
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 7. **`finishing-a-development-branch`** — structured merge options; rebase onto development branch (no merge commits).
@@ -34,7 +34,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 ## Status updates
 
 - `in_dev` when implementation starts.
-- `visual_acceptance_passed` after screenshot matches YAML (UI only). Write `visual-acceptance.md` or `visual-acceptance/*.png` before promoting this status.
+- `visual_acceptance_passed` after the screenshot matches the reviewed `ui-contract.html` (UI only). Write `visual-acceptance.md` or `visual-acceptance/*.png` before promoting this status.
 - `merged` after successful rebase.
 
 ## Progress ledger (optional)

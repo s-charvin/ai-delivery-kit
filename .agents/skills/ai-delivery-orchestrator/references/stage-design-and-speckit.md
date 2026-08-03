@@ -20,7 +20,7 @@ Do not invoke `speckit-specify`, `speckit-plan`, or `speckit-tasks` until brains
 Feed `superpowers:brainstorming`:
 
 - `requirement-slice.md`
-- `ui-acceptance-contract.yaml` (if UI-bearing)
+- each unit's `ui-contract.html` (if UI-bearing)
 - API docs (if available)
 - Dependency graph
 
@@ -35,7 +35,7 @@ Design session should produce:
 
 Store summary in `notes`. On user approval, set `design_approved: true`.
 
-If design conflicts with YAML contract or requirement → `blocked_spec_mismatch`.
+If design conflicts with the HTML contract or requirement → `blocked_spec_mismatch`.
 
 **Pause:** design approval is checkpoint CP-DESIGN. Wait for explicit user approval.
 
@@ -43,7 +43,7 @@ If design conflicts with YAML contract or requirement → `blocked_spec_mismatch
 
 When `design_approved: true`:
 
-1. `speckit-specify` → `spec.md` — audit against YAML screen states (UI).
+1. `speckit-specify` → `spec.md` — audit against the HTML contract's states (UI); Spec Kit's input is the reviewed `ui-contract.html`, not a separate spec document.
 2. `speckit-plan` → `plan.md` — audit delivery slice ordering.
 3. `speckit-tasks` → `tasks.md` — audit granularity, dependency order, file scope.
 

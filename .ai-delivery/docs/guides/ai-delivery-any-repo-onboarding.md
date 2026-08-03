@@ -249,7 +249,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 要求：
 - 基于结构化 node payload 完成映射
-- 生成 ui-acceptance-contract.yaml 和 section-map.json
+- 每个独立 unit 生成一份 ui-contract.html（schema v2），无配套 YAML/JSON 文件
 - 更新 traceability.json
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
@@ -266,8 +266,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 上游输入必须以这些文件为准：
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/ui-acceptance-contract.yaml（如有 UI）
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/section-map.json（如有 UI）
+- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/<unit-id>/ui-contract.html（如有 UI，每个 unit 一份）
 - .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json
 
 要求：

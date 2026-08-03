@@ -12,15 +12,17 @@ For each sub-requirement where `ui_bearing: true` and a Figma design source is a
 
 ## Run `ui-truth-mapping`
 
-Feed requirement-slice and design source. Produces `ui-acceptance-contract.yaml` and `section-map.json`.
+Feed requirement-slice and design source. Produces one `ui-contract.html` (schema v2) per independent unit, each under its own `<unit-id>/` directory in the sub-requirement. There is no aggregate index file or companion YAML/JSON — each unit's `meta.unit.type` (`page` / `modal` / `shared-component`) and `meta.unit.dependencies` are the sole source for cross-unit relationships and delivery ordering.
 
 `ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.
 
 ## After completion
 
 ```bash
-python3 scripts/validate-ui-contract.py <contract-path> [--section-map <section-map.json>]
+python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
+
+Run once per unit's `ui-contract.html`.
 
 - Set `acceptance_frozen` only when every validator run prints `OK`.
 - On failure → `blocked_verification_failure` with validator output; do not advance status.
