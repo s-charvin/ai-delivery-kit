@@ -46,7 +46,7 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 
 **Coordination Platform 是一个"管理与编排层"平台**,不干预开发执行,只做:
 
-1. **产物管理**:通过独立 git 仓库管理所有产物内容,管理方只持有引用
+1. **产物管理**:通过**独立于管理层的单一 hub 仓**管理所有产物内容(管理方管辖,各端共同提交);代码仓库不归管理方管,代码 commit 引用作为"引用型产物"存入 hub 仓
 2. **状态编排**:用 LangGraph StateGraph 管理节点状态机 + 依赖 DAG,自动推进/阻塞/级联
 3. **角色协调**:用 CrewAI 定义 4 角色,按 ready 节点动态分配任务
 4. **审核准入门**:所有产物提交经 PR 审核(skill 约束校验 + 依赖检查)才能合并生效
@@ -694,12 +694,18 @@ pipeline:
 
 #### ArtifactRef(产物引用,管理方持有)
 
+> **设计修正**:产物仓库采用**单一 hub 仓**模型(管理方管辖,各端共同提交)。ArtifactRef 区分"内容型"(产物内容在 hub 仓)和"引用型"(引用文件在 hub 仓,指向代码仓 commit)。详见 [round2-scenario-draft-multiworkflow.md §2](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md)。
+
 ```python
 class ArtifactRef(TypedDict):
     node_id: str
-    repo: str                    # 产物仓库地址
-    path: str                    # 产物在仓库内路径
-    commit: str                  # git commit hash(合并后的)
+    repo: str                    # hub 仓地址(单一)
+    path: str                    # 产物在 hub 仓内路径
+    commit: str                  # hub 仓 merge commit hash
+    artifact_kind: str           # "content"(内容型) | "reference"(引用型)
+    # 引用型产物额外字段(artifact_kind="reference" 时):
+    external_repo: str | None    # 代码仓地址(引用型指向代码仓)
+    external_commit: str | None  # 代码仓 commit hash
     toolspec_framework: str      # 生成工具(中立,不限取值)
     trace_id: str                # Langfuse trace 关联
 ```
@@ -1123,3 +1129,28 @@ class AuditLogEntry(TypedDict):
 2. **1 节点 1 产物模型必须打破**:引入 slot(平台)+ variant(变体)维度,ArtifactRef 从 1:1 演进为 1:N
 3. **级联失效必须分级**:hard_invalidate(破坏性)/ soft_invalidate(兼容性待确认)/ cascade_skip(无影响)
 4. **管线生命周期必须完整**:版本化 + 热重载 + 模板 + 存量迁移 + 派生 + 归档
+
+### D7. 产物仓库模型修正:单一 hub 仓(取代多产物仓库 RepoRegistry)
+
+> **评审修正**:原场景 A14 提出"多产物仓库 + RepoRegistry"方案,经评审否决。产物仓库采用**单一 hub 仓**模型。
+
+**修正要点**:
+
+| 维度 | 原方案(多产物仓库) | 修正后(单一 hub 仓) |
+|---|---|---|
+| 产物仓库数量 | 多个(各端独立) | **1 个**(管理方管辖,各端共同提交) |
+| 仓库注册 | RepoRegistry(多仓注册表) | **HubRepoConfig**(单一配置) |
+| 代码仓库 | 不区分 | **多仓**(各业务方独立,不归管理方管) |
+| ArtifactRef | repo_id 指向 RepoRegistry | repo 指向 hub 仓 + artifact_kind 区分内容型/引用型 |
+| get_dependencies | 跨仓库 clone/mirror | **单仓库** clone(简化) |
+| 代码仓引用 | 无 | git ls-remote 存在性校验(不 clone 代码仓) |
+| 代码产物合一(A15) | 支持(hybrid 仓库) | **不支持**(产物必须在 hub 仓) |
+
+**影响范围**:
+- 主 PRD §1.2 产品定位:产物管理改为"单一 hub 仓"
+- 主 PRD §5.1 ArtifactRef:增加 artifact_kind / external_repo / external_commit 字段
+- 场景 A14:重写为"单一 hub 仓 + 多代码仓"(含 HubRepoConfig + GitProvider + verify_external_ref)
+- 场景 A15:结论改为"不支持代码产物合一",提供"轻量 hub 仓"方案
+- 附录 D4 P0 项:原"多产物仓库 RepoRegistry"相关条目移除,替换为"单一 hub 仓 + GitProvider 抽象"
+
+**GitProvider 抽象保留**:hub 仓虽单一,但 git 托管类型可配置(GitHub/GitLab/Bitbucket),GitProvider 接口屏蔽托管差异。详见 [round2-scenario-draft-multiworkflow.md §2.4](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md)。

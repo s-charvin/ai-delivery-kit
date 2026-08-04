@@ -282,31 +282,43 @@ sequenceDiagram
 
 ---
 
-## 2. 场景 A14:多产物仓库工作流(不同团队用不同产物仓库)
+## 2. 场景 A14:跨部门协同——单一产物 hub 仓 + 多代码仓
+
+> **设计修正说明**:经评审,产物仓库采用**单一 hub 仓**模型(由管理方统一管理,各端共同提交),而非"多产物仓库"。理由:(1) 产物仓库是信息同步枢纽,多仓会导致产物散落、依赖追溯困难;(2) 各端**代码仓库**天然多仓(各业务方独立),但产物需要集中才能高效编排;(3) 单 hub 仓 + GitProvider 抽象,既支持任意 git 托管(GitHub/GitLab/Bitbucket),又保证产物集中管理。
 
 ### 2.1 场景描述
 
-**业务背景**:大公司,部门墙明显。一个跨部门 feature"统一登录"涉及服务端、设计、客户端三端,各端产物强制存在各自部门的产物仓库:
+**业务背景**:大公司,部门墙明显。一个跨部门 feature"统一登录"涉及服务端、设计、客户端、产品四端。
 
-| 仓库 | git 托管 | 归属部门 | 存放产物 |
+**关键区分——两种仓库**:
+
+| 仓库类型 | 数量 | 归属 | 存放内容 | 管理方角色 |
+|---|---|---|---|---|
+| **产物 hub 仓**(唯一) | **1 个** | 管理方管辖 | 所有产物(product_spec/api_contract/design_asset/client_ui/...) | 全权管理(审核/合并/分支保护) |
+| **代码仓**(多个) | N 个 | 各业务方独立 | 各端源代码 | 不归管理方管(代码 review 在各仓自己做) |
+
+各端代码仓库示例:
+
+| 代码仓 | git 托管 | 归属部门 | 说明 |
 |---|---|---|---|
-| repo A | GitLab 内网 | 服务端中台 | `api_contract` / `server_impl` / `server_test` |
-| repo B | GitHub 企业版 | 设计中心 | `design_proto` / `design_asset` |
-| repo C | GitLab 内网 | 客户端团队 | `client_ui` / `client_func` / `client_delivery` |
-| repo D | GitHub 企业版 | 产品中台 | `product_spec` |
-
-需求 6(主 PRD §1.2 第 49 行)说"产物管理通过独立 git 仓库进行",但没说"只能一个仓库"。需求 9 说产物自由定义,各端可能用不同 git 托管。
+| code-user-service | GitLab 内网 | 服务端中台 | user-service 源码 |
+| code-order-service | GitLab 内网 | 服务端中台 | order-service 源码 |
+| design-figma | Figma(非 git) | 设计中心 | 设计源文件(产物只提交 figma 链接) |
+| code-ios-app | GitHub 企业版 | 客户端团队 | iOS 源码 |
+| code-android-app | GitHub 企业版 | 客户端团队 | Android 源码 |
 
 **团队诉求**:
-- 各端产物留在各自部门仓库(合规、审计、网络隔离要求),不强制集中到一个仓库
-- 管理方要能统一编排跨 4 个仓库的产物依赖与审核
-- 服务端 agent 只能提 repo A,设计 agent 只能提 repo B——权限按仓库隔离
+- 各端代码仓库独立(合规、审计、网络隔离)——**代码仓多仓**
+- 产物集中到一个 hub 仓,方便依赖编排和信息同步——**产物仓单仓**
+- hub 仓由管理方管理,各端往 hub 仓提 PR 提交产物
+- hub 仓可以是任意 git 托管(GitHub/GitLab/Bitbucket),由组织选择
+- 代码仓的 commit 引用(如 server_impl 产物)指向代码仓,产物内容(如 api_contract)存在 hub 仓
 
-**关键特征**:这是大公司的现实约束,不是"要不要多仓库"的选择题,而是"必须多仓库"的客观情况。PRD 若只支持单仓库,在大公司场景直接不可用。
+**关键特征**:产物 hub 仓是"信息同步枢纽",各端代码仓是"业务实现独立区"。管理方只管 hub 仓,不碰代码仓(代码仓 commit 引用只校验存在性)。
 
 ### 2.2 PRD 走查
 
-#### 走查点 1:数据模型假设单仓库
+#### 走查点 1:产物仓库假设单仓(符合),但未明确"hub 仓"定位
 
 主 PRD §5.1 `ArtifactRef`(第 698-705 行):
 
@@ -317,13 +329,13 @@ class ArtifactRef(TypedDict):
 
 `repo` 是单个 string。fr1 §1.1(主 PRD 第 152-174 行)仓库结构示例只有一个 `artifact-repo/`,9 种产物类型目录都在这一个仓库下。
 
-fr1 §2.1.1(第 87-92 行):
+**结论**:PRD 数据模型**已假设单产物仓库**,这与"单一 hub 仓"设计一致。但 PRD 没有明确:
+- 这个仓库是"hub 仓"(各端共同提交)还是"管理方私有仓"(只管理方写)
+- 各端如何往 hub 仓提交(分支命名/权限)
+- hub 仓的 git 托管类型(GitHub/GitLab)是否可配置
+- 代码仓引用(如 server_impl 指向 code-user-service)与产物仓的区分
 
-> 产物类型目录名必须与节点 `type` 字段完全一致……禁止在产物类型目录下建子目录
-
-**结论**:PRD 数据模型与目录规范都假设"一个产物仓库装所有产物",4 个仓库无法用单个 ArtifactRef.repo 表达,也无法用单仓库目录结构约束。
-
-#### 走查点 2:webhook 跨 git 托管适配缺失
+#### 走查点 2:webhook 只适配 GitHub 语义
 
 主 PRD §FR6.1(第 489-497 行):
 
@@ -331,275 +343,280 @@ fr1 §2.1.1(第 87-92 行):
 
 fr1 §8.1.3(第 1166-1199 行)CI 配置示例只给了 GitHub Actions(`.github/workflows/artifact-ci.yml`)。
 
-**结论**:
-- GitHub webhook payload 结构、GitLab webhook payload 结构、Bitbucket webhook payload 结构**完全不同**(字段名、事件类型、签名验证方式都不同)
-- PR 模板:GitHub 用 `.github/pull_request_template.md`,GitLab 用 `.gitlab/merge_request_templates/`,Bitbucket 无原生模板
-- PR API:GitHub `POST /repos/{owner}/{repo}/pulls/{number}/merge`,GitLab `PUT /projects/{id}/merge_requests/{iid}/merge`,完全不同
-- PRD 的 webhook 解析、PR 模板、approve_pr 合并逻辑都假设 GitHub 语义,跨托管不可用
+**结论**:hub 仓若选用 GitLab 或 Bitbucket,webhook payload、PR 模板、PR API、分支保护 API 全部不同。PRD 硬编码 GitHub 语义,hub 仓无法选用其他 git 托管。需要 GitProvider 抽象层。
 
-#### 走查点 3:CI 校验跨平台不统一
+#### 走查点 3:CI 校验只给 GitHub Actions 示例
 
 fr1 §8.1.1(第 1130-1145 行)CI 检查项 CI-1~CI-11。fr1 §8.1.3 只给 GitHub Actions 示例。
 
-**结论**:
-- GitHub Actions 用 `.github/workflows/*.yml`,GitLab CI 用 `.gitlab-ci.yml`,Bitbucket 用 `bitbucket-pipelines.yml`
-- fr1 §8.1.3 的 `coord-ci check` 命令是平台无关的(Python 包),但**注入到各仓库 CI 的配置语法不同**
-- PRD 没有提供 GitLab CI / Bitbucket Pipelines 的配置示例,也没说"skill 约束如何翻译为各平台 CI 规则"
-- 分支保护:GitHub 用 branch protection rules(UI/API),GitLab 用 protected branches(API),配置方式与 API 都不同,fr1 §1.2(第 182-190 行)只给了规则表,没说跨平台如何落地
+**结论**:hub 仓选用 GitLab 时,`.gitlab-ci.yml` 配置缺失。`coord-ci` 本身平台无关,但注入语法需按平台翻译。
 
-#### 走查点 4:角色→仓库权限映射缺失
+#### 走查点 4:各端往 hub 仓提交的权限未定义
 
 fr3-fr5 §2.4(第 228-238 行)工具权限矩阵:
 
 > `submit_artifact`:`repo` 必须是注册的产物仓库
 
-但"注册的产物仓库"是单数还是多数?server 能提哪些仓库?PRD 未定义角色→仓库的映射表。
+但"注册的产物仓库"是 hub 仓(单数),各端都往同一个仓提交。当前权限只校验 `node_type` 白名单(server → {api_contract, server_impl, server_test}),不校验"各端只能提交本端产物类型"——server agent 理论上能提交 design_asset 到 hub 仓。
 
-**结论**:大公司场景要求 server 只能提 repo A、design 只能提 repo B。当前权限矩阵只校验 `node_type` 白名单(server → {api_contract, server_impl, server_test}),不校验"该角色能提哪个仓库"。server agent 理论上能把 server_impl 提到 repo B(设计仓库),权限越界。
+**结论**:hub 仓是共享仓,需要"各端只能提交本端 node_type"的权限校验(角色→node_type 映射),而非"角色→仓库"映射(因为只有一个仓)。
 
-#### 走查点 5:跨仓库 get_dependencies 需要 clone 多仓库
+#### 走查点 5:代码仓引用 vs 产物仓内容的区分
 
-主 PRD §6.5 `get_dependencies`(第 819-834 行)`git show` 拉取上游产物内容。
+`server_impl` 产物是"代码仓 commit 引用"(如 `{"code_repo": "code-user-service", "commit": "abc123"}`),这个引用文件本身存在 hub 仓,但指向的是代码仓。`api_contract` 产物是契约文件,直接存在 hub 仓。
 
-n7(client_ui,在 repo C)依赖 n2(api_contract,在 repo A)+ n6(design_asset,在 repo B)。管理方要 `get_dependencies(n7)`,需要从 repo A 拉 n2、从 repo B 拉 n6——**跨 3 个仓库的 git show**。
+**结论**:ArtifactRef 需要区分:
+- **内容型产物**(api_contract/design_asset/product_spec):内容在 hub 仓,ArtifactRef.repo = hub 仓
+- **引用型产物**(server_impl/client_ui):引用文件在 hub 仓,但引用指向代码仓。ArtifactRef 指向 hub 仓的引用文件,引用文件内容记录代码仓 commit
 
-**结论**:
-- 管理方必须持有所有产物仓库的 clone/访问凭证
-- 内网 GitLab(repo A/C)与外网 GitHub(repo B/D)网络隔离,管理方需同时访问两边
-- PRD 假设管理方持有"产物仓库"单数访问权,多仓库场景的凭证管理、网络打通、clone 维护都未设计
+#### 走查点 6:hub 仓的 git 托管类型未配置化
 
-#### 走查点 6:仓库注册表缺失
+PRD 假设 hub 仓是 GitHub(从 CI 配置推断),但没有"hub 仓托管类型"的配置项。
 
-fr1 §2.4.3(第 228-237 行)`repo-meta.yaml` 是**单仓库内**的元数据(schema_version、directory_layout_version、node_types_supported)。
+**结论**:需要 HubRepoConfig(单一配置,非 RepoRegistry),声明 hub 仓的 url/provider/credential/branch_protection。
 
-**结论**:没有"管理方管辖哪些产物仓库"的注册表。管理方启动时不知道有几个产物仓库、各自的 git 托管类型、访问凭证、webhook 端点。
+### 2.3 设计缺陷(修正后)
 
-### 2.3 设计缺陷
+| # | 缺陷 | 定位 | 修正后状态 |
+|---|---|---|---|
+| D14.1 | PRD 未明确"hub 仓"定位(各端共享提交 vs 管理方私有) | 主 PRD §5.1 + fr1 §1.1 | **需修正**:明确 hub 仓为各端共享,管理方管辖 |
+| D14.2 | webhook/PR 模板/PR API 硬编码 GitHub 语义,hub 仓无法选其他托管 | 主 PRD §FR6.1 + fr1 §8.1.3 | **需修正**:引入 GitProvider 抽象 |
+| D14.3 | CI 注入只给 GitHub Actions,hub 仓选 GitLab 时缺配置 | fr1 §8.1.3 | **需修正**:提供各平台 CI 模板 |
+| D14.4 | 分支保护规则只给规则表,跨平台落地未设计 | fr1 §1.2 | **需修正**:GitProvider 适配各平台分支保护 API |
+| D14.5 | 各端往 hub 仓提交时,角色→node_type 权限未校验(可越权提他端产物) | fr3-fr5 §2.4 | **需修正**:submit 时校验 caller_role → node_type |
+| D14.6 | 代码仓引用 vs 产物仓内容未区分,ArtifactRef 语义模糊 | 主 PRD §5.1 | **需修正**:ArtifactRef 区分内容型/引用型 |
+| D14.7 | ~~需求 6 多产物仓库~~ | — | **已解决**:采用单一 hub 仓,需求 6"独立"指"独立于管理层" |
 
-| # | 缺陷 | 定位 |
-|---|---|---|
-| D14.1 | 数据模型假设单仓库,`ArtifactRef.repo` 单值 string,无仓库注册表 | 主 PRD §5.1(第 698-705 行) |
-| D14.2 | webhook 解析、PR 模板、PR API、approve_pr 合并逻辑都硬编码 GitHub 语义,跨 git 托管不可用 | 主 PRD §FR6.1(第 489-497 行)、§6.3(第 783-799 行)、fr1 §1.3(第 192-213 行)、§8.1.3(第 1166-1199 行) |
-| D14.3 | CI 校验注入只给 GitHub Actions 示例,GitLab CI / Bitbucket Pipelines 配置与 skill 约束翻译机制缺失 | fr1 §8.1.3(第 1166-1199 行) |
-| D14.4 | 分支保护规则只给规则表,跨平台落地(GitHub branch protection vs GitLab protected branches)未设计 | fr1 §1.2(第 182-190 行) |
-| D14.5 | 角色→仓库权限映射缺失,agent 理论上可越权提交到非本端仓库 | fr3-fr5 §2.4(第 228-238 行) |
-| D14.6 | 跨仓库 `get_dependencies` 需管理方 clone 多仓库,凭证管理、网络隔离、mirror 维护未设计 | 主 PRD §6.5(第 819-834 行) |
-| D14.7 | 需求 6"独立 git 仓库"未明确"独立"是"独立于管理层"还是"各端各自独立",多仓库场景未纳入设计 | 主 PRD §1.2(第 49 行) |
+> **注**:原 D14.1/D14.6(多仓库 clone/mirror)在单一 hub 仓模型下**不再存在**——管理方只需 clone 一个 hub 仓。代码仓引用只做 `git ls-remote` 存在性校验,不 clone 代码仓。
 
 ### 2.4 修正方案
 
-#### 修正 1:引入 RepoRegistry(仓库注册表)
+#### 修正 1:明确 hub 仓定位 + HubRepoConfig(单一配置,非 RepoRegistry)
 
-管理方维护多产物仓库注册表,替代"单产物仓库"假设:
+主 PRD §1.2 + §5.1 修正为:
+
+> 产物管理通过**独立于管理层的单一 hub 仓**进行。hub 仓由管理方管辖,各端共同提交(各端只能提交本端产物类型)。hub 仓可选任意 git 托管(GitHub/GitLab/Bitbucket),由组织通过 HubRepoConfig 配置。代码仓库不归管理方管,代码 commit 引用作为"引用型产物"存入 hub 仓。
 
 ```yaml
-# config/repo-registry.yaml
-repos:
-  - repo_id: repoA
-    url: git@gitlab.internal:server-middleware/artifact-repo.git
-    provider: gitlab          # gitlab | github | bitbucket | gitea
-    network: internal         # internal | external
-    credential_ref: vault://artifact/repoA   # Vault 凭证引用,不硬编码
-    managed_node_types: [api_contract, server_impl, server_test]
-    allowed_roles: [server]
-    webhook_secret_ref: vault://webhook/repoA
-    branch_protection:
-      main: { require_pr: true, min_reviewers: 1, squash_merge: true }
-    ci_config_path: .gitlab-ci.yml
-  - repo_id: repoB
-    url: git@github.com:design-center/design-artifacts.git
-    provider: github
-    network: external
-    credential_ref: vault://artifact/repoB
-    managed_node_types: [design_proto, design_asset]
-    allowed_roles: [design]
-    webhook_secret_ref: vault://webhook/repoB
-    branch_protection:
-      main: { require_pr: true, min_reviewers: 1, squash_merge: true }
-    ci_config_path: .github/workflows/artifact-ci.yml
-  # repoC / repoD 同理
+# config/hub-repo.yaml(单一配置,非多仓注册表)
+hub_repo:
+  url: git@gitlab.internal:platform/artifact-hub.git   # 任意 git 托管
+  provider: gitlab              # gitlab | github | bitbucket | gitea
+  credential_ref: vault://artifact/hub-repo            # Vault 凭证引用
+  webhook_secret_ref: vault://webhook/hub-repo
+  branch_protection:
+    main:
+      require_pr: true
+      min_reviewers: 1          # 管理方 bot
+      squash_merge: true
+  ci_config_path: .gitlab-ci.yml
+  directory_layout:
+    version: 2                  # features/{pipeline_id}/ 命名空间
+    pattern: "features/{pipeline_id}/{node_type}/{seq}_{slug}.{ext}"
 ```
 
-`ArtifactRef.repo` 改为 `repo_id`(指向 RepoRegistry),非直接 URL:
+`ArtifactRef` 保持 `repo` 字段(指向 hub 仓),增加 `artifact_kind` 区分内容型/引用型:
 
 ```python
 class ArtifactRef(TypedDict):
     node_id: str
-    repo_id: str           # 改:指向 RepoRegistry 的 repo_id(而非裸 URL)
-    path: str
-    commit: str
+    repo: str                   # hub 仓地址(单一)
+    path: str                   # 产物在 hub 仓内路径
+    commit: str                 # hub 仓 merge commit
+    artifact_kind: str          # "content"(内容型) | "reference"(引用型)
+    # 引用型产物额外字段(artifact_kind="reference" 时):
+    external_repo: str | None   # 代码仓地址(引用型指向代码仓)
+    external_commit: str | None # 代码仓 commit hash
     toolspec_framework: str
     trace_id: str
 ```
 
-#### 修正 2:引入 GitProvider 抽象层
+#### 修正 2:引入 GitProvider 抽象层(hub 仓单仓,但适配多托管)
 
-抽象出 `GitProvider` 接口,各 git 托管实现适配器,管理方只依赖接口:
+hub 仓是单一仓库,但 git 托管类型可配置。GitProvider 抽象屏蔽托管差异:
 
 ```python
 class GitProvider(Protocol):
-    """git 托管抽象层,屏蔽 GitHub/GitLab/Bitbucket 差异"""
+    """git 托管抽象层,屏蔽 GitHub/GitLab/Bitbucket 差异(hub 仓单仓)"""
     def parse_webhook(self, headers: dict, body: bytes) -> WebhookEvent: ...
     def verify_webhook_signature(self, headers: dict, body: bytes, secret: str) -> bool: ...
-    def get_pr_detail(self, repo_id: str, pr_id: str) -> PRDetail: ...
-    def approve_pr(self, repo_id: str, pr_id: str, bot_token: str) -> None: ...
-    def merge_pr(self, repo_id: str, pr_id: str, merge_method: str) -> str: ...  # 返回 merge commit
-    def close_pr(self, repo_id: str, pr_id: str) -> None: ...
-    def comment_pr(self, repo_id: str, pr_id: str, body: str) -> None: ...
-    def set_branch_protection(self, repo_id: str, branch: str, rules: dict) -> None: ...
-    def get_pr_template(self, repo_id: str) -> str | None: ...
-    def ls_file_at_ref(self, repo_id: str, ref: str, path: str) -> bytes: ...   # 跨仓库 git show 统一接口
+    def get_pr_detail(self, pr_id: str) -> PRDetail: ...           # 无需 repo_id(单仓)
+    def approve_pr(self, pr_id: str, bot_token: str) -> None: ...
+    def merge_pr(self, pr_id: str, merge_method: str) -> str: ...  # 返回 merge commit
+    def close_pr(self, pr_id: str) -> None: ...
+    def comment_pr(self, pr_id: str, body: str) -> None: ...
+    def set_branch_protection(self, branch: str, rules: dict) -> None: ...
+    def get_pr_template(self) -> str | None: ...
+    def ls_file_at_ref(self, ref: str, path: str) -> bytes: ...    # hub 仓 git show
+    def ls_remote(self, external_repo: str, commit: str) -> bool: ...  # 代码仓存在性校验
 
 class GitHubProvider(GitProvider): ...
 class GitLabProvider(GitProvider): ...
 class BitbucketProvider(GitProvider): ...
 ```
 
-webhook 入口按 `repo_id` 查 RepoRegistry 得 `provider`,分发到对应适配器。PR 模板解析、approve_pr 合并、分支保护都走适配器,管理方核心逻辑平台无关。
+管理方启动时按 `HubRepoConfig.provider` 实例化对应 GitProvider。webhook 入口、PR 模板解析、approve_pr 合并、分支保护都走 GitProvider,管理方核心逻辑平台无关。
 
-#### 修正 3:CI 注入的平台无关化
+#### 修正 3:CI 注入的平台无关化(hub 仓)
 
-`coord-ci`(Python 包)本身平台无关,各仓库 CI 配置只负责"安装 coord-ci + 调用 check",语法按平台翻译。管理方提供**各平台 CI 配置模板**(不是只给 GitHub):
+`coord-ci`(Python 包)平台无关。hub 仓 CI 配置按 `provider` 选择模板:
 
-| 平台 | 配置文件 | 模板内容(核心) |
+| provider | 配置文件 | 模板内容(核心) |
 |---|---|---|
-| GitHub | `.github/workflows/artifact-ci.yml` | `pip install coord-ci && coord-ci check --pr $PR` |
-| GitLab | `.gitlab-ci.yml` | `pip install coord-ci && coord-ci check --mr $MR` |
-| Bitbucket | `bitbucket-pipelines.yml` | `pip install coord-ci && coord-ci check --pr $PR` |
+| github | `.github/workflows/artifact-ci.yml` | `pip install coord-ci && coord-ci check --pr $PR` |
+| gitlab | `.gitlab-ci.yml` | `pip install coord-ci && coord-ci check --mr $MR` |
+| bitbucket | `bitbucket-pipelines.yml` | `pip install coord-ci && coord-ci check --pr $PR` |
 
-skill 约束(`review_rules`)在 `coord-ci` 内统一执行,各平台 CI 只做"触发 + 报告",不重复实现校验逻辑。`coord-ci` 输出平台无关的 JSON 报告,适配器翻译为各平台评论格式(GitHub PR comment / GitLab MR note / Bitbucket comment)。
+skill 约束(`review_rules`)在 `coord-ci` 内统一执行。`coord-ci` 输出平台无关 JSON 报告,GitProvider 翻译为各平台评论格式。
 
-#### 修正 4:角色→仓库权限矩阵扩展
+#### 修正 4:角色→node_type 权限校验(hub 仓共享,按产物类型隔离)
 
-fr3-fr5 §2.4 权限矩阵增加 `repo_id` 校验:
+hub 仓是共享仓,各端都往同一个仓提交。权限校验从"角色→仓库"改为"角色→node_type"(因为只有一个仓):
 
 ```python
-def authorize_submit(caller_role: str, node_type: str, repo_id: str) -> bool:
-    repo = repo_registry.get(repo_id)
-    # 1. node_type 必须在 repo.managed_node_types 内(仓库只装特定类型产物)
-    if node_type not in repo.managed_node_types:
-        return False  # 如 server_impl 不能提到 repoB(设计仓库)
-    # 2. caller_role 必须在 repo.allowed_roles 内(角色只能提本端仓库)
-    if caller_role not in repo.allowed_roles:
-        return False  # 如 design 不能提到 repoA(服务端仓库)
-    # 3. 既有 node_type 白名单校验(角色→节点类型)
-    if node_type not in ROLE_NODE_TYPE_WHITELIST[caller_role]:
-        return False
+# 角色→node_type 白名单(已有,fr3-fr5 §2.4)
+ROLE_NODE_TYPE_WHITELIST = {
+    "product": ["product_spec"],
+    "server": ["api_contract", "server_impl", "server_test"],
+    "design": ["design_proto", "design_asset"],
+    "client": ["client_ui", "client_func", "client_delivery"],
+}
+
+def authorize_submit(caller_role: str, node_type: str) -> bool:
+    """hub 仓共享,校验角色只能提交本端 node_type"""
+    if node_type not in ROLE_NODE_TYPE_WHITELIST.get(caller_role, []):
+        return False  # 如 design 不能提交 api_contract
     return True
+    # 注:无需 repo_id 校验(只有一个 hub 仓)
 ```
 
-#### 修正 5:跨仓库 get_dependencies 的多仓库 mirror
+#### 修正 5:get_dependencies 只需 clone hub 仓(简化)
 
-管理方维护所有产物仓库的**只读 mirror**(定时同步或 webhook 触发同步):
+单一 hub 仓,管理方只需 clone/mirror 一个仓库。代码仓引用只做 `git ls-remote` 存在性校验(不 clone 代码仓):
 
 ```python
 class ArtifactStore:
-    """多仓库产物存储,统一 git show 接口"""
-    def __init__(self, repo_registry: RepoRegistry):
-        self.mirrors: dict[str, str] = {}   # repo_id → 本地 mirror 路径
-        for repo in repo_registry.repos:
-            self.mirrors[repo.repo_id] = clone_or_update(repo)
+    """单一 hub 仓产物存储"""
+    def __init__(self, hub_config: HubRepoConfig, provider: GitProvider):
+        self.hub_mirror = clone_or_update(hub_config)   # 只 clone hub 仓
+        self.provider = provider
 
-    async def get_content(self, repo_id: str, commit: str, path: str) -> bytes:
-        """跨仓库统一 git show"""
-        mirror = self.mirrors[repo_id]
-        return await git_show(mirror, commit, path)
+    async def get_content(self, commit: str, path: str) -> bytes:
+        """从 hub 仓 git show 产物内容"""
+        return await git_show(self.hub_mirror, commit, path)
+
+    async def verify_external_ref(self, external_repo: str, external_commit: str) -> bool:
+        """校验代码仓 commit 存在性(不 clone,用 git ls-remote)"""
+        return await self.provider.ls_remote(external_repo, external_commit)
 ```
 
-`get_dependencies` 内部调 `ArtifactStore.get_content`,对调用方透明(不感知多仓库)。内网/外网网络隔离通过**双网卡 mirror 节点**或**网关代理**解决,管理方核心进程只访问本地 mirror。
+`get_dependencies` 调 `ArtifactStore.get_content`,所有产物内容都在 hub 仓,无需跨仓库 clone。代码仓引用存在性由 `verify_external_ref` 校验(审核时调用)。
 
 #### 修正 6:明确需求 6"独立"语义
 
-建议主 PRD §1.2 修正为:
+主 PRD §1.2 修正为:
 
-> 产物管理通过**独立于管理层的** git 仓库进行(管理方不持有产物内容,只持有引用)。支持**单仓库或多仓库**;各端可按组织约束使用不同 git 托管(GitHub/GitLab/Bitbucket),管理方通过 RepoRegistry 统一管辖。
+> 产物管理通过**独立于管理层的单一 hub 仓**进行(管理方管辖但不持有代码,各端共同提交产物)。hub 仓可选任意 git 托管(GitHub/GitLab/Bitbucket)。**代码仓库不归管理方管**,各业务方独立维护,代码 commit 引用作为"引用型产物"存入 hub 仓。
 
-### 2.5 设计图:多产物仓库架构
+### 2.5 设计图:单一 hub 仓 + 多代码仓架构
 
 ```mermaid
 graph TB
     subgraph MGMT["管理方(Coordination Platform)"]
-        REG[RepoRegistry<br/>config/repo-registry.yaml]
+        HUB[HubRepoConfig<br/>config/hub-repo.yaml<br/>单一配置]
         GP[GitProvider 抽象层]
         GH[GitHubProvider]
         GL[GitLabProvider]
         BB[BitbucketProvider]
-        AS[ArtifactStore<br/>多仓库 mirror]
+        AS[ArtifactStore<br/>hub 仓 mirror(单一)]
         SK[Skill 校验 + 规则引擎]
         LG[LangGraph 编排]
     end
 
-    subgraph REPOS["产物仓库(多 git 托管)"]
-        RA[repoA<br/>GitLab 内网<br/>server 产物]
-        RB[repoB<br/>GitHub 企业版<br/>design 产物]
-        RC[repoC<br/>GitLab 内网<br/>client 产物]
-        RD[repoD<br/>GitHub 企业版<br/>product 产物]
+    subgraph HUBREPO["产物 hub 仓(单一,管理方管辖)"]
+        HR["artifact-hub.git<br/>各端共同提交<br/>features/{pipeline_id}/..."]
     end
 
-    subgraph AGENTS["角色 Agent(权限按仓库隔离)"]
-        PA[product_agent<br/>只能提 repoD]
-        SA[server_agent<br/>只能提 repoA]
-        DA[design_agent<br/>只能提 repoB]
-        CA[client_agent<br/>只能提 repoC]
+    subgraph CODEREPOS["代码仓(多个,各业务方独立)"]
+        CA1[code-user-service<br/>GitLab]
+        CA2[code-order-service<br/>GitLab]
+        CA3[code-ios-app<br/>GitHub]
+        CA4[code-android-app<br/>GitHub]
     end
 
-    REG --> GP
+    subgraph AGENTS["角色 Agent(往 hub 仓提交,按 node_type 隔离)"]
+        PA[product_agent<br/>提 product_spec]
+        SA[server_agent<br/>提 api_contract/server_impl]
+        DA[design_agent<br/>提 design_proto/design_asset]
+        CLA[client_agent<br/>提 client_ui/client_func]
+    end
+
+    HUB --> GP
     GP --> GH
     GP --> GL
     GP --> BB
-    GH -.-> RB
-    GH -.-> RD
-    GL -.-> RA
-    GL -.-> RC
-    BB -.-> REPOS
+    GP -.->|适配 hub 仓托管类型| HR
 
-    RA & RB & RC & RD -->|webhook(各平台 payload)| GP
-    GP -->|解析为统一 WebhookEvent| SK
+    PA & SA & DA & CLA -->|submit_artifact<br/>各端提交本端产物| HR
+    HR -->|webhook| GP
+    GP -->|统一 WebhookEvent| SK
     SK --> LG
 
-    AS -->|clone/sync| RA
-    AS -->|clone/sync| RB
-    AS -->|clone/sync| RC
-    AS -->|clone/sync| RD
-    LG -->|get_dependencies<br/>跨仓库 git show| AS
+    AS -->|clone/sync(单一)| HR
+    LG -->|get_dependencies<br/>hub 仓 git show| AS
 
-    PA & SA & DA & CA -->|submit_artifact<br/>repo_id 校验| SK
-    SK -->|权限校验:role↔repo↔node_type| REG
+    SA -.->|server_impl 引用型产物<br/>指向代码仓 commit| CA1
+    SA -.-> CA2
+    CLA -.->|client_ui 引用型产物| CA3
+    CLA -.-> CA4
+    AS -.->|verify_external_ref<br/>git ls-remote(不 clone)| CA1
+    AS -.-> CA2
+    AS -.-> CA3
+    AS -.-> CA4
 
-    style REG fill:#a371f7,color:#fff
-    style GP fill:#4a8ad6,color:#fff
+    style HR fill:#b3261e,color:#fff
+    style HUB fill:#a371f7,color:#fff
     style AS fill:#3fb950,color:#fff
-    style SK fill:#e3b341,color:#fff
 ```
 
 ```mermaid
 sequenceDiagram
     participant SA as server_agent
     participant MCP as MCP Server
-    participant REG as RepoRegistry
+    participant HUB as HubRepoConfig
     participant GL as GitLabProvider
-    participant RA as repoA(GitLab)
+    participant HR as hub 仓(GitLab)
     participant AS as ArtifactStore
+    participant CODE as code-user-service(代码仓)
     participant CA as client_agent
 
-    Note over SA: n2(api_contract) ready,提交到 repoA
-    SA->>MCP: submit_artifact(n2, repo_id=repoA, branch, path)
-    MCP->>REG: 查 repoA: provider=gitlab, allowed_roles=[server], managed_types=[api_contract,...]
-    REG-->>MCP: 校验:server∈allowed_roles ✓, api_contract∈managed_types ✓
-    MCP->>GL: 推 feat 分支 + 开 MR(GitLab 用 MR 非 PR)
-    GL->>RA: 创建 MR !42
-    RA->>MCP: webhook(GitLab MR payload)
+    Note over SA: n2(api_contract) ready,提交到 hub 仓
+    SA->>MCP: submit_artifact(n2, branch, path, kind=content)
+    MCP->>HUB: 查 provider=gitlab
+    MCP->>MCP: 校验:server→api_contract ∈ ROLE_NODE_TYPE_WHITELIST ✓
+    MCP->>GL: 推 feat 分支 + 开 MR
+    GL->>HR: 创建 MR !42
+    HR->>MCP: webhook(GitLab MR payload)
     MCP->>GL: parse_webhook → 统一 WebhookEvent
     MCP->>MCP: skill 校验 + 规则引擎
     MCP->>GL: approve + merge(MR !42)
-    GL->>RA: squash merge,返回 merge_commit
-    MCP->>AS: 触发 repoA mirror 同步
+    GL->>HR: squash merge,返回 merge_commit
+    MCP->>AS: 触发 hub 仓 mirror 同步(单一仓库)
     MCP-->>SA: ok, n2 done
 
-    Note over CA: n7(client_ui) 依赖 n2(repoA) + n6(repoB),跨仓库拉取
+    Note over SA: n4(server_impl) ready,引用型产物指向代码仓
+    SA->>MCP: submit_artifact(n4, kind=reference, external_repo=code-user-service, external_commit=abc)
+    MCP->>AS: verify_external_ref(code-user-service, abc)
+    AS->>CODE: git ls-remote(不 clone,只校验存在性)
+    CODE-->>AS: commit abc 存在 ✓
+    MCP->>GL: 引用文件存入 hub 仓 + 开 MR
+    GL->>HR: 创建 MR !43
+    Note over HR: hub 仓存的是引用文件 {code_repo, commit},不是代码本身
+
+    Note over CA: n7(client_ui) 依赖 n2(hub 仓) + n6(hub 仓),单仓拉取
     CA->>MCP: get_dependencies(n7)
-    MCP->>AS: get_content(repoA, n2.commit, n2.path) + get_content(repoB, n6.commit, n6.path)
-    AS->>AS: 从本地 mirror git show(不直连远端)
+    MCP->>AS: get_content(n2.commit, n2.path) + get_content(n6.commit, n6.path)
+    AS->>AS: 从 hub 仓 mirror git show(单仓库,无跨仓)
     AS-->>MCP: n2 内容 + n6 内容
     MCP-->>CA: [{n2, content}, {n6, content}]
 ```
@@ -607,6 +624,8 @@ sequenceDiagram
 ---
 
 ## 3. 场景 A15:产物引用同一仓库(代码仓库和产物仓库合一)
+
+> **设计修正说明**:经评审,产物仓库采用**单一 hub 仓**模型(A14 修正)。本场景"代码产物合一"与 hub 仓集中管理原则**冲突**——产物必须在 hub 仓,不能与代码同仓。但本场景的走查仍有价值:它暴露了"管理方审核边界"问题(hub 仓 vs 代码仓),以及"小团队不想维护多仓"的真实诉求。修正方向:不支持代码产物合一,但提供"轻量 hub 仓"方案降低小团队维护成本。
 
 ### 3.1 场景描述
 
@@ -618,7 +637,7 @@ team-app/                          # 代码仓库(唯一仓库)
 │  ├─ api/
 │  ├─ ui/
 │  └─ ...
-├─ docs/                           # 产物存放处
+├─ docs/                           # 产物存放处(希望)
 │  ├─ product_spec/
 │  │  └─ 001.yaml
 │  ├─ api_contract/
@@ -642,6 +661,16 @@ team-app/                          # 代码仓库(唯一仓库)
 - 分支保护规则:产物路径用管理方规则(1 个 bot approve),代码路径用团队规则(2 个人工 review + 代码 CI)
 
 **关键特征**:这是需求 6 与需求 9 的边界冲突。产物仓库"独立"是硬性约束还是建议?若硬性,小团队被迫维护两个仓库,违反需求 9 的灵活性;若建议,则混合仓库的审核边界、webhook 过滤、分支保护叠加都需要设计。
+
+### 3.1.1 修正后结论:不支持代码产物合一,提供"轻量 hub 仓"
+
+> **评审决议**:产物仓库必须独立(hub 仓),不支持代码产物合一。理由:
+> 1. **信息同步枢纽**:产物是各端协同的"单一事实源",与代码同仓会导致产物散落、跨端依赖追溯困难
+> 2. **审核边界清晰**:hub 仓由管理方全权管辖(分支保护/CI/审核),代码仓归各业务方,职责分明;混合仓的 per-path 审核边界复杂且脆弱
+> 3. **小团队成本可控**:hub 仓可以是 GitHub/GitLab 免费私有仓,维护成本极低(只需管理方 clone 一个仓)
+> 4. **引用型产物已解决"代码关联"**:server_impl 等"引用型产物"存 hub 仓,指向代码仓 commit——代码和产物的关联通过引用保持,无需物理同仓
+>
+> 原走查(3.2-3.4)保留作为"为什么不支持合一"的设计依据。
 
 ### 3.2 PRD 走查
 
