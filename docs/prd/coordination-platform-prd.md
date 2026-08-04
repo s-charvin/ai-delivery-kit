@@ -1003,3 +1003,123 @@ class AuditLogEntry(TypedDict):
 ### C5. 新增非功能需求
 
 深化文档补充 NFR11 ~ NFR20(共 10 条),涵盖:容量规划、灾备 RTO/RPO、密钥管理、限流配额、审计防篡改等。详见 [fr7-fr8-monitoring-visual.md §9](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr7-fr8-monitoring-visual.md)。
+
+---
+
+## 附录 D:真实场景压力测试汇总(2 轮 32 场景,196 缺陷)
+
+> 通过 2 轮共 32 个真实开发场景对 PRD 进行压力测试,共发现 196 个设计缺陷。场景报告位于 `docs/prd/scenarios/` 目录。本附录为汇总索引,详细走查与修正方案见各场景报告。
+
+### D1. 测试场景总览
+
+#### 第一轮:16 场景(基础流程 + 异常 + 多团队)
+
+| 场景 | 名称 | 核心挑战 | 缺陷数 | 报告 |
+|---|---|---|---|---|
+| 1 | 契约中途变更 | changed 级联全量失效,无兼容期 | — | [scenario-contract-versioning.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-contract-versioning.md) |
+| 2 | 设计稿延迟并行 | client_ui 节点粒度太粗,无灵活并行 | 4 | [scenario-parallel-dependency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-parallel-dependency.md) |
+| 3 | 紧急 hotfix 插队 | 无优先级/抢占机制 | 6 | [scenario-exception-human.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md) |
+| 4 | 跨团队接口协调 | 4 角色太粗,无角色实例化 | 7 | [scenario-multi-team-rollback.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-team-rollback.md) |
+| 5 | 大产物(50MB zip) | max_size 512KB + 无 LFS | 8 | [scenario-artifact-trust.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-trust.md) |
+| 6 | 同契约多格式 | 中立性 vs 格式转换能力 | — | [scenario-contract-versioning.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-contract-versioning.md) |
+| 7 | 审批人不在 | 无代理人机制,超时升级不符合组织结构 | 7 | [scenario-exception-human.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md) |
+| 8 | 错误产物引用 | 不解析内容=引用正确性无保障 | 7 | [scenario-artifact-trust.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-trust.md) |
+| 9 | 管线中途修改 | 无热重载 + 无管线版本 | 7 | [scenario-artifact-trust.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-trust.md) |
+| 10 | 跨管线共享产物 | Pipeline 隔离,无产物注册表 | 3 | [scenario-parallel-dependency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-parallel-dependency.md) |
+| 11 | LLM 失败卡死 | "规则引擎直提"语义模糊,无人工 fallback | 6 | [scenario-exception-human.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md) |
+| 12 | Mock 先行开发 | 无 mock 节点类型,依赖模型过于线性 | 5 | [scenario-parallel-dependency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-parallel-dependency.md) |
+| 13 | 产物消费者反馈 | 无下游逆向反馈机制 | 6 | [scenario-exception-human.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md) |
+| 14 | 契约 v2 不兼容共存 | 无多版本共存,7 态不够 | — | [scenario-contract-versioning.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-contract-versioning.md) |
+| 15 | 全链路回滚 | changed 级联全量失效,无增量失效 | 6 | [scenario-multi-team-rollback.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-team-rollback.md) |
+| 16 | 多 feature 分支冲突 | 无 feature 命名空间 | 5 | [scenario-multi-team-rollback.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-team-rollback.md) |
+
+#### 第二轮:16 场景(版本演进 + 多形态 + 运维边界,重点测需求 9)
+
+| 场景 | 名称 | 核心挑战 | 缺陷数 | 报告 |
+|---|---|---|---|---|
+| A1 | 产物格式自主演进 | skill 约束死板,目录型产物被禁 | 5 | [round2-scenario-evolution.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-evolution.md) |
+| A2 | 多语言客户端 | 1 节点 1 引用,无多平台支持 | 7 | [round2-scenario-evolution.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-evolution.md) |
+| A3 | A/B 测试变体 | DAG 无法表达并存变体 | 6 | [round2-scenario-evolution.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-evolution.md) |
+| A4 | 跨多代码仓库 | ArtifactRef 1:1,微服务多仓库无法表达 | 7 | [round2-scenario-crossrepo-link.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-crossrepo-link.md) |
+| A5 | 纯链接产物 | 外部链接无校验,版本失真 | 8 | [round2-scenario-crossrepo-link.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-crossrepo-link.md) |
+| A6 | 无依赖旁路产物 | 9 种封闭枚举,无自由产物类型 | 7 | [round2-scenario-crossrepo-link.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-crossrepo-link.md) |
+| A7 | 同节点方案竞争 | 先到先得锁,无方案竞争机制 | 5 | [round2-scenario-concurrency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-concurrency.md) |
+| A8 | 跨 feature 路径冲突 | 无 feature 命名空间,seq 非原子 | 6 | [round2-scenario-concurrency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-concurrency.md) |
+| A9 | PR 合并冲突 | rebase 后重审规则不明确 | 7 | [round2-scenario-concurrency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-concurrency.md) |
+| A10 | 存量项目迁移 | 无批量导入/免审通道 | 8 | [round2-scenario-migration-ops.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-migration-ops.md) |
+| A11 | 权限误操作 | 校验失败不入审计,无主动撤销 token | 8 | [round2-scenario-migration-ops.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-migration-ops.md) |
+| A12 | 冷启动单节点管线 | 全节点 done 即终止,单节点语义错误 | 7 | [round2-scenario-migration-ops.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-migration-ops.md) |
+| A13 | 草案产物共享 | 无 draft 状态,无软提交 | 7 | [round2-scenario-draft-multiworkflow.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md) |
+| A14 | 多产物仓库 | 跨 git 托管 webhook/CI 不统一 | 7 | [round2-scenario-draft-multiworkflow.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md) |
+| A15 | 代码产物合一 | 需求 6 vs 需求 9 冲突,审核边界模糊 | 7 | [round2-scenario-draft-multiworkflow.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md) |
+| A16 | 管线模板复用 | 无模板继承/参数化/版本化 | 8 | [round2-scenario-draft-multiworkflow.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md) |
+
+### D2. 缺陷分类统计(196 项)
+
+| 严重度 | 第一轮 | 第二轮 | 合计 |
+|---|---|---|---|
+| Critical(阻断) | 3 | 5 | 8 |
+| High | 45 | 43 | 88 |
+| Medium | 35 | 41 | 76 |
+| Low | 6 | 18 | 24 |
+| **合计** | **89** | **107** | **196** |
+
+### D3. 缺陷根因归类(8 大类)
+
+| 根因类别 | 涉及场景 | 核心问题 | 影响范围 |
+|---|---|---|---|
+| **R1. 1 节点 1 产物 1 状态刚性** | A2/A3/A4/A6 | ArtifactRef 1:1,无法表达多平台/多变体/多仓库/旁路产物 | 数据模型 + 状态机 |
+| **R2. 格式中立≠格式不可知** | A1/A2/A5 | 需求 9"不限制格式"被误解为"不记录格式",导致 guide 失效/审核退化/版本失真 | skill + 审核 |
+| **R3. 级联失效粒度过粗** | 1/15/A13 | changed 全量递归 blocked+清引用,无兼容性判定/增量失效/草案隔离 | 状态机 + cascade |
+| **R4. 角色与权限粒度过粗** | 4/A11/A14 | 4 角色无实例化,权限只校验 role 不校验团队/仓库归属 | CrewAI + MCP 认证 |
+| **R5. 依赖模型过于线性** | 2/12/A6 | 严格 AND 依赖,无可选依赖/替代依赖/旁路依赖 | DAG + 状态机 |
+| **R6. 产物仓库边界模糊** | 5/8/16/A4/A14/A15 | 单仓库假设,无 LFS/多仓库/代码合一/路径命名空间 | FR1 + ArtifactRef |
+| **R7. 管线生命周期缺失** | 9/A10/A12/A16 | 无热重载/版本/模板/存量迁移/冷启动/派生 | FR2 + pipeline |
+| **R8. 异常流程可观测性不足** | 3/7/11/13/A11 | 无优先级/代理人/fallback/逆向反馈/权限异常告警 | FR7 + 审批 + agent |
+
+### D4. P0 修正项(Phase 1 必做,共 20 项)
+
+以下缺陷若不在 Phase 1 修正,后续有数据后返工成本极高:
+
+| 编号 | 场景 | 缺陷 | 修正方案 | 影响章节 |
+|---|---|---|---|---|
+| P0-1 | A2 | ArtifactRef 1:1 阻断多平台 | 升级为 1:N(引入 slot/variant 维度) | §5.1 + fr4 §8 |
+| P0-2 | A4 | ArtifactRef 1:1 阻断多仓库 | 同 P0-1 | §5.1 + fr4 §8 |
+| P0-3 | A1 | 目录型产物被 CI 拦截 | 放宽 file_constraints,允许目录型产物 | fr1-fr6 §2 |
+| P0-4 | 16/A8 | 无 feature 命名空间,路径冲突 | 产物路径改 `features/{pipeline_id}/...` | FR1.1 + fr1-fr6 §2 |
+| P0-5 | 4 | 无角色实例化,单 agent 瓶颈 | 引入 RoleInstance + instance_id | FR3 + fr3-fr5 §2 |
+| P0-6 | 15 | 级联全量失效,无增量 | deps 增 coupling 字段,分级失效 | FR2 + fr2 §2 |
+| P0-7 | 5 | max_size 512KB 阻断大产物 | 引入 L1/L2/L3 分层存储 | fr1-fr6 §3 + §5.1 |
+| P0-8 | A10 | 无存量迁移通道 | 新增 import_legacy_artifacts + 免审标记 | FR6 + 新 MCP 工具 |
+| P0-9 | 9 | 无管线版本/热重载 | pipeline_version + reload_pipeline | FR2 + fr2 §7 |
+| P0-10 | A16 | 无管线模板 | 模板继承 + 参数化 + 版本化 | FR2 + 新机制 |
+| P0-11 | 8 | 引用正确性无保障 | R_REF_EXISTS(git ls-remote) + implements 声明 | fr1-fr6 §4 |
+| P0-12 | A13 | 无草案状态 | 新增 draft 状态 + soft_submit | 状态机 + MCP |
+| P0-13 | A6 | 无旁路产物类型 | 新增 free_artifact + side_node 标记 | §2.1 + 状态机 |
+| P0-14 | 11 | LLM 失败无 fallback | 人工 fallback 模式 + 人员 token | FR3 + FR4 权限 |
+| P0-15 | 13 | 无消费者反馈 | consume_ack + done_pending_ack 状态 | 状态机 + MCP |
+| P0-16 | 3 | 无优先级/抢占 | pipeline.priority + p0 抢占 | FR2 + 调度 |
+| P0-17 | A11 | 权限误操作不入审计 | 校验失败入审计 + ALR-13 告警 | FR7 + MCP 中间件 |
+| P0-18 | A5 | 纯链接无校验 | external_refs 字段 + url_reachable op | fr1-fr6 §3/§4 |
+| P0-19 | A9 | PR 合并冲突无规则 | 内容指纹校验 + 仓库级 merge 锁 | fr1-fr6 §5 |
+| P0-20 | 7 | 无代理人机制 | delegate 字段 + transfer_approvals 工具 | 审批 + MCP |
+
+### D5. 设计图统计
+
+| 来源 | Mermaid 图数 |
+|---|---|
+| 调研报告(27 章) | 7 |
+| 5 份深化文档 | 24 |
+| 第一轮场景走查(4 份) | 15 |
+| 第二轮场景走查(5 份) | 29 |
+| **合计** | **75** |
+
+### D6. 迭代结论
+
+经过 2 轮 32 场景压力测试,PRD 从 v2.0(8000 行)演进到 v2.1(+ 196 缺陷修正)。**主 agent 评估:第二轮新增的 107 个缺陷中,P0 级 20 项已明确修正方案,可作为 PRD v2.1 的输入进入实现阶段。** 剩余 P1/P2 项在 Phase 2/3 逐步落地。
+
+关键认知升级:
+1. **需求 9 的正确解读**:不**限制**格式,但应**记录** format_type 供下游感知——"中立"不等于"不可知"
+2. **1 节点 1 产物模型必须打破**:引入 slot(平台)+ variant(变体)维度,ArtifactRef 从 1:1 演进为 1:N
+3. **级联失效必须分级**:hard_invalidate(破坏性)/ soft_invalidate(兼容性待确认)/ cascade_skip(无影响)
+4. **管线生命周期必须完整**:版本化 + 热重载 + 模板 + 存量迁移 + 派生 + 归档
