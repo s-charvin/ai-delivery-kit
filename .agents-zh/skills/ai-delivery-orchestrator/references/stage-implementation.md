@@ -8,7 +8,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与
 
 ## 切片执行顺序
 
-来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`（无独立 section-map 文件）：`shared-component` → `page` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
+来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`：`shared-component` → `page` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
 
 ## 子代理策略
 

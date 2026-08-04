@@ -141,7 +141,7 @@ python3 "$STATUS_VALIDATOR" "$TMP_DIR/merged-ok/status.json" --req-root "$TMP_DI
   || fail "Status validator should pass merged when delivery.implemented is complete"
 
 # Scenario 3: a sub-requirement with no ui-contract.html anywhere must fail
-# acceptance_frozen (no YAML or section-map fallback exists anymore).
+# acceptance_frozen.
 mkdir -p "$TMP_DIR/missing/sub-requirements/sr-missing"
 cat >"$TMP_DIR/missing/status.json" <<'EOF'
 {

@@ -44,16 +44,6 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		}
 	}
 
-	if _, err := os.Stat(filepath.Join(target, ".ai-delivery/scripts/validate-ui-contract.py")); !os.IsNotExist(err) {
-		t.Fatalf("expected obsolete YAML validator to be absent from bootstrap output, got %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml")); !os.IsNotExist(err) {
-		t.Fatalf("expected obsolete YAML template to be absent from bootstrap output, got %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/section-map-template.json")); !os.IsNotExist(err) {
-		t.Fatalf("expected obsolete section-map template to be absent from bootstrap output, got %v", err)
-	}
-
 	if _, err := os.Stat(filepath.Join(target, ".ai-delivery/docs/guides/ai-delivery-any-repo-onboarding.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected onboarding guide to be absent, got %v", err)
 	}

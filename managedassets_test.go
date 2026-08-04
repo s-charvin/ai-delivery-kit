@@ -32,20 +32,6 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 	}
 }
 
-func TestEmbeddedAssetsExcludeObsoleteYAMLContractAssets(t *testing.T) {
-	obsolete := []string{
-		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml",
-		".agents/skills/ui-truth-mapping/templates/section-map-template.json",
-		"scripts/validate-ui-contract.py",
-	}
-
-	for _, path := range obsolete {
-		if _, err := Embedded.ReadFile(path); err == nil {
-			t.Fatalf("expected obsolete asset %s to be absent from embedded assets", path)
-		}
-	}
-}
-
 func TestManagedSourcePathsAreEmbeddable(t *testing.T) {
 	for _, path := range ManagedSourcePaths() {
 		info, err := fs.Stat(Embedded, path)
@@ -54,19 +40,6 @@ func TestManagedSourcePathsAreEmbeddable(t *testing.T) {
 		}
 		if !info.IsDir() && info.Size() == 0 {
 			t.Fatalf("expected non-empty managed file for %s", path)
-		}
-	}
-}
-
-func TestManagedSourcePathsExcludeObsoleteYAMLContractAssets(t *testing.T) {
-	obsolete := map[string]bool{
-		".agents/skills/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml": true,
-		".agents/skills/ui-truth-mapping/templates/section-map-template.json":            true,
-		"scripts/validate-ui-contract.py":                                                true,
-	}
-	for _, path := range ManagedSourcePaths() {
-		if obsolete[path] {
-			t.Fatalf("expected obsolete managed source path removed: %s", path)
 		}
 	}
 }

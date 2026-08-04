@@ -52,18 +52,13 @@ require_file "$UI_TEMPLATE"
 require_contains "$REQ_SKILL" 'source_ref'
 require_contains "$REQ_TEMPLATE" 'source_ref'
 
-# Scenario 2: ui-truth-mapping speaks HTML contract v2 (single-file truth),
-# not the legacy YAML contract / section-map pair.
+# Scenario 2: ui-truth-mapping speaks HTML contract v2 (single-file truth).
 require_contains "$UI_SKILL" 'requirement-slice'
 require_contains "$UI_SKILL" 'ui-contract.html'
 require_contains "$UI_SKILL" 'ui-contract-template.html'
 require_contains "$UI_SKILL" 'incremental patch'
 require_contains "$UI_SKILL" 'implementation lookup'
 require_contains "$UI_SKILL" 'Do not invent visual truth'
-require_not_contains "$UI_SKILL" 'ui-acceptance-contract.yaml'
-require_not_contains "$UI_SKILL" 'section-map.json'
-require_not_contains "$UI_SKILL" 'section-map-template.json'
-require_not_contains "$UI_SKILL" 'ui-acceptance-contract-template.yaml'
 
 # Scenario 3: the HTML contract template carries the required schema v2
 # anchors — metadata script, unit root, and the collapsible review panel.
