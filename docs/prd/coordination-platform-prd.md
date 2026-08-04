@@ -1,9 +1,7 @@
 # 产品需求文档 PRD:AI 多角色开发协同平台(Coordination Platform)
 
 > **文档性质**:基于《AI 多 Agent 开发协同平台调研报告》第十六~二十七章(v2 自建设计)产出的可开发 PRD
-> **版本**:v3.1 | **日期**:2026-08-04 | **状态**:可开发评审
-> **设计文档**:[ai-multi-agent-dev-dashboard-research.md](file:///Users/zuiyou/develop/skills/.trae/documents/ai-multi-agent-dev-dashboard-research.md)
-> **第五轮**:全流程角色参与拓扑压力测试 → [round5-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round5-summary.md)
+> **版本**:v3.2 | **日期**:2026-08-04 | **状态**:可开发评审
 
 ---
 
@@ -13,19 +11,12 @@
 - [2. 核心概念与术语](#2-核心概念与术语)
 - [3. 角色与权限模型](#3-角色与权限模型)
 - [4. 功能需求详述(分)](#4-功能需求详述分)
-  - [FR1 产物仓库管理](#fr1-产物仓库管理)
-  - [FR2 管理编排引擎(LangGraph)](#fr2-管理编排引擎langgraph)
-  - [FR3 角色协调(CrewAI)](#fr3-角色协调crewai)
-  - [FR4 MCP 接口层](#fr4-mcp-接口层)
-  - [FR5 约束技能(Constraint Skills)](#fr5-约束技能constraint-skills)
-  - [FR6 产物审核机制](#fr6-产物审核机制)
-  - [FR7 监控与可观测性](#fr7-监控与可观测性)
-  - [FR8 可视化编排与 Dashboard](#fr8-可视化编排与-dashboard)
 - [5. 数据模型](#5-数据模型)
 - [6. 接口规范(MCP 工具)](#6-接口规范mcp-工具)
 - [7. 非功能需求](#7-非功能需求)
 - [8. 验收标准](#8-验收标准)
 - [9. 实施阶段](#9-实施阶段)
+- [附录 E:内容完整性定稿(算法/错误码/术语统一)](#附录-e内容完整性定稿算法错误码术语统一)
 
 ---
 
@@ -65,11 +56,23 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | 做什么(范围内) | 不做什么(范围外) |
 |---|---|
 | 产物仓库的分支保护 + PR 审核 | 不限制开发方用什么工具产出内容 |
-| 状态机 + 依赖 DAG 编排 | 不执行代码开发(无执行层) |
-| MCP 工具接口(submit/review/approve) | 不生成代码、不生成设计稿 |
-| Constraint Skills 元数据约束 | 不校验产物内容格式(YAML/JSON/Figma 均可) |
-| Langfuse 监控 + 可视化 Dashboard | 不做多租户/RBAC(v3 规划) |
+| 状态机 + 依赖 DAG 编排 | **不执行代码开发、不生成设计稿、不跑业务测试**(无执行层) |
+| MCP 工具接口(submit/review/approve) | 不生成业务代码、不代替 IDE/Figma |
+| Constraint Skills 元数据约束 | 不校验产物**业务语义**(对不对 / 好不好) |
+| Langfuse 监控 + 可视化 Dashboard | 不做多租户/RBAC(v3 规划);**本期按单租户单 hub 仓** |
 | 变更级联(下游自动 blocked) | 成本硬预算本期落地;配额管理 v3 规划;密钥管理本期落地(NFR18) |
+
+#### 1.4.1 「不解析内容」硬边界(内容完整性定稿)
+
+> 修正来源:内容完整性审核 G-BOUND-1
+
+| 允许的管理约束(可编码) | 禁止(属执行层/业务语义) |
+|---|---|
+| 路径/扩展名/大小/LFS;PR 模板必填字段 | 「这个需求写得好不好」 |
+| secret/URL/malware 扫描;content_integrity_hash | 「这个 API 设计是否合理」 |
+| completeness_contract:**声明式结构存在性**(jsonpath 节点存在/数组非空) | 用 LLM「理解」规格并判业务对错作为强制门(可作为 warn 建议,不可作唯一 reject) |
+| change_class L1:**diff 语法启发式**(删键名/改 HTTP 方法字符串) | 推断「兼容性业务含义」 |
+| figma URL 可达(HEAD);git ls-remote 存在性 | clone 代码仓做编译/单测 |
 
 ---
 
@@ -84,7 +87,9 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | **产物(Artifact)** | 产物节点产出的交付物,内容存产物仓库,管理方只存引用 |
 | **产物引用(ArtifactRef)** | 指向产物仓库的引用,含 `repo + path + commit + artifact_kind + artifact_qualifier + content_integrity_hash + provenance` 等,不含内容 |
 | **Constraint Skill** | 约束技能,定义某节点类型的元数据约束 + 产出引导(superpowers 风格) |
-| **状态机** | 节点级 10 态状态机:blocked → ready → pending_review / draft → done / changed → deprecated → sunset |
+| **状态机** | 节点级 **11 态**:blocked → ready → pending_review / draft / in_progress / review → done / changed → deprecated → sunset;**skipped**(optional 节点在管线完成时未交付) |
+| **ParticipationProfile** | 管线角色参与配置(唯一正式名)。旧文 `participants` 仅为兼容别名,解析时映射为 `roles_present`/`roles_absent` |
+| **presence** | 依赖边是否计入 ready:`required` / `optional` / `if_present`。旧文 `optional: true` ≡ `presence: optional` |
 | **审核** | 管理方对产物 PR 的准入审核(skill 约束校验 + 依赖检查 + 安全扫描 → 批准/驳回) |
 | **级联(Cascade)** | 节点 done 后自动解锁下游;changed 后按依赖严格性(strictness)分级失效下游 |
 | **MCP** | Model Context Protocol,管理方暴露给 agent 的标准工具接口 |
@@ -94,16 +99,16 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | **classification** | 产物密级:public / internal / confidential / restricted |
 | **derived_artifact** | 派生产物,由 generator 角色基于上游产物自动生成(如 SDK、文档) |
 | **管线状态** | 管线级 5 态生命周期:active / paused / cancelled / merged / completed |
-| **ParticipationProfile** | 管线角色参与配置:声明哪些角色在场/缺席、完成谓词、是否允许非 product 根;使「设计/服务端/客户端可能无」成为一等模型 |
-| **presence** | 依赖边是否生效:`required` / `optional` / `if_present`(仅当节点存在于 materialized 管线时才成为硬依赖) |
 | **coupling** | 上游变更时下游失效强度:`hard` / `soft` / `informational` |
 | **change_class** | 产物重提变更分类:`breaking` / `compatible` / `docs_only`,驱动分级级联 |
+| **current_owner** | 节点当前负责人(人员级,与 RoleInstance 团队级正交);支持 transfer_owner |
+| **addendum** | done 产物上的 append-only 轻量补充,不改原内容/版本,弱级联 |
 
 ### 2.1 节点类型完整清单
 
-**产物节点(10 种,可扩展):**
+**产物节点(预置 13 种,可扩展 `{role}.{name}`):**
 
-> 节点类型采用 `{role}.{name}` 开放命名空间。 SkillRegistry 按「精确匹配 → 角色兜底(`client.*`) → 通用(`*`)」三级匹配 skill。下列为预置节点类型,向后兼容。
+> SkillRegistry 按「精确匹配 → 角色兜底(`client.*`) → 通用(`*`)」三级匹配 skill。下列为预置节点类型,向后兼容。
 
 | 节点类型 | 角色 | 说明 |
 |---|---|---|
@@ -111,11 +116,14 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | `api_contract` | server | 接口契约(端点/schema/错误码) |
 | `server_impl` | server | 服务端实现引用(指向代码仓库 commit) |
 | `server_test` | server | 服务端测试结果引用 |
+| `server_delivery` | server | 服务端交付门禁产物(对称 client_delivery;server_only 管线用) |
 | `design_proto` | design | 设计原型 |
-| `design_asset` | design | 设计标注/切图(含 figma 链接) |
+| `design_asset` | design | 设计标注/切图(**仅需 figma 链接**;不强制标注文件) |
 | `client_ui` | client | 客户端 UI 实现 |
+| `client_logic` | client | 纯客户端逻辑(埋点/网络层等,无 UI) |
 | `client_func` | client | 客户端功能联调 |
 | `client_delivery` | client | 客户端交付物 |
+| `research_spike` | product/server | 调研/技术预研旁路产物(可与 product_spec 并行作多根) |
 | `derived_artifact` | generator | 派生产物(如 SDK、文档、发布包),基于上游产物自动生成 |
 
 **控制节点(5 种):**
@@ -137,9 +145,9 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | 角色 | 职责 | 可产出的节点类型 | 可用 MCP 工具 |
 |---|---|---|---|
 | **product** | 产品需求 | product_spec | submit_artifact, update_progress, get_dependencies |
-| **server** | 服务端开发 | api_contract, server_impl, server_test | submit_artifact, update_progress, get_dependencies, request_approval |
+| **server** | 服务端开发 | api_contract, server_impl, server_test, server_delivery | submit_artifact, update_progress, get_dependencies, request_approval |
 | **design** | UI 设计 | design_proto, design_asset | submit_artifact, update_progress, get_dependencies |
-| **client** | 客户端开发 | client_ui, client_func, client_delivery | submit_artifact, update_progress, get_dependencies, request_approval |
+| **client** | 客户端开发 | client_ui, client_logic, client_func, client_delivery | submit_artifact, update_progress, get_dependencies, request_approval |
 | **generator** | 生成器 | derived_artifact | submit_artifact(derived_artifact), report_generation_status |
 | **reviewer** | 审批人 | — | approve_pr, reject_pr, get_audit_log |
 | **admin** | 管理员 | — | set_gate_policy, get_audit_log, 全部工具 |
@@ -360,13 +368,13 @@ modification:
 
 **目标**:用 LangGraph StateGraph 实现节点状态机 + 依赖 DAG + 条件推进 + 变更级联。
 
-#### FR2.1 状态机定义(10 态)
+#### FR2.1 状态机定义(11 态)
 
-> 修正来源:第三轮压力测试 / 第五轮补充(addendum)
+> 修正来源:第三轮压力测试 / 第五轮补充(addendum / skipped)
 
 | 状态 | 含义 | 进入条件 | 退出条件 |
 |---|---|---|---|
-| `blocked` | 依赖未满足 | 初始态 / 上游变更失效 | 上游全 done |
+| `blocked` | 依赖未满足 | 初始态 / 上游变更失效 | 上游 required 依赖满足 |
 | `ready` | 依赖满足,待产出 | cascade 解锁 / PR 驳回 / 废弃草案 | submit_artifact 提 PR / soft_submit 进 draft |
 | `pending_review` | PR 已提交,待审核 | submit_artifact | approve_pr 合并 / reject_pr 驳回 |
 | `in_progress` | 开发中(进度更新) / 门禁失败打回 | update_progress / gate 失败 | 重新 submit |
@@ -376,26 +384,29 @@ modification:
 | `draft` | 草案(未完成但可共享) | soft_submit_artifact | submit_artifact(转正式) / abandon_draft |
 | `deprecated` | 已废弃(仍存在但不推荐新依赖) | 管理方标记 / 版本 superseded / 外部依赖失效 | sunset(彻底下线) |
 | `sunset` | 已下线(不可被任何新管线依赖) | deprecated 后 N 天 | —(终态) |
+| `skipped` | 可选节点未交付且管线将完成 | `presence=optional` 且 core 将完成 / 显式 skip_node | —(终态,可人工转回 ready) |
 
-> **addendum 不引入新状态**:addendum 是 done 态上的"附加层",节点状态保持 done,通过 `addenda` 字段挂载。下游级联通过事件机制触发,不改节点状态。详见 §FR2.5.1。
+> **addendum 不引入新状态**:addendum 是 done 态上的"附加层",节点状态保持 done。详见 §FR2.5.1。
 
 **新增状态语义:**
 - `draft`: 不进 pending_review,不触发 cascade;可作为下游可选依赖(`strictness=accepts_draft`);变更时通知订阅者
 - `deprecated`: 仍存在但不可被新管线依赖;已依赖的下游收到 `DEPRECATED` 通知,可选择升级或保持(有限期)
 - `sunset`: 终态,不可被任何新依赖;已依赖的下游强制 blocked
+- `skipped`: **不阻塞** `core_nodes_done` completed;不可被新依赖指向;审计记录 skip 原因
 
 **状态流转图:**
 ```mermaid
 stateDiagram-v2
     direction TB
-    [*] --> blocked : T1(有deps未done)
-    [*] --> ready : T2(根节点)
+    [*] --> blocked : T1(有required deps未满足)
+    [*] --> ready : T2(根节点/无required deps)
 
-    blocked --> ready : T3 cascade(deps全done)
+    blocked --> ready : T3 cascade(required deps满足)
 
     ready --> in_progress : T4 update_progress
     ready --> pending_review : T5 submit_artifact(正式)
     ready --> draft : D1 soft_submit_artifact(草案)
+    ready --> skipped : S1 skip_node / 管线完成时optional未做
 
     in_progress --> pending_review : T6 submit_artifact
     in_progress --> ready : T18 gate失败打回
@@ -414,6 +425,7 @@ stateDiagram-v2
 
     done --> deprecated : D5 管理方标记废弃/版本superseded/外部依赖失效
     deprecated --> sunset : D6 N天后下线
+    skipped --> ready : S2 人工反悔重新启用
 ```
 
 #### FR2.2 依赖 DAG 规则
@@ -423,31 +435,34 @@ stateDiagram-v2
 | 规则 | 描述 |
 |---|---|
 | 依赖声明 | 节点 `deps` 数组声明上游依赖(边由 deps 推导,无需手写) |
-| 单入边 | 节点依赖 1 个上游:上游 done → 本节点 ready |
-| 多入边 | 节点依赖 N 个上游:全部 done → 本节点 ready(fork 节点同理) |
-| 级联解锁 | 节点 done → 检查所有下游,依赖全满足的下游置 ready |
-| 级联失效 | 节点 changed → 按 `strictness` 分级失效下游;`strict` 清除引用 + blocked,`accepts_draft` 可保持 draft 依赖 |
-| addendum 级联 | done 节点附加 addendum → 按 `cascade_level`(must/should/info)分级通知下游,不改节点状态(详见 §FR2.5.1) |
-| 无环校验 | 管线加载时校验 DAG 无环(CI 校验) |
-| 跨管线引用 | `hub_ref: "hub://{pipeline_id}/{node_id}@{version}"` 引用其他管线产物,经 CrossPipelineReferenceRegistry 注册 |
+| **ready 谓词** | 仅当所有 **effective required** 上游满足时 → ready(`presence=optional` 不参与 AND;`if_present` 仅节点存在时计入)。详见附录 E.2 |
+| 单入边 | 节点依赖 1 个 required 上游:上游满足 → 本节点 ready |
+| 多入边 | 节点 N 个 required 上游:全部满足 → ready(fork 同理;optional 边忽略) |
+| 级联解锁 | 节点 done → 检查所有下游,按其 ready 谓词推进 |
+| 级联失效 | 节点 changed → 按 `coupling`×`change_class` 分级失效下游 |
+| addendum 级联 | done 附加 addendum → `cascade_level` 弱通知(§FR2.5.1) |
+| 无环校验 | 管线加载时校验 DAG 无环(CI);**允许多根** |
+| 跨管线引用 | `hub_ref: "hub://{pipeline_id}/{node_id}@{version}"` |
 
-**DepDeclaration 字段扩展**:
+**DepDeclaration 字段**(规范化):
 
 ```python
 class DepDeclaration(TypedDict):
-    node_id: str | None              # 管线内依赖
-    hub_ref: str | None              # 跨管线依赖:hub://{pipeline_id}/{node_id}@{version}
-    version_constraint: str          # semver 约束,如 ">=1.0.0 <2.0.0"
-    format_slot: str | None          # 多格式产物:openapi/grpc/typescript
-    strictness: str                  # strict(默认,要求 done) | accepts_draft(允许 draft 态上游)
-    presence: str                    # required | optional | if_present(第五轮:节点缺席≠draft)
-    coupling: str                    # hard | soft | informational(第五轮:产品回流分级失效)
+    node_id: str | None
+    hub_ref: str | None
+    version_constraint: str          # 默认 "*"
+    format_slot: str | None
+    strictness: str                  # strict | accepts_draft(默认 strict)
+    presence: str                    # required | optional | if_present(默认 required)
+    # 兼容: optional: true → 写入时规范化为 presence=optional
+    coupling: str                    # hard | soft | informational(默认 hard)
 ```
 
-**Skill × Pipeline 依赖仲裁(第五轮)**:
-- Constraint Skill 可声明 `presence: if_present` 的 deps(如 client_ui → design_asset)
-- 审核时 `effective_deps = resolve(skill.deps, pipeline.deps, participation)`
-- 管线 `roles_absent` 已裁掉的节点,**不**触发 `R_DEPS_DONE`
+**上游「满足」定义**:
+- `strictness=strict`:上游 ∈ {done}(skipped/deprecated/sunset 不满足)
+- `strictness=accepts_draft`:上游 ∈ {done, draft}
+
+**Skill × Pipeline 依赖仲裁**:完整算法见 **附录 E.2**;materialize 见 **附录 E.3**;组合真值表见 **附录 E.4**。
 
 **外部依赖持续监控**:
 - 产物 manifest 声明 `external_resources` / `third_party_apis`
@@ -667,7 +682,7 @@ rules:
 class PipelineState(TypedDict):
     pipeline_status: PipelineStatus                 # 管线级 5 态: active/paused/cancelled/merged/completed
     participation: ParticipationProfile             # 第五轮:角色参与拓扑
-    node_states: dict[str, NodeStatus]              # node_id -> 10 态状态
+    node_states: dict[str, NodeStatus]              # node_id -> 11 态状态
     artifact_refs: dict[str, dict[str, ArtifactRef]]  # node_id -> {version -> ArtifactRef}(多版本共存)
     active_version: dict[str, str]                  # node_id -> 当前生效版本
     draft_refs: dict[str, DraftRef]                 # node_id -> 草案引用(feat 分支 commit)
@@ -684,14 +699,16 @@ class PipelineState(TypedDict):
 
 | 节点 | 作用 | 触发条件 |
 |---|---|---|
-| `bootstrap_node` | 初始化:无依赖根节点置 ready | 管线启动 |
+| `bootstrap_node` | 初始化:**所有无 required 入边的根节点**(可多个)置 ready | 管线启动 |
 | `dispatch_router` | 条件路由:按节点状态分发 | 每次状态变更后 |
 | `crewai_assign` | 调 CrewAI 分配 ready 节点给角色 agent | 节点 ready |
-| `cascade_node` | done 节点解锁下游 | 节点 done |
-| `invalidate_node` | changed 节点失效下游(清引用 + blocked) | 节点 changed |
+| `cascade_node` | done 节点按 ready 谓词解锁下游 | 节点 done |
+| `invalidate_node` | changed 按 coupling 失效下游 | 节点 changed |
 | `approval_node` | 审批门等待 | approval 节点依赖满足 |
 | `draft_publish_node` | 草案发布/更新/订阅通知 | soft_submit 或 feat 分支 push |
-| `external_health_node` | 外部依赖健康检查 + 触发 deprecated | ExternalHealthMonitor 定时任务 |
+| `addendum_node` | 处理 addendum 事件与 must 超时 | add_addendum / timer |
+| `skip_finalize_node` | 将未做的 optional 置 skipped | core 将完成时 |
+| `external_health_node` | 外部依赖健康检查 + deprecated | ExternalHealthMonitor |
 | `wait_node` | 等待(无待处理节点) | 无 ready/review/done/changed |
 
 #### FR2.5 控制节点行为
@@ -990,40 +1007,44 @@ skills/
 name: <skill-name>
 description: <描述>
 trigger:
-  node_type: <产物节点类型>   # 支持精确类型、角色通配(client.*)、通用通配(*)
+  node_type: <产物节点类型>   # 精确 / 角色通配(client.*) / 通用(*)
   role: <角色>
 artifact_constraints:
-  required_fields:              # 元数据必填字段(管理方校验)
+  required_fields:
     - title
-    - version                   # semver
+    - version
     - source.repo
     - source.path
     - source.commit
-    - toolspec.framework        # 不限取值(中立)
-    - classification            # 产物密级(public/internal/confidential/restricted)
-  deps:                         # 必须依赖的节点类型
-    - <dep_node_type>
-  min_version:                  # 依赖最低版本
-    <dep_node_type>: "1.0.0"
-  file_constraints:             # 文件格式约束(不解析内容)
+    - toolspec.framework
+    - classification
+  deps:                         # 条件依赖(定稿)
+    - node_type: api_contract
+      presence: required        # required | optional | if_present
+      strictness: strict        # 可选,默认 strict
+    - node_type: design_asset
+      presence: if_present      # 管线无该节点则不计入 R_DEPS_DONE
+  min_version:
+    api_contract: "1.0.0"
+  file_constraints:
     allowed_extensions: [.yaml, .json, .md]
-    max_size_kb: 512
-  requires_human_review: false  # 是否需人工审核
-  completeness_contract:        # 结构化完整性契约(安全扫描级别的管理约束)
+    max_size_kb: 512            # >阈值走 LFS;目录型产物见 LFS 规则
+  requires_human_review: false
+  completeness_contract:        # 可选;结构存在性,非业务语义
     required_structures:
       - jsonpath: "$.endpoints"
-        min_items: 1
-      - jsonpath: "$.errors"
         min_items: 1
     on_fail: reject             # reject | warn
 guide_ref: guide.md
 guide_summary: |
   <产出建议,非强制>
-allowed_mcp_tools:              # 此 skill 激活时可调用的 MCP 工具
+allowed_mcp_tools:
   - submit_artifact
   - update_progress
   - get_dependencies
 ```
+
+匹配失败:三级均未命中 → 使用内置 `generic-skill`(仅校验 required_fields 子集 + R_NO_PATH_TRAVERSAL),并告警 `ALR-SKILL-MISS`。
 
 #### FR5.3 Skill 匹配与加载
 
@@ -1041,15 +1062,18 @@ allowed_mcp_tools:              # 此 skill 激活时可调用的 MCP 工具
 
 > 修正来源:第四轮压力测试
 
-| Skill | node_type | deps 必须包含 | requires_human_review | 引导要点 |
+| Skill | node_type | deps(presence) | requires_human_review | 引导要点 |
 |---|---|---|---|---|
 | product-spec-skill | product_spec | 无 | false | 建议含需求背景、验收标准 |
-| api-contract-skill | api_contract | product_spec | true(首次) | 建议含端点、schema、错误码;含 completeness_contract |
-| design-handoff-skill | design_proto/design_asset | product_spec | true(design_asset) | 建议含 figma 链接、标注 |
-| server-impl-skill | server_impl/server_test | api_contract | false | 建议含代码仓库 commit 引用 |
-| client-ui-skill | client_ui | api_contract + design_asset | false | 建议含 UI 实现引用 |
-| client-delivery-skill | client_func/client_delivery | client_ui + server_impl | true | 建议含联调结果、交付清单 |
-| derived-artifact-skill | derived_artifact | 派生来源节点 | false | 建议含 generator 信息、derived_from |
+| api-contract-skill | api_contract | product_spec:`if_present` | true(首次) | 端点/schema/错误码;completeness_contract |
+| design-handoff-skill | design_proto/design_asset | product_spec:`if_present` | true(design_asset) | **figma 链接必填**;标注可选 |
+| server-impl-skill | server_impl/server_test | api_contract:`required` | false | 代码仓 commit 引用 |
+| server-delivery-skill | server_delivery | server_impl+server_test:`required` | true | 服务端交付清单 |
+| client-ui-skill | client_ui | api_contract:`required`; design_asset:`if_present` | false | UI 实现引用 |
+| client-logic-skill | client_logic | api_contract:`if_present` | false | 无 UI 纯逻辑 |
+| client-delivery-skill | client_func/client_delivery | 上游 client_* + server_impl:`if_present` | true | 联调/交付清单 |
+| research-spike-skill | research_spike | 无(可作多根) | false | 调研结论 |
+| derived-artifact-skill | derived_artifact | derived_from:`required` | false | generator 信息 |
 
 #### FR5.5 验收标准
 
@@ -1307,31 +1331,45 @@ pipeline:
   id: "login-feature"
   name: "登录功能全链路"
   status: "active"                    # active | paused | cancelled | merged | completed
+  participation:                      # 必填(内容完整性定稿)
+    profile: fullstack
+    roles_present: [product, server, design, client]
+    roles_absent: []
+    allow_non_product_root: false
+    completion:
+      mode: core_nodes_done
+      core_node_types: [product_spec, api_contract, design_asset, client_ui, client_delivery]
+      optional_node_types: [derived_artifact]
   nodes:
-    - id: "login-feature.n1"          # 全局唯一节点 ID:{pipeline_id}.{local_id}
+    - id: "login-feature.n1"
       type: "product_spec"
       role: "product"
       instance_id: "product_team"
+      current_owner: "pm_alice"
       deps: []
       toolspec: { framework: "openspec" }
     - id: "login-feature.n2"
       type: "api_contract"
       role: "server"
       instance_id: "team_a_server"
-      deps: ["login-feature.n1"]
+      current_owner: "dev_bob"
+      deps:
+        - { node_id: "login-feature.n1", presence: required, strictness: strict, coupling: hard }
     - id: "login-feature.n7"
       type: "fork"
       role: "control"
-      deps: ["login-feature.n2", "login-feature.n6"]
+      deps:
+        - { node_id: "login-feature.n2", presence: required }
+        - { node_id: "login-feature.n6", presence: required }
     - id: "login-feature.n9"
       type: "gate"
       role: "control"
-      deps: ["login-feature.n8"]
+      deps: [{ node_id: "login-feature.n8", presence: required }]
       policy: { lint: true, test: true, coverage_min: 80, security_scan: true }
     - id: "login-feature.n10"
       type: "approval"
       role: "control"
-      deps: ["login-feature.n9"]
+      deps: [{ node_id: "login-feature.n9", presence: required }]
       approver: "reviewer_agent"
   edges: []  # 由 deps 推导
 ```
@@ -1344,23 +1382,24 @@ pipeline:
 ```python
 class ArtifactRef(TypedDict):
     node_id: str
-    repo: str                          # hub 仓地址(单一)
-    path: str                          # 产物在 hub 仓内路径
-    commit: str                        # hub 仓 merge commit hash
-    version: str                       # semver
+    repo: str
+    path: str
+    commit: str
+    version: str
     artifact_kind: str                 # "content" | "reference"
     artifact_qualifier: str            # "official" | "mock" | "draft" | "experimental"
-    # 引用型产物额外字段
     external_repo: str | None
     external_commit: str | None
     commit_stability: str              # "stable" | "volatile"
-    content_integrity_hash: str        # SHA-256(产物内容)
-    classification: str                # public | internal | confidential | restricted
+    content_integrity_hash: str
+    classification: str
     provenance: Provenance
-    derived_from: str | None           # 派生来源 node_id(derived_artifact)
+    derived_from: str | None
     consumers: list[ArtifactConsumer]
     toolspec_framework: str
     trace_id: str
+    current_owner: str                 # 人员级负责人(可 transfer_owner)
+    addenda: list[Addendum]            # append-only;可空列表
 
 class Provenance(TypedDict):
     submitter_instance_id: str
@@ -1370,14 +1409,9 @@ class Provenance(TypedDict):
     submitted_at: str
     merged_at: str
     reviewer: str
-    business_source: str           # product_spec | engineering_decision | incident | design_brief(第五轮)
-    business_ref: str | None       # 工单/事故/brief URL
-    change_class: str | None       # breaking | compatible | docs_only(重提时)
-
-# PipelineState 中 artifact_refs 改为多版本映射
-class PipelineState(TypedDict):
-    artifact_refs: dict[str, dict[str, ArtifactRef]]  # node_id -> {version -> ArtifactRef}
-    active_version: dict[str, str]                    # node_id -> 当前生效版本
+    business_source: str
+    business_ref: str | None
+    change_class: str | None
 ```
 
 #### AuditLogEntry(审计日志)
@@ -1604,6 +1638,104 @@ class RoleInstance(TypedDict):
 | `sync_pending_artifacts` | pending_ids | {ok, synced_count} |
 | `emergency_approve` | pending_id, note | {ok} |
 
+### 6.7 关键工具完整 Schema(内容完整性定稿)
+
+> 下列工具此前仅有清单行,现定稿 request/response/错误码,避免开发猜测。
+
+#### 6.7.1 create_pipeline
+
+```json
+{
+  "name": "create_pipeline",
+  "description": "从模板或显式 YAML 创建管线并 materialize",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "pipeline_id": {"type": "string"},
+      "name": {"type": "string"},
+      "template_id": {"type": "string", "description": "可选,与 nodes 二选一"},
+      "template_params": {"type": "object"},
+      "participation": {"type": "object", "description": "ParticipationProfile"},
+      "nodes": {"type": "array", "description": "不使用模板时必填"},
+      "priority": {"type": "integer", "default": 50}
+    },
+    "required": ["pipeline_id", "name", "participation"]
+  }
+}
+```
+**返回**: `{"ok": true, "pipeline_id": "...", "ready_roots": ["..."]}`  
+**错误**: `E_PIPELINE_EXISTS` / `E_PARTICIPATION_INVALID` / `E_DAG_CYCLE` / `E_DANGLING_DEP` / `E_PERMISSION_DENIED`
+
+#### 6.7.2 transfer_owner
+
+```json
+{
+  "name": "transfer_owner",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "node_id": {"type": "string"},
+      "from_owner": {"type": "string"},
+      "to_owner": {"type": "string"},
+      "revoke_tokens": {"type": "boolean", "default": true},
+      "note": {"type": "string"}
+    },
+    "required": ["node_id", "from_owner", "to_owner"]
+  }
+}
+```
+**返回**: `{"ok": true, "current_owner": "to_owner"}`  
+**错误**: `E_OWNER_MISMATCH` / `E_PERMISSION_DENIED`  
+**副作用**: 写审计;可选 revoke from_owner 的 human_submit_token;节点状态不变;零级联。
+
+#### 6.7.3 add_addendum / reack_addendum
+
+```json
+{
+  "name": "add_addendum",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "node_id": {"type": "string"},
+      "content": {"type": "string"},
+      "cascade_level": {"type": "string", "enum": ["must", "should", "info"]},
+      "incompatible_with": {"type": "array", "items": {"type": "string"}}
+    },
+    "required": ["node_id", "content", "cascade_level"]
+  }
+}
+```
+**前置**:节点必须 `done`;调用方为 current_owner 或 admin。  
+**返回**: `{"ok": true, "addendum_id": "..."}`  
+**错误**: `E_NODE_NOT_DONE` / `E_ADDENDUM_AUTH` / `E_INCOMPATIBLE_NOT_DOWNSTREAM`
+
+#### 6.7.4 soft_submit_artifact(完整)
+
+与 `submit_artifact` 类似,但:**不**开正式审核 PR;节点 → `draft`;写入 `draft_refs`。  
+**返回**: `{"ok": true, "draft_ref": {"branch": "...", "commit": "..."}}`  
+**错误**: `E_DEPS_NOT_SATISFIED`(required 未满足时) / `E_PERMISSION_DENIED`
+
+#### 6.7.5 skip_node
+
+```json
+{
+  "name": "skip_node",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "node_id": {"type": "string"},
+      "reason": {"type": "string"}
+    },
+    "required": ["node_id", "reason"]
+  }
+}
+```
+**前置**:该节点在 pipeline 中对应边均为 `presence=optional`,或属于 `completion.optional_node_types`。  
+**返回**: `{"ok": true, "state": "skipped"}`  
+**错误**: `E_NOT_OPTIONAL` / `E_PERMISSION_DENIED`
+
+> 全局错误码表见 **附录 E.1**。未在本节展开的工具仍遵从 §6.6 参数表 + 附录 E 错误码命名约定 `E_*`。
+
 ---
 
 ## 7. 非功能需求
@@ -1649,23 +1781,30 @@ class RoleInstance(TypedDict):
 | TC-10 | 监控:产物 trace_id 跳转 Langfuse | 可查看完整执行 trace |
 | TC-11 | 可视化:节点颜色随状态实时变化 | SSE 推送 < 1s 延迟 |
 | TC-12 | 降级:Langfuse 挂掉 | 平台正常工作 |
+| TC-13 | profile=server_only 无 design/client | materialize 后无幽灵节点;core done → completed |
+| TC-14 | profile=no_design_client | client_ui 不因缺 design_asset 被 R_DEPS_DONE reject |
+| TC-15 | profile=design_only | 仅 design 节点;figma 链接产物可 done |
+| TC-16 | profile=tech_debt 无 product 根 | allow_non_product_root;business_source=incident |
+| TC-17 | optional 依赖未做 | 下游仍可 ready;结束时 optional → skipped |
+| TC-18 | transfer_owner + addendum(should) | 状态不变;下游仅通知;审计可查 |
 
 ### 8.2 验收检查清单
 
-- [ ] 产物仓库 main 分支受保护,只接受 PR
-- [ ] PR 模板强制声明 node_id/deps
+- [ ] 产物仓库 main 分支受保护,只接受 PR(**仅管理方 bot merge**)
+- [ ] PR 模板强制声明 node_id/deps/classification
 - [ ] submit_artifact 后节点进入 pending_review(非直接 done)
 - [ ] approve_pr 合并后节点 done + 下游 cascade
 - [ ] reject_pr 后节点回 ready + 通知
-- [ ] 依赖未 done 的 PR 被自动 reject
+- [ ] 依赖未满足(required)的 PR 被自动 reject(`E_DEPS_NOT_SATISFIED`)
 - [ ] 元数据缺失的 PR 被自动 reject
 - [ ] requires_human_review=true 的 PR 转人工
-- [ ] changed 节点下游递归 blocked + 产物引用清除
+- [ ] changed 节点下游按 coupling 分级失效
 - [ ] gate 失败上游打回 in_progress
 - [ ] approval 驳回上游 changed
-- [ ] 审计日志可查 + 含 trace_id
+- [ ] 审计日志可查 + hash 链 + 含 trace_id
 - [ ] Langfuse trace 贯穿 MCP + LangGraph
-- [ ] 可视化依赖图实时状态更新
+- [ ] ParticipationProfile 预设 e2e(TC-13~16)至少通过三种
+- [ ] effective_deps / materialize 单测覆盖附录 E
 - [ ] Langfuse 挂掉时降级正常
 
 ---
@@ -1677,35 +1816,37 @@ class RoleInstance(TypedDict):
 | 任务 | 产出 |
 |---|---|
 | 产物仓库初始化 + 分支保护 + PR 模板 | artifact-repo 可用 |
-| LangGraph StateGraph(状态机 + DAG + cascade/invalidate) | orchestration/ |
-| MCP Server(submit/review/approve/reject/get_deps) | mcp_server/ |
-| 2 个 Constraint Skill(product-spec + api-contract) | skills/ |
-| 审核流程(webhook → skill 校验 → approve/reject) | mcp_server/ |
-| 基础可视化(依赖图 + 实时状态) | visual/ |
+| LangGraph StateGraph(11 态 + DAG + cascade + **materialize**) | orchestration/ |
+| **ParticipationProfile + presence ready 谓词 + resolve(附录 E)** | orchestration/deps.py |
+| MCP Server(submit/review/approve/reject/get_deps/**create_pipeline**) | mcp_server/ |
+| Constraint Skill(含 client-ui **if_present** design) | skills/ |
+| 审核流程 + 错误码 E_* | mcp_server/ |
+| 基础可视化(+ profile 徽章) | visual/ |
 
-**验收**:跑通 TC-01 ~ TC-04, TC-07 ~ TC-09
+**验收**:跑通 TC-01 ~ TC-04, TC-07 ~ TC-09,**TC-13, TC-14, TC-17**
 
 ### Phase 2:角色协调 + 监控
 
 | 任务 | 产出 |
 |---|---|
-| CrewAI 4 角色 Agent + Task 动态生成 | crew/ |
-| Langfuse 旁路监听装饰器 + 埋点 | monitoring/ |
-| 全部 6 个 Constraint Skill | skills/ |
+| CrewAI RoleInstance + 仅 roles_present | crew/ |
+| Langfuse 旁路监听 + 埋点 | monitoring/ |
+| 全部 Constraint Skill + generator | skills/ |
 | 控制节点(gate/approval/fork) | orchestration/nodes.py |
-| 审计日志 + get_audit_log 工具 | mcp_server/ |
+| transfer_owner + addendum MCP | mcp_server/ |
+| 审计日志 hash 链 | mcp_server/ |
 
-**验收**:跑通 TC-05, TC-06, TC-10, TC-12
+**验收**:跑通 TC-05, TC-06, TC-10, TC-12, **TC-15, TC-16, TC-18**
 
 ### Phase 3:可视化增强 + 生产化准备
 
 | 任务 | 产出 |
 |---|---|
-| react-flow 可视化(替代 SVG) | visual/ |
-| 审批交互 + 审计日志视图 | visual/ |
+| react-flow 可视化 | visual/ |
+| 审批交互 + 审计视图 | visual/ |
 | LangGraph Postgres checkpointer | 持久化 |
 | Langfuse Dashboard 集成 | monitoring/ |
-| 控制节点(switch/notify) | orchestration/ |
+| switch/notify + 管线模板 + merge/split | orchestration/ |
 
 **验收**:跑通 TC-11,全部验收检查清单通过
 
@@ -2145,3 +2286,225 @@ flowchart TB
 - [scenario-role-absence.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-role-absence.md)(A37-A39,12 缺陷,2 Critical)
 - [scenario-owner-handover.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-owner-handover.md)(A40,10 缺陷,1 Critical)
 - [scenario-multi-source-optional-dep.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-source-optional-dep.md)(A41,10 缺陷,2 Critical)
+
+### D12. 内容完整性审核(v3.2)
+
+> 详见 [content-completeness-audit.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/audits/content-completeness-audit.md)。本轮将开发受阻级缺口定稿为 **附录 E**,并回写 FR2/FR5/§5/§6/§8/Phase1。
+
+---
+
+## 附录 E:内容完整性定稿(算法/错误码/术语统一)
+
+> **效力**:本附录条文与正文冲突时,**以本附录为准**(v3.2 定稿)。实现必须以本附录为单测真源。
+
+### E.1 全局错误码
+
+| 码 | 含义 | 典型触发 |
+|---|---|---|
+| `E_PERMISSION_DENIED` | 角色/instance/token 不允许 | L1/L2/L3 权限失败 |
+| `E_PIPELINE_EXISTS` | pipeline_id 已存在 | create_pipeline |
+| `E_PIPELINE_NOT_FOUND` | 管线不存在 | 任意管线级工具 |
+| `E_PARTICIPATION_INVALID` | profile 与 roles_* 不一致 | materialize |
+| `E_DAG_CYCLE` | 依赖成环 | 加载/热重载 |
+| `E_DANGLING_DEP` | deps 指向不存在/已裁剪节点 | materialize |
+| `E_DEPS_NOT_SATISFIED` | required 上游未满足 | submit / R_DEPS_DONE |
+| `E_META_REQUIRED` | 元数据缺字段 | skill 校验 |
+| `E_SECRET_DETECTED` | 密钥扫描命中 | R_SECRET_SCAN |
+| `E_URL_UNSAFE` | URL 安全检查失败 | R_URL_SAFETY |
+| `E_REF_NOT_FOUND` | git ls-remote 失败 | 引用型校验 |
+| `E_REF_OWNERSHIP` | external_repo 不在白名单 | R_EXTERNAL_REF_OWNERSHIP |
+| `E_NODE_NOT_DONE` | 节点非 done | add_addendum |
+| `E_OWNER_MISMATCH` | from_owner 非 current_owner | transfer_owner |
+| `E_NOT_OPTIONAL` | 非 optional 节点不可 skip | skip_node |
+| `E_ADDENDUM_AUTH` | 无权限写 addendum | R_ADDENDUM_AUTH |
+| `E_INCOMPATIBLE_NOT_DOWNSTREAM` | incompatible_with 非法 | R_ADDENDUM_INCOMPATIBLE |
+| `E_CLASSIFICATION_DENIED` | clearance 不足 | get_dependencies |
+| `E_BUDGET_EXCEEDED` | 成本硬预算 | agent 护栏 |
+| `E_HUB_UNAVAILABLE` | hub 仓不可达 | 提交/审核 |
+| `E_IDEMPOTENCY_CONFLICT` | 重复请求且参数不一致 | 带 idempotency_key 的写工具 |
+
+**约定**:MCP 错误响应一律 `{"ok": false, "error": {"code": "E_*", "message": "...", "details": {}}}`.
+
+### E.2 effective_deps / resolve 算法
+
+```python
+def normalize_dep(d: dict) -> DepDeclaration:
+    if d.get("optional") is True:
+        d["presence"] = "optional"
+    d.setdefault("presence", "required")
+    d.setdefault("strictness", "strict")
+    d.setdefault("coupling", "hard")
+    d.setdefault("version_constraint", "*")
+    return d
+
+def resolve(skill_deps, pipeline_deps, participation, materialized_nodes) -> list[DepDeclaration]:
+    """合并 skill 与 pipeline 声明,得到审核与 ready 共用的 effective_deps。"""
+    by_key = {}
+    # 1) pipeline 边优先(实例拓扑真相)
+    for d in pipeline_deps:
+        d = normalize_dep(dict(d))
+        key = d.get("node_id") or d.get("hub_ref")
+        by_key[key] = d
+    # 2) skill 边按 node_type 对齐:仅当 pipeline 未声明同 type 边时补入
+    type_index = {n["id"]: n["type"] for n in materialized_nodes}
+    declared_types = {type_index.get(k) for k in by_key if k in type_index}
+    for sd in skill_deps or []:
+        sd = normalize_dep(dict(sd))
+        nt = sd["node_type"]
+        if nt in declared_types:
+            continue
+        # 在 materialized 中找同 type 节点;找不到则按 presence 处理
+        matches = [n for n in materialized_nodes if n["type"] == nt]
+        if not matches:
+            if sd["presence"] in ("optional", "if_present"):
+                continue  # 丢弃
+            # required 但节点不存在:materialize 阶段应已失败;此处防御
+            raise DepError("E_DANGLING_DEP", nt)
+        for m in matches:
+            by_key[m["id"]] = {**sd, "node_id": m["id"]}
+    # 3) presence 过滤
+    present_ids = {n["id"] for n in materialized_nodes}
+    out = []
+    for dep in by_key.values():
+        p = dep["presence"]
+        nid = dep.get("node_id")
+        if p == "optional":
+            dep["_counts_for_ready"] = False
+            out.append(dep)
+        elif p == "if_present":
+            if nid in present_ids:
+                dep["_counts_for_ready"] = True
+                out.append(dep)
+            # else drop
+        else:  # required
+            if nid not in present_ids and not dep.get("hub_ref"):
+                raise DepError("E_DANGLING_DEP", nid)
+            dep["_counts_for_ready"] = True
+            out.append(dep)
+    return out
+
+def deps_satisfied(node_id, state, effective_deps) -> bool:
+    for dep in effective_deps:
+        if not dep.get("_counts_for_ready", True):
+            continue
+        if dep.get("hub_ref"):
+            if not hub_ref_ready(dep["hub_ref"], dep["version_constraint"]):
+                return False
+            continue
+        st = state["node_states"][dep["node_id"]]
+        if dep["strictness"] == "accepts_draft":
+            if st not in ("done", "draft"):
+                return False
+        else:
+            if st != "done":
+                return False
+    return True
+```
+
+### E.3 materialize 算法
+
+```python
+def materialize(template_or_nodes, participation) -> MaterializedPipeline:
+    # 0) 别名归一
+    if "participants" in participation and "roles_present" not in participation:
+        participation["roles_present"] = participation.pop("participants")
+    validate_participation(participation)  # 否则 E_PARTICIPATION_INVALID
+
+    nodes = expand_template(template_or_nodes, participation)
+    # 1) 裁剪缺席角色
+    nodes = [n for n in nodes if n["role"] not in participation["roles_absent"]]
+    nodes = [n for n in nodes if eval_condition(n.get("condition"), participation)]
+    ids = {n["id"] for n in nodes}
+
+    # 2) 禁止非 product 根?
+    roots = [n for n in nodes if not n.get("deps")]
+    if not participation.get("allow_non_product_root", False):
+        if roots and all(r["type"] != "product_spec" for r in roots):
+            # tech_debt/design_only 必须显式允许
+            raise DepError("E_PARTICIPATION_INVALID", "non_product_root")
+
+    # 3) 规范化 deps + 删 dangling
+    for n in nodes:
+        new_deps = []
+        for d in n.get("deps") or []:
+            d = normalize_dep(dict(d) if isinstance(d, dict) else {"node_id": d})
+            if d.get("node_id") and d["node_id"] not in ids:
+                if d["presence"] in ("optional", "if_present"):
+                    continue
+                raise DepError("E_DANGLING_DEP", d["node_id"])
+            new_deps.append(d)
+        n["deps"] = new_deps
+
+    if has_cycle(nodes):
+        raise DepError("E_DAG_CYCLE")
+
+    return MaterializedPipeline(nodes=nodes, participation=participation)
+```
+
+### E.4 presence × strictness × coupling 真值表(摘要)
+
+| presence | 计入 ready AND? | 上游未满足时下游 | changed 时默认 |
+|---|---|---|---|
+| required | 是 | blocked | 按 coupling |
+| optional | 否 | 仍可 ready;结束时可 skipped | 仅通知 |
+| if_present 且节点存在 | 是 | 同 required | 按 coupling |
+| if_present 且节点已裁剪 | 边不存在 | — | — |
+
+| coupling | breaking | compatible | docs_only |
+|---|---|---|---|
+| hard | hard_invalidate | soft+ack | skip 通知 |
+| soft | soft+ack | soft+ack | skip 通知 |
+| informational | 仅通知 | 仅通知 | 仅通知 |
+
+### E.5 术语统一裁决
+
+| 旧写法 | 正式写法 | 处理 |
+|---|---|---|
+| `participants: [...]` | `participation.roles_present` | 加载时兼容映射 |
+| `optional: true` | `presence: optional` | normalize_dep |
+| 「10 态状态机」 | **11 态**(含 skipped) | 正文已改 |
+| 「解析内容」歧义 | §1.4.1 硬边界表 | 以表为准 |
+
+### E.6 系统边界与编排总图
+
+```mermaid
+flowchart TB
+  subgraph out [范围外-执行层]
+    Human[人员任意工具]
+    IDE[IDE/Figma/测试]
+  end
+  subgraph in [范围内]
+    MCP[MCP Server]
+    LG[LangGraph 11态+DAG]
+    Crew[CrewAI roles_present]
+    Rev[审核+R_*规则]
+    Hub[artifact-hub]
+    LF[Langfuse旁路]
+  end
+  Human -->|产物文件/链接/进度| MCP
+  MCP --> Rev --> Hub
+  Rev --> LG
+  LG --> Crew
+  Crew --> MCP
+  MCP -.-> LF
+  LG -.-> LF
+```
+
+```mermaid
+sequenceDiagram
+  participant Admin
+  participant MCP
+  participant Mat as materialize
+  participant LG as LangGraph
+  participant Hub
+  Admin->>MCP: create_pipeline(participation)
+  MCP->>Mat: expand+裁剪+校验
+  Mat-->>MCP: nodes/ready_roots
+  MCP->>LG: bootstrap 多根 ready
+  Note over LG: ready 谓词只用 effective required
+  LG->>MCP: crew assign
+  MCP->>Hub: submit PR
+  Hub->>MCP: webhook review
+  MCP->>LG: approve → done → cascade
+  LG->>LG: core_nodes_done? optional→skipped
+```
