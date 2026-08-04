@@ -1,8 +1,9 @@
 # 产品需求文档 PRD:AI 多角色开发协同平台(Coordination Platform)
 
 > **文档性质**:基于《AI 多 Agent 开发协同平台调研报告》第十六~二十七章(v2 自建设计)产出的可开发 PRD
-> **版本**:v3.0 | **日期**:2026-08-04 | **状态**:可开发评审
+> **版本**:v3.1 | **日期**:2026-08-04 | **状态**:可开发评审
 > **设计文档**:[ai-multi-agent-dev-dashboard-research.md](file:///Users/zuiyou/develop/skills/.trae/documents/ai-multi-agent-dev-dashboard-research.md)
+> **第五轮**:全流程角色参与拓扑压力测试 → [round5-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round5-summary.md)
 
 ---
 
@@ -93,6 +94,10 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | **classification** | 产物密级:public / internal / confidential / restricted |
 | **derived_artifact** | 派生产物,由 generator 角色基于上游产物自动生成(如 SDK、文档) |
 | **管线状态** | 管线级 5 态生命周期:active / paused / cancelled / merged / completed |
+| **ParticipationProfile** | 管线角色参与配置:声明哪些角色在场/缺席、完成谓词、是否允许非 product 根;使「设计/服务端/客户端可能无」成为一等模型 |
+| **presence** | 依赖边是否生效:`required` / `optional` / `if_present`(仅当节点存在于 materialized 管线时才成为硬依赖) |
+| **coupling** | 上游变更时下游失效强度:`hard` / `soft` / `informational` |
+| **change_class** | 产物重提变更分类:`breaking` / `compatible` / `docs_only`,驱动分级级联 |
 
 ### 2.1 节点类型完整清单
 
@@ -419,12 +424,64 @@ class DepDeclaration(TypedDict):
     version_constraint: str          # semver 约束,如 ">=1.0.0 <2.0.0"
     format_slot: str | None          # 多格式产物:openapi/grpc/typescript
     strictness: str                  # strict(默认,要求 done) | accepts_draft(允许 draft 态上游)
+    presence: str                    # required | optional | if_present(第五轮:节点缺席≠draft)
+    coupling: str                    # hard | soft | informational(第五轮:产品回流分级失效)
 ```
+
+**Skill × Pipeline 依赖仲裁(第五轮)**:
+- Constraint Skill 可声明 `presence: if_present` 的 deps(如 client_ui → design_asset)
+- 审核时 `effective_deps = resolve(skill.deps, pipeline.deps, participation)`
+- 管线 `roles_absent` 已裁掉的节点,**不**触发 `R_DEPS_DONE`
 
 **外部依赖持续监控**:
 - 产物 manifest 声明 `external_resources` / `third_party_apis`
 - `ExternalHealthMonitor` 后台任务定期 health check
 - 外部资源失效时触发 `done → deprecated` 自动转移,并通知所有已注册消费者
+
+#### FR2.2.1 ParticipationProfile(角色参与拓扑)
+
+> 修正来源:第五轮压力测试(B1–B5)
+
+需求 1 要求「设计/服务端/客户端可能无」。平台必须认识拓扑变体,不能只靠手写省略节点。
+
+```yaml
+participation:
+  profile: server_only    # fullstack | server_only | no_design_client | design_only | tech_debt | custom
+  roles_present: [product, server]
+  roles_absent: [design, client]
+  allow_non_product_root: false
+  completion:
+    mode: core_nodes_done
+    core_node_types: [product_spec, api_contract, server_impl, server_test, gate]
+    optional_node_types: [derived_artifact]
+  default_policies:
+    requires_human_review_override: null
+```
+
+| profile | roles_present(典型) | 说明 |
+|---|---|---|
+| `fullstack` | product,server,design,client | 默认登录类全链路 |
+| `server_only` | product,server | 内部 API / 计费等无 UI |
+| `no_design_client` | product,server,client | Admin/组件库拼装,永久无 Figma |
+| `design_only` | design(+product?) | 设计系统/视觉改版;`allow_non_product_root` 可 true |
+| `tech_debt` | server | 无产品规格热修;强制更高人工审批 |
+| `custom` | 显式列表 | 自由组合,须通过无环 + 无悬空 deps 校验 |
+
+**materialize 规则**(LangGraph bootstrap):
+1. 按 `roles_absent` / `condition` 裁剪节点
+2. 删除指向已裁剪节点的 deps(禁止 dangling)
+3. CrewAI **仅**为 `roles_present` 建 RoleInstance
+4. completed 使用 `core_nodes_done`;optional 节点失败只告警不挡完成
+
+**产物重提变更分类**:
+
+```python
+class ArtifactResubmitMeta(TypedDict):
+    change_class: str      # breaking | compatible | docs_only
+    impact_claim: list[str]  # 声称受影响下游;低估可被审核驳回
+```
+
+级联:`breaking+hard → hard_invalidate`;`compatible+soft → soft + ack`;`docs_only|informational → cascade_skip(通知)`。
 
 #### FR2.3 PipelineState 数据结构
 
@@ -433,6 +490,7 @@ class DepDeclaration(TypedDict):
 ```python
 class PipelineState(TypedDict):
     pipeline_status: PipelineStatus                 # 管线级 5 态: active/paused/cancelled/merged/completed
+    participation: ParticipationProfile             # 第五轮:角色参与拓扑
     node_states: dict[str, NodeStatus]              # node_id -> 10 态状态
     artifact_refs: dict[str, dict[str, ArtifactRef]]  # node_id -> {version -> ArtifactRef}(多版本共存)
     active_version: dict[str, str]                  # node_id -> 当前生效版本
@@ -495,11 +553,15 @@ class PipelineState(TypedDict):
 - AC2.4: changed 节点的下游按 strictness 分级失效
 - AC2.5: gate 失败时上游产物打回 in_progress
 - AC2.6: approval 驳回时上游最近产物节点 changed
-- AC2.7: 管线全节点 done 时管线进入 completed
+- AC2.7: 管线 **core 节点**全 done 时进入 completed(`completion.mode=core_nodes_done`);optional 节点失败不挡完成
 - AC2.8: `soft_submit_artifact` 后节点进入 draft,不触发 cascade
 - AC2.9: draft 更新时订阅下游收到 `DRAFT_UPDATED` 通知
 - AC2.10: 外部资源失效时触发 done → deprecated 并通知消费者
 - AC2.11: 引用型产物 changed 时只清 hub 仓引用,代码仓 commit 保留并通知代码团队
+- AC2.12: `participation.profile=server_only` 管线无 design/client 节点且可 completed(第五轮)
+- AC2.13: `no_design_client` 下 client_ui 不因缺 design_asset 被 R_DEPS_DONE 拒绝(第五轮)
+- AC2.14: `tech_debt` / `design_only` 允许非 product 根,且 Crew 仅 roles_present(第五轮)
+- AC2.15: product_spec `change_class=docs_only` 不 hard_invalidate 下游(第五轮)
 
 #### FR2.7 管线级生命周期
 
@@ -550,27 +612,38 @@ stateDiagram-v2
 
 **关键约束:Agent 不执行开发,只协调提交。** 真正开发由人员自由完成,Agent 是"提交协调员",调用 MCP 工具把人员产出的产物引用提交到管理方。
 
-> 修正来源:第三轮/第四轮压力测试
+> 修正来源:第三轮/第四轮/第五轮压力测试
 > **RoleInstance 分发**:每个 role 可配置多个 RoleInstance(如 `team_a_server`、`team_b_server`)。`build_crew_for_ready_nodes` 按 `role_assignments[node_id]` 中的 `instance_id` 匹配对应 RoleInstance,再创建 Task。每个 RoleInstance 拥有独立的 LLM 配置、可产出节点类型、代码仓白名单和密级许可。
+> **Participation 裁剪(第五轮)**:Crew **只**实例化 `state.participation.roles_present` 中的角色;缺席角色不建 agent,避免空转耗预算。client backstory 中的 design 约束改为「若 effective_deps 含 design_asset 则必须遵守」。
 
 #### FR3.2 Task 动态生成
 
 ```python
 def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
-    """按 LangGraph ready 节点动态创建 CrewAI Task"""
+    """按 LangGraph ready 节点动态创建 CrewAI Task;仅 roles_present"""
+    present = set(state["participation"]["roles_present"])
     tasks = []
+    agents = {}
     for node_id in ready_nodes:
         node = get_node(node_id)
+        if node["role"] not in present:
+            raise TopologyError(f"node {node_id} role not in participation")
         instance_id = state["role_assignments"].get(node_id)
-        role_instance = get_role_instance(instance_id)  # RoleInstance 路由
+        role_instance = get_role_instance(instance_id)
         agent = role_instance_to_agent(role_instance)
+        agents[instance_id] = agent
         tasks.append(Task(
             description=f"为节点 {node_id}({node['type']})产出产物,通过 MCP 提交",
             agent=agent,
             expected_output="产物已提交 PR,等待审核",
-            context={"node_id": node_id, "instance_id": instance_id, "deps": get_deps_info(node_id, state)},
+            context={
+                "node_id": node_id,
+                "instance_id": instance_id,
+                "deps": get_deps_info(node_id, state),
+                "participation_profile": state["participation"]["profile"],
+            },
         ))
-    return Crew(agents=[...], tasks=tasks, process=Process.sequential)
+    return Crew(agents=list(agents.values()), tasks=tasks, process=Process.sequential)
 ```
 
 #### FR3.3 CrewAI ↔ LangGraph 协作
@@ -588,6 +661,7 @@ def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
 - AC3.2: 多个节点同时 ready 时,对应角色 agent 并行执行
 - AC3.3: agent 调 submit_artifact 后,节点进入 pending_review
 - AC3.4: 同一角色多 RoleInstance 时,任务按 instance_id 正确路由
+- AC3.5: `roles_absent` 角色不出现在 Crew agents 列表中(第五轮)
 
 #### FR3.5 Agent 行为护栏
 
@@ -963,7 +1037,8 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps/cla
 | Trace 列表 | Langfuse | 每次 MCP 调用 + LangGraph 节点 trace |
 | 节点耗时 | trace span | 节点从 ready→done 耗时分布 |
 | 异常告警 | trace error | gate 失败、审批超时、agent 离线 |
-| 角色负载 | trace 按 agent 聚合 | 各角色 agent 任务数/耗时 |
+| 角色负载 | trace 按 agent 聚合 | 各角色 agent 任务数/耗时;**按 participation.profile 过滤缺席角色列**(第五轮) |
+| 拓扑徽章 | PipelineState.participation | 管线标题旁显示 profile(server_only/design_only/...) |
 | 审计日志 | 管理方 audit_log | 审核记录列表(可过滤) + hash 链完整性校验 |
 | 外部依赖健康 | ExternalHealthMonitor | 各产物外部资源可达性状态 |
 | 成本归因 | `agent.cost` span | Task/Agent/管线/平台四级成本汇总 |
@@ -1107,6 +1182,9 @@ class Provenance(TypedDict):
     submitted_at: str
     merged_at: str
     reviewer: str
+    business_source: str           # product_spec | engineering_decision | incident | design_brief(第五轮)
+    business_ref: str | None       # 工单/事故/brief URL
+    change_class: str | None       # breaking | compatible | docs_only(重提时)
 
 # PipelineState 中 artifact_refs 改为多版本映射
 class PipelineState(TypedDict):
@@ -1761,3 +1839,55 @@ class RoleInstance(TypedDict):
 - [scenario-pipeline-lifecycle.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-pipeline-lifecycle.md)(21 缺陷,4 Critical)
 - [scenario-artifact-consumption.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-consumption.md)(18 缺陷,5 Critical)
 - [scenario-agent-behavior.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-agent-behavior.md)(21 缺陷,3 Critical)
+
+### D10. 第五轮压力测试修正:全流程角色参与拓扑(B1–B5)
+
+> **评审修正**:系统盘点前四轮 64 场景后,发现需求 1「设计/服务端/客户端可能无」几乎未被作为一等拓扑验收。第五轮压测 5 个真实全流程拓扑,发现 35 缺陷(7 Critical / 14 High / 10 Medium / 4 Low)。
+
+**本轮测试场景**(主 agent 必报清单):
+
+| 编号 | 拓扑 | 参与 | 缺席 | 报告 |
+|---|---|---|---|---|
+| B1 | 服务端独占 | product,server | design,client | [scenario-topology-server-only.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-topology-server-only.md) |
+| B2 | 无设计客户端 | product,server,client | design | [scenario-topology-no-design-client.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-topology-no-design-client.md) |
+| B3 | 纯设计迭代 | design(+product?) | server,client | [scenario-topology-design-only.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-topology-design-only.md) |
+| B4 | 产品中途回流 | 全角色 | — | [scenario-topology-product-reflux-no-product.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-topology-product-reflux-no-product.md) |
+| B5 | 无产品技术债 | server | product,design,client | 同上 |
+
+**四大根因**:ParticipationProfile 缺失 · Skill/管线 deps 未仲裁 · completed 谓词过朴素 · coupling/change_class 未回写。
+
+**P0 已回写本 PRD**:
+- §2 术语:ParticipationProfile / presence / coupling / change_class
+- §FR2.2–2.2.1:DepDeclaration 扩展 + ParticipationProfile + materialize + 变更分级
+- §FR2.3:PipelineState.participation
+- §FR2.6:AC2.7 修订 + AC2.12~AC2.15
+- §FR3:Crew 仅 roles_present
+- §5 Provenance:business_source / business_ref / change_class
+- §FR7:Dashboard 拓扑过滤
+
+**主 agent 判定**:就「与已测本质不同且非常重要的真实全流程角色拓扑」而言,**补齐后已无必须再开一轮的新拓扑**;次要变体机制已被覆盖。后续重心是实现。详见 [round5-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round5-summary.md)。
+
+#### 第五轮设计总图(LangGraph + CrewAI + Langfuse)
+
+```mermaid
+flowchart TB
+  subgraph create [管线创建]
+    Tpl[PipelineTemplate]
+    Prof[ParticipationProfile]
+  end
+  Tpl --> Mat[materialize<br/>裁剪 roles_absent]
+  Prof --> Mat
+  Mat --> DAG[严格依赖 DAG]
+  Mat --> Crew[CrewAI<br/>仅 roles_present]
+  Mat --> Eff[effective_deps<br/>skill × pipeline × presence]
+  DAG --> LG[LangGraph StateGraph]
+  Crew --> MCP[MCP 提交/进度]
+  Eff --> MCP
+  MCP --> Hub[artifact-hub PR 审核]
+  Hub --> LG
+  LG --> Core{core_nodes_done?}
+  Core -->|是| Done[completed]
+  Core -->|optional 失败| Alert[告警不挡完成]
+  LG --> LF[Langfuse<br/>profile 标签]
+  Hub --> LF
+```
