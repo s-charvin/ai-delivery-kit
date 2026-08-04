@@ -1201,3 +1201,69 @@ class AuditLogEntry(TypedDict):
 - [scenario-exception-human.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md)(20 缺陷)
 - [scenario-multi-team-rollback.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-team-rollback.md)(19 缺陷)
 - [scenario-parallel-dependency.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-parallel-dependency.md)(13 缺陷)
+
+### D9. 第四轮压力测试修正:安全合规 / 外部依赖 / 管线生命周期 / 产物消费 / Agent 行为
+
+> **评审修正**:第四轮系统盘点前三轮 48 个场景未覆盖的 5 类真实开发维度,5 个并行 agent 测试 20 个新场景(A17-A36),发现 99 个缺陷(17 Critical / 45 High / 35 Medium / 2 Low),归因为 7 大根因(前 5 个延续第三轮,后 2 个新发现),提出 18 项 P0 修正。
+
+**未覆盖维度识别**(第四轮核心价值):
+
+| 未覆盖维度 | 为什么重要 | Critical 缺陷数 |
+|---|---|---|
+| 安全合规 | 产物仓库是"信息枢纽",密钥泄露/恶意提交/密级混放是生产必遇 | 2 |
+| 外部依赖失效 | 需求 9"只提供 figma 链接",但外部资源会失效 | 3 |
+| 管线生命周期 | feature 会被取消/暂停/合并/拆分,PRD 只有节点级状态机 | 4 |
+| 产物自动消费 | 需求 3"自动同步",但 done 后如何触发 CI/CD/SDK/文档 | 5 |
+| AI agent 行为 | 需求 8 自建 LLM agent,行为有不确定性(误判/越权/遗忘/失控) | 3 |
+
+**7 大根因**(第三轮 5 个 + 第四轮 2 个新发现):
+
+| 根因 | 影响缺陷数 | 核心问题 | 新/延续 |
+|---|---|---|---|
+| "不解析内容"与安全/质量校验张力 | 18 | 安全扫描/完整性/质量度量无定位 | 延续根因 1 |
+| 外部依赖持续监控缺失 | 15 | 只有提交时校验,无持续监控 | 新发现 |
+| 管线级生命周期管理空白 | 21 | 无管线级取消/暂停/合并/拆分 | 新发现 |
+| 产物 done 后外部消费机制缺失 | 18 | notify 仅飞书/Slack,无 CI/CD 触发 | 新发现 |
+| LLM agent 行为不确定性未护栏 | 21 | 异常处理只覆盖"崩溃",未覆盖"行为异常" | 新发现 |
+| 权限模型无密级维度 | 8 | 扁平权限无 classification | 延续根因 5 |
+| 审计防篡改与导出不完整 | 6 | audit_log 无 hash 链,合规导出缺失 | 新发现 |
+
+**18 项 P0 修正**(详见 [round4-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round4-summary.md)):
+
+| # | 修正项 | 修正根因 | 影响章节 |
+|---|---|---|---|
+| 1 | 安全扫描规则族(R_SECRET_SCAN/R_URL_SAFETY/R_MALWARE_SCAN) | 根因 1 | §FR6 |
+| 2 | 产物完整性 provenance(content_integrity_hash) | 根因 1 | §5.1 |
+| 3 | 产物密级与权限(classification + clearance) | 根因 6 | §5.1、§FR6 |
+| 4 | 审计 hash 链 + WORM | 根因 7 | §FR7 |
+| 5 | 外部依赖声明与监控(external_resources + ExternalHealthMonitor) | 根因 2 | §FR1、§FR2 |
+| 6 | 管线级 5 态状态机(active/paused/cancelled/merged/completed) | 根因 3 | §5、§FR2 |
+| 7 | 管线级 MCP 工具(cancel/pause/resume/merge/split_pipeline) | 根因 3 | §FR4 |
+| 8 | 节点 ID 全局唯一({pipeline_id}.{local_id}) | 根因 3 | §5 |
+| 9 | 产物消费订阅机制(consumers + notify 扩展) | 根因 4 | §FR2.5、§FR4 |
+| 10 | 消费状态回传工具(report_consumption/generation_status) | 根因 4 | §FR4 |
+| 11 | 结构化完整性契约(completeness_contract) | 根因 1/5 | §FR5 |
+| 12 | 三层硬预算(Task/Agent/管线/平台级) | 根因 5 | §FR3、§FR7 |
+| 13 | agent 身份强绑定(session 级 token) | 根因 5 | §FR4 |
+| 14 | 关键约束提取(key_constraints) | 根因 5 | §FR4 |
+| 15 | 跨管线引用注册表(CrossPipelineReferenceRegistry) | 根因 2 | §5、§FR2 |
+| 16 | 安全事件响应闭环(handle_security_incident) | 根因 1 | §FR4 |
+| 17 | 派生产物模型(derived_artifact + generator 角色) | 根因 4 | §2.1、§FR3 |
+| 18 | agent 行为基线与告警(ALR-13~15) | 根因 5 | §FR7 |
+
+**关键认知**:
+1. "不解析内容"原则需要重新定义边界——安全扫描是"管理约束"而非"内容解析"
+2. 外部依赖是产物的"暗物质"——提交时校验不够,需要持续监控 + 自动 deprecated
+3. 管线是"有生命周期"的——管线级状态机与节点级状态机正交
+4. 产物 done 不是终点,是消费的起点——需要消费订阅机制
+5. LLM agent ≠ 传统代码 agent——需要行为护栏 + 成本硬约束
+6. 单一 hub 仓放大安全风险——安全模型必须前置
+7. 审计不只是"看历史",是"合规证据"——hash 链 + WORM 是刚需
+
+**关联文档**:
+- [round4-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round4-summary.md)(总报告)
+- [scenario-security-compliance.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-security-compliance.md)(20 缺陷,2 Critical)
+- [scenario-external-dependency.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-external-dependency.md)(19 缺陷,3 Critical)
+- [scenario-pipeline-lifecycle.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-pipeline-lifecycle.md)(21 缺陷,4 Critical)
+- [scenario-artifact-consumption.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-consumption.md)(18 缺陷,5 Critical)
+- [scenario-agent-behavior.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-agent-behavior.md)(21 缺陷,3 Critical)
