@@ -347,11 +347,16 @@ class ContractValidator:
             if not node.has("data-ui-id"):
                 continue
             ui_id = node.get("data-ui-id")
-            if is_nonempty_str(ui_id):
-                if ui_id in seen_ids:
-                    self.add_error("DUPLICATE_ID", f'duplicate data-ui-id "{ui_id}" found')
-                else:
-                    seen_ids.add(ui_id)
+            if not is_nonempty_str(ui_id):
+                self.add_error(
+                    "HTML",
+                    "data-ui-id must be a non-empty string (empty or whitespace rejected)",
+                )
+                continue
+            if ui_id in seen_ids:
+                self.add_error("DUPLICATE_ID", f'duplicate data-ui-id "{ui_id}" found')
+            else:
+                seen_ids.add(ui_id)
 
             if not is_nonempty_str(node.get("data-figma-node")):
                 self.add_error(

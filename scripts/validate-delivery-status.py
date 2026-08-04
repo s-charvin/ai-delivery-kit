@@ -30,6 +30,10 @@ UI_IMPLIES_UI_STATUSES = frozenset(
     }
 )
 VISUAL_ACCEPTANCE_STATUSES = frozenset({"visual_acceptance_passed", "merged"})
+# Delivered end-state in status.json: force implementation lookup even if
+# HTML meta.delivery.status is still "frozen" (blocks raise-status-only shortcut).
+STATUSES_REQUIRING_IMPLEMENTED_LOOKUP = frozenset({"merged"})
+DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
 
 
 CONTRACT_META_PATTERN = re.compile(
@@ -114,6 +118,40 @@ def run_contract_validator(contract: Path, validator_script: Path) -> tuple[bool
     return result.returncode == 0, output.strip()
 
 
+def is_nonempty_str(value: Any) -> bool:
+    return isinstance(value, str) and value.strip() != ""
+
+
+def require_implemented_lookup(
+    subreq_id: str, contract: Path, meta: dict[str, Any] | None
+) -> list[str]:
+    """Require complete delivery.implemented when status.json is merged.
+
+    Independent of HTML meta.delivery.status: raising status alone while leaving
+    meta frozen + implemented:null must fail.
+    """
+    prefix = f"[GATE] {subreq_id} merged requires delivery.implemented in {contract}"
+    if meta is None:
+        return [f"{prefix}: cannot parse #ui-contract-meta"]
+
+    delivery = meta.get("delivery")
+    if not isinstance(delivery, dict):
+        return [f"{prefix}: delivery object missing"]
+
+    implemented = delivery.get("implemented")
+    if not isinstance(implemented, dict):
+        return [
+            f"{prefix}: delivery.implemented must be an object with "
+            f"{', '.join(DELIVERY_IMPLEMENTED_FIELDS)}"
+        ]
+
+    errors: list[str] = []
+    for field in DELIVERY_IMPLEMENTED_FIELDS:
+        if not is_nonempty_str(implemented.get(field)):
+            errors.append(f"{prefix}: missing delivery.implemented.{field}")
+    return errors
+
+
 def validate_status_file(status_path: Path, req_root: Path, validator_script: Path) -> list[str]:
     errors: list[str] = []
 
@@ -155,6 +193,11 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
                 errors.append(
                     f"[GATE] {subreq_id} status={status} requires ui-contract.html"
                 )
+
+        if status in STATUSES_REQUIRING_IMPLEMENTED_LOOKUP and contracts:
+            for contract in contracts:
+                meta = load_contract_meta(contract)
+                errors.extend(require_implemented_lookup(subreq_id, contract, meta))
 
         if status == "merged" and contracts:
             for contract in contracts:

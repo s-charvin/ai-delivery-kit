@@ -65,11 +65,11 @@ EOF
 python3 "$STATUS_VALIDATOR" "$TMP_DIR/frozen/status.json" --req-root "$TMP_DIR/frozen" >/dev/null \
   || fail "Status validator should pass acceptance_frozen with a valid ui-contract.html present"
 
-# Scenario 2: a delivered status (merged) whose ui-contract.html declares
-# delivery.status=merged but is missing delivery.implemented must FAIL.
+# Scenario 2: status.json=merged while ui-contract.html meta is still frozen
+# with implemented:null (raise-status-only shortcut) must FAIL — independent of
+# HTML meta.delivery.status. Do NOT rewrite meta to merged here.
 mkdir -p "$TMP_DIR/merged/sub-requirements/sr-login/profile-page"
-sed -e 's/"status": "frozen"/"status": "merged"/' \
-  "$GOOD" >"$TMP_DIR/merged/sub-requirements/sr-login/profile-page/ui-contract.html"
+cp "$GOOD" "$TMP_DIR/merged/sub-requirements/sr-login/profile-page/ui-contract.html"
 echo '# visual acceptance evidence' >"$TMP_DIR/merged/sub-requirements/sr-login/visual-acceptance.md"
 
 cat >"$TMP_DIR/merged/status.json" <<'EOF'
@@ -90,8 +90,55 @@ cat >"$TMP_DIR/merged/status.json" <<'EOF'
 EOF
 
 if python3 "$STATUS_VALIDATOR" "$TMP_DIR/merged/status.json" --req-root "$TMP_DIR/merged" >/dev/null 2>&1; then
-  fail "Status validator should fail when a merged contract is missing delivery.implemented"
+  fail "Status validator should fail when status.json=merged but meta remains frozen/implemented:null"
 fi
+
+# Scenario 2b: merged + complete delivery.implemented backfill must PASS.
+mkdir -p "$TMP_DIR/merged-ok/sub-requirements/sr-login/profile-page"
+python3 - "$GOOD" "$TMP_DIR/merged-ok/sub-requirements/sr-login/profile-page/ui-contract.html" <<'PY'
+import json, re, sys
+from pathlib import Path
+src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+raw = src.read_text(encoding="utf-8")
+match = re.search(
+    r'(<script[^>]*id=["\']ui-contract-meta["\'][^>]*>)(.*?)(</script>)',
+    raw,
+    re.DOTALL,
+)
+assert match, "fixture missing #ui-contract-meta"
+meta = json.loads(match.group(2))
+meta["delivery"] = {
+    "status": "merged",
+    "implemented": {
+        "type": "code",
+        "target": "src/profile/ProfilePage.tsx",
+        "requirement": "fixture-subreq-1",
+        "version": "1",
+        "status": "merged",
+    },
+}
+dst.write_text(match.group(1) + "\n  " + json.dumps(meta, indent=2) + "\n  " + match.group(3) + raw[match.end():], encoding="utf-8")
+PY
+echo '# visual acceptance evidence' >"$TMP_DIR/merged-ok/sub-requirements/sr-login/visual-acceptance.md"
+cat >"$TMP_DIR/merged-ok/status.json" <<'EOF'
+{
+  "requirement_id": "req-fixture",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "sub_requirements": {
+    "sr-login": {
+      "status": "merged",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "notes": null
+    }
+  }
+}
+EOF
+
+python3 "$STATUS_VALIDATOR" "$TMP_DIR/merged-ok/status.json" --req-root "$TMP_DIR/merged-ok" >/dev/null \
+  || fail "Status validator should pass merged when delivery.implemented is complete"
 
 # Scenario 3: a sub-requirement with no ui-contract.html anywhere must fail
 # acceptance_frozen (no YAML or section-map fallback exists anymore).
