@@ -1,9 +1,51 @@
 # PRD 深化:FR1 产物仓库管理 & FR6 产物审核机制
 
 > **文档性质**:对主 PRD `coordination-platform-prd.md` 中 FR1 与 FR6 的深化补充
-> **版本**:v1.0 | **日期**:2026-08-04 | **状态**:待评审
-> **上游文档**:[coordination-platform-prd.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/coordination-platform-prd.md)、[调研报告第25章](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/research/ai-multi-agent-dev-dashboard-research.md)
-> **深化范围**:目录规范、manifest schema、审核规则引擎、并发冲突、SLA、驳回重试、CI 校验
+> **版本**:v3.0 | **日期**:2026-08-04 | **状态**:待评审
+> **上游文档**:[coordination-platform-prd.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/coordination-platform-prd.md)(v3.0 为权威源)、[调研报告第25章](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/research/ai-multi-agent-dev-dashboard-research.md)
+> **深化范围**:目录规范、manifest schema、审核规则引擎、并发冲突、SLA、驳回重试、CI 校验、安全扫描规则族
+
+---
+
+## Changelog
+
+### v3.0(2026-08-04)— 与主 PRD v3.0 全量同步
+
+本次修订以主 PRD v3.0 为权威源,修复审核报告 Part1 / Part3 指出的三类阻断性问题:
+
+**S4:manifest schema 9 处冲突修复**(对齐主 PRD §FR1.1/§FR1.3/§FR2.2/§5.1)
+
+| # | 修复点 | 修改前 | 修改后 |
+|---|---|---|---|
+| 1 | manifest 格式声明 | 仅 json | yaml(也允许 json),放宽格式声明 |
+| 2 | node_id pattern | `^n[0-9]+$` | `^[a-z0-9][a-z0-9-]*\\.n[0-9]+$`(`{pipeline_id}.{local_id}`) |
+| 3 | node_type enum | 9 种 | 14 种(补 derived_artifact/client_logic/server_delivery/research_spike/free_artifact) |
+| 4 | role enum | 4 种(product/server/design/client) | 5 种(补 generator) |
+| 5 | source.path pattern | 不含 pipeline_id 与 qualifier | 含 `features/{pipeline_id}/{node_type}/{qualifier}/` |
+| 6 | deps 字段 | 仅 node_id/node_type/min_version/artifact_path | 补 hub_ref/version_constraint/format_slot/strictness/presence/coupling |
+| 7 | 必填字段 | 缺 classification/artifact_kind/artifact_qualifier | 三者补入 required |
+| 8 | artifact_kind 枚举 | 无 | content/reference/hybrid |
+| 9 | artifact_qualifier 枚举 | 无 | official/mock/draft/experimental |
+
+**S5:安全扫描规则族补全**(对齐主 PRD §FR6.1/§FR6.2,填补 D1-3/D1-4 空洞)
+
+新增 6 条安全/完整性规则 + 6 个 op:R_MALWARE_SCAN、R_SECRET_SCAN、R_URL_SAFETY、R_EXTERNAL_REF_OWNERSHIP、R_COMMIT_STABILITY、R_COMPLETENESS_CONTRACT。
+
+**S6:skill.yaml 约束模型统一**(对齐主 PRD §FR5.2)
+
+将本深化 §4 的 `review_rules` 模型统一回 `artifact_constraints`(主 PRD §FR5.2 权威),保留规则优先级/op 清单作为 `artifact_constraints` 子字段。
+
+**其他同步**:
+
+- §2.3 仓库结构补 `addenda/` 子目录说明
+- §2.3.1 ArtifactRef 示例补多版本映射 + provenance + content_integrity_hash + current_owner + addenda 字段
+- §5 锁机制补 `human_submit_token` 相关说明
+- §8 CI 配置补 GitLab CI 示例(.gitlab-ci.yml)
+- 节点类型清单对齐 11 态状态机(补 skipped 终态语义)
+
+### v1.0(2026-08-04)— 初版
+
+FR1/FR6 深化补充:目录规范、manifest schema、审核规则引擎、并发冲突、SLA、驳回重试、CI 校验。
 
 ---
 
@@ -83,18 +125,44 @@
 
 #### 2.1.1 目录命名
 
+> v3.0 修正:对齐主 PRD §FR1.1 单一 hub 仓 + `features/{pipeline_id}/` 命名空间;节点类型清单扩展为 14 种(主 PRD §2.1 预置 10 种 + D11 扩展 4 种)。
+
 | 目录类别 | 命名规则 | 示例 | 说明 |
 |---|---|---|---|
-| 产物类型目录 | `<node_type>`(与节点 type 完全一致) | `product_spec/`、`api_contract/`、`design_asset/` | 9 种产物节点类型各一目录,见主 PRD §2.1 |
-| manifest 目录 | `manifests/` | `manifests/n2_v1.json` | 元数据副本(可选,供管理方快速查询,详见 §3.5) |
-| CI 配置目录 | `.github/` 或 `.gitlab-ci.yml` | `.github/workflows/artifact-ci.yml` | CI 校验配置 |
-| PR 模板 | `.github/pull_request_template.md` | — | 强制声明 node_id/deps |
+| 管线命名空间 | `features/{pipeline_id}/` | `features/login-feature/` | 按 pipeline_id 隔离,与主 PRD §FR1.1 一致 |
+| 产物类型目录 | `features/{pipeline_id}/{node_type}/{qualifier}/` | `features/login-feature/api_contract/official/` | 14 种节点类型各一目录,qualifier 为 official/mock/draft/experimental |
+| addenda 目录 | `features/{pipeline_id}/{node_type}/{qualifier}/addenda/` | `addenda/20260804-001.md` | append-only 补充内容(见 §2.3.4),不改原产物 |
+| manifest 目录 | `manifests/` | `manifests/login-feature.n2_v1.json` | 元数据副本(可选,供管理方快速查询,详见 §3.5) |
+| CI 配置目录 | `.github/` 或 `.gitlab-ci.yml` | `.github/workflows/artifact-ci.yml` | CI 校验配置(GitHub / GitLab 均支持,见 §8.1.3) |
+| PR 模板 | `.github/pull_request_template.md` | — | 强制声明 node_id/deps/classification |
 | Skill 索引 | `.skills-index.yaml` | — | 管理方 skill 版本索引(详见 §4.1.3) |
+| 管线级索引 | `features/{pipeline_id}/.manifest.yaml` | — | 本管线产物版本/依赖/消费者索引(主 PRD §FR1.1) |
+
+**14 种节点类型**(主 PRD §2.1 预置 10 种 + 附录 D11 扩展 4 种):
+
+| 节点类型 | 角色 | 阶段 |
+|---|---|---|
+| `product_spec` | product | Phase 1 |
+| `api_contract` | server | Phase 1 |
+| `server_impl` | server | Phase 1 |
+| `server_test` | server | Phase 1 |
+| `design_proto` | design | Phase 2 |
+| `design_asset` | design | Phase 2 |
+| `client_ui` | client | Phase 2 |
+| `client_func` | client | Phase 2 |
+| `client_delivery` | client | Phase 2 |
+| `derived_artifact` | generator | Phase 2 |
+| `client_logic` | client | Phase 2(D11) |
+| `server_delivery` | server | Phase 2(D11) |
+| `research_spike` | any | Phase 2(D11) |
+| `free_artifact` | any | Phase 2(D11) |
 
 **约束:**
-- 产物类型目录名**必须**与节点 `type` 字段完全一致(大小写敏感),CI 校验
-- 禁止在产物类型目录下建子目录(扁平化,避免路径歧义),例外见 §2.3.2 多产物共存
-- 不允许出现未在 9 种产物类型之外的目录(CI 阻断)
+- 产物类型目录名**必须**与节点 `node_type` 字段完全一致(大小写敏感),CI 校验
+- 产物路径须匹配 `features/{pipeline_id}/{node_type}/{qualifier}/{seq}_{slug}.{ext}`(主 PRD §FR1.1)
+- 禁止在产物类型目录下建非 `addenda/` 之外的子目录(扁平化,避免路径歧义),例外见 §2.3.2 多产物共存
+- 不允许出现未在 14 种产物类型之外的目录(CI 阻断)
+- 扩展节点类型用 `{role}.{name}` 开放命名,须在 `skills/` 建对应 skill.yaml
 
 #### 2.1.2 产物文件命名
 
@@ -110,7 +178,7 @@
 | `slug` | 小写 kebab-case,简短描述(可省略),仅 ASCII 字母/数字/连字符 | `login-contract`、`user-profile` |
 | `ext` | 文件扩展名,必须在 skill 的 `allowed_extensions` 内 | `.yaml`、`.json`、`.md` |
 
-**完整示例:** `api_contract/001_login-contract.yaml`
+**完整示例:** `features/login-feature/api_contract/official/001_login-contract.yaml`
 
 **命名约束(CI 校验):**
 - `seq` 不可重复、不可跳号(001 后不可直接 003,除非中间记录被删除并有 audit 说明)
@@ -121,15 +189,30 @@
 
 #### 2.1.3 feat 分支命名
 
-主 PRD 给出 `feat/{role}/{node_type}-{seq}`,本深化补充 `seq` 预分配机制(避免并发分支 seq 冲突,详见 §5.2):
+> v3.0 修正:对齐主 PRD §FR1.2 四维分支命名 `feat/{pipeline_id}/{instance_id}/{node_type}-{seq}`,取代旧的三维 `{role}/` 命名。
+
+主 PRD §FR1.2 给出四维分支命名,本深化补充 `seq` 预分配机制(避免并发分支 seq 冲突,详见 §5.2):
 
 ```
-feat/{role}/{node_type}-{seq}-{short-uuid}
+feat/{pipeline_id}/{instance_id}/{node_type}-{seq}[-{short-uuid}]
 ```
 
-**示例:** `feat/server/api_contract-001-a3f2`
+**示例:** `feat/login-feature/team_a_server/api_contract-001-a3f2b1c4`
 
-- `short-uuid`:分支创建时生成(8 位),仅用于分支去重,不进文件名
+**Regex(CI 校验):**
+
+```
+^feat/[a-z0-9][a-z0-9-]{0,63}/[a-z0-9_]{1,32}/[a-z_]+-[0-9]{3}(-[a-f0-9]{8})?$
+```
+
+| 段 | 规则 | 示例 |
+|---|---|---|
+| `pipeline_id` | 全局唯一管线标识,小写 kebab-case,1-64 字符 | `login-feature` |
+| `instance_id` | RoleInstance ID,小写 snake_case,1-32 字符 | `team_a_server` |
+| `node_type` | 节点类型,小写 snake_case | `api_contract` |
+| `seq` | 3 位零填充序号,与产物文件名 seq 一致 | `001` |
+| `short-uuid` | 可选,8 位 hex,分支去重,不进文件名 | `a3f2b1c4` |
+
 - 文件 `seq` 在 PR 合并时由管理方 bot 最终确认(详见 §5.2.4)
 
 ### 2.2 版本化策略
@@ -166,38 +249,87 @@ feat/{role}/{node_type}-{seq}-{short-uuid}
 
 ### 2.3 多产物共存
 
+> v3.0 修正:路径对齐主 PRD §FR1.1 `features/{pipeline_id}/{node_type}/{qualifier}/` 命名空间;补 addenda 子目录说明。
+
 #### 2.3.1 同一节点的多版本共存
 
 同一节点(node_id)在不同时期产出多个版本(变更迭代),它们**以不同 seq 共存于同一类型目录**:
 
 ```
-api_contract/
-├─ 001_login-contract.yaml      # n2 v1.0.0(commit a1b2c3)
-├─ 002_login-contract.yaml      # n2 v1.1.0(commit b2c3d4,变更)
-└─ 003_login-contract.yaml      # n2 v2.0.0(commit c3d4e5,breaking)
+features/login-feature/api_contract/official/
+├─ 001_login-contract.yaml      # login-feature.n2 v1.0.0(commit a1b2c3)
+├─ 002_login-contract.yaml      # login-feature.n2 v1.1.0(commit b2c3d4,变更)
+├─ 003_login-contract.yaml      # login-feature.n2 v2.0.0(commit c3d4e5,breaking)
+└─ addenda/                     # append-only 补充内容(见 §2.3.4)
+   └─ 20260804-001.md           # must 级 addendum,不改原产物
 ```
 
-**关键:管理方 ArtifactRef 只指向"当前生效版本"的 commit**,旧版本文件保留在仓库(可追溯)但不被引用。`changed` → 重提 PR → 合并新版本 → ArtifactRef 更新指向新 commit → 下游失效重算。
+**关键:管理方 ArtifactRef 支持多版本映射**(`artifact_refs[node_id][version]`),`active_version` 指向"当前生效版本"的 commit。旧版本文件保留在仓库(可追溯)但 `active_version` 不再指向。`changed` → 重提 PR → 合并新版本 → `active_version` 更新指向新 commit → 下游失效重算。
+
+**ArtifactRef 多版本映射示例**(对齐主 PRD §5.1):
+
+```python
+# PipelineState.artifact_refs 结构
+artifact_refs = {
+  "login-feature.n2": {                  # node_id
+    "1.0.0": ArtifactRef(                # version -> ArtifactRef(多版本共存)
+      repo="git@gitlab.internal:platform/artifact-hub.git",
+      path="features/login-feature/api_contract/official/001_login-contract.yaml",
+      commit="a1b2c3d4",
+      version="1.0.0",
+      artifact_kind="content",            # content | reference | hybrid
+      artifact_qualifier="official",      # official | mock | draft | experimental
+      external_repo=None,
+      external_commit=None,
+      commit_stability="stable",          # stable | volatile
+      content_integrity_hash="sha256:9f86d...",
+      classification="internal",          # public | internal | confidential | restricted
+      provenance=Provenance(
+        submitter_instance_id="team_a_server",
+        submitter_token_scope="bot_token",
+        llm_model="glm-5.2",
+        llm_prompt_hash="sha256:abc123",
+        submitted_at="2026-08-04T10:00:00Z",
+        merged_at="2026-08-04T11:00:00Z",
+        reviewer="reviewer-agent-01",
+        business_source="PRD-FR1",
+        business_ref=None,
+        change_class=None,
+      ),
+      derived_from=None,
+      consumers=[],
+      toolspec_framework="spec-kit",
+      trace_id="lf_xxx",
+      current_owner="server-agent-01",    # 人员级负责人(可 transfer_owner)
+      addenda=[],                         # append-only 补充列表(见 §2.3.4)
+    ),
+    "1.1.0": ArtifactRef(...),            # 变更版本
+    "2.0.0": ArtifactRef(...),            # breaking 版本
+  }
+}
+active_version = {"login-feature.n2": "2.0.0"}   # 当前生效版本
+```
 
 #### 2.3.2 不同节点的同类型产物共存
 
-多个节点同为 `api_contract` 类型(如 n2 登录契约、n12 用户信息契约),它们以不同 seq 共存:
+多个节点同为 `api_contract` 类型(如 login-feature.n2 登录契约、user-profile.n12 用户信息契约),它们以不同 seq 共存:
 
 ```
-api_contract/
-├─ 001_login-contract.yaml      # n2
-├─ 002_user-profile.yaml        # n12
-└─ 003_login-contract.yaml      # n2 变更版本
+features/login-feature/api_contract/official/
+├─ 001_login-contract.yaml      # login-feature.n2
+└─ 003_login-contract.yaml      # login-feature.n2 变更版本
+features/user-profile/api_contract/official/
+└─ 002_user-profile.yaml        # user-profile.n12
 ```
 
-**约束:** seq 是类型目录内全局递增,不按节点分段。node_id 与 seq 的映射通过 manifest 的 `node_id` 字段维护(管理方不依赖文件名反推 node_id)。
+**约束:** seq 在管线 × 类型 × qualifier 三元组内递增。node_id 与 seq 的映射通过 manifest 的 `node_id` 字段维护(管理方不依赖文件名反推 node_id)。
 
 #### 2.3.3 引用型产物的特殊共存
 
-`server_impl`/`client_ui` 等引用型产物(`*_ref.json`)指向外部代码仓库 commit,其共存策略同上,但文件内容是引用 JSON 而非实际代码:
+`server_impl`/`client_ui` 等引用型产物(`artifact_kind=reference`)指向外部代码仓库 commit,其共存策略同上,但文件内容是引用 JSON 而非实际代码:
 
 ```json
-// server_impl/001_ref.json
+// features/login-feature/server_impl/official/001_ref.json
 {
   "code_repo": "org/backend-services",
   "code_commit": "e5f6g7h8",
@@ -205,6 +337,28 @@ api_contract/
   "build_status": "passed"
 }
 ```
+
+引用型产物额外校验 `R_EXTERNAL_REF_OWNERSHIP`(代码仓白名单)+ `R_COMMIT_STABILITY`(commit 稳定性),详见 §4.5。
+
+#### 2.3.4 addendum 子目录(append-only 补充)
+
+> v3.0 新增:对齐主 PRD §FR2.5.1 addendum 机制。
+
+对已 `done` 产物,可通过 `add_addendum` 附加**轻量补充内容**(`cascade_level`: must/should/info),不改原产物文件内容/版本/provenance:
+
+```
+features/login-feature/api_contract/official/addenda/
+├─ 20260804-001.md             # must 级,下游需 7 天内 ack
+└─ 20260805-002.md             # info 级,仅记录
+```
+
+**约束:**
+- addendum 文件名:`{YYYYMMDD}-{seq}.md`,seq 在同节点 addenda 内递增
+- 内容含 `content_integrity_hash`(SHA-256,防篡改)
+- `cascade_level=must` 且 `incompatible_with` 含某下游时,该下游需主动 `changed`
+- `must` 级 addendum 发出后 7 天(可配置)下游未 ack → 下游自动 `changed`
+- addendum 不触发版本 bump,不改变 `active_version`
+- 强制走 `changed` 的场景(即使声明 addendum):修改了 version/deps/artifact_kind/artifact_qualifier/classification,或删除了原产物内容
 
 ### 2.4 目录结构演进
 
@@ -231,44 +385,62 @@ api_contract/
 # repo-meta.yaml(仓库根)
 schema_version: "1.0"
 directory_layout_version: "1.0"
-node_types_supported: [product_spec, api_contract, design_proto, ...]
+node_types_supported: [
+  product_spec, api_contract, server_impl, server_test,
+  design_proto, design_asset, client_ui, client_func, client_delivery,
+  derived_artifact, client_logic, server_delivery, research_spike, free_artifact
+]
+state_machine_version: "11"   # 11 态(含 skipped,D11)
 ```
 
 `directory_layout_version` 在 migration PR 中 bump,管理方启动时校验兼容性。
 
 ---
 
-## 3. manifest JSON Schema 完整定义
+## 3. manifest Schema 完整定义
 
-主 PRD 与调研报告展示了 manifest 示例,但未给出可机器校验的 JSON Schema。本节给出完整定义,作为 CI 校验与管理方审核的权威依据。
+> v3.0 修正:对齐主 PRD §FR1.1/§FR1.3/§FR2.2/§5.1,修复 9 处 schema 冲突(C1.6~C1.15)。manifest 格式放宽为 yaml(也允许 json)。
+
+主 PRD 与调研报告展示了 manifest 示例,但未给出可机器校验的 Schema。本节给出完整定义,作为 CI 校验与管理方审核的权威依据。
 
 ### 3.1 设计原则
 
 - **中立性**:schema 只约束元数据,**不含产物内容**;`content` 字段禁止出现
-- **可校验**:每个字段有明确类型与约束,CI 用 JSON Schema 校验
-- **可演进**:`schema_version` 字段支持未来扩展
+- **可校验**:每个字段有明确类型与约束,CI 用 JSON Schema 校验(无论 manifest 本身是 yaml 还是 json)
+- **可演进**:`manifest_version` 字段支持未来扩展
 - **关联性**:与 ArtifactRef、AuditLogEntry 字段对齐(主 PRD §5.1)
+- **双层 manifest 职责分离**(主 PRD §FR1.1):管线级 `.manifest.yaml`(索引本管线全部产物版本/依赖/消费者)+ 产物级 `<file>.manifest.{yaml|json}`(单产物元数据)。本节 §3.3 校验**产物级** manifest。
 
-### 3.2 manifest 文件位置
+### 3.2 manifest 文件位置与格式
 
-每个产物**必须**附带一个 manifest 文件,与产物文件同目录、同名不同扩展:
+> v3.0 修正:manifest 格式从仅 json 放宽为 **yaml(也允许 json)**,与主 PRD §FR1.1 `.manifest.yaml` 一致。
+
+每个产物**必须**附带一个 manifest 文件,与产物文件同目录、同名不同扩展,格式为 yaml 或 json:
 
 ```
-api_contract/
-├─ 001_login-contract.yaml          # 产物内容(格式中立)
-└─ 001_login-contract.manifest.json # 元数据(manifest)
+features/login-feature/api_contract/official/
+├─ 001_login-contract.yaml              # 产物内容(格式中立)
+├─ 001_login-contract.manifest.yaml     # 元数据(manifest,推荐 yaml)
+└─ 001_login-contract.manifest.json     # 或 json(同等接受)
 ```
 
-**例外:** 引用型产物(`*_ref.json`)自身即元数据,不需额外 manifest 文件;其内容须符合 §3.3 的引用型子 schema。
+**格式选择规则:**
+- 产物级 manifest 推荐 yaml(与主 PRD §FR1.1 管线级 `.manifest.yaml` 一致),也接受 json
+- CI 同时支持 `.manifest.yaml` 与 `.manifest.json`,任一存在即可
+- 管线级 `.manifest.yaml` 为索引文件,独立于产物级 manifest
+
+**例外:** 引用型产物(`artifact_kind=reference` 的 `*_ref.json`)自身即元数据,不需额外 manifest 文件;其内容须符合 §3.4 的引用型子 schema。
 
 ### 3.3 完整 JSON Schema
+
+> v3.0 修复 9 处冲突(C1.6~C1.15):格式、node_id pattern、node_type/role enum、source.path pattern、deps 字段、必填字段、artifact_kind/artifact_qualifier/classification 枚举。对齐主 PRD §FR1.1/§FR1.3/§FR2.2/§5.1。
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://coordination-platform/schemas/artifact-manifest.json",
   "title": "Artifact Manifest",
-  "description": "产物元数据,管理方唯一强制的 schema;不含产物内容",
+  "description": "产物元数据,管理方唯一强制的 schema;不含产物内容。manifest 本身可为 yaml 或 json",
   "type": "object",
   "required": [
     "manifest_version",
@@ -281,7 +453,10 @@ api_contract/
     "toolspec",
     "deps",
     "created_at",
-    "submitter"
+    "submitter",
+    "artifact_kind",
+    "artifact_qualifier",
+    "classification"
   ],
   "additionalProperties": false,
   "properties": {
@@ -292,13 +467,13 @@ api_contract/
     },
     "node_id": {
       "type": "string",
-      "description": "对应管线节点 ID",
-      "pattern": "^n[0-9]+$",
-      "examples": ["n2"]
+      "description": "对应管线节点 ID,格式 {pipeline_id}.{local_id}(主 PRD §5.1)",
+      "pattern": "^[a-z0-9][a-z0-9-]*\\.n[0-9]+$",
+      "examples": ["login-feature.n2"]
     },
     "node_type": {
       "type": "string",
-      "description": "产物节点类型,与目录名一致",
+      "description": "产物节点类型,与目录名一致;14 种预置类型(主 PRD §2.1 预置 10 种 + D11 扩展 4 种)",
       "enum": [
         "product_spec",
         "api_contract",
@@ -308,13 +483,18 @@ api_contract/
         "design_asset",
         "client_ui",
         "client_func",
-        "client_delivery"
+        "client_delivery",
+        "derived_artifact",
+        "client_logic",
+        "server_delivery",
+        "research_spike",
+        "free_artifact"
       ]
     },
     "role": {
       "type": "string",
-      "description": "产出方角色",
-      "enum": ["product", "server", "design", "client"]
+      "description": "产出方角色(含 generator,主 PRD §3.1);reviewer/admin 不产出物,不列入",
+      "enum": ["product", "server", "design", "client", "generator"]
     },
     "title": {
       "type": "string",
@@ -338,16 +518,31 @@ api_contract/
       "description": "本版本取代的上一版本 commit(变更时填,首次为 null)",
       "pattern": "^[0-9a-f]{7,40}$"
     },
+    "artifact_kind": {
+      "type": "string",
+      "description": "产物种类:内容型(内容在 hub 仓)/ 引用型(引用文件在 hub 仓指向代码仓 commit)/ 混合(主 PRD §5.1)",
+      "enum": ["content", "reference", "hybrid"]
+    },
+    "artifact_qualifier": {
+      "type": "string",
+      "description": "产物完成度标记(主 PRD §5.1)",
+      "enum": ["official", "mock", "draft", "experimental"]
+    },
+    "classification": {
+      "type": "string",
+      "description": "密级(主 PRD §5.1);get_dependencies 按调用方 clearance 过滤",
+      "enum": ["public", "internal", "confidential", "restricted"]
+    },
     "source": {
       "type": "object",
-      "description": "产物内容位置(管理方不解析内容)",
+      "description": "产物内容位置(管理方不解析业务内容,但校验结构契约)",
       "required": ["path"],
       "properties": {
         "path": {
           "type": "string",
-          "description": "产物在仓库内相对路径",
-          "pattern": "^[a-z_]+/[0-9]{3}[_a-z0-9-]*\\.(yaml|yml|json|md|mdx)$",
-          "examples": ["api_contract/001_login-contract.yaml"]
+          "description": "产物在 hub 仓内相对路径,格式 features/{pipeline_id}/{node_type}/{qualifier}/{seq}_{slug}.{ext}(主 PRD §FR1.1)",
+          "pattern": "^features/[a-z0-9][a-z0-9-]*/[a-z_]+/(official|mock|draft|experimental)/[0-9]{3}[_a-z0-9-]*\\.(yaml|yml|json|md|mdx)$",
+          "examples": ["features/login-feature/api_contract/official/001_login-contract.yaml"]
         }
       },
       "additionalProperties": false
@@ -378,32 +573,71 @@ api_contract/
     },
     "deps": {
       "type": "array",
-      "description": "依赖声明(管理方校验依赖已 done 且版本达标)",
+      "description": "依赖声明(对齐主 PRD §FR2.2 DepDeclaration;管理方校验依赖状态满足 strictness、版本满足 version_constraint)",
       "items": {
         "type": "object",
-        "required": ["node_id", "node_type"],
+        "description": "DepDeclaration(主 PRD §FR2.2):node_id 与 hub_ref 二选一",
         "properties": {
           "node_id": {
             "type": "string",
-            "pattern": "^n[0-9]+$"
+            "description": "同管线依赖节点 ID(与 hub_ref 二选一)",
+            "pattern": "^[a-z0-9][a-z0-9-]*\\.n[0-9]+$"
           },
-          "node_type": {
+          "hub_ref": {
             "type": "string",
-            "enum": [
-              "product_spec", "api_contract", "server_impl", "server_test",
-              "design_proto", "design_asset", "client_ui", "client_func", "client_delivery"
-            ]
+            "description": "跨管线引用 hub://{pipeline_id}/{node_id}@{version_range}(主 PRD §FR2.2)",
+            "pattern": "^hub://[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9-]*\\.n[0-9]+@[\\^~]?[0-9.]+$"
+          },
+          "version_constraint": {
+            "type": "string",
+            "description": "版本约束(npm semver range,默认 *),如 >=1.0.0 <2.0.0",
+            "default": "*"
           },
           "min_version": {
             "type": "string",
-            "description": "依赖最低版本(可选,semver)",
+            "description": "依赖最低版本(兼容旧字段,等价于 version_constraint 的下界;semver)",
             "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$"
+          },
+          "format_slot": {
+            "type": "string",
+            "description": "多格式产物时指定 slot(如 openapi/protobuf),可选"
+          },
+          "strictness": {
+            "type": "string",
+            "description": "依赖严格性:strict=上游须 done / accepts_draft=上游可为 draft(主 PRD §FR2.2)",
+            "enum": ["strict", "accepts_draft"],
+            "default": "strict"
+          },
+          "presence": {
+            "type": "string",
+            "description": "依赖必要性:required=必须 / optional=可选 / if_present=节点存在时才成为硬依赖(主 PRD §FR2.2)",
+            "enum": ["required", "optional", "if_present"],
+            "default": "required"
+          },
+          "coupling": {
+            "type": "string",
+            "description": "耦合度:hard=变更强级联 / soft=软级联 / informational=仅通知(主 PRD §FR2.2)",
+            "enum": ["hard", "soft", "informational"],
+            "default": "hard"
+          },
+          "node_type": {
+            "type": "string",
+            "description": "依赖节点类型(便于审核定位,可选)",
+            "enum": [
+              "product_spec", "api_contract", "server_impl", "server_test",
+              "design_proto", "design_asset", "client_ui", "client_func", "client_delivery",
+              "derived_artifact", "client_logic", "server_delivery", "research_spike", "free_artifact"
+            ]
           },
           "artifact_path": {
             "type": "string",
             "description": "依赖产物路径(可选,便于审核定位)"
           }
         },
+        "anyOf": [
+          { "required": ["node_id"] },
+          { "required": ["hub_ref"] }
+        ],
         "additionalProperties": false
       },
       "uniqueItems": true
@@ -443,9 +677,27 @@ api_contract/
 }
 ```
 
+**S4 修复对照表**(9 处冲突逐一对照):
+
+| # | 冲突 | 修复后 |
+|---|---|---|
+| 1 | manifest 格式 | §3.2 声明 yaml(也允许 json),CI 同时支持 |
+| 2 | node_id pattern | `^[a-z0-9][a-z0-9-]*\.n[0-9]+$`,examples `login-feature.n2` |
+| 3 | node_type enum | 14 种(补 derived_artifact/client_logic/server_delivery/research_spike/free_artifact) |
+| 4 | role enum | 5 种(补 generator) |
+| 5 | source.path pattern | 含 `features/{pipeline_id}/{node_type}/{qualifier}/` |
+| 6 | deps 字段 | 补 hub_ref/version_constraint/format_slot/strictness/presence/coupling(对齐 §FR2.2 DepDeclaration) |
+| 7 | 必填字段 | 补 artifact_kind/artifact_qualifier/classification |
+| 8 | artifact_kind 枚举 | content/reference/hybrid |
+| 9 | artifact_qualifier 枚举 | official/mock/draft/experimental |
+
+> **PR 模板字段说明**(主 PRD §FR1.3):`external_resources`/`third_party_apis`/`consumers`/`completeness_contract`/`modification` 为 PR 模板字段,合并后由管理方写入 PipelineState.artifact_refs,不进产物级 manifest schema。
+
 ### 3.4 引用型产物子 schema
 
-`server_impl`/`server_test`/`client_ui`/`client_func`/`client_delivery` 的产物文件本身是引用 JSON,需符合:
+> v3.0 修正:对齐主 PRD §5.1 引用型产物(`artifact_kind=reference`),补 server_delivery/client_logic 等新节点类型;校验由 R_EXTERNAL_REF_OWNERSHIP + R_COMMIT_STABILITY 补充(§4.5)。
+
+`server_impl`/`server_test`/`client_ui`/`client_func`/`client_delivery`/`server_delivery`/`client_logic` 等引用型产物的产物文件本身是引用 JSON,需符合:
 
 ```json
 {
@@ -471,103 +723,137 @@ api_contract/
 
 ```
 manifests/
-└─ n2_v1.1.0.json     # 命名:<node_id>_v<version>.json
+└─ login-feature.n2_v1.1.0.yaml     # 命名:<node_id>_v<version>.{yaml|json}
 ```
 
-副本由管理方 bot 在 approve_pr 后写入,内容为合并时 manifest 加 `merge_commit`、`reviewer`、`approved_at` 字段。副本非权威源,权威源是产物文件旁的 manifest。
+副本由管理方 bot 在 approve_pr 后写入,内容为合并时 manifest 加 `merge_commit`、`reviewer`、`approved_at`、`content_integrity_hash` 字段。副本非权威源,权威源是产物文件旁的 manifest。
 
 ---
 
 ## 4. 审核规则引擎设计
 
-主 PRD FR6.2 的审核逻辑是硬编码的 if-else 链。本节将其抽象为**可配置规则引擎**,支持规则配置化、优先级、AND/OR 组合,便于演进而不改代码。
+> v3.0 修正(S6):以主 PRD §FR5.2 为权威,统一约束模型为 `artifact_constraints`。原 `review_rules` 重命名为 `artifact_constraints.rules` 子字段,保留规则优先级/op 清单等扩展能力。同时补全安全扫描规则族(S5),填补 D1-3/D1-4 空洞。
+
+主 PRD FR6.2 的审核逻辑是硬编码的 if-else 链。本节将其抽象为**可配置规则引擎**,支持规则配置化、优先级、AND/OR 组合,便于演进而不改代码。规则引擎是 `artifact_constraints` 的**执行层**:skill.yaml 声明 `artifact_constraints`(主 PRD §FR5.2 字段:`required_fields`/`deps`/`file_constraints`/`requires_human_review`/`completeness_contract`),引擎将其编译为带优先级/op 的 `rules` 列表执行。
 
 ### 4.1 规则配置格式
 
 #### 4.1.1 规则结构
 
-每条审核规则是一个 YAML 对象,定义于 Constraint Skill 的 `review_rules` 字段:
+每条审核规则是一个 YAML 对象,定义于 Constraint Skill 的 `artifact_constraints.rules` 子字段(主 PRD §FR5.2 `artifact_constraints` 的扩展):
 
 ```yaml
-# skills/api-contract-skill/skill.yaml 片段
-review_rules:
-  - id: R_META_REQUIRED
-    name: 元数据必填字段校验
-    priority: 100                    # 数值越大优先级越高(先执行)
-    combinators: AND                  # 规则内子条件组合(详见 4.3)
-    on_fail: reject                   # 失败动作:reject | needs_human | warn
-    checks:
-      - field: title
-        op: exists
-      - field: version
-        op: regex
-        value: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
-      - field: source.path
-        op: exists
-      - field: toolspec.framework
-        op: exists
-      - field: node_id
-        op: regex
-        value: "^n[0-9]+$"
-
-  - id: R_DEPS_DONE
-    name: 依赖完整性校验
-    priority: 90
-    combinators: AND
+# skills/api-contract-skill/skill.yaml 片段(对齐主 PRD §FR5.2)
+name: api-contract-skill
+description: API 契约约束技能
+trigger:
+  node_type: api_contract
+  role: server
+artifact_constraints:
+  # —— 主 PRD §FR5.2 标准字段 ——
+  required_fields: [title, version, source.path, source.commit, toolspec.framework, classification]
+  deps:
+    - node_type: product_spec
+      presence: if_present
+      strictness: strict
+  file_constraints:
+    allowed_extensions: [.yaml, .json, .md]
+    max_size_kb: 512
+  requires_human_review: true        # 首次人工
+  completeness_contract:
+    required_structures:
+      - jsonpath: "$.endpoints"
+        min_items: 1
     on_fail: reject
-    checks:
-      - field: deps
-        op: all_deps_done            # 自定义 op:所有依赖节点状态=done
+  # —— 规则引擎扩展字段(v3.0:原 review_rules 迁入此处)——
+  rules:
+    - id: R_META_REQUIRED
+      name: 元数据必填字段校验
+      priority: 100                    # 数值越大优先级越高(先执行)
+      combinators: AND                  # 规则内子条件组合(详见 4.3)
+      on_fail: reject                   # 失败动作:reject | needs_human | warn
+      checks:
+        - field: title
+          op: exists
+        - field: version
+          op: regex
+          value: "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        - field: source.path
+          op: exists
+        - field: toolspec.framework
+          op: exists
+        - field: artifact_kind
+          op: in
+          value: [content, reference, hybrid]
+        - field: artifact_qualifier
+          op: in
+          value: [official, mock, draft, experimental]
+        - field: classification
+          op: in
+          value: [public, internal, confidential, restricted]
+        - field: node_id
+          op: regex
+          value: "^[a-z0-9][a-z0-9-]*\\.n[0-9]+$"
 
-  - id: R_DEPS_MIN_VERSION
-    name: 依赖最低版本校验
-    priority: 85
-    combinators: AND
-    on_fail: reject
-    checks:
-      - field: deps
-        op: all_deps_min_version     # 自定义 op:依赖版本 ≥ min_version
+    - id: R_DEPS_DONE
+      name: 依赖完整性校验
+      priority: 90
+      combinators: AND
+      on_fail: reject
+      checks:
+        - field: deps
+          op: all_deps_done            # 自定义 op:所有 presence=required 依赖状态满足 strictness
 
-  - id: R_FILE_FORMAT
-    name: 文件格式校验
-    priority: 80
-    combinators: AND
-    on_fail: reject
-    checks:
-      - field: __files__
-        op: extensions_in
-        value: [".yaml", ".yml", ".json"]
-      - field: __files__
-        op: size_le
-        value_kb: 512
+    - id: R_DEPS_MIN_VERSION
+      name: 依赖版本约束校验
+      priority: 85
+      combinators: AND
+      on_fail: reject
+      checks:
+        - field: deps
+          op: all_deps_min_version     # 自定义 op:依赖版本满足 version_constraint
 
-  - id: R_FILE_EXISTS
-    name: 文件存在性校验
-    priority: 75
-    combinators: AND
-    on_fail: reject
-    checks:
-      - field: __files__
-        op: git_ls_file_exists       # 自定义 op:git ls-file 校验
+    - id: R_FILE_FORMAT
+      name: 文件格式校验
+      priority: 80
+      combinators: AND
+      on_fail: reject
+      checks:
+        - field: __files__
+          op: extensions_in
+          value: [".yaml", ".yml", ".json"]
+        - field: __files__
+          op: size_le
+          value_kb: 512
 
-  - id: R_VERSION_BUMP
-    name: 版本递增校验
-    priority: 70
-    combinators: AND
-    on_fail: reject
-    checks:
-      - field: version
-        op: gt_current_main_version  # 自定义 op:版本 > main 上当前版本
+    - id: R_FILE_EXISTS
+      name: 文件存在性校验
+      priority: 75
+      combinators: AND
+      on_fail: reject
+      checks:
+        - field: __files__
+          op: git_ls_file_exists       # 自定义 op:git ls-file 校验
 
-  - id: R_HUMAN_REVIEW
-    name: 高危节点人工审核
-    priority: 50
-    combinators: AND
-    on_fail: needs_human             # 失败(命中)转人工
-    checks:
-      - field: __skill__.requires_human_review
-        op: equals
-        value: true
+    - id: R_VERSION_BUMP
+      name: 版本递增校验
+      priority: 70
+      combinators: AND
+      on_fail: reject
+      checks:
+        - field: version
+          op: gt_current_main_version  # 自定义 op:版本 > main 上当前版本
+
+    - id: R_HUMAN_REVIEW
+      name: 高危节点人工审核
+      priority: 50
+      combinators: AND
+      on_fail: needs_human             # 失败(命中)转人工
+      checks:
+        - field: __skill__.requires_human_review
+          op: equals
+          value: true
+  # 安全扫描规则族见 §4.5(R_SECRET_SCAN/R_URL_SAFETY/R_MALWARE_SCAN 等)
 ```
 
 #### 4.1.2 字段说明
@@ -605,6 +891,8 @@ skills:
 
 #### 4.1.4 操作符(op)清单
 
+> v3.0 新增(S5):补全 6 个安全/完整性扫描 op(scan_secret_patterns/check_url_safety/scan_malware/verify_external_ref/check_commit_stability/check_completeness_contract),填补 D1-3 空洞。
+
 | op | 适用 field | 说明 |
 |---|---|---|
 | `exists` | 任意 manifest 字段 | 字段存在且非 null |
@@ -613,11 +901,17 @@ skills:
 | `in` | 任意 | 值在 value 数组中 |
 | `extensions_in` | `__files__` | 所有文件扩展名在 value 列表内 |
 | `size_le` | `__files__` | 所有文件大小 ≤ value_kb |
-| `all_deps_done` | `deps` | 所有依赖节点状态为 done |
-| `all_deps_min_version` | `deps` | 所有依赖版本 ≥ min_version |
+| `all_deps_done` | `deps` | 所有 presence=required 依赖状态满足 strictness |
+| `all_deps_min_version` | `deps` | 所有依赖版本满足 version_constraint |
 | `git_ls_file_exists` | `__files__` | git ls-file 校验文件存在于 feat 分支 |
 | `gt_current_main_version` | `version` | 版本号 > main 上当前 node_id 的版本 |
 | `no_path_traversal` | `source.path` | 路径无 `..`、绝对路径等危险模式 |
+| `scan_secret_patterns` | `__files__` + `deps[].code_repo` | **[S5 新增]** 扫描密钥特征(AWS/GCP/私钥/token 等),详见 §4.5.1 |
+| `check_url_safety` | `source.path` 内容 + `external_resources` | **[S5 新增]** 校验 URL 不指向私网 IP/钓鱼域名,详见 §4.5.2 |
+| `scan_malware` | `__files__` + 引用型产物指向的 code_commit | **[S5 新增]** 对接 ClamAV/YARA 扫描恶意特征,详见 §4.5.3 |
+| `verify_external_ref` | `deps[].code_repo`/`external_resources` | **[S5 新增]** git ls-remote 校验代码仓 commit 存在性 + 白名单,详见 §4.5.4 |
+| `check_commit_stability` | `deps[].code_commit` | **[S5 新增]** 校验引用型产物 commit 不在 feat 分支(须在 main/release),详见 §4.5.5 |
+| `check_completeness_contract` | `__skill__.completeness_contract` | **[S5 新增]** 校验 skill.yaml completeness_contract 的 jsonpath 求值,详见 §4.5.6 |
 
 ### 4.2 规则优先级
 
@@ -629,13 +923,22 @@ skills:
 
 #### 4.2.2 默认优先级分层
 
+> v3.0 修正:安全扫描规则族纳入 P0 层(对齐主 PRD §FR6.1/§FR6.2 审核流程顺序)。
+
 | 层级 | priority 范围 | 规则类别 | 示例 |
 |---|---|---|---|
-| P0 安全 | 90-100 | 元数据/安全 | `R_META_REQUIRED`、`R_NO_PATH_TRAVERSAL` |
-| P1 依赖 | 80-89 | 依赖完整性/版本 | `R_DEPS_DONE`、`R_DEPS_MIN_VERSION` |
-| P2 格式 | 70-79 | 文件格式/大小 | `R_FILE_FORMAT`、`R_FILE_EXISTS` |
-| P3 业务 | 50-69 | 业务规则/版本递增 | `R_VERSION_BUMP`、`R_HUMAN_REVIEW` |
+| P0 安全 | 90-100 | 元数据/安全扫描/路径安全 | `R_META_REQUIRED`(100)、`R_MALWARE_SCAN`(96)、`R_SECRET_SCAN`(95)、`R_URL_SAFETY`(92)、`R_NO_PATH_TRAVERSAL`(91) |
+| P1 依赖/引用 | 80-89 | 依赖完整性/版本/引用归属 | `R_DEPS_DONE`(90)、`R_DEPS_MIN_VERSION`(85)、`R_EXTERNAL_REF_OWNERSHIP`(85) |
+| P2 格式/稳定性 | 70-79 | 文件格式/大小/commit 稳定性 | `R_FILE_FORMAT`(80)、`R_FILE_EXISTS`(75)、`R_COMMIT_STABILITY`(80,warn) |
+| P3 业务/契约 | 50-74 | 版本递增/完整性契约/人工 | `R_VERSION_BUMP`(70)、`R_COMPLETENESS_CONTRACT`(75)、`R_HUMAN_REVIEW`(50) |
 | P4 提示 | 1-49 | 软提示(不阻断) | `R_GUIDE_SUGGESTION`(on_fail=warn) |
+
+**on_fail 选择准则**(对齐主 PRD §FR6 安全闭环):
+- 安全类(密钥/恶意/钓鱼/路径穿越)默认 `reject`(零容忍)
+- 依赖/格式/元数据类默认 `reject`
+- 结构契约类按 skill 声明(`completeness_contract.on_fail`)
+- commit 稳定性类默认 `warn`(可接受,但提示风险)
+- 风格建议类 `warn`
 
 #### 4.2.3 优先级与 on_fail 的交互
 
@@ -660,15 +963,17 @@ skills:
 
 规则集(一个 skill 的所有规则)之间**默认是 AND**:所有规则必须通过,审核才通过(除 `warn` 外)。
 
-但支持声明**规则组(group)**实现更复杂的 OR 语义:
+但支持声明**规则组(group)**实现更复杂的 OR 语义,定义于 `artifact_constraints.groups` 子字段:
 
 ```yaml
-review_rule_groups:
-  - id: G_FORMAT_FLEXIBLE
-    combinators: OR                   # 组内规则 OR:任一通过即可
-    rules:
-      - R_FILE_FORMAT_YAML            # 是 YAML 且符合 schema
-      - R_FILE_FORMAT_JSON            # 或是 JSON 且符合 schema
+artifact_constraints:
+  # ... required_fields/deps/file_constraints 等主 PRD §FR5.2 标准字段 ...
+  groups:
+    - id: G_FORMAT_FLEXIBLE
+      combinators: OR                   # 组内规则 OR:任一通过即可
+      rules:
+        - R_FILE_FORMAT_YAML            # 是 YAML 且符合 schema
+        - R_FILE_FORMAT_JSON            # 或是 JSON 且符合 schema
 ```
 
 组内规则 OR:产物是 YAML 或 JSON 任一即可。组与组之间、组与独立规则之间仍是 AND。
@@ -695,8 +1000,9 @@ R_HUMAN_REVIEW (AND, on_fail=needs_human)    ← 高危转人工
 
 ```python
 def run_review_engine(pr, skill, state) -> ReviewVerdict:
-    rules = skill.review_rules
-    groups = skill.review_rule_groups or []
+    ac = skill.artifact_constraints              # 主 PRD §FR5.2 权威字段
+    rules = ac.get("rules", [])                  # 扩展:规则引擎规则列表
+    groups = ac.get("groups", [])                # 扩展:规则组
     verdict = ReviewVerdict(action="approve", failures=[], warnings=[])
 
     # 1. 按优先级排序(降序)
@@ -744,22 +1050,237 @@ class ReviewVerdict(TypedDict):
     failures: list[dict]         # 失败规则与 check
     warnings: list[dict]         # 警告(不阻断)
     rules_evaluated: list[str]   # 已评估规则 id(可追溯)
-    rules_version: str           # skill rules_version
+    rules_version: str           # skill artifact_constraints.rules 的版本
+    security_scan_results: dict  # 安全扫描明细(对齐主 PRD §FR7.1 span 属性)
+    completeness: dict           # 完整性契约校验结果
+    ref_ownership: dict          # 引用型归属校验结果
 ```
 
 #### 4.4.3 与主 PRD FR6.2 的映射
 
 主 PRD FR6.2 的硬编码校验项,迁移到规则引擎后:
 
-| 主 PRD FR6.2 校验项 | 对应规则 id |
-|---|---|
-| 元数据校验 | `R_META_REQUIRED` |
-| 依赖完整性 | `R_DEPS_DONE` |
-| 文件格式 | `R_FILE_FORMAT`(或 `G_FORMAT_FLEXIBLE`) |
-| 文件存在 | `R_FILE_EXISTS` |
-| 人工审核 | `R_HUMAN_REVIEW` |
+| 主 PRD FR6.2 校验项 | 对应规则 id | priority | on_fail |
+|---|---|---|---|
+| 权限三层校验(L1/L2/L3) | (锁/权限层,非规则引擎) | — | reject |
+| 元数据校验 | `R_META_REQUIRED` | 100 | reject |
+| 密级校验 | `R_META_REQUIRED`(classification 子 check) | 100 | reject |
+| 依赖完整性 | `R_DEPS_DONE` | 90 | reject |
+| 依赖版本约束 | `R_DEPS_MIN_VERSION` | 85 | reject |
+| 文件格式 | `R_FILE_FORMAT`(或 `G_FORMAT_FLEXIBLE`) | 80 | reject |
+| 文件存在 | `R_FILE_EXISTS` | 75 | reject |
+| 结构化完整性 | `R_COMPLETENESS_CONTRACT`(§4.5.6) | 75 | reject(warn 可配) |
+| 安全扫描-密钥 | `R_SECRET_SCAN`(§4.5.1) | 95 | reject |
+| 安全扫描-URL | `R_URL_SAFETY`(§4.5.2) | 92 | reject |
+| 安全扫描-恶意 | `R_MALWARE_SCAN`(§4.5.3) | 96 | reject |
+| 引用型归属 | `R_EXTERNAL_REF_OWNERSHIP`(§4.5.4) | 85 | reject |
+| commit 稳定性 | `R_COMMIT_STABILITY`(§4.5.5) | 80 | warn |
+| 版本递增 | `R_VERSION_BUMP` | 70 | reject |
+| 路径安全 | `R_NO_PATH_TRAVERSAL` | 91 | reject |
+| 人工审核 | `R_HUMAN_REVIEW` | 50 | needs_human |
 
-新增规则(本深化补充):`R_DEPS_MIN_VERSION`、`R_VERSION_BUMP`、`R_NO_PATH_TRAVERSAL`。
+### 4.5 安全扫描规则族定义(S5)
+
+> v3.0 新增:对齐主 PRD §FR6.1/§FR6.2 安全扫描规则族 + AC6.8/AC6.9。填补审核报告 Part3 D1-3/D1-4 空洞(原 op 清单无安全扫描 op,无规则定义)。
+>
+> **设计原则**:安全扫描是"管理约束"而非"内容解析"(主 PRD 附录 D9 关键认知 1)。扫描对象 = 产物文件本身 + 引用型产物指向的代码 commit。
+
+#### 4.5.0 规则总览
+
+| 规则 id | priority | on_fail | op | 适用产物 | 扫描对象 |
+|---|---|---|---|---|---|
+| `R_MALWARE_SCAN` | 96 | reject | `scan_malware` | 所有 | 产物文件 + 引用型 code_commit |
+| `R_SECRET_SCAN` | 95 | reject | `scan_secret_patterns` | 所有 | 产物文件 + 引用型 code_commit |
+| `R_URL_SAFETY` | 92 | reject | `check_url_safety` | 所有 | 产物内容 URL + external_resources |
+| `R_EXTERNAL_REF_OWNERSHIP` | 85 | reject | `verify_external_ref` | 引用型 | code_repo 白名单 + commit 存在性 |
+| `R_COMMIT_STABILITY` | 80 | warn | `check_commit_stability` | 引用型 | code_commit 所属分支 |
+| `R_COMPLETENESS_CONTRACT` | 75 | reject(可配 warn) | `check_completeness_contract` | 所有 | skill.yaml completeness_contract jsonpath |
+
+#### 4.5.1 R_MALWARE_SCAN(恶意特征扫描)
+
+**规则定义:**
+
+```yaml
+- id: R_MALWARE_SCAN
+  name: 恶意特征扫描
+  priority: 96
+  combinators: AND
+  on_fail: reject
+  checks:
+    - field: __files__
+      op: scan_malware
+      engine: clamav            # clamav | yara | hybrid
+      scan_ref_commits: true    # 引用型产物同时扫描 code_commit 指向的代码快照
+```
+
+**op `scan_malware` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{files: list[FileContent], ref_commits: list[{repo, commit}]}` |
+| 引擎 | ClamAV(二进制特征)/ YARA(自定义规则)/ hybrid(两者并行) |
+| 输出 | `{passed: bool, detections: [{file, signature, severity}]}` |
+| 误报处理 | `severity=low` 记录 warn 不阻断;`severity>=medium` reject |
+
+**扫描对象:**
+- 内容型产物:产物文件本身(YAML/JSON/MD,主要防嵌入恶意 payload)
+- 引用型产物:code_commit 指向的代码快照(git archive 后扫描)
+- 扫描超时(默认 60s):超时转 `needs_human`(不自动放行)
+
+#### 4.5.2 R_SECRET_SCAN(密钥特征扫描)
+
+**规则定义:**
+
+```yaml
+- id: R_SECRET_SCAN
+  name: 密钥特征扫描
+  priority: 95
+  combinators: AND
+  on_fail: reject
+  checks:
+    - field: __files__
+      op: scan_secret_patterns
+      patterns:
+        - aws_access_key: "AKIA[0-9A-Z]{16}"
+        - aws_secret: "(?i)aws_secret_access_key.{0,20}[A-Za-z0-9/+=]{40}"
+        - gcp_key: "AIza[0-9A-Za-z_\\-]{35}"
+        - github_pat: "ghp_[0-9A-Za-z]{36}"
+        - gitlab_pat: "glpat-[0-9A-Za-z_\\-]{20}"
+        - private_key: "-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----"
+        - jwt: "eyJ[A-Za-z0-9_\\-]+\\.eyJ[A-Za-z0-9_\\-]+\\.[A-Za-z0-9_\\-]+"
+        - generic_token: "(?i)(token|secret|password).{0,10}['\"][A-Za-z0-9]{16,}['\"]"
+      entropy_threshold: 4.5    # Shannon 熵 > 4.5 的字符串标记为可疑
+      scan_ref_commits: true
+      whitelist_patterns:       # 白名单(测试占位符等)
+        - "AKIAIOSFODNN7EXAMPLE"
+        - "EXAMPLEKEY"
+```
+
+**op `scan_secret_patterns` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{files: list[FileContent], ref_commits: list[{repo, commit}], patterns, entropy_threshold, whitelist}` |
+| 引擎 | 正则匹配 + Shannon 熵检测(可选 gitleaks/truffleHog 对接) |
+| 输出 | `{passed: bool, findings: [{file, line, pattern_id, match, entropy, severity}]}` |
+| 分级 | `severity=critical`(私钥/AWS key)→ reject;`high`(PAT/token)→ reject;`medium`(高熵)→ reject;白名单命中 → 跳过 |
+
+**误报申诉:** 提交方在 PR 评论中用 `#secret-scan-false-positive` 标注,admin 审核后加入 `whitelist_patterns`,重新触发扫描。
+
+#### 4.5.3 R_URL_SAFETY(URL 安全检查)
+
+**规则定义:**
+
+```yaml
+- id: R_URL_SAFETY
+  name: URL 安全检查
+  priority: 92
+  combinators: AND
+  on_fail: reject
+  checks:
+    - field: __content_urls__
+      op: check_url_safety
+      block_private_ip: true       # 拦截私网 IP
+      block_localhost: true        # 拦截 127.x/localhost
+      blocklist_source: "builtin"  # builtin | external_feed
+      allowlist: []                # 允许的域名(如 figma.com)
+```
+
+**op `check_url_safety` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{urls: list[str], block_private_ip, block_localhost, blocklist, allowlist}` |
+| 私网 IP 检测 | `127.0.0.0/8`、`10.0.0.0/8`、`192.168.0.0/16`、`172.16.0.0/12`、`169.254.0.0/16`、`::1` |
+| 钓鱼域名检测 | 对接外部威胁情报 feed(可配),或内置高危 TLD 黑名单 |
+| 输出 | `{passed: bool, blocked: [{url, reason: "private_ip"|"localhost"|"blocklist", detail}]}` |
+| allowlist 优先 | figma.com / 内部 CI 域名等可加入 allowlist 放行 |
+
+**扫描对象:** 产物内容中出现的所有 URL(正则提取 `https?://`)+ PR 模板 `external_resources`/`third_party_apis` 声明的 URL。
+
+#### 4.5.4 R_EXTERNAL_REF_OWNERSHIP(外部引用归属校验)
+
+**规则定义:**
+
+```yaml
+- id: R_EXTERNAL_REF_OWNERSHIP
+  name: 外部引用归属校验
+  priority: 85
+  combinators: AND
+  on_fail: reject
+  checks:
+    - field: deps[].code_repo
+      op: verify_external_ref
+      check_commit_exists: true    # git ls-remote 校验 commit 存在
+      check_whitelist: true        # 校验 repo 在 RoleInstance.allowed_external_repos
+```
+
+**op `verify_external_ref` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{refs: list[{repo, commit}], submitter_instance_id, allowed_external_repos}` |
+| commit 存在性 | `git ls-remote {repo} {commit}` 返回非空(不 clone 代码仓) |
+| 白名单校验 | `repo` 须在提交方 RoleInstance.`allowed_external_repos` 内(主 PRD §3.2 L3) |
+| 输出 | `{passed: bool, violations: [{repo, commit, reason: "commit_not_found"|"repo_not_whitelisted"}]}` |
+| 适用范围 | 仅 `artifact_kind=reference` 的产物;内容型跳过 |
+
+#### 4.5.5 R_COMMIT_STABILITY(commit 稳定性校验)
+
+**规则定义:**
+
+```yaml
+- id: R_COMMIT_STABILITY
+  name: 引用型产物 commit 稳定性
+  priority: 80
+  combinators: AND
+  on_fail: warn                    # 稳定性问题 warn,不阻断(可接受风险)
+  checks:
+    - field: deps[].code_commit
+      op: check_commit_stability
+      allowed_branches: [main, master, release/*]
+      disallow_feat_branch: true
+```
+
+**op `check_commit_stability` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{refs: list[{repo, commit}]}` |
+| 校验方式 | `git branch -r --contains {commit}` 查询 commit 所属分支 |
+| 稳定判定 | commit 在 `main`/`master`/`release/*` 分支 → `stable`;仅在 `feat/*` 分支 → `volatile` |
+| 输出 | `{passed: bool, unstable: [{repo, commit, branch, stability: "volatile"}]}` |
+| on_fail=warn 理由 | feat 分支 commit 可被 rebase/force-push 覆盖,但不阻断(业务可接受),仅提示风险并记录 `commit_stability=volatile` |
+
+**与 ArtifactRef 的关联:** 校验结果写入 `ArtifactRef.commit_stability`(stable/volatile,主 PRD §5.1)。
+
+#### 4.5.6 R_COMPLETENESS_CONTRACT(结构化完整性契约)
+
+**规则定义:**
+
+```yaml
+- id: R_COMPLETENESS_CONTRACT
+  name: 结构化完整性契约
+  priority: 75
+  combinators: AND
+  on_fail: reject                  # 可配 warn(skill.yaml completeness_contract.on_fail)
+  checks:
+    - field: __skill__.completeness_contract
+      op: check_completeness_contract
+      # jsonpath 仅限 exists/min_items/max_items 三类(不校验值语义)
+```
+
+**op `check_completeness_contract` schema:**
+
+| 项 | 说明 |
+|---|---|
+| 输入 | `{contract: {required_structures: [{jsonpath, min_items?, max_items?}]}, content: FileContent}` |
+| jsonpath 求值 | 对产物内容(解析为 JSON/YAML)求 jsonpath,仅支持 `exists`/`min_items`/`max_items` |
+| 边界声明 | 这是"结构校验"非"业务语义解析"(主 PRD 附录 D9 认知 1);jsonpath 禁止值匹配 |
+| 输出 | `{passed: bool, violations: [{jsonpath, expected, actual, reason}]}` |
+| on_fail | 按 skill.yaml `completeness_contract.on_fail`(reject | warn,主 PRD §FR5.2) |
+
+**示例:** api_contract 的 completeness_contract 要求 `$.endpoints` min_items=1,若产物无 endpoints 字段 → reject。
 
 ---
 
@@ -796,9 +1317,11 @@ class ReviewVerdict(TypedDict):
 
 **锁规则:**
 - 节点 `ready` 时,第一个调 `submit_artifact` 的 agent 获得锁
-- 持锁者有权为该节点提 PR;其他 agent 提 PR 时,管理方 webhook 收到后**立即 reject**,提示"节点 n2 正在被 server-agent-01 编辑,请等待或协调"
+- 持锁者有权为该节点提 PR;其他 agent 提 PR 时,管理方 webhook 收到后**立即 reject**,提示"节点 login-feature.n2 正在被 server-agent-01 编辑,请等待或协调"
 - 锁有 TTL(默认 12 小时,可配置),超时自动释放(`expires_at`),避免死锁
 - 持锁者完成 PR 合并或主动放弃时,锁释放
+- **`human_submit_token` fallback**(主 PRD §3.1):agent 故障时,持有该 token 的人员(user)可代为推 feat 分支 + 开 PR,但**无 merge 权限**(仅 bot_token 可 approve_pr 合并);human_submit_token 持有者提 PR 时同样须先持锁,锁的 `holder` 记录 user_id 而非 agent_id
+- `bot_token`(管理方 bot)拥有 approve_pr/merge 权限;`admin_token` 含 emergency_local_commit 等降级操作(主 PRD §3.1)
 
 **锁状态查询:** MCP 新增 `get_node_lock(node_id)` 工具,返回当前持锁者与过期时间。
 
@@ -806,7 +1329,7 @@ class ReviewVerdict(TypedDict):
 
 为防止 C3(seq 冲突),seq 分配采用**预分配 + 最终确认**两阶段:
 
-1. **预分配**(分支创建时):agent 调 `reserve_seq(node_type)` 获得预分配 seq,写入分支名 `feat/server/api_contract-001-a3f2`。预分配记录在管理方内存表,有 30 分钟 TTL。
+1. **预分配**(分支创建时):agent 调 `reserve_seq(node_type)` 获得预分配 seq,写入分支名 `feat/login-feature/team_a_server/api_contract-001-a3f2b1c4`。预分配记录在管理方内存表,有 30 分钟 TTL。
 2. **最终确认**(PR 合并时):管理方 bot 在 squash merge 前,校验预分配 seq 与 main 上 max seq + 1 一致;不一致则 rebase 重命名文件后合并。
 
 **简化方案(MVP):** 不预分配,seq 在 merge 时由 bot 统一分配(取 main 上 max seq + 1,原子操作),分支内文件名用临时 slug,merge 时 bot 重命名。这样彻底避免 seq 冲突,代价是分支内文件名与最终不一致(可接受,因分支是临时态)。
@@ -1163,22 +1686,20 @@ CI 在 PR 提交时触发(GitHub Actions / GitLab CI),分两类:**仓库级检�
 
 #### 8.1.3 CI 配置示例
 
+> v3.0 修正:paths 对齐 `features/**` 命名空间;补 GitLab CI 示例(主 PRD §FR1.1 provider 支持 gitlab)。
+
+**GitHub Actions 示例:**
+
 ```yaml
 # .github/workflows/artifact-ci.yml
 name: Artifact CI
 on:
   pull_request:
     paths:
-      - 'product_spec/**'
-      - 'api_contract/**'
-      - 'design_proto/**'
-      - 'design_asset/**'
-      - 'server_impl/**'
-      - 'server_test/**'
-      - 'client_ui/**'
-      - 'client_func/**'
-      - 'client_delivery/**'
+      - 'features/**'        # 按管线命名空间隔离(主 PRD §FR1.1)
       - 'manifests/**'
+      - '.skills-index.yaml'
+      - 'repo-meta.yaml'
 
 jobs:
   validate:
@@ -1197,6 +1718,39 @@ jobs:
           name: ci-report
           path: ci-report.json
 ```
+
+**GitLab CI 示例(v3.0 新增):**
+
+```yaml
+# .gitlab-ci.yml
+stages:
+  - validate
+
+artifact-ci:
+  stage: validate
+  image: python:3.11-slim
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - features/**/*
+        - manifests/**/*
+        - .skills-index.yaml
+        - repo-meta.yaml
+  before_script:
+    - pip install coordination-platform-ci
+  script:
+    - coord-ci check --mr ${CI_MERGE_REQUEST_IID} --repo ${CI_PROJECT_URL}
+  after_script:
+    - coord-ci report --format gitlab-mr > gl-code-quality-report.json
+  artifacts:
+    when: always
+    reports:
+      codequality: gl-code-quality-report.json
+    paths:
+      - ci-report.json
+```
+
+**GitProvider 抽象**(主 PRD §FR1.1):CI 命令 `coord-ci check` 通过 GitProvider 接口屏蔽 GitHub/GitLab 差异,内部按 `hub_repo.provider` 适配 webhook payload、分支保护 API、PR/MR 编号。
 
 ### 8.2 CI 失败处理
 
@@ -1451,10 +2005,19 @@ flowchart LR
 | manifest `lock` | 主 PRD 无 | **新增**:并发锁机制 |
 | manifest `supersedes` | 主 PRD 无 | **新增**:变更版本追溯 |
 | manifest `manifest_version` | 主 PRD 无 | **新增**:schema 演进 |
+| manifest `node_id` pattern | 主 PRD §FR1.3 `{pipeline_id}.{local_id}` | **对齐**(S4):v3.0 同步为 `^[a-z0-9][a-z0-9-]*\.n[0-9]+$` |
+| manifest `node_type`(14 态) | 主 PRD §2.1 预置 13 种 + D11 扩展 | **对齐**(S4):补 derived_artifact/client_logic/server_delivery/research_spike/free_artifact |
+| manifest `role`(含 generator) | 主 PRD §3.1 五角色 | **对齐**(S4):补 generator |
+| manifest `artifact_kind`/`artifact_qualifier` | 主 PRD §2 术语 | **对齐**(S4):枚举 content/reference/hybrid、official/mock/draft/experimental |
+| manifest `classification` | 主 PRD §2 密级 | **对齐**(S4):public/internal/confidential/restricted |
+| manifest `deps`(hub_ref/version_constraint/format_slot/strictness/presence/coupling) | 主 PRD §2 + §FR1.3 PR 模板 | **对齐**(S4):补跨管线 hub_ref 与级联分级字段 |
+| ArtifactRef `provenance`/`content_integrity_hash`/`current_owner`/`addenda` | 主 PRD §5.1 ArtifactRef | **对齐**:多版本映射补全(§2.3.1) |
 | `ReviewVerdict.failures`/`warnings` | 主 PRD `verdict`/`reason` | **扩展**:结构化 verdict |
-| `review_rules`(skill.yaml) | 主 PRD `artifact_constraints` | **重构**:约束 → 规则引擎 |
+| `artifact_constraints`(skill.yaml,含 rules + ops) | 主 PRD §FR5.2 `artifact_constraints` | **统一**(S6):v2.0 曾拆为 `review_rules`,v3.0 回归 `artifact_constraints`,保留规则优先级/op 清单为子字段 |
+| 安全扫描规则族(§4.5,6 条) | 主 PRD §FR6.1/§FR6.2 | **补全**(S5):R_SECRET_SCAN/R_URL_SAFETY/R_MALWARE_SCAN/R_EXTERNAL_REF_OWNERSHIP/R_COMMIT_STABILITY/R_COMPLETENESS_CONTRACT |
 | `sla`(skill.yaml) | 主 PRD 无 | **新增**:SLA 配置 |
 | `escalation` | 主 PRD 无 | **新增**:升级链 |
+| 锁 `human_submit_token` fallback | 主 PRD §3.1 token 类型 | **对齐**:补人工 fallback 提交语义(§5.2.1) |
 
 ### 10.2 对主 PRD 的修正项
 
@@ -1462,26 +2025,30 @@ flowchart LR
 |---|---|---|
 | FR1.1 文件名"建议序号前缀" | §2.1.2 三段式命名 `<seq>_<slug>.<ext>`(CI 强制) | 避免命名歧义 |
 | FR1.1 "管理方不解析内容,只校验文件存在性 + 扩展名/大小" | 补充:CI 校验 manifest schema + 命名规范(§8) | 元数据也需校验 |
-| FR1.3 PR 模板 | 补充 `version`、`supersedes` 字段 | 版本化需要 |
-| FR5.2 skill.yaml 的 `artifact_constraints` | 重构为 `review_rules`(规则引擎,§4) | 可配置化 |
+| FR1.1 路径不含 pipeline_id/qualifier | §2.1.1 `features/{pipeline_id}/{node_type}/{qualifier}/` 命名空间(S4-5) | 主 PRD v3.0 单 hub 仓隔离 |
+| FR1.3 PR 模板 | 补充 `version`、`supersedes`、`classification`、`artifact_kind`、`artifact_qualifier` 字段 | 版本化/密级/完成度需要 |
+| FR5.2 skill.yaml `artifact_constraints` | v3.0 统一回 `artifact_constraints`(§4),保留 rules/ops 为子字段(S6) | v2.0 曾拆 `review_rules` 与主 PRD 分裂,v3.0 修正回归 |
 | FR6.2 审核逻辑(硬编码 if-else) | 规则引擎执行(§4.4) | 可演进 |
 | FR6.2 校验项"元数据/依赖/格式/文件/人工" | 对应规则 R_META/R_DEPS/R_FILE/R_HUMAN(§4.1.1) | 映射清晰 |
+| FR6.1/FR6.2 安全扫描(6 规则族无定义) | §4.5 补 6 条规则 + 6 个 op + 扫描模式/引擎/对象/阈值(S5) | 主 PRD 引用但无实现 |
 | FR6.6 "reject_pr 后节点回 ready" | 补充:结构化 reason + 重试限制 + 历史追溯(§7) | 可追溯 |
 | FR6 审核流程 | 补充:CI → 锁 → 冲突 → 规则引擎 → SLA(§9.1) | 完整路径 |
 | 无并发处理 | 新增锁机制 + 冲突检测(§5) | C1-C6 场景 |
 | 无 SLA | 新增分级 SLA + 升级链(§6) | 超时兜底 |
+| FR1.1 仅 GitHub Actions | §8.1.3 补 GitLab CI 示例 + GitProvider 抽象 | 主 PRD provider 支持 gitlab |
+| manifest schema 9 处冲突 | §3.3 全量对齐主 PRD(S4) | 格式/node_id/node_type/role/path/deps/必填/artifact_kind/artifact_qualifier |
 
 ### 10.3 不变项(确认对齐)
 
 以下主 PRD 设计**不变**,本深化确认对齐:
 
 - 产物仓库独立 git、main 分支保护、squash merge
-- 管理方不解析内容、格式中立
+- 管理方不解析内容、格式中立(结构存在性校验属元数据约束,非语义判定)
 - 合并即推进(set_done + cascade)
 - 审计日志结构(AuditLogEntry)
-- ArtifactRef 结构(repo + path + commit + toolspec_framework + trace_id)
-- 状态机 7 态(blocked/ready/pending_review/in_progress/review/done/changed)
-- Constraint Skill 6 个(product-spec/api-contract/design-handoff/server-impl/client-ui/client-delivery)
+- ArtifactRef 结构(repo + path + commit + version + artifact_kind + artifact_qualifier + classification + content_integrity_hash + provenance + current_owner + addenda + toolspec_framework + trace_id)
+- 状态机 11 态(blocked/ready/pending_review/draft/in_progress/review/done/changed/deprecated/sunset/skipped)
+- 节点类型 13 预置 + D11 扩展(product_spec/api_contract/server_impl/server_test/server_delivery/design_proto/design_asset/client_ui/client_logic/client_func/client_delivery/research_spike/derived_artifact/free_artifact)
 - 审核策略矩阵(按产物类型分级,FR6.4)
 
 ### 10.4 实施建议
@@ -1508,6 +2075,12 @@ flowchart LR
 | (新增)版本递增 | `R_VERSION_BUMP` | 70 | reject | gt_current_main_version |
 | 人工审核 | `R_HUMAN_REVIEW` | 50 | needs_human | equals(true) |
 | (新增)路径安全 | `R_NO_PATH_TRAVERSAL` | 95 | reject | no_path_traversal |
+| (S5 新增)安全扫描-恶意 | `R_MALWARE_SCAN` | 96 | reject | scan_malware |
+| (S5 新增)安全扫描-密钥 | `R_SECRET_SCAN` | 95 | reject | scan_secret_patterns |
+| (S5 新增)安全扫描-URL | `R_URL_SAFETY` | 92 | reject | check_url_safety |
+| (S5 新增)引用型归属 | `R_EXTERNAL_REF_OWNERSHIP` | 85 | reject | verify_external_ref |
+| (S5 新增)commit 稳定性 | `R_COMMIT_STABILITY` | 80 | warn | check_commit_stability |
+| (S5 新增)结构化完整性 | `R_COMPLETENESS_CONTRACT` | 75 | reject(warn 可配) | check_completeness_contract |
 
 ## 附录 B:冲突场景与解决速查
 

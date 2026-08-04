@@ -1,29 +1,42 @@
 # FR3 角色协调(CrewAI)+ FR5 约束技能(Constraint Skills)深化设计
 
 > **文档性质**:对《coordination-platform-prd.md》FR3 / FR5 的深化补充
-> **版本**:v2.1 | **日期**:2026-08-04 | **状态**:待评审
-> **父文档**:[coordination-platform-prd.md](../coordination-platform-prd.md)
+> **版本**:v3.0 | **日期**:2026-08-04 | **状态**:待评审
+> **父文档**:[coordination-platform-prd.md](../coordination-platform-prd.md)(v3.0 权威源)
 > **调研依据**:[ai-multi-agent-dev-dashboard-research.md](../../research/ai-multi-agent-dev-dashboard-research.md) 第18章 CrewAI、第20章 Skills
 > **关联深化**:[fr4-data-api.md](./fr4-data-api.md)(MCP 工具参数与错误码)、[fr1-fr6-artifact-review.md](./fr1-fr6-artifact-review.md)(审核闭环)
+
+## Changelog
+
+| 版本 | 日期 | 变更摘要 |
+|---|---|---|
+| v2.0 | 2026-08-03 | 初版深化:8 个薄弱点(LLM 配置/重试降级/事件桥接/6 skill.yaml/版本化/发现加载/权限矩阵/Process 模式) |
+| v2.1 | 2026-08-04 | 修正 AC 编号(AC3.6 起);附录 A llm.yaml 补 design 配置 |
+| **v3.0** | 2026-08-04 | **与主 PRD v3.0 全面对齐**:<br/>① **S9 硬预算数值对齐**——Task 级 10k→20k(token)+ warning→硬中断;Agent 级 $5→$10;管线级 $50→$100;补平台级 $4000;补充三层硬预算完整定义/session 级 token/key_constraints 提取算法/agent 行为基线/Task 重入队上限 3 次/成本归因 Dashboard<br/>② **S6 skill.yaml 模型统一**——确认全部使用 `artifact_constraints`(无 `review_rules`);补 `classification`/`completeness_contract` 字段;deps 改用 `presence: required/optional/if_present` 条件依赖语法(对齐主 PRD §FR5.2)<br/>③ **新增 generator 角色**(管理方内置 bot,derived_artifact 生成)<br/>④ **新增 human_submit_token 降级机制**(LLM 故障时人员直提)<br/>⑤ **新增 competition mode**(allow_competition + 竞争锁 TTL 4h)<br/>⑥ **新增 4 个 skill**:client-logic-skill / server-delivery-skill / research-spike-skill / derived-artifact-skill |
+
+> **对齐原则**:本文档与主 PRD v3.0 冲突时,以主 PRD §FR3.5 / §FR5.2 为准。审核报告 review-part2 P0-2/P0-8 已修正。
 
 ---
 
 ## 0. 文档范围与补全说明
 
-本文针对 PRD v2.0 中 FR3(CrewAI 角色协调)与 FR5(Constraint Skills)的 8 个薄弱点进行深化:
+本文针对 PRD v3.0 中 FR3(CrewAI 角色协调)与 FR5(Constraint Skills)的薄弱点进行深化:
 
 | # | 薄弱点 | 深化章节 |
 |---|---|---|
 | 1 | CrewAI agent 的 LLM 配置(模型/temperature/max_tokens/cost) | §2.1 ~ §2.2 |
 | 2 | agent 失败重试与降级策略 | §3(含 Mermaid 图) |
 | 3 | CrewAI ↔ LangGraph 事件桥接(双向同步机制) | §4(含代码示例 + Mermaid 时序图) |
-| 4 | 6 个完整 skill.yaml(原仅 api-contract-skill 示例) | §6.1 ~ §6.6 |
+| 4 | 10 个完整 skill.yaml(原仅 api-contract-skill 示例) | §6.1 ~ §6.10 |
 | 5 | skill 版本化与演进 | §7 |
 | 6 | skill 发现与加载机制(运行时匹配/缓存/热重载) | §8(含 Mermaid 图) |
 | 7 | agent 工具权限矩阵(细化到参数级) | §2.4 |
 | 8 | CrewAI Process 模式选择(sequential vs hierarchical / 并行策略) | §5 |
+| **9** | **硬预算数值对齐 + 行为护栏(session token / key_constraints / 行为基线)** | **§2.3(v3.0 重写)** |
+| **10** | **generator 角色 + human_submit_token 降级** | **§2.2(v3.0 新增)** |
+| **11** | **competition mode(竞争锁)** | **§5.4(v3.0 新增)** |
 
-**核心定位回顾**:Agent **不执行开发,只协调提交**。CrewAI 4 角色(product/server/design/client)agent 是"提交协调员",调用 MCP 工具把人员产出的产物引用提交到管理方。Constraint Skill 是 superpowers 风格的"约束 + 引导",定义"交什么"(元数据约束)+ 引导"建议交什么"(guide),不限制"怎么交"。
+**核心定位回顾**:Agent **不执行开发,只协调提交**。CrewAI 角色(product/server/design/client/**generator**)agent 是"提交协调员",调用 MCP 工具把人员产出的产物引用提交到管理方。其中 `generator_agent` 是管理方内置 bot,负责 `derived_artifact`(SDK/文档/发布包)的派生提交。Constraint Skill 是 superpowers 风格的"约束 + 引导",定义"交什么"(元数据约束)+ 引导"建议交什么"(guide),不限制"怎么交"。
 
 ---
 
@@ -50,7 +63,7 @@ graph TB
         DISC["skill 发现(§8)<br/>node_type → skill"]
         CACHE["skill 缓存 + 热重载"]
         VER["版本化(§7)"]
-        S1["6 个 skill.yaml"]
+        S1["10 个 skill.yaml"]
     end
 
     subgraph MCP["MCP 接口层"]
@@ -93,7 +106,7 @@ Agent 职责是"协调提交"而非"开发",LLM 选型遵循三条原则:
 | **低成本优先** | agent 不做创造性推理(代码/设计由人员完成),无需最强推理模型;用中等模型控成本 |
 | **低 temperature 保稳定** | 协调提交是确定性流程,temperature 调低避免随机性导致工具参数漂移 |
 
-**4 个 Agent 的 LLM 配置:**
+**5 个 Agent 的 LLM 配置**(v3.0 新增 generator_agent):
 
 | Agent | 推荐模型 | temperature | max_tokens | 选型理由 |
 |---|---|---|---|---|
@@ -101,11 +114,13 @@ Agent 职责是"协调提交"而非"开发",LLM 选型遵循三条原则:
 | `server_agent` | Claude Sonnet 4 | 0.2 | 2048 | 需校验 api_contract 产物引用与 deps 一致;契约字段结构化,工具调用为主 |
 | `design_agent` | Claude Haiku 4(或 GPT-4o-mini) | 0.2 | 1024 | 任务最轻:提交 design_asset 引用(含 figma 链接),几乎无推理,用小模型省钱 |
 | `client_agent` | Claude Sonnet 4 | 0.3 | 2048 | 需联调多端依赖(契约+设计+服务实现),上下文最复杂;temperature 略高以处理联调歧义 |
+| `generator_agent` | Claude Haiku 4 | 0.1 | 1024 | 管理方内置 bot,负责 derived_artifact 派生提交;任务高度确定(按上游产物生成 SDK/文档),temperature 最低 |
 
 **说明:**
-- `max_tokens` 限制输出长度:agent 输出主要是工具调用参数 + 简短说明,无需长输出。`design_agent` 用 1024 因任务最简单;其余 2048 留余量。
-- `temperature` 统一低值(0.2~0.3):协调提交是确定性流程,不需要创造性。`client_agent` 联调场景略提到 0.3。
-- 模型可配置(`config/llm.yaml`),不硬编码,支持切换 provider。`design_agent` 可降级到 Haiku 进一步省钱。
+- `max_tokens` 限制输出长度:agent 输出主要是工具调用参数 + 简短说明,无需长输出。`design_agent` / `generator_agent` 用 1024 因任务最简单;其余 2048 留余量。
+- `temperature` 统一低值(0.1~0.3):协调提交是确定性流程,不需要创造性。`generator_agent` 最低(0.1)因派生逻辑高度确定;`client_agent` 联调场景略提到 0.3。
+- 模型可配置(`config/llm.yaml`),不硬编码,支持切换 provider。`design_agent` / `generator_agent` 可降级到本地小模型进一步省钱。
+- **`generator_agent` 与其他 4 角色的区别**:它是管理方内置 bot(非人员角色),不需要人员产出产物——它直接基于上游 done 产物自动派生(SDK/文档/发布包),通过 `report_generation_status` 回传结果。
 
 ### 2.2 LLM 配置与 Agent 定义(代码)
 
@@ -126,12 +141,13 @@ def make_llm(model: str, temperature: float, max_tokens: int) -> LLM:
         max_retries=2,                        # LLM 层重试(provider 级)
     )
 
-# 4 个 agent 的 LLM 配置(集中管理,便于调参)
+# 5 个 agent 的 LLM 配置(集中管理,便于调参)
 LLM_CONFIG = {
-    "product": make_llm("anthropic/claude-sonnet-4", 0.2, 2048),
-    "server":  make_llm("anthropic/claude-sonnet-4", 0.2, 2048),
-    "design":  make_llm("anthropic/claude-haiku-4",  0.2, 1024),
-    "client":  make_llm("anthropic/claude-sonnet-4", 0.3, 2048),
+    "product":   make_llm("anthropic/claude-sonnet-4", 0.2, 2048),
+    "server":    make_llm("anthropic/claude-sonnet-4", 0.2, 2048),
+    "design":    make_llm("anthropic/claude-haiku-4",  0.2, 1024),
+    "client":    make_llm("anthropic/claude-sonnet-4", 0.3, 2048),
+    "generator": make_llm("anthropic/claude-haiku-4",  0.1, 1024),  # v3.0 新增
 }
 ```
 
@@ -202,39 +218,269 @@ client_agent = Agent(
     verbose=True,
 )
 
+# v3.0 新增:generator_agent(管理方内置 bot,负责 derived_artifact 派生提交)
+generator_agent = Agent(
+    role="派生产物生成器",
+    goal="为 derived_artifact 节点协调提交:基于上游 done 产物自动派生 SDK/文档/发布包,通过 MCP 提交并回传生成状态",
+    backstory=(
+        "你是管理方内置的派生产物生成器,不服务于特定人员角色。"
+        "当上游产物(如 api_contract)done 后,你基于其内容自动生成派生产物"
+        "(如 SDK 代码包、API 文档、发布包),通过 MCP submit_artifact 提交引用,"
+        "并调用 report_generation_status 回传生成结果。"
+        "你必须遵守 key_constraints 中 level=must 的约束。"
+    ),
+    llm=LLM_CONFIG["generator"],
+    tools=[mcp_submit_artifact, mcp_report_generation_status, mcp_get_deps],
+    allow_delegation=False,
+    max_iter=3,                       # 派生逻辑确定,迭代次数少
+    max_rpm=30,
+    verbose=True,
+)
+
 ROLE_TO_AGENT = {
-    "product": product_agent,
-    "server":  server_agent,
-    "design":  design_agent,
-    "client":  client_agent,
+    "product":   product_agent,
+    "server":    server_agent,
+    "design":    design_agent,
+    "client":    client_agent,
+    "generator": generator_agent,      # v3.0 新增
 }
 ```
 
-### 2.3 Cost 控制
+#### 2.2.1 human_submit_token 降级机制(v3.0 新增,对齐主 PRD §3.1)
 
-| 控制层 | 指标 | 触发动作 |
+当 LLM 持续不可用(agent 故障 + 规则引擎降级也失败时),人员可通过 `human_submit_token` 直接提交产物,绕过 agent:
+
+```python
+# crew/human_fallback.py
+from datetime import datetime, timedelta, timezone
+
+class HumanSubmitToken(BaseModel):
+    """per-user 人工提交 token:仅允许推 feat 分支 + 开 PR,无 merge 权限"""
+    token_id: str
+    user_id: str                       # 人员 ID(非 agent)
+    node_id: str                       # 绑定节点
+    role: str                          # 该人员的角色
+    allowed_tools: list[str]           # ["submit_artifact", "update_progress"](无 approve_pr)
+    expires_at: datetime               # 24h 有效(agent 修复后回收)
+    force_human_review: bool = True    # 人工提交的 PR 强制人工审核
+
+def issue_human_submit_token(node_id: str, user_id: str, role: str) -> HumanSubmitToken:
+    """LLM 故障时 admin 签发人工提交 token 给人员"""
+    return HumanSubmitToken(
+        token_id=f"hst_{node_id}_{user_id}",
+        user_id=user_id,
+        node_id=node_id,
+        role=role,
+        allowed_tools=["submit_artifact", "update_progress"],
+        expires_at=datetime.now(timezone.utc) + timedelta(hours=24),
+    )
+```
+
+**降级触发链路**(三级降级):
+1. **一级(agent 正常)**:LLM agent 协调提交 → 自动审核
+2. **二级(LLM 故障)**:规则引擎降级直提(`fallback_direct_submit`,§3.3)→ 强制人工审核
+3. **三级(LLM + 规则引擎均故障)**:`human_submit_token` 人员直提 → 强制人工审核
+
+**token 回收**:agent 恢复后,admin 调用 `revoke_human_token(token_id)` 回收人工 token(对齐主 PRD §FR4.1 `revoke_human_token` 工具)。未回收的 token 24h 后自动过期。
+
+### 2.3 三层硬预算与 Agent 行为护栏(v3.0 重写,对齐主 PRD §FR3.5)
+
+> **对齐说明**:v2.x 版本硬预算数值(Task 10k/$5/$50)与主 PRD §FR3.5 矛盾,审核报告 review-part2 P0-2/P0-8 标记为 P0 阻塞项。v3.0 以主 PRD §FR3.5 为权威源全面对齐。
+
+#### 2.3.1 四层硬预算(阈值 / 超限动作 / 恢复条件)
+
+| 层级 | 限额(主 PRD §FR3.5 权威值) | 超限动作 | 恢复条件 |
+|---|---|---|---|
+| **Task 级** | 20k token(输入+输出)/ 3 次重试 | **硬中断**:Task 终止,节点标记 `need_human=True`(非状态,是标记);节点状态保持 `ready`/`in_progress`,Dashboard 高亮告警 | 人工介入处理(补字段/重提/转 human_submit_token 直提)后清除标记 |
+| **Agent 级** | $10/日(按模型价格折算,日滚动窗口) | **排队等待**:新 Task 进队列不 dispatch,等待次日配额刷新;Langfuse 告警 ALR-15 | 次日 00:00(配置时区)配额重置,队列中的 Task 自动出队 dispatch |
+| **管线级** | $100 | **暂停管线**:`pause_pipeline` 自动触发,ready 节点不再 dispatch,级联事件挂起(§FR2.7);已 in_progress 的 Task 完成后不再起新 Task | admin 手动 `resume_pipeline` + 追加预算或切换更便宜模型后恢复 |
+| **平台级** | $4000/月 | **全局降级**:所有 agent 自动切换到更便宜模型(如 Sonnet→Haiku);通知 admin | 月初配额重置或 admin 手动上调预算后恢复原模型 |
+
+**降级开关(平台级触发后生效)**:`design_agent` Haiku→本地小模型;`product/server/client_agent` Sonnet→Haiku。降级期间 PR 标记 `model_tier=degraded`,强制 `requires_human_review=true`。
+
+**`need_human` 语义澄清**(对齐 review-part2 P0-8):`need_human` **不是节点状态**,而是节点上的布尔标记(`need_human: bool`)。节点状态机保持原态(`ready`/`in_progress`),Dashboard 高亮告警等待人工介入。这避免与 11 态状态机冲突。
+
+#### 2.3.2 Session 级 Token 机制(对齐主 PRD §FR3.5 Agent 身份强绑定)
+
+v2.x 的 token 是 RoleInstance 级(静态),v3.0 升级为 **session 级**(动态),防止 LLM 社会工程越权:
+
+```python
+# crew/session_token.py
+from pydantic import BaseModel
+from datetime import datetime, timedelta, timezone
+
+class SessionToken(BaseModel):
+    """session 级 token:绑定 session_id + node_id + allowed_tools,5min 有效"""
+    token_id: str
+    session_id: str                    # 一次 Task 执行 = 一个 session
+    node_id: str                       # 绑定到具体节点(防跨节点越权)
+    role: str                          # product/server/design/client/generator
+    instance_id: str                   # RoleInstance ID
+    allowed_tools: list[str]           # 该 session 允许调用的 MCP 工具子集
+    expires_at: datetime               # 5min 有效(创建时刻 + 5min)
+    classification_clearance: str      # 密级许可(public/internal/confidential/restricted)
+
+def issue_session_token(node_id: str, role: str, instance_id: str,
+                        skill_allowed_tools: list[str]) -> SessionToken:
+    """节点 ready → build_crew 时签发 session token"""
+    return SessionToken(
+        token_id=f"st_{node_id}_{int(datetime.now(timezone.utc).timestamp())}",
+        session_id=f"sess_{node_id}",
+        node_id=node_id,
+        role=role,
+        instance_id=instance_id,
+        allowed_tools=skill_allowed_tools,          # 来自 skill.allowed_mcp_tools
+        expires_at=datetime.now(timezone.utc) + timedelta(minutes=5),
+        classification_clearance=get_role_instance(instance_id).clearance,
+    )
+```
+
+**MCP Server 校验(每次调用)**:
+1. token 未过期(`expires_at > now`)
+2. `node_id` 匹配当前调用目标
+3. 调用的工具在 `allowed_tools` 列表中
+4. 产物的 `classification` ≤ token 的 `classification_clearance`
+
+任一不满足 → 返回 `E_PERMISSION_DENIED` + 触发 ALR-14(越权尝试告警)。
+
+#### 2.3.3 key_constraints 提取算法(对齐主 PRD §FR3.5 + review-part2 P0-8)
+
+主 PRD §FR3.5 要求 `get_dependencies` 返回 `key_constraints` 字段,结构化高亮上游 must 级约束。review-part2 P0-8 指出原算法未定义。v3.0 定义如下:
+
+**提取原则**:管理方**不解析业务内容**(§1.2),只按 skill 声明的元数据规则提取。
+
+```python
+# mcp_server/key_constraints.py
+def extract_key_constraints(upstream_node_id: str, upstream_content: str,
+                             upstream_skill: dict) -> list[dict]:
+    """
+    从上游产物提取 must 级关键约束,注入下游 agent 上下文。
+    提取规则由 skill.yaml 的 key_constraints_extractor 声明(非 LLM 提取)。
+    """
+    extractor = upstream_skill.get("artifact_constraints", {}).get("key_constraints_extractor")
+    if not extractor:
+        return []                          # skill 未声明提取规则 → 返回空
+    constraints = []
+    for rule in extractor:
+        if rule["type"] == "jsonpath":
+            values = jsonpath_extract(upstream_content, rule["path"])
+            if values:
+                constraints.append({
+                    "level": rule.get("level", "must"),     # must / should / info
+                    "text": rule["template"].format(values=values),
+                    "source_field": rule["path"],
+                })
+        elif rule["type"] == "regex":
+            matches = re.findall(rule["pattern"], upstream_content)
+            if matches:
+                constraints.append({
+                    "level": rule.get("level", "must"),
+                    "text": rule["template"].format(matches=matches),
+                    "source_field": rule["pattern"],
+                })
+    return constraints
+```
+
+**skill.yaml 中声明提取规则**(示例,api-contract-skill):
+```yaml
+artifact_constraints:
+  key_constraints_extractor:
+    - type: jsonpath
+      path: "$.endpoints[*].method"
+      level: must
+      template: "上游契约定义了 {values} 方法,下游实现必须覆盖"
+    - type: jsonpath
+      path: "$.error_codes[*].code"
+      level: must
+      template: "上游契约错误码 {values} 必须在客户端处理"
+```
+
+**注入下游 agent context**:`get_dependencies` 返回结构(对齐主 PRD §6.5 行 1612):
+```json
+[{"node_id": "n1", "content": "...", "stability": "stable",
+  "key_constraints": [{"level": "must", "text": "上游契约定义了 ['GET','POST'] 方法,下游实现必须覆盖"}]}]
+```
+
+agent backstory 强制要求(对齐主 PRD §FR3.5):"必须遵守 `key_constraints` 中 `level=must` 的约束"。
+
+#### 2.3.4 Agent 行为基线(对齐主 PRD §FR3.5 ALR-13~15)
+
+| 告警码 | 检测维度 | 基线定义 | 触发条件 | 动作 |
+|---|---|---|---|---|
+| **ALR-13** | 循环检测 | `allowed_sequences`:每个 role 声明合法工具调用序列(如 `get_deps → submit → update_progress`) | 同一 agent 对同一节点的工具调用序列偏离 `allowed_sequences` 超过 **N=3 次** | 告警 Langfuse + 中断 Task,节点标 `need_human=True` |
+| **ALR-14** | 越权尝试 | `forbidden_tools`:每个 role 声明禁止调用的工具(如 product_agent 禁 `approve_pr`) | 调用不在 `allowed_tools` 列表中的工具(session token 校验拦截) | 拒绝调用(`E_PERMISSION_DENIED`)+ 告警 + 审计记录 |
+| **ALR-15** | 成本异常 | 单 Task 基线 = 20k token;单 Agent 日基线 = $10 | 单 Task 突破 20k token 或单 Agent 突破 $10/日 | 硬中断 / 排队(见 §2.3.1)+ 告警 |
+
+**allowed_sequences / forbidden_tools 声明**(在 RoleInstance 配置中):
+```yaml
+# config/role_instances.yaml
+product:
+  allowed_sequences:
+    - [get_dependencies, submit_artifact, update_progress]
+    - [get_dependencies, update_progress, submit_artifact]
+  forbidden_tools:
+    - approve_pr
+    - reject_pr
+    - set_gate_policy
+  deviation_threshold: 3              # 偏离 N 次告警
+```
+
+#### 2.3.5 Task 重入队上限(对齐 review-part2 P0-8)
+
+Task 失败后节点回 `ready`,CrewOrchestrator 重新入队等待下次 ready 事件。为防无限重试:
+
+| 重入队次数 | 节点状态 | 动作 |
 |---|---|---|
-| 单 Task | token 消耗 ≤ 10k(输入+输出) | 超限记录 warning,不强制中断(避免卡管线) |
-| 单 Agent / 日 | 成本 ≤ $5(按模型价格折算) | 超限告警 Langfuse,新 Task 排队等待配额刷新 |
-| 管线级 | 全链路 agent 成本 ≤ $50 | 超限告警,允许继续(不阻塞交付)但记审计 |
-| 降级开关 | `design_agent` 可切 Haiku→本地小模型 | 配额紧张时自动降级,牺牲少量质量换成本 |
+| 1~3 次 | `ready`(可重试) | 正常重入队,等待下次 dispatch |
+| **>3 次** | `ready` + `need_human=True` | **停止自动重试**,Dashboard 高亮告警,等待人工介入 |
 
-**实现**:每次 LLM 调用经 `@langfuse_trace` 记录 token + cost,按 agent_id 聚合日成本,超阈值触发告警(详见 FR7 监控)。
+```python
+# crew/crew_orchestrator.py(§4.3 _handle_ready 扩展)
+MAX_REQUEUE = 3
+
+async def _handle_ready(self, event: ReadyEvent):
+    requeue_count = get_requeue_count(event.node_id)
+    if requeue_count >= MAX_REQUEUE:
+        await self.completion_queue.put(CompletionEvent(
+            event_type="task_failed", node_id=event.node_id,
+            error=f"Task 重入队超限({MAX_REQUEUE} 次),转 needs_human",
+            trace_id=event.trace_id,
+        ))
+        await mark_need_human(event.node_id, reason="requeue_exceeded")
+        return
+    # ... 正常执行
+    increment_requeue_count(event.node_id)
+```
+
+#### 2.3.6 成本归因 Dashboard(对齐主 PRD §FR7.3 + AC7.8)
+
+主 PRD §FR7.3 定义"成本归因"视图(数据源:`agent.cost` span),AC7.8 要求展示 Task/Agent/管线/平台四级成本。v3.0 Dashboard 设计:
+
+| 视图 | 聚合维度 | 展示内容 | 告警阈值 |
+|---|---|---|---|
+| Task 级成本 | `trace.span(cost)` 按 node_id 聚合 | 单 Task token 消耗 + 折算 USD;超 20k token 标红 | 20k token |
+| Agent 级成本 | 按 instance_id + 日期聚合 | 各 RoleInstance 日累计成本;超 $10/日 标黄 + 排队状态 | $10/日 |
+| 管线级成本 | 按 pipeline_id 聚合 | 管线全链路累计成本;超 $100 标橙 + 暂停状态 | $100 |
+| 平台级成本 | 按月聚合 | 平台月累计成本;超 $4000 标红 + 降级状态 | $4000/月 |
+| 预算利用率 | 各层级 actual/budget | 进度条:绿(<70%)/黄(70~90%)/红(>90%) | — |
+
+**实现**:每次 LLM 调用经 `@langfuse_trace` 记录 token + cost span(`agent.cost`),按 agent_id/node_id/pipeline_id 聚合,Dashboard 实时查询 Langfuse API(详见 FR7 监控)。
 
 ### 2.4 Agent 工具权限矩阵(细化到参数级)
 
 PRD §3.2 仅到工具级。下表细化每个 agent 调用每个工具时的**参数约束**——这是 MCP Server 鉴权层(见 fr4-data-api.md §3)的强制校验依据:
 
-| 工具 | product_agent | server_agent | design_agent | client_agent | 参数级约束(所有 agent 通用) |
-|---|---|---|---|---|---|
-| `submit_artifact` | ✅ node_type ∈ {product_spec} | ✅ node_type ∈ {api_contract, server_impl, server_test} | ✅ node_type ∈ {design_proto, design_asset} | ✅ node_type ∈ {client_ui, client_func, client_delivery} | `node_id` 必须属于本 agent 角色(按 pipeline.yaml 的 node.role 校验);`repo` 必须是注册的产物仓库;`branch` 命名 `feat/{role}/{node_type}-{seq}`;`toolspec_framework` 非空且 ≤ 64 字符 |
-| `update_progress` | ✅ 仅本角色节点 | ✅ 仅本角色节点 | ✅ 仅本角色节点 | ✅ 仅本角色节点 | `node_id` 属于本角色;`status` ∈ {in_progress}(只能置 in_progress,不能置 done/blocked);`note` ≤ 500 字符 |
-| `get_dependencies` | ✅ | ✅ | ✅ | ✅ | `node_id` 必须是调用方节点的上游(防越权读取无关节点产物) |
-| `request_approval` | ❌ | ✅ node_type ∈ {api_contract} | ❌ | ✅ node_type ∈ {client_delivery} | `node_id` 属于本角色且为契约/交付物(首次/最终把关);`approver` 必须是合法 reviewer_id |
-| `review_artifact_pr` | ❌ | ❌ | ❌ | ❌ | 仅管理方 bot/reviewer 可调(非角色 agent 工具) |
-| `approve_pr` / `reject_pr` | ❌ | ❌ | ❌ | ❌ | 仅 reviewer/admin |
-| `get_pipeline_state` | ✅ 只读 | ✅ 只读 | ✅ 只读 | ✅ 只读 | 无副作用,所有 agent 可查全局状态 |
-| `set_gate_policy` | ❌ | ❌ | ❌ | ❌ | 仅 admin |
+| 工具 | product_agent | server_agent | design_agent | client_agent | generator_agent | 参数级约束(所有 agent 通用) |
+|---|---|---|---|---|---|---|
+| `submit_artifact` | ✅ node_type ∈ {product_spec} | ✅ node_type ∈ {api_contract, server_impl, server_test, server_delivery} | ✅ node_type ∈ {design_proto, design_asset} | ✅ node_type ∈ {client_ui, client_logic, client_func, client_delivery} | ✅ node_type ∈ {derived_artifact} | `node_id` 必须属于本 agent 角色(按 pipeline.yaml 的 node.role 校验);`repo` 必须是注册的产物仓库;`branch` 命名 `feat/{role}/{node_type}-{seq}`;`toolspec_framework` 非空且 ≤ 64 字符;`classification` 必须声明且 ≤ token clearance |
+| `update_progress` | ✅ 仅本角色节点 | ✅ 仅本角色节点 | ✅ 仅本角色节点 | ✅ 仅本角色节点 | ✅ 仅本角色节点 | `node_id` 属于本角色;`status` ∈ {in_progress}(只能置 in_progress,不能置 done/blocked);`note` ≤ 500 字符 |
+| `get_dependencies` | ✅ | ✅ | ✅ | ✅ | ✅ | `node_id` 必须是调用方节点的上游(防越权读取无关节点产物);返回内容按 `classification_clearance` 过滤 |
+| `request_approval` | ❌ | ✅ node_type ∈ {api_contract, server_delivery} | ❌ | ✅ node_type ∈ {client_delivery} | ❌ | `node_id` 属于本角色且为契约/交付物(首次/最终把关);`approver` 必须是合法 reviewer_id |
+| `report_generation_status` | ❌ | ❌ | ❌ | ❌ | ✅ | `node_id` ∈ {derived_artifact};`status` ∈ {generated, failed};回传后触发下游消费 |
+| `review_artifact_pr` | ❌ | ❌ | ❌ | ❌ | ❌ | 仅管理方 bot/reviewer 可调(非角色 agent 工具) |
+| `approve_pr` / `reject_pr` | ❌ | ❌ | ❌ | ❌ | ❌ | 仅 reviewer/admin |
+| `get_pipeline_state` | ✅ 只读 | ✅ 只读 | ✅ 只读 | ✅ 只读 | ✅ 只读 | 无副作用,所有 agent 可查全局状态 |
+| `set_gate_policy` | ❌ | ❌ | ❌ | ❌ | ❌ | 仅 admin |
 
 **关键约束说明:**
 - **node_type 白名单**:agent 只能提交本角色产物类型,server_agent 不能提交 design_asset(防角色越权)。
@@ -662,22 +908,81 @@ async def handle_ready_batch(events: list[ReadyEvent]):
 | 维度 | 限制 | 理由 |
 |---|---|---|
 | 同角色节点 | 串行(sequential) | 避免同角色 agent 并发提交冲突(如 server 多节点抢同一产物仓库分支) |
-| 不同角色 | 并行(gather) | server/design/product/client 互不依赖,天然并行 |
-| 全局并发 Crew | ≤ 4(每角色一个) | 对应 4 角色 |
+| 不同角色 | 并行(gather) | server/design/product/client/generator 互不依赖,天然并行 |
+| 全局并发 Crew | ≤ 5(每角色一个) | 对应 5 角色(含 generator) |
 | 单 agent 并发 Task | 1(max_rpm 限流) | CrewAI 单 agent 串行处理 Task |
+
+### 5.4 Competition Mode(竞争模式,v3.0 新增)
+
+**场景**:同一节点的多个上游产物可由不同人员/团队**并行竞争产出**,谁先 done 谁成为该节点的有效上游,其余竞争者的 PR 自动 close。适用于"调研多方案选型""多团队竞速交付"等场景。
+
+**配置**(pipeline.yaml 节点级声明):
+
+```yaml
+# pipeline.yaml 节点配置
+nodes:
+  - id: n_research
+    type: research_spike
+    role: product
+    allow_competition: true              # 开启竞争模式
+    competition_lock_ttl_sec: 14400      # 竞争锁 TTL = 4h(14400s)
+    deps: []
+```
+
+**竞争锁机制**:
+
+| 步骤 | 动作 | 说明 |
+|---|---|---|
+| 1. 竞争开始 | 多个 RoleInstance 同时对同一竞争节点提交 PR | 每个 PR 持有临时竞争锁(绑定 node_id + instance_id) |
+| 2. 锁 TTL | 4h(TTL 内有效) | 超时未合并的 PR 自动释放锁,cancel 竞争资格 |
+| 3. 首个合并 | 第一个 PR 审核通过 → bot merge → 节点 done | 竞争结束,该 PR 成为有效产物 |
+| 4. 竞争收尾 | 其余竞争 PR 自动 close + 通知提交方 | close 原因标记 `competition_lost`,节点已 done |
+| 5. 锁释放 | done 后竞争锁释放 | 允许后续 changed 重提(走标准 changed 级联) |
+
+```python
+# crew/competition.py
+import asyncio
+from datetime import datetime, timedelta, timezone
+
+COMPETITION_LOCK_TTL = 14400  # 4h
+
+class CompetitionLock:
+    """竞争锁:绑定 node_id,首个合并者胜出"""
+    node_id: str
+    holder_instance_ids: list[str]     # 所有竞争者
+    winner_instance_id: str | None     # 首个合并者
+    locked_at: datetime
+    ttl_sec: int = COMPETITION_LOCK_TTL
+
+    def is_expired(self) -> bool:
+        return (datetime.now(timezone.utc) - self.locked_at).total_seconds() > self.ttl_sec
+
+    def declare_winner(self, instance_id: str):
+        """首个 PR merge 后调用,close 其余竞争 PR"""
+        self.winner_instance_id = instance_id
+        for holder in self.holder_instance_ids:
+            if holder != instance_id:
+                asyncio.create_task(close_competition_pr(holder, reason="competition_lost"))
+```
+
+**与 §5.2 并行策略的关系**:竞争模式是**同角色多 instance 并行**(多个 team_a_server / team_b_server 竞争同一节点),§5.2 的 gather 是**不同角色并行**。两者正交,可组合(如 server 内竞争 + design/product 并行)。
+
+**预算影响**:竞争模式会放大成本(多个 instance 同时消耗 token),触发 §2.3 Agent 级硬预算($10/日)时,竞争者中成本最低的优先合并。
 
 ---
 
-## 6. 6 个完整 skill.yaml(深化点 4)
+## 6. 10 个完整 skill.yaml(深化点 4)
 
-PRD FR5.2 仅给出 `api-contract-skill` 示例。本节补全全部 6 个,均含 `artifact_constraints` / `file_constraints` / `guide_summary` / `allowed_mcp_tools`。版本字段见 §7。
+> **v3.0 更新**:对齐主 PRD §FR5.2 schema。所有 skill 均含 `artifact_constraints`(非 `review_rules`)。新增 `classification` 必填字段、`completeness_contract` 可选字段、`presence` 条件依赖语法。skill 总数 6→10(补 client-logic / server-delivery / research-spike / derived-artifact)。
+
+PRD FR5.2 给出 skill.yaml 结构定义。本节补全全部 10 个,均含 `artifact_constraints` / `file_constraints` / `guide_summary` / `allowed_mcp_tools`。版本字段见 §7。
 
 ### 6.1 product-spec-skill
 
 ```yaml
 # skills/product-spec-skill/skill.yaml
 name: product-spec-skill
-version: "1.0.0"
+version: "1.1.0"
 description: 约束产品需求文档 product_spec 的提交规范
 trigger:
   node_type: product_spec
@@ -690,6 +995,7 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework        # 不限取值(ECC/OpenSpec/custom 均可)
+    - classification            # v3.0 新增:密级 public/internal/confidential/restricted
   deps: []                      # 根节点,无依赖
   min_version: {}
   file_constraints:
@@ -713,7 +1019,7 @@ allowed_mcp_tools:
 ```yaml
 # skills/api-contract-skill/skill.yaml
 name: api-contract-skill
-version: "1.1.0"
+version: "1.2.0"
 description: 约束服务端 api_contract 产物的提交规范
 trigger:
   node_type: api_contract
@@ -726,15 +1032,34 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework        # spec-kit / OpenSpec / custom 均可
-  deps:
-    - product_spec              # 必须依赖需求文档
+    - classification            # v3.0 新增:密级声明
+  deps:                         # v3.0:条件依赖语法(对齐主 PRD §FR5.2)
+    - node_type: product_spec
+      presence: if_present      # 管线无 product_spec 时不计入 R_DEPS_DONE(支持 server_only 拓扑)
+      strictness: strict
   min_version:
-    product_spec: "1.0.0"       # 依赖的 product_spec 最低版本
+    product_spec: "1.0.0"
   file_constraints:
     allowed_extensions: [.yaml, .yml, .json]
     max_size_kb: 1024           # 契约可能较大
     min_size_kb: 1
   requires_human_review: true   # 首次契约影响下游多端,人工把关
+  completeness_contract:        # v3.0 新增:结构存在性校验(对齐主 PRD §FR5.2)
+    required_structures:
+      - jsonpath: "$.endpoints"
+        min_items: 1
+      - jsonpath: "$.error_codes"
+        min_items: 1
+    on_fail: reject             # reject | warn
+  key_constraints_extractor:    # v3.0 新增:为下游提取 must 级约束(§2.3.3)
+    - type: jsonpath
+      path: "$.endpoints[*].method"
+      level: must
+      template: "上游契约定义了 {values} 方法,下游实现必须覆盖"
+    - type: jsonpath
+      path: "$.error_codes[*].code"
+      level: must
+      template: "上游契约错误码 {values} 必须在客户端处理"
 guide_ref: guide.md
 guide_summary: |
   建议 api_contract 包含:端点(method+path)、请求/响应 schema、错误码、鉴权方式。
@@ -753,7 +1078,7 @@ allowed_mcp_tools:
 ```yaml
 # skills/design-handoff-skill/skill.yaml
 name: design-handoff-skill
-version: "1.0.0"
+version: "1.1.0"
 description: 约束设计交接产物(design_proto / design_asset)的提交规范
 trigger:
   node_type: [design_proto, design_asset]   # 一个 skill 覆盖两种设计产物
@@ -766,8 +1091,11 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework        # Figma / TemPad / custom 均可
-  deps:
-    - product_spec              # 设计依赖需求
+    - classification            # v3.0 新增:密级声明
+  deps:                         # v3.0:条件依赖语法
+    - node_type: product_spec
+      presence: if_present      # design_only 拓扑无 product_spec 时不阻断
+      strictness: strict
   min_version:
     product_spec: "1.0.0"
   file_constraints:
@@ -793,7 +1121,7 @@ allowed_mcp_tools:
 ```yaml
 # skills/server-impl-skill/skill.yaml
 name: server-impl-skill
-version: "1.0.0"
+version: "1.1.0"
 description: 约束服务端实现引用(server_impl / server_test)的提交规范
 trigger:
   node_type: [server_impl, server_test]
@@ -806,8 +1134,11 @@ artifact_constraints:
     - source.path                # 代码路径
     - source.commit              # 代码 commit hash
     - toolspec.framework        # Claude Code / Cursor / custom
-  deps:
-    - api_contract              # 实现依赖契约
+    - classification            # v3.0 新增:密级声明
+  deps:                         # v3.0:条件依赖语法
+    - node_type: api_contract
+      presence: required        # 实现必须依赖契约
+      strictness: strict
   min_version:
     api_contract: "1.0.0"
   file_constraints:
@@ -834,7 +1165,7 @@ allowed_mcp_tools:
 ```yaml
 # skills/client-ui-skill/skill.yaml
 name: client-ui-skill
-version: "1.0.0"
+version: "1.1.0"
 description: 约束客户端 UI 实现(client_ui)的提交规范
 trigger:
   node_type: client_ui
@@ -847,9 +1178,14 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework        # Cursor / Claude Code / custom
-  deps:
-    - api_contract              # UI 依赖接口契约(数据绑定)
-    - design_asset              # UI 依赖设计标注(视觉还原)
+    - classification            # v3.0 新增:密级声明
+  deps:                         # v3.0:条件依赖语法
+    - node_type: api_contract
+      presence: required        # UI 依赖接口契约(数据绑定)
+      strictness: strict
+    - node_type: design_asset
+      presence: if_present      # 无设计拓扑(no-design)时不阻断
+      strictness: strict
   min_version:
     api_contract: "1.0.0"
     design_asset: "1.0.0"
@@ -861,7 +1197,7 @@ artifact_constraints:
 guide_ref: guide.md
 guide_summary: |
   client_ui:提交客户端代码仓库的 commit 引用。
-  建议实现已对照 design_asset 还原视觉,并按 api_contract 对接数据层。
+  建议实现已对照 design_asset 还原视觉(若 effective_deps 含 design_asset),并按 api_contract 对接数据层。
   建议含组件清单与页面路由,供 client_func 联调参考。
   管理方不解析代码内容,仅校验引用存在性 + 依赖完整性。
 allowed_mcp_tools:
@@ -875,7 +1211,7 @@ allowed_mcp_tools:
 ```yaml
 # skills/client-delivery-skill/skill.yaml
 name: client-delivery-skill
-version: "1.0.0"
+version: "1.1.0"
 description: 约束客户端交付物(client_func / client_delivery)的提交规范
 trigger:
   node_type: [client_func, client_delivery]
@@ -888,9 +1224,14 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework
-  deps:
-    - client_ui                 # 功能依赖 UI 实现
-    - server_impl               # 联调依赖服务端实现
+    - classification            # v3.0 新增:密级声明
+  deps:                         # v3.0:条件依赖语法
+    - node_type: client_ui
+      presence: required        # 功能依赖 UI 实现
+      strictness: strict
+    - node_type: server_impl
+      presence: if_present      # 联调依赖服务端实现(server_only 无 client 时不计)
+      strictness: strict
   min_version:
     client_ui: "1.0.0"
     server_impl: "1.0.0"
@@ -912,16 +1253,196 @@ allowed_mcp_tools:
   - request_approval            # 交付物可请求最终审批
 ```
 
-### 6.7 Skill 约束摘要对照表
+### 6.7 client-logic-skill(v3.0 新增,对齐主 PRD §FR5.4)
 
-| Skill | node_type | deps 必含 | requires_human_review | allowed_mcp_tools 数 |
+```yaml
+# skills/client-logic-skill/skill.yaml
+name: client-logic-skill
+version: "1.0.0"
+description: 约束纯客户端逻辑(client_logic,埋点/网络层等,无 UI)的提交规范
+trigger:
+  node_type: client_logic
+  role: client
+artifact_constraints:
+  required_fields:
+    - title
+    - version
+    - source.repo
+    - source.path
+    - source.commit
+    - toolspec.framework
+    - classification
+  deps:                         # 条件依赖语法
+    - node_type: api_contract
+      presence: if_present      # 纯逻辑可能不依赖契约(如埋点 SDK)
+      strictness: strict
+  min_version:
+    api_contract: "1.0.0"
+  file_constraints:
+    allowed_extensions: [.json]
+    max_size_kb: 64
+    min_size_kb: 1
+  requires_human_review: false
+guide_ref: guide.md
+guide_summary: |
+  client_logic:提交纯客户端逻辑代码仓 commit 引用(无 UI 部分)。
+  典型场景:埋点 SDK、网络层封装、工具函数库。
+  若依赖 api_contract(如网络层对接接口),按契约实现。
+  管理方不解析代码内容,仅校验引用存在性 + 依赖完整性。
+allowed_mcp_tools:
+  - submit_artifact
+  - update_progress
+  - get_dependencies
+```
+
+### 6.8 server-delivery-skill(v3.0 新增,对齐主 PRD §FR5.4)
+
+```yaml
+# skills/server-delivery-skill/skill.yaml
+name: server-delivery-skill
+version: "1.0.0"
+description: 约束服务端交付门禁产物(server_delivery)的提交规范
+trigger:
+  node_type: server_delivery
+  role: server
+artifact_constraints:
+  required_fields:
+    - title
+    - version
+    - source.repo
+    - source.path
+    - source.commit
+    - toolspec.framework
+    - classification
+  deps:                         # 条件依赖语法
+    - node_type: server_impl
+      presence: required        # 交付必须依赖实现
+      strictness: strict
+    - node_type: server_test
+      presence: required        # 交付必须依赖测试
+      strictness: strict
+  min_version:
+    server_impl: "1.0.0"
+    server_test: "1.0.0"
+  file_constraints:
+    allowed_extensions: [.json, .md]            # 引用 + 交付清单
+    max_size_kb: 256
+    min_size_kb: 1
+  requires_human_review: true                  # 服务端交付门禁,人工把关
+guide_ref: guide.md
+guide_summary: |
+  server_delivery:服务端交付门禁产物(对称 client_delivery;server_only 管线用)。
+  建议含:交付清单、部署说明、已知问题、回滚方案。
+  交付前需 server_impl + server_test 均 done。
+  管理方不解析代码内容,仅校验引用存在性 + 依赖完整性。
+allowed_mcp_tools:
+  - submit_artifact
+  - update_progress
+  - get_dependencies
+  - request_approval            # 交付物可请求审批
+```
+
+### 6.9 research-spike-skill(v3.0 新增,对齐主 PRD §FR5.4)
+
+```yaml
+# skills/research-spike-skill/skill.yaml
+name: research-spike-skill
+version: "1.0.0"
+description: 约束调研/技术预研旁路产物(research_spike)的提交规范
+trigger:
+  node_type: research_spike
+  role: product                  # 也可为 server(预研方角色)
+artifact_constraints:
+  required_fields:
+    - title
+    - version
+    - source.repo
+    - source.path
+    - source.commit
+    - toolspec.framework
+    - classification
+  deps: []                       # 可作多根 DAG 的根节点,无依赖
+  min_version: {}
+  file_constraints:
+    allowed_extensions: [.md, .yaml, .yml, .json]
+    max_size_kb: 1024
+    min_size_kb: 1
+  requires_human_review: false   # 调研结论,自动审核
+guide_ref: guide.md
+guide_summary: |
+  research_spike:调研/技术预研旁路产物,可与 product_spec 并行作多根。
+  建议含:调研背景、方案对比、结论建议、风险点。
+  可用任意工具产出(Markdown / Notion 导出 / 自定义格式)。
+  管理方不解析内容,仅校验引用存在性。
+  支持 allow_competition(§5.4 竞争模式,多方案并行调研)。
+allowed_mcp_tools:
+  - submit_artifact
+  - update_progress
+  - get_dependencies
+```
+
+### 6.10 derived-artifact-skill(v3.0 新增,对齐主 PRD §FR5.4)
+
+```yaml
+# skills/derived-artifact-skill/skill.yaml
+name: derived-artifact-skill
+version: "1.0.0"
+description: 约束派生产物(derived_artifact,SDK/文档/发布包)的提交规范
+trigger:
+  node_type: derived_artifact
+  role: generator                 # 管理方内置 bot
+artifact_constraints:
+  required_fields:
+    - title
+    - version
+    - source.repo
+    - source.path
+    - source.commit
+    - toolspec.framework          # 生成工具(generator 内部声明)
+    - classification
+    - derived_from                # v3.0 新增:派生源(上游产物 node_id)
+    - generator_info              # v3.0 新增:生成器信息(模型/版本/命令)
+  deps:                           # 条件依赖语法
+    - node_type: derived_from
+      presence: required          # 派生产物必须声明上游源
+      strictness: strict
+  min_version: {}
+  file_constraints:
+    allowed_extensions: [.json, .yaml, .md, .zip, .tar.gz]
+    max_size_kb: 10240            # 发布包可能较大(>10MB 走 LFS)
+    min_size_kb: 1
+  requires_human_review: false    # 派生产物依赖上游已审产物,自动审核
+guide_ref: guide.md
+guide_summary: |
+  derived_artifact:由 generator_agent 基于上游 done 产物自动派生。
+  典型场景:SDK 代码包(api_contract → SDK)、API 文档、发布包。
+  必须声明 derived_from(上游产物 node_id)+ generator_info(生成器信息)。
+  管理方不解析派生产物内容,仅校验引用存在性 + 上游 done。
+  生成结果通过 report_generation_status 回传。
+allowed_mcp_tools:
+  - submit_artifact
+  - report_generation_status
+  - get_dependencies
+```
+
+### 6.11 Skill 约束摘要对照表(v3.0 更新:10 个 skill)
+
+> 对齐主 PRD §FR5.4 的 10 个 Skill 约束摘要。
+
+| Skill | node_type | deps(presence) | requires_human_review | allowed_mcp_tools 数 |
 |---|---|---|---|---|
 | product-spec-skill | product_spec | 无 | false | 3 |
-| api-contract-skill | api_contract | product_spec | true | 4 |
-| design-handoff-skill | design_proto / design_asset | product_spec | true | 3 |
-| server-impl-skill | server_impl / server_test | api_contract | false | 3 |
-| client-ui-skill | client_ui | api_contract + design_asset | false | 3 |
-| client-delivery-skill | client_func / client_delivery | client_ui + server_impl | true | 4 |
+| api-contract-skill | api_contract | product_spec:`if_present` | true(首次) | 4 |
+| design-handoff-skill | design_proto / design_asset | product_spec:`if_present` | true(design_asset) | 3 |
+| server-impl-skill | server_impl / server_test | api_contract:`required` | false | 3 |
+| client-ui-skill | client_ui | api_contract:`required`;design_asset:`if_present` | false | 3 |
+| client-delivery-skill | client_func / client_delivery | client_ui:`required`;server_impl:`if_present` | true | 4 |
+| **client-logic-skill** | client_logic | api_contract:`if_present` | false | 3 |
+| **server-delivery-skill** | server_delivery | server_impl+server_test:`required` | true | 4 |
+| **research-spike-skill** | research_spike | 无(可作多根) | false | 3 |
+| **derived-artifact-skill** | derived_artifact | derived_from:`required` | false | 3 |
+
+**S6 模型统一确认**:全部 10 个 skill 均使用 `artifact_constraints` 字段名(对齐主 PRD §FR5.2),**无 `review_rules` 字样**。新增字段:`classification`(全部必填)、`completeness_contract`(api-contract-skill 示例)、`key_constraints_extractor`(api-contract-skill 示例)、`presence`/`strictness` 条件依赖语法(全部 deps)。
 
 ---
 
@@ -1044,15 +1565,26 @@ async def _handle_ready(self, event: ReadyEvent):
         ))
         return
     agent = ROLE_TO_AGENT[event.role]
+    # v3.0:签发 session 级 token(§2.3.2)
+    session_token = issue_session_token(
+        event.node_id, event.role, event.instance_id,
+        skill.get("allowed_mcp_tools", []),
+    )
     task = Task(
-        description=f"为节点 {event.node_id}({event.node_type})协调提交产物",
+        description=f"为节点 {event.node_id}({event.node_type})协调提交产物引用:校验人员已产出的产物,通过 MCP submit_artifact 提 PR",
         agent=agent,
         expected_output="产物 PR 已提交",
         context={
             "node_id": event.node_id,
-            "deps_info": event.deps_info,
-            "skill": {                       # 注入 skill 给 agent 参考
+            "instance_id": event.instance_id,           # v3.0 新增(对齐主 PRD §FR3.2)
+            "node_type": event.node_type,                # v3.0 新增
+            "deps_info": event.deps_info,                # 含 key_constraints(§2.3.3)
+            "key_constraints": extract_key_constraints_from_deps(event.deps_info),  # v3.0 新增:must 级约束高亮
+            "participation_profile": state.get("participation", {}).get("profile"),  # v3.0 新增
+            "session_token": session_token,              # v3.0 新增:session 级 token
+            "skill": {                                   # 注入 skill 给 agent 参考
                 "name": skill["name"],
+                "version": skill.get("version", ""),
                 "guide_summary": skill.get("guide_summary", ""),
                 "allowed_mcp_tools": skill.get("allowed_mcp_tools", []),
                 "required_fields": skill["artifact_constraints"]["required_fields"],
@@ -1152,20 +1684,31 @@ flowchart TB
 
 在 PRD FR3.4 / FR5.5 基础上补充:
 
-### FR3 补充验收
+### FR3 补充验收(v3.0 更新:编号从 AC3.6 起,避免与主 PRD AC3.1-AC3.5 冲突)
 
-- AC3.4: 4 个 agent 的 LLM 配置(模型/temperature/max_tokens)可配置且生效(config/llm.yaml)
-- AC3.5: agent Task 失败时,瞬时错误自动重试 ≤ 3 次(指数退避),业务错误不重试
-- AC3.6: LLM 不可用时,降级规则引擎能直提 PR(标记 fallback + 强制人工审)
-- AC3.7: LangGraph ready 事件异步触发 CrewAI,LangGraph 不阻塞等待
-- AC3.8: CompletionEvent 回写 LangGraph,失败 Task 节点回 ready + 通知人员
-- AC3.9: 不同角色 Crew 并行执行(asyncio.gather),同角色节点串行
-- AC3.10: agent 越权提交(如 server_agent 提交 design_asset)被 MCP 拒绝(FORBIDDEN_NODE_ROLE)
-- AC3.11: 单 Task 超 60s 被中断,触发降级或失败通知
+- AC3.6: 5 个 agent(含 generator)的 LLM 配置(模型/temperature/max_tokens)可配置且生效(config/llm.yaml)
+- AC3.7: agent Task 失败时,瞬时错误自动重试 ≤ 3 次(指数退避),业务错误不重试
+- AC3.8: LLM 不可用时,降级规则引擎能直提 PR(标记 fallback + 强制人工审)
+- AC3.9: LangGraph ready 事件异步触发 CrewAI,LangGraph 不阻塞等待
+- AC3.10: CompletionEvent 回写 LangGraph,失败 Task 节点回 ready + 通知人员
+- AC3.11: 不同角色 Crew 并行执行(asyncio.gather),同角色节点串行
+- AC3.12: agent 越权提交(如 server_agent 提交 design_asset)被 MCP 拒绝(FORBIDDEN_NODE_ROLE)
+- AC3.13: 单 Task 超 60s 被中断,触发降级或失败通知
+- AC3.14(v3.0): Task 级 token 突破 20k 触发硬中断,节点标记 `need_human=True`(非状态)
+- AC3.15(v3.0): Agent 级日成本突破 $10 触发排队等待,新 Task 不 dispatch
+- AC3.16(v3.0): 管线级成本突破 $100 触发 `pause_pipeline`,平台级突破 $4000/月触发全局降级
+- AC3.17(v3.0): session 级 token 绑定 node_id + allowed_tools,5min 有效,越权调用返回 E_PERMISSION_DENIED + ALR-14 告警
+- AC3.18(v3.0): get_dependencies 返回 key_constraints(must 级),agent backstory 强制遵守
+- AC3.19(v3.0): agent 行为偏离 allowed_sequences 超 3 次 → ALR-13 告警 + 中断 Task
+- AC3.20(v3.0): Task 重入队超 3 次 → 节点 `need_human=True`,停止自动重试
+- AC3.21(v3.0): generator_agent 可提交 derived_artifact 并调 report_generation_status 回传
+- AC3.22(v3.0): LLM + 规则引擎均故障时,human_submit_token 人员直提 PR(强制人工审),admin 可 revoke_human_token 回收
+- AC3.23(v3.0): competition mode 开启时,首个 PR merge 后其余竞争 PR 自动 close(competition_lost)
+- AC3.24(v3.0): 成本归因 Dashboard 展示 Task/Agent/管线/平台四级成本(对齐 AC7.8)
 
-### FR5 补充验收
+### FR5 补充验收(v3.0 更新:10 个 skill)
 
-- AC5.7: 6 个 skill.yaml 均可被 skill_registry 加载,索引建立成功
+- AC5.7: 10 个 skill.yaml 均可被 skill_registry 加载,索引建立成功
 - AC5.8: 节点 ready 时按 node_type 匹配到正确 skill(含多 node_type 的 skill 如 design-handoff)
 - AC5.9: skill.yaml 变更后热重载生效,无需重启(watchdog 监听)
 - AC5.10: skill 缓存命中时(mtime 未变)不重复解析 yaml
@@ -1173,6 +1716,10 @@ flowchart TB
 - AC5.12: 审计日志记录 skill_used + skill_version
 - AC5.13: 无匹配 skill 的节点提交被拒(配置错误保护)
 - AC5.14: guide_summary 内容注入 agent context 可见,但不强制
+- AC5.15(v3.0): 全部 skill 使用 `artifact_constraints` 字段名,无 `review_rules` 残留
+- AC5.16(v3.0): skill.required_fields 含 `classification`,缺失或超 clearance 的 PR 被拒
+- AC5.17(v3.0): completeness_contract 结构缺失时按 on_fail(reject/warn)策略处理
+- AC5.18(v3.0): skill.deps 使用 `presence: required/optional/if_present` 条件依赖语法,if_present 依赖未 done 不阻断 ready
 
 ---
 
@@ -1193,7 +1740,7 @@ flowchart TB
 ### llm.yaml(可选,集中管理 LLM 配置)
 
 ```yaml
-# config/llm.yaml
+# config/llm.yaml(v3.0:成本数值对齐主 PRD §FR3.5)
 agents:
   product:
     model: anthropic/claude-sonnet-4
@@ -1201,32 +1748,41 @@ agents:
     max_tokens: 2048
     max_iter: 5
     max_rpm: 30
-    daily_cost_limit_usd: 5
+    daily_cost_limit_usd: 10        # v3.0: $5→$10(对齐主 PRD §FR3.5)
   server:
     model: anthropic/claude-sonnet-4
     temperature: 0.2
     max_tokens: 2048
     max_iter: 5
     max_rpm: 30
-    daily_cost_limit_usd: 5
+    daily_cost_limit_usd: 10        # v3.0: $5→$10
   design:
     model: anthropic/claude-haiku-4
     temperature: 0.2
     max_tokens: 1024
     max_iter: 3
     max_rpm: 30
-    daily_cost_limit_usd: 3
+    daily_cost_limit_usd: 10        # v3.0: $3→$10(主 PRD 统一 $10/日,不再按角色区分)
   client:
     model: anthropic/claude-sonnet-4
     temperature: 0.3
     max_tokens: 2048
     max_iter: 5
     max_rpm: 30
-    daily_cost_limit_usd: 5
+    daily_cost_limit_usd: 10        # v3.0: $5→$10
+  generator:                        # v3.0 新增
+    model: anthropic/claude-haiku-4
+    temperature: 0.1
+    max_tokens: 1024
+    max_iter: 3
+    max_rpm: 30
+    daily_cost_limit_usd: 10
 pipeline:
-  total_cost_limit_usd: 50
+  total_cost_limit_usd: 100         # v3.0: $50→$100(对齐主 PRD §FR3.5)
 task:
   timeout_sec: 60
+  token_limit: 20000                # v3.0 新增:Task 级 20k token 硬中断(对齐主 PRD §FR3.5)
+  max_requeue: 3                    # v3.0 新增:重入队上限 3 次(§2.3.5)
 retry:
   max_attempts: 3
   backoff: exponential
@@ -1235,6 +1791,11 @@ retry:
 fallback:
   enabled: true
   force_human_review: true
+session_token:                      # v3.0 新增:session 级 token(§2.3.2)
+  ttl_min: 5
+platform:                           # v3.0 新增:平台级预算(§2.3.1)
+  monthly_cost_limit_usd: 4000      # 对齐主 PRD §FR3.5
+  degrade_action: switch_cheaper_model
 ```
 
 ### 目录结构补充(PRD §23.2 扩展)
@@ -1242,12 +1803,15 @@ fallback:
 ```
 coordination-platform/
 ├─ crew/
-│  ├─ agents.py                 # 4 角色 Agent(§2.2)
+│  ├─ agents.py                 # 5 角色 Agent(§2.2,含 generator)
 │  ├─ llm_config.py             # LLM 配置(§2.1)
 │  ├─ crew_orchestrator.py      # Crew 编排 + 并行(§4.3 §5.2)
 │  ├─ event_bridge.py           # 事件桥接器(§4.3)
 │  ├─ retry.py                  # 失败重试(§3.2)
-│  └─ fallback.py               # 规则引擎降级(§3.3)
+│  ├─ fallback.py               # 规则引擎降级(§3.3)
+│  ├─ session_token.py          # session 级 token(§2.3.2,v3.0 新增)
+│  ├─ human_fallback.py         # human_submit_token 降级(§2.2.1,v3.0 新增)
+│  └─ competition.py            # 竞争锁(§5.4,v3.0 新增)
 ├─ skills/
 │  ├─ registry.py               # skill 发现 + 索引 + 热重载(§8)
 │  ├─ product-spec-skill/
@@ -1255,8 +1819,12 @@ coordination-platform/
 │  ├─ design-handoff-skill/
 │  ├─ server-impl-skill/
 │  ├─ client-ui-skill/
-│  └─ client-delivery-skill/
+│  ├─ client-delivery-skill/
+│  ├─ client-logic-skill/       # v3.0 新增
+│  ├─ server-delivery-skill/    # v3.0 新增
+│  ├─ research-spike-skill/     # v3.0 新增
+│  └─ derived-artifact-skill/   # v3.0 新增
 ├─ config/
-│  └─ llm.yaml                  # LLM 集中配置(附录 A)
+│  └─ llm.yaml                  # LLM 集中配置(附录 A,v3.0 数值对齐)
 └─ ...
 ```

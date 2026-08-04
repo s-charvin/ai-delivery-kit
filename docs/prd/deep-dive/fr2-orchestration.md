@@ -1,27 +1,39 @@
 # FR2 管理编排引擎(LangGraph)深化设计
 
 > **文档性质**:对《coordination-platform-prd.md》FR2 章节的深化补充
-> **版本**:v2.1 | **日期**:2026-08-04 | **状态**:待评审
-> **父文档**:[coordination-platform-prd.md](../coordination-platform-prd.md)
+> **版本**:v3.0 | **日期**:2026-08-04 | **状态**:待评审
+> **父文档**:[coordination-platform-prd.md](../coordination-platform-prd.md)(v3.0,权威源)
 > **调研依据**:[ai-multi-agent-dev-dashboard-research.md](../../research/ai-multi-agent-dev-dashboard-research.md) 第17章 LangGraph 设计
+
+## Changelog
+
+| 版本 | 日期 | 变更摘要 |
+|---|---|---|
+| v2.0 | 2026-07 | 初版:9 个薄弱点深化(7 态状态机 + T1-T18 转移表) |
+| v2.1 | 2026-08-04 | 微调:幂等键 / 退避参数 |
+| **v3.0** | **2026-08-04** | **S1 修复:状态机 7 态 → 11 态(对齐主 PRD v3.0 §FR2.1 + 附录 D11);新增 D1-D12 + S1-S2 转移条目;非法转移防护表覆盖 11 态;§7 补 ParticipationProfile + optional 依赖 DAG 校验;新增 §13 管线级生命周期 5 态;新增 §14 addendum 级联机制** |
+
+> **本版同步依据**:主 PRD v3.0 §FR2.1(11 态定义)、§FR2.2(DAG 规则 + DepDeclaration + ParticipationProfile)、§FR2.5.1(addendum 机制)、§FR2.7(管线级生命周期)、附录 D11(第五轮 P0-R5.17 skipped 态扩展)。
 
 ---
 
 ## 0. 文档范围与补全说明
 
-本文针对 PRD v2.0 FR2 章节的以下 9 个薄弱点进行深化:
+本文针对 PRD v3.0 FR2 章节的以下薄弱点进行深化(v3.0 已合并第五轮 D10/D11 修正):
 
 | # | 薄弱点 | 深化章节 |
 |---|---|---|
-| 1 | 状态机边界条件(多变更/非法跳转/幂等) | §2 |
+| 1 | 状态机边界条件(11 态/多变更/非法跳转/幂等) | §2 |
 | 2 | 并发提交处理(同节点/异节点/LangGraph 并发模型) | §3 |
 | 3 | PR 冲突处理(多 PR 合并/产物路径冲突) | §4 |
 | 4 | 错误恢复与重试(节点失败/MCP/git) | §5 |
 | 5 | checkpointer 配置(Postgres schema/频率/恢复点) | §6 |
-| 6 | 管线加载与校验(DAG 无环/引用完整/热重载) | §7 |
+| 6 | 管线加载与校验(DAG 无环/引用完整/ParticipationProfile/optional 依赖/热重载) | §7 |
 | 7 | 控制节点完整边界条件(gate/approval/fork/switch/notify) | §8 |
 | 8 | LangGraph 配置细节(编译/interrupt/recursion/fan-out) | §9 |
 | 9 | 事件溯源(events 累积/回放/审计/state 重建) | §10 |
+| 10 | 管线级生命周期 5 态(active/paused/cancelled/merged/completed) | §13 |
+| 11 | addendum 级联机制(must/should/info + 超时) | §14 |
 
 **最少 4 张 Mermaid 设计图**:`图 2-1` 完整状态机含 guard、`图 3-1` 并发提交时序、`图 5-1` 错误恢复流程、`图 6-1` checkpoint 恢复;另含 `图 7-1` 管线加载校验流程、`图 10-1` 事件回放流程。
 
@@ -35,10 +47,10 @@ LangGraph StateGraph 是管理/编排层的"心脏",承担 4 项职责:
 
 | 职责 | 实现机制 |
 |---|---|
-| 节点状态机(7 态) | `node_states` dict + 状态转移 guard |
-| 依赖 DAG | `deps` 推导边 + `cascade_node` / `invalidate_node` |
+| 节点状态机(**11 态**) | `node_states` dict + 状态转移 guard(对齐主 PRD v3.0 §FR2.1) |
+| 依赖 DAG | `deps` 推导边 + `cascade_node` / `invalidate_node` + ParticipationProfile materialize |
 | 条件推进 | `add_conditional_edges` 声明式路由 |
-| 变更级联 | done→下游 ready / changed→下游 blocked(递归) |
+| 变更级联 | done→下游 ready / changed→下游 blocked(递归);addendum→下游 must/should/info 弱级联(§14) |
 
 **本深化的 5 条设计原则:**
 
@@ -56,89 +68,239 @@ LangGraph StateGraph 是管理/编排层的"心脏",承担 4 项职责:
 
 ### 2.1 完整状态转移表(所有合法转移)
 
-PRD §2.1 只给出 7 态定义和简化流转图,本节穷举所有合法转移及其 guard / 副作用。状态枚举:`blocked` / `ready` / `pending_review` / `in_progress` / `review` / `done` / `changed`。
+PRD v3.0 §FR2.1 定义 11 态状态机,本节穷举所有合法转移及其 guard / 副作用。状态枚举(11 态,对齐主 PRD §FR2.1 + 附录 D11 P0-R5.17):
+
+| 状态 | 含义 | 类别 |
+|---|---|---|
+| `blocked` | 依赖未满足 | 初始/中间态 |
+| `ready` | 依赖满足,待产出 | 中间态 |
+| `pending_review` | PR 已提交,待审核 | 中间态 |
+| `in_progress` | 开发中(进度更新)/门禁失败打回 | 中间态(产物节点) |
+| `review` | 审批门等待审批 | 中间态(approval 控制节点) |
+| `done` | 产物已合并生效 | 终态(可被 changed/deprecated 打破) |
+| `changed` | 已 done 产物被重新提交(变更) | 中间态 |
+| `draft` | 草案(未完成但可共享) | 中间态 |
+| `deprecated` | 已废弃(仍存在但不推荐新依赖) | 中间态(向 sunset 演进) |
+| `sunset` | 已下线(不可被任何新管线依赖) | 终态 |
+| `skipped` | 可选节点未交付且管线将完成 | 终态(可人工转回 ready) |
+
+> **addendum 不引入新状态**:addendum 是 done 态上的"附加层",节点状态保持 done。详见 §14。
+
+#### 2.1.1 基础转移表(T1-T18,7 态原版)
 
 | # | 源状态 | 目标状态 | 触发事件 | 前置 Guard | 副作用(Side Effect) | 备注 |
 |---|---|---|---|---|---|---|
-| T1 | `(初始)` | `blocked` | `bootstrap_node` | 节点有 deps 且至少一个未 done | 写 `node_states[nid]=blocked`,发 `BLOCKED` event | 默认初始态 |
-| T2 | `(初始)` | `ready` | `bootstrap_node` | 节点无 deps(根节点) | 写 `node_states[nid]=ready`,发 `READY` event,触发 CrewAI 分配 | AC2.1 |
-| T3 | `blocked` | `ready` | `cascade_node` 上游全 done | `all(dep_state==done for dep in deps(nid))` | 写 ready,发 `READY` event,CrewAI 分配 | 级联解锁 |
-| T4 | `ready` | `in_progress` | `update_progress(status=in_progress)` | 调用方为 `role_assignments[nid]` 对应 agent 或 admin | 发 `IN_PROGRESS` event,Langfuse span 开始 | 进度更新 |
-| T5 | `ready` | `pending_review` | `submit_artifact` 开 PR | `skill` 元数据 + 依赖完整性预校验通过;`pending_prs[nid]` 为空 | 写 `pending_prs[nid]=pr_id`,发 `PENDING_REVIEW` event | AC2.7 修正 |
+| T1 | `(初始)` | `blocked` | `bootstrap_node` | 节点有 required deps 且至少一个未满足(strictness=strict 时需 done;accepts_draft 时需 done 或 draft) | 写 `node_states[nid]=blocked`,发 `BLOCKED` event | 默认初始态 |
+| T2 | `(初始)` | `ready` | `bootstrap_node` | 节点无 required deps(根节点)或所有 required deps 已满足 | 写 `node_states[nid]=ready`,发 `READY` event,触发 CrewAI 分配 | AC2.1 |
+| T3 | `blocked` | `ready` | `cascade_node` required deps 全满足 | `all(satisfied(dep) for dep in deps(nid) if dep.presence==required)`,其中 `satisfied(strict)=done`、`satisfied(accepts_draft)∈{done,draft}` | 写 ready,发 `READY` event,CrewAI 分配 | 级联解锁;optional dep 不参与判定(附录 E.2) |
+| T4 | `ready` | `in_progress` | `update_progress(status=in_progress)` | 调用方为 `role_assignments[nid]` 对应 agent 或 admin;节点类型为产物节点 | 发 `IN_PROGRESS` event,Langfuse span 开始 | 进度更新 |
+| T5 | `ready` | `pending_review` | `submit_artifact` 开 PR | `skill` 元数据 + 依赖完整性预校验通过;`pending_prs[nid]` 为空 | 写 `pending_prs[nid]=pr_id`,发 `PENDING_REVIEW` event | AC2.7 |
 | T6 | `in_progress` | `pending_review` | `submit_artifact` 开 PR | 同 T5;且当前 `role_assignments[nid]` 持有者调用 | 同 T5 | 修复后提 PR |
 | T7 | `pending_review` | `done` | `approve_pr` 合并 | PR 已 squash merge;构造 `ArtifactRef` | 写 `artifact_refs[nid]`,清 `pending_prs[nid]`,发 `DONE` event,触发 `cascade_node` | 合并即生效 |
 | T8 | `pending_review` | `ready` | `reject_pr` | PR 已关闭未合并 | 清 `pending_prs[nid]`,发 `REJECT` event,通知提交方 | 驳回 |
 | T9 | `pending_review` | `pending_review` | 重提新 PR(同一节点) | 旧 PR 已 close;`pending_prs[nid]` 被新 pr_id 覆盖 | 替换 `pending_prs[nid]`,发 `RE_SUBMIT` event | 见 §4.1 |
-| T10 | `done` | `changed` | `submit_artifact` 重提已 done 节点的 PR | `artifact_refs[nid]` 已存在;新 commit ≠ 旧 commit | 发 `CHANGED` event,触发 `invalidate_node` 递归失效下游 | AC2.4 |
+| T10 | `done` | `changed` | `submit_artifact` 重提已 done 节点的 PR(modification_type=changed) | `artifact_refs[nid]` 已存在;新 commit ≠ 旧 commit;`change_class` 已声明 | 发 `CHANGED` event,触发 `invalidate_node` 按 coupling×change_class 分级失效下游 | AC2.4 |
 | T11 | `done` | `done` | 同 commit 重提 | 新 commit == 旧 commit | 幂等返回,不发 `CHANGED`,不级联 | 幂等,见 §2.4 |
 | T12 | `changed` | `pending_review` | 重提 PR | 同 T5 | 写 `pending_prs[nid]`,发 `PENDING_REVIEW` event | 变更后重审 |
 | T13 | `changed` | `done` | 直接 approve(变更已合并) | PR 合并 commit 已是最新 | 写 `artifact_refs[nid]`(新 commit),发 `DONE` event,触发 `cascade_node` 解锁下游 | 变更生效 |
-| T14 | `review` | `done` | `approve`(approval 控制节点) | `pending_approvals[nid]` 已 approve | 清 `pending_approvals[nid]`,发 `DONE` event,cascade | 控制节点 |
-| T15 | `review` | `changed` | `reject`(approval 控制节点) | 上游最近产物节点存在 | 上游产物节点置 `changed`(递归),发 `REJECT` event | AC2.6 |
-| T16 | `blocked`/`ready`/`in_progress`/`pending_review` | `blocked` | 下游 cascade 失效(上游 changed 递归) | 本节点是某 changed 节点的下游可达节点 | 清 `artifact_refs[nid]`,清 `pending_prs[nid]`,发 `INVALIDATED` event | 递归失效 |
+| T14 | `review` | `done` | `approve`(approval 控制节点) | `pending_approvals[nid]` 已 approve(多审批人时全部 approve) | 清 `pending_approvals[nid]`,发 `DONE` event,cascade | 控制节点 |
+| T15 | `review` | `changed` | `reject`(approval 控制节点) | 上游最近产物节点存在(沿 deps 反向遍历跳过 control 节点;若无,标记 `NO_ARTIFACT_UPSTREAM`) | 上游产物节点置 `changed`(递归),发 `REJECT` event | AC2.6 |
+| T16 | `blocked`/`ready`/`in_progress`/`pending_review`/`draft`/`done`(strict 下游)/`review` | `blocked` | 下游 cascade 失效(上游 changed breaking + coupling=hard 递归) | 本节点是某 changed 节点的下游可达节点,且 dep.coupling=hard;按 `breaking+hard→hard_invalidate` 分级(见 §2.6 级联矩阵) | 清 `artifact_refs[nid]`/`draft_refs[nid]`,清 `pending_prs[nid]`,发 `INVALIDATED` event;pending_review 时 PR 自动 reject | 递归失效;visited set 防环 |
 | T17 | `done`(控制节点) | `done` | 控制节点透传(fork/notify) | 控制节点上游全 done | 发 `DONE` event,cascade | 透传 |
 | T18 | `in_progress` | `ready` | `gate` 失败打回 | gate policy 校验失败 | 发 `GATE_FAIL` event,通知提交方修复 | AC2.5 |
 
-**说明:**
+#### 2.1.2 draft / 草案转移表(D1-D4)
+
+> 修正来源:主 PRD §FR2.1(行 384)、§FR2.5.1(行 530 草案迭代光谱)。draft 是"未完成但可共享"中间态,不触发 cascade,可作为下游 `strictness=accepts_draft` 的可选依赖。
+
+| # | 源状态 | 目标状态 | 触发事件 | 前置 Guard | 副作用(Side Effect) | 备注 |
+|---|---|---|---|---|---|---|
+| D1 | `ready` | `draft` | `soft_submit_artifact` | 节点类型为产物节点;调用方为 assignee 或 admin;feat 分支 commit 已存在 | 写 `draft_refs[nid]`,发 `DRAFT_CREATED` event,通知 `draft_subscribers[nid]`;**不触发 cascade** | AC2.8 |
+| D2 | `draft` | `draft` | feat 分支 push 新 commit | 新 commit ≠ 旧 commit | 更新 `draft_refs[nid]`,发 `DRAFT_UPDATED` event,通知订阅者 | 草案迭代;AC2.9 |
+| D3 | `draft` | `pending_review` | `submit_artifact`(转正式) | 同 T5 guard;`draft_refs[nid]` 存在 | 清 `draft_refs[nid]`,写 `pending_prs[nid]`,发 `PENDING_REVIEW` event | 草案转正式 |
+| D4 | `draft` | `ready` | `abandon_draft` | 调用方为 assignee 或 admin | 清 `draft_refs[nid]`,发 `DRAFT_ABANDONED` event,通知订阅者 | 放弃草案 |
+
+> **draft vs in_progress 边界**:draft 是独立状态(非 in_progress 子状态)。`in_progress` 时**不能** soft_submit(否则状态冲突);需先回 ready(T18 gate 失败 / 手动)再 D1 进 draft,或直接 T5/T6 提正式 PR。
+
+#### 2.1.3 deprecated / sunset 转移表(D5-D10)
+
+> 修正来源:主 PRD §FR2.1(行 385-386)、§FR2.2(行 467-470 外部依赖持续监控)、附录 D9 修正项 5(外部依赖监控)。
+
+| # | 源状态 | 目标状态 | 触发事件 | 前置 Guard | 副作用(Side Effect) | 备注 |
+|---|---|---|---|---|---|---|
+| D5 | `done` | `deprecated` | 管理方标记废弃 / 版本 superseded | 调用方为 admin;`artifact_refs[nid]` 存在 | 发 `DEPRECATED` event,通知 CrossPipelineReferenceRegistry 中所有引用方;`deprecated_at` 时间戳写入 | 主动废弃 |
+| D6 | `deprecated` | `sunset` | deprecated 后 N 天(NFR 可配,默认 30) | `now - deprecated_at >= N 天` | 发 `SUNSET` event,强制所有下游 → blocked(递归 hard_invalidate);从 `active_version` 移除 | 终态下线 |
+| D7 | `done` | `deprecated` | ExternalHealthMonitor 检测到外部 URL 失效 | `external_health[nid].status = unreachable`;产物 manifest 声明 `external_resources` | 同 D5;附 `reason=external_url_invalid` | AC2.10 |
+| D8 | `done` | `deprecated` | 第三方 API 变更(破坏性) | ExternalHealthMonitor 检测到 API schema 不兼容 | 同 D5;附 `reason=third_party_api_breaking` | 外部依赖失效 |
+| D9 | `done` | `deprecated` | CVE 漏洞披露 | 安全扫描规则族 R_MALWARE_SCAN / 外部 CVE feed 命中 | 同 D5;附 `reason=cve_vulnerability`;触发 `handle_security_incident` | 安全合规 |
+| D10 | (跨管线) | (通知) | 跨管线 deprecated 通知 | 上游跨管线 hub:// 引用节点 deprecated | 查 CrossPipelineReferenceRegistry,向所有引用方发 `DEPRECATED_NOTIFY` event;引用方可选择升级或保持(有限期) | 跨管线级联,不改本管线状态 |
+
+> **deprecated 期间下游行为**:deprecated 节点的下游**保持原状态**(不立即 blocked),但收到 `DEPRECATED_NOTIFY`;下游 owner 需在 sunset 前完成升级。sunset 时强制下游 blocked(D6 副作用)。
+
+#### 2.1.4 skipped 转移表(S1-S2)
+
+> 修正来源:主 PRD §FR2.1(行 387)、附录 D11 P0-R5.17(skipped 态扩展)。skipped 用于 optional 节点未交付但管线 core 节点已全 done 的场景,不阻塞 completed。
+
+| # | 源状态 | 目标状态 | 触发事件 | 前置 Guard | 副作用(Side Effect) | 备注 |
+|---|---|---|---|---|---|---|
+| S1 | `blocked`/`ready`/`in_progress` | `skipped` | `skip_finalize_node`(core 节点全 done 时扫 optional 未 done)/ 显式 `skip_node` | 节点 `presence=optional` 或在 `completion.optional_node_types` 中;管线 `core_nodes_done` 谓词即将满足 | 写 `node_states[nid]=skipped`,发 `SKIPPED` event,记 skip 原因;**不阻塞 completed** | AC2.7 修正 |
+| S2 | `skipped` | `ready` | 人工反悔 `reactivate_node` / 后到依赖触发 `OPTIONAL_DEP_ARRIVED` | 调用方为 admin;管线未进入 completed/cancelled 终态 | 写 `node_states[nid]=ready`,发 `REACTIVATED` event,CrewAI 重新分配 | 可逆终态 |
+| S3 | `skipped` | `skipped` | 后到依赖到达但 owner 选择继续 skip | `OPTIONAL_DEP_ARRIVED` 后 owner 显式 `keep_skipped` | 发 `SKIP_MAINTAINED` event,不改变状态 | 幂等 |
+
+> **skipped 与 completed 的关系**(对齐 AC2.7 修正):管线 `core 节点全 done 且 optional 节点全 done 或 skipped` 时进入 `completed`。optional 节点失败只告警不挡完成(自动 skipped)。
+
+#### 2.1.5 转移表汇总说明
+
+**状态类别边界:**
 - `review` 状态仅 `approval` 控制节点进入;产物节点不进 `review`,产物节点走 `pending_review`。
 - `in_progress` 仅产物节点会进入(由 `update_progress`);控制节点不进 `in_progress`。
+- `draft` 仅产物节点可进入(soft_submit);控制节点不进 draft。
+- `deprecated`/`sunset` 仅 `done` 态可进入(已生效产物才可废弃)。
+- `skipped` 仅 optional 节点可进入(required 节点不可 skip)。
+
+**幂等性要点:**
 - T11 是幂等转移,不发 `CHANGED` 避免 cascade 风暴。
-- T16 是递归失效,需用 visited set 防环(虽然 DAG 无环,但跨管线引用需防护)。
+- D2 草案 push 同 commit 重放幂等(不发 `DRAFT_UPDATED`)。
+- S3 保持 skip 幂等。
+
+**递归防护:**
+- T16 递归失效需用 visited set 防环(虽然 DAG 无环,但跨管线引用需防护)。
+- D6 sunset 触发的下游 blocked 复用 T16 递归逻辑。
 
 ### 2.2 非法转移防护表
 
-以下转移被 Guard 拒绝,返回 `INVALID_TRANSITION` 错误(对齐 FR4 错误码体系):
+以下转移被 Guard 拒绝,返回 `INVALID_TRANSITION` 错误(对齐 FR4 错误码体系)。本表覆盖 11 态之间的所有非法转移组合。
+
+#### 2.2.1 基础 7 态非法转移(原版保留)
 
 | 源状态 | 目标状态 | 拒绝原因 | 错误码 |
 |---|---|---|---|
 | `blocked` | `pending_review` | 依赖未满足不能提 PR | `INVALID_TRANSITION` + `DEPS_NOT_DONE` |
 | `blocked` | `done` | 跳过产出/审核 | `INVALID_TRANSITION` |
+| `blocked` | `changed` | 未 done 不能 changed | `INVALID_TRANSITION` + `NOT_DONE` |
 | `ready` | `done` | 跳过 pending_review | `INVALID_TRANSITION` |
 | `ready` | `review` | review 仅 approval 控制节点可进 | `INVALID_TRANSITION` + `NOT_APPROVAL_NODE` |
+| `ready` | `blocked`(非 cascade 路径) | 仅 T16 cascade 可回 blocked | `INVALID_TRANSITION` |
 | `pending_review` | `in_progress` | 审核中不可改进度 | `INVALID_TRANSITION` + `REVIEW_IN_PROGRESS` |
 | `pending_review` | `ready`(非 reject 路径) | 仅 `reject_pr` 可回 ready | `INVALID_TRANSITION` |
 | `pending_review` | `review` | 产物节点不进 review | `INVALID_TRANSITION` |
+| `pending_review` | `done`(无 PR 合并) | 审核必须经 PR 合并 | `INVALID_TRANSITION` + `NO_MERGE_COMMIT` |
+| `pending_review` | `changed` | 审核中不能直接 changed,需先 done 再重提 | `INVALID_TRANSITION` |
 | `done` | `ready` | 已生效不能直接回 ready,需走 changed | `INVALID_TRANSITION` + `USE_CHANGED_PATH` |
-| `done` | `blocked` | 已生效不能直接 blocked,需先 changed | `INVALID_TRANSITION` |
+| `done` | `blocked` | 已生效不能直接 blocked,需先 changed 或 deprecated | `INVALID_TRANSITION` |
+| `done` | `in_progress` | 已生效不能回开发,需走 changed 重审 | `INVALID_TRANSITION` |
+| `done` | `pending_review`(非重提路径) | 需走 T10 changed 再 T12 pending_review | `INVALID_TRANSITION` |
+| `done` | `review` | done 不回 review,approval 驳回走 T15 上游 changed | `INVALID_TRANSITION` |
 | `changed` | `ready` | changed 必须经 pending_review 重审 | `INVALID_TRANSITION` |
 | `changed` | `done`(无 PR 合并) | 变更必须经审核 | `INVALID_TRANSITION` + `NO_MERGE_COMMIT` |
+| `changed` | `blocked` | changed 不直接 blocked,需经 T12→T7 重审或上游再 cascade | `INVALID_TRANSITION` |
 | `review` | `ready` | approval 节点驳回走 changed,不回 ready | `INVALID_TRANSITION` |
 | `review` | `pending_review` | review 与 pending_review 不互通 | `INVALID_TRANSITION` |
+| `review` | `in_progress` | approval 节点不进 in_progress | `INVALID_TRANSITION` |
+| `review` | `blocked` | approval 不直接 blocked,驳回走 T15 | `INVALID_TRANSITION` |
 | 任意 | `in_progress`(非产物节点) | 控制节点不进 in_progress | `INVALID_TRANSITION` + `CONTROL_NODE_NO_PROGRESS` |
+| 任意 | `review`(非 approval 控制节点) | 仅 approval 控制节点可进 review | `INVALID_TRANSITION` + `NOT_APPROVAL_NODE` |
+
+#### 2.2.2 新增 4 态(draft/deprecated/sunset/skipped)非法转移
+
+| 源状态 | 目标状态 | 拒绝原因 | 错误码 |
+|---|---|---|---|
+| `blocked`/`pending_review`/`review`/`changed`/`deprecated`/`sunset`/`skipped` | `draft` | 仅 `ready` 可经 D1 进 draft | `INVALID_TRANSITION` + `NOT_READY` |
+| `in_progress` | `draft` | in_progress 不能直接 soft_submit,需先回 ready | `INVALID_TRANSITION` + `IN_PROGRESS_NO_DRAFT` |
+| `draft` | `done` | draft 不能直接 done,需 D3 转正式 PR 再 T7 | `INVALID_TRANSITION` |
+| `draft` | `in_progress` | draft 不回 in_progress,需先 D4 abandon 回 ready | `INVALID_TRANSITION` |
+| `draft` | `review` | draft 不进 review(非 approval 节点) | `INVALID_TRANSITION` |
+| `draft` | `changed` | draft 未 done 不能 changed,需先 D3 转正式 | `INVALID_TRANSITION` |
+| `draft` | `deprecated` | draft 未生效不能 deprecated,需先 D3→T7 done | `INVALID_TRANSITION` |
+| `draft` | `skipped` | draft 已有草案产出,不能 skip(需先 D4 abandon) | `INVALID_TRANSITION` + `DRAFT_EXISTS` |
+| `draft` | `sunset` | draft 未生效不能 sunset | `INVALID_TRANSITION` |
+| 非 `done` | `deprecated` | 仅 done 可 deprecated(已生效才可废弃) | `INVALID_TRANSITION` + `NOT_DONE` |
+| `deprecated` | `done` | deprecated 不可恢复 done(废弃不可逆,需重做走新版本) | `INVALID_TRANSITION` + `DEPRECATED_IRREVERSIBLE` |
+| `deprecated` | `ready` | deprecated 不可回 ready(需新版本节点) | `INVALID_TRANSITION` |
+| `deprecated` | `pending_review` | deprecated 不可提 PR(需新版本节点) | `INVALID_TRANSITION` |
+| `deprecated` | `changed` | deprecated 不可 changed(需新版本节点) | `INVALID_TRANSITION` |
+| `deprecated` | `draft` | deprecated 不可回 draft | `INVALID_TRANSITION` |
+| `deprecated` | `in_progress` | deprecated 不可回开发 | `INVALID_TRANSITION` |
+| `deprecated` | `review` | deprecated 不可回审批 | `INVALID_TRANSITION` |
+| `deprecated` | `skipped` | deprecated 不可转 skipped(语义不同) | `INVALID_TRANSITION` |
+| `sunset` | (任意非终态) | sunset 是终态,不可转出 | `INVALID_TRANSITION` + `SUNSET_TERMINAL` |
+| `sunset` | `sunset` | sunset 自环无意义(非幂等场景) | `INVALID_TRANSITION` |
+| `done` | `skipped` | done 节点不可 skip(已交付) | `INVALID_TRANSITION` + `DONE_NOT_SKIPPABLE` |
+| `changed` | `skipped` | changed 节点不可 skip(变更需重审) | `INVALID_TRANSITION` |
+| `deprecated`/`sunset` | `skipped` | 废弃/下线节点不可 skip | `INVALID_TRANSITION` |
+| `skipped` | `done` | skipped 不能直接 done(需 S2 回 ready 再走完整流程) | `INVALID_TRANSITION` |
+| `skipped` | `pending_review` | skipped 不能直接提 PR(需 S2 回 ready) | `INVALID_TRANSITION` |
+| `skipped` | `in_progress` | skipped 不能直接开发(需 S2 回 ready) | `INVALID_TRANSITION` |
+| `skipped` | `changed` | skipped 未 done 不能 changed | `INVALID_TRANSITION` |
+| `skipped` | `draft` | skipped 不能直接 soft_submit(需 S2 回 ready) | `INVALID_TRANSITION` |
+| `skipped` | `deprecated` | skipped 未生效不能 deprecated | `INVALID_TRANSITION` |
+| `skipped` | `sunset` | skipped 未生效不能 sunset | `INVALID_TRANSITION` |
+| `skipped` | `review` | skipped 不进 review | `INVALID_TRANSITION` |
+| `skipped` | `blocked` | skipped 不回 blocked(需 S2 回 ready 或保持终态) | `INVALID_TRANSITION` |
+| 任意 | `sunset`(非 deprecated 源) | 仅 deprecated 可经 D6 进 sunset | `INVALID_TRANSITION` + `NOT_DEPRECATED` |
+| 任意(required 节点) | `skipped` | required 节点不可 skip(仅 optional 可 skip) | `INVALID_TRANSITION` + `REQUIRED_NOT_SKIPPABLE` |
+
+#### 2.2.3 防护表覆盖度汇总
+
+| 状态 | 合法出转移数 | 合法入转移数 | 非法转移防护条目 |
+|---|---|---|---|
+| `blocked` | 2(T3 ready / S1 skipped)+T16 自环 | 5(初始 / T16 from 5 态 / D6 触发) | 3 |
+| `ready` | 5(T4/T5/D1/T18/S1)+T16 | 4(T2/T3/T8/T15/D4/S2) | 3 |
+| `pending_review` | 3(T7/T8/T9)+T16 | 4(T5/T6/T9/T12/D3) | 6 |
+| `in_progress` | 2(T6/T18)+T16 | 1(T4) | 1 |
+| `review` | 2(T14/T15)+T16 | 1(approval 节点依赖满足) | 4 |
+| `done` | 4(T10/T11/D5/D7/D8/D9)+T17 | 2(T7/T13) | 5 |
+| `changed` | 2(T12/T13) | 1(T10/T15) | 3 |
+| `draft` | 3(D2/D3/D4)+T16 | 1(D1) | 7 |
+| `deprecated` | 1(D6) | 4(D5/D7/D8/D9) | 7 |
+| `sunset` | 0(终态) | 1(D6) | 2(全拒绝出转移) |
+| `skipped` | 2(S2/S3) | 1(S1) | 10 |
+| **合计** | — | — | **51 条非法转移防护** |
 
 **Guard 实现要点:**
 - Guard 在 LangGraph 节点入口校验,失败时**不修改 state**,直接返回错误 event 并终止该次 invoke。
-- Guard 校验用纯函数 `guard_transition(from_state, to_state, event, node_type) -> (ok, reason)`,便于单测覆盖上表全部分支。
+- Guard 校验用纯函数 `guard_transition(from_state, to_state, event, node_type, participation) -> (ok, reason)`,便于单测覆盖上表全部分支。
 - Guard 拒绝的 event 仍入 `events` 流(标记 `rejected=true`),供审计与回放。
+- 新增 4 态的 Guard 需额外校验节点类别(产物/控制)和 participation(optional 标记),见 §2.3。
 
 ### 2.3 状态机 Guard 设计
 
-每个 LangGraph 节点入口包含三层 Guard:
+每个 LangGraph 节点入口包含三层 Guard(11 态扩展版):
 
 ```python
 def guard_transition(
     state: PipelineState,
     node_id: str,
-    target: NodeStatus,
+    target: NodeStatus,  # 11 态枚举
     event: str,
     caller: str,
 ) -> TransitionVerdict:
-    """三层 Guard:身份 / 前置状态 / 上下文"""
+    """三层 Guard:身份 / 前置状态 / 上下文(11 态扩展)"""
     current = state["node_states"].get(node_id)
     node = get_node_def(node_id)
+    participation = state["participation"]
 
     # L1: 身份 Guard — 调用方是否有权操作此节点
     if not authorize(caller, node, event):
         return TransitionVerdict(ok=False, code="FORBIDDEN",
                                   reason=f"{caller} 无权对 {node_id} 执行 {event}")
 
-    # L2: 前置状态 Guard — 源→目标转移是否合法(查 §2.2 表)
-    if not is_legal_transition(current, target, event, node["type"]):
+    # L2: 前置状态 Guard — 源→目标转移是否合法(查 §2.2 表,含 11 态)
+    #   额外校验:target=skipped 时节点必须 optional(participation.completion.optional_node_types 或 dep.presence=optional)
+    #   target=draft 时节点必须为产物节点
+    #   target=review 时节点必须为 approval 控制节点
+    if not is_legal_transition_11state(current, target, event, node, participation):
         return TransitionVerdict(ok=False, code="INVALID_TRANSITION",
                                   reason=f"{current}→{target} via {event} 非法")
 
     # L3: 上下文 Guard — 业务前置条件(依赖全 done / PR 已合并 / commit 不同等)
-    ctx_ok, ctx_reason = check_context(state, node_id, target, event)
+    #   含 draft/deprecated/sunset/skipped 的上下文校验:
+    #   - D1: draft_refs[nid] 不存在(防重复草案)
+    #   - D5/D7/D8/D9: artifact_refs[nid] 存在(已生效才能废弃)
+    #   - D6: now - deprecated_at >= N 天
+    #   - S1: core_nodes_done 谓词即将满足
+    #   - S2: 管线未进入 completed/cancelled 终态
+    ctx_ok, ctx_reason = check_context_11state(state, node_id, target, event)
     if not ctx_ok:
         return TransitionVerdict(ok=False, code="CONTEXT_FAIL", reason=ctx_reason)
 
@@ -156,52 +318,123 @@ def guard_transition(
 | 重复 `reject_pr`(同 pr_id) | `reject:{pr_id}` | 直接返回,不重复关 PR |
 | 重复 `update_progress`(同 node_id + 同 note hash) | `progress:{node_id}:{note_hash}` | 直接返回 ok,不重复写 event |
 | 重复 `approve`(同 approval 节点 + 同 approver) | `approval:{node_id}:{approver}` | 直接返回,不重复 cascade |
+| 重复 `soft_submit_artifact`(同 node_id + 同 commit) | `soft_submit:{node_id}:{commit}` | 直接返回首次 `draft_ref`,不重复写 `draft_refs`(第五轮新增) |
+| 重复 `add_addendum`(同 node_id + 同 content hash) | `addendum:{node_id}:{content_hash}` | 直接返回首次 `addendum_id`,不重复附加(第五轮新增) |
+| 重复 `reack_addendum`(同 addendum_id + 同 ack_status) | `reack:{addendum_id}:{ack_status}` | 直接返回,不重复写 `reacks`(第五轮新增) |
+| 重复 `transfer_owner`(同 node_id + 同 new_owner) | `transfer:{node_id}:{new_owner}` | 直接返回,不重复写 `current_owner`(第五轮新增) |
+| 重复 `skip_node`(同 node_id) | `skip:{node_id}` | 直接返回,不重复发 `SKIPPED` event(第五轮新增) |
 
 **幂等键存储**:`idempotency_keys(key, response_json, expires_at)` 表, TTL 7 天。重复命中时返回首次响应原文,保证客户端语义等价。
 
 **T11 同 commit 重提**:`submit_artifact` 检测到 `artifact_refs[nid].commit == new_commit` 时,不进 `changed`,直接返回 `{"ok": true, "idempotent": true, "state": "done"}`。
 
-### 2.5 完整状态机含 Guard(图 2-1)
+**D2 同 commit 重放**:feat 分支 push 检测到 `draft_refs[nid].commit == new_commit` 时,不更新 `draft_refs`,不发 `DRAFT_UPDATED`。
+
+### 2.5 完整状态机含 Guard(图 2-1,11 态)
 
 ```mermaid
 stateDiagram-v2
-    [*] --> blocked : T1 bootstrap(有deps未done)
-    [*] --> ready : T2 bootstrap(根节点)
+    direction TB
+    [*] --> blocked : T1 bootstrap(required deps未满足)
+    [*] --> ready : T2 bootstrap(根节点/required deps全满足)
 
-    blocked --> ready : T3 cascade\\n[guard: deps全done]
-    ready --> in_progress : T4 update_progress\\n[guard: caller=assignee]
-    ready --> pending_review : T5 submit_artifact\\n[guard: skill校验+deps全done]
+    blocked --> ready : T3 cascade\\n[guard: required deps全满足]
+    blocked --> skipped : S1 skip_finalize(core全done+optional未做)\\n[guard: 节点optional]
+
+    ready --> in_progress : T4 update_progress\\n[guard: caller=assignee+产物节点]
+    ready --> pending_review : T5 submit_artifact\\n[guard: skill校验+required deps满足]
+    ready --> draft : D1 soft_submit_artifact\\n[guard: 产物节点+feat分支commit存在]
+    ready --> skipped : S1 skip_finalize\\n[guard: 节点optional]
     in_progress --> pending_review : T6 submit_artifact\\n[guard: 同T5]
     in_progress --> ready : T18 gate失败打回\\n[guard: gate policy失败]
+
+    draft --> draft : D2 草案push新commit\\n[guard: 新commit≠旧commit]
+    draft --> pending_review : D3 submit_artifact转正式\\n[guard: 同T5]
+    draft --> ready : D4 abandon_draft\\n[guard: caller=assignee/admin]
 
     pending_review --> done : T7 approve_pr合并\\n[guard: PR已merge]
     pending_review --> ready : T8 reject_pr\\n[guard: PR已close未merge]
     pending_review --> pending_review : T9 重提新PR\\n[guard: 旧PR已close]
 
-    done --> changed : T10 重提且commit不同\\n[guard: 新commit≠旧commit]
+    done --> changed : T10 重提且commit不同(modification=changed)\\n[guard: 新commit≠旧commit]
     done --> done : T11 同commit重提(幂等)\\n[guard: commit相同]
+    done --> done : T17 控制节点透传(fork/notify)\\n[guard: 上游全done]
+    done --> deprecated : D5 管理方标记/superseded\\n[guard: caller=admin]
+    done --> deprecated : D7 外部URL失效\\n[guard: external_health=unreachable]
+    done --> deprecated : D8 第三方API破坏性变更\\n[guard: API schema不兼容]
+    done --> deprecated : D9 CVE漏洞披露\\n[guard: R_MALWARE_SCAN/CVE feed命中]
+
     changed --> pending_review : T12 重提PR\\n[guard: 同T5]
     changed --> done : T13 变更approve合并\\n[guard: PR已merge]
 
-    review --> done : T14 approve(approval节点)\\n[guard: pending_approvals已approve]
+    review --> done : T14 approve(approval节点)\\n[guard: pending_approvals全approve]
     review --> changed : T15 reject(approval节点)\\n[guard: 上游最近产物节点存在]
 
-    blocked --> blocked : T16 下游cascade失效\\n[guard: 本节点是changed可达下游]
-    ready --> blocked : T16 cascade失效
+    deprecated --> sunset : D6 deprecated后N天\\n[guard: now-deprecated_at>=N天]
+
+    skipped --> ready : S2 人工反悔/OPTIONAL_DEP_ARRIVED\\n[guard: caller=admin+管线未终态]
+    skipped --> skipped : S3 keep_skipped(幂等)\\n[guard: owner选择继续skip]
+
+    blocked --> blocked : T16 cascade失效(自环)
+    ready --> blocked : T16 cascade失效\\n[guard: 上游changed+coupling=hard]
     in_progress --> blocked : T16 cascade失效
     pending_review --> blocked : T16 cascade失效\\n[guard: 清pending_prs+artifact_refs]
+    draft --> blocked : T16 cascade失效\\n[guard: 清draft_refs]
+    review --> blocked : T16 cascade失效
+    done --> blocked : T16 cascade失效(strict下游)\\n[guard: 清artifact_refs]
+    deprecated --> blocked : D6 sunset触发(下游hard_invalidate)
 
-    done --> done : T17 控制节点透传(fork/notify)\\n[guard: 上游全done]
+    note right of draft
+        draft 边界:
+        - 仅 ready 可进 draft
+        - in_progress 不能直接 soft_submit
+        - draft 不触发 cascade
+        - draft 可作为 accepts_draft 下游依赖
+    end note
 
-    note right of pending_review
-        Guard 拒绝的非法转移:
-        - blocked→done(跳过产出)
-        - ready→done(跳过审核)
-        - done→ready(需走changed)
-        - changed→ready(需重审)
-        - 任意→in_progress(控制节点)
+    note right of deprecated
+        deprecated 边界:
+        - 仅 done 可进 deprecated
+        - deprecated 不可逆(不能回 done)
+        - 下游保持原状态但收到 DEPRECATED_NOTIFY
+        - sunset 后下游强制 blocked
+    end note
+
+    note right of skipped
+        skipped 边界:
+        - 仅 optional 节点可 skip
+        - required 节点不可 skip
+        - skipped 不阻塞 completed
+        - skipped 可经 S2 回 ready(可逆)
+    end note
+
+    note right of sunset
+        sunset 是终态:
+        - 不可转出任何状态
+        - 不可被任何新管线依赖
     end note
 ```
+
+### 2.6 级联失效矩阵(coupling × change_class)
+
+> 对齐主 PRD §FR2.2.1(行 515)。T16 递归失效按此矩阵分级处理。
+
+| coupling \ change_class | breaking(破坏性) | compatible(兼容) | docs_only(仅文档) |
+|---|---|---|---|
+| `hard`(强耦合) | **hard_invalidate**:下游 → blocked(递归传播),清 `artifact_refs`/`draft_refs`,PR 自动 reject | **soft_invalidate**:下游保持 + ack required(7 天) | cascade_skip(通知) |
+| `soft`(弱耦合) | **soft_invalidate**:下游保持 + ack required | cascade_skip(通知) | cascade_skip(通知) |
+| `informational`(信息性) | cascade_skip(通知,不传播) | cascade_skip(通知) | cascade_skip(通知) |
+
+**递归传播规则**:
+- `hard + breaking` → 下游 blocked,继续向下游的下游传播(按其 coupling 判定)
+- `soft / informational` → 不递归传播(终止于本节点)
+- `visited set` 防环(跨管线 hub:// 引用场景)
+
+**addendum 级联**(独立类型,见 §14):
+- 不改节点状态(done 保持 done)
+- must 级:下游若 `incompatible_with` 命中则 → changed(委托 invalidate_node);超时 7 天 → changed
+- should 级:通知 + warning,不改状态
+- info 级:仅记录
 
 ---
 
@@ -209,37 +442,62 @@ stateDiagram-v2
 
 ### 3.1 LangGraph Annotated 累积策略详解
 
-PRD §2.3 给出了 `PipelineState` 雏形,本节明确每个字段的合并策略:
+PRD v3.0 §FR2.3 给出了 `PipelineState` 雏形(13 字段),本节明确每个字段的合并策略(11 态扩展版):
 
 | 字段 | 类型 | 合并策略 | 理由 |
 |---|---|---|---|
-| `node_states` | `dict[str, NodeStatus]` | **last-write-wins + 版本号** | 状态是"当前态",覆盖语义;用 `version` 防 lost update |
-| `artifact_refs` | `dict[str, ArtifactRef]` | **last-write-wins + 版本号** | 引用是"当前态",覆盖语义 |
+| `pipeline_status` | `PipelineStatus`(5 态) | last-write-wins | 管线级状态(§13) |
+| `participation` | `ParticipationProfile` | last-write-wins(bootstrap 时固定) | 角色参与拓扑(§7.3) |
+| `node_states` | `dict[str, NodeStatus]`(11 态) | **last-write-wins + 版本号** | 状态是"当前态",覆盖语义;用 `version` 防 lost update |
+| `artifact_refs` | `dict[str, dict[str, ArtifactRef]]` | **last-write-wins + 版本号** | 引用是"当前态",覆盖语义;多版本共存 |
+| `active_version` | `dict[str, str]` | last-write-wins | 当前生效版本 |
+| `draft_refs` | `dict[str, DraftRef]` | last-write-wins | 草案引用(feat 分支 commit) |
+| `draft_subscribers` | `dict[str, list[str]]` | **`Annotated[..., list_extend]`** 列表合并 | 订阅者列表,多分支订阅自动合并 |
 | `events` | `Sequence[dict]` | **`Annotated[..., operator.add]`** 累积追加 | 事件是"日志",追加语义,多节点并发写自动合并 |
 | `pending_approvals` | `dict[str, str]` | last-write-wins | 当前态 |
 | `role_assignments` | `dict[str, str]` | last-write-wins | 当前态 |
 | `pending_prs` | `dict[str, str]` | last-write-wins | 当前态 |
+| `cascade_pending` | `list[dict]` | **`Annotated[..., operator.add]`** 累积 | paused 时挂起的级联事件,resume 时清空 |
+| `external_health` | `dict[str, ExternalHealthStatus]` | last-write-wins | 外部依赖健康状态 |
 | `node_versions` | `dict[str, int]` | **`Annotated[..., max]`** 取最大 | 单调递增版本号,防并发覆盖 |
 | `idempotency_seen` | `set[str]` | **`Annotated[..., operator.or_]`** 并集 | 幂等键集合,多分支合并取并集 |
 
-**TypedDict 定义(扩展 PRD §2.3):**
+**TypedDict 定义(对齐主 PRD v3.0 §FR2.3):**
 
 ```python
 from typing import Annotated
 import operator
 
+def list_extend(a: list, b: list) -> list:
+    return a + [x for x in b if x not in a]
+
 class PipelineState(TypedDict):
-    node_states: dict[str, NodeStatus]
-    artifact_refs: dict[str, ArtifactRef]
-    events: Annotated[Sequence[dict], operator.add]            # 累积追加
-    pending_approvals: dict[str, str]
-    role_assignments: dict[str, str]
-    pending_prs: dict[str, str]
+    pipeline_status: PipelineStatus                              # 管线级 5 态(§13)
+    participation: ParticipationProfile                          # 角色参与拓扑(§7.3)
+    node_states: dict[str, NodeStatus]                           # node_id -> 11 态
+    artifact_refs: dict[str, dict[str, ArtifactRef]]             # node_id -> {version -> ArtifactRef}
+    active_version: dict[str, str]                               # node_id -> 当前生效版本
+    draft_refs: dict[str, DraftRef]                              # node_id -> 草案引用
+    draft_subscribers: dict[str, list[str]]                      # node_id -> 订阅下游
+    events: Annotated[Sequence[dict], operator.add]              # 事件流(累积追加)
+    pending_approvals: dict[str, str]                            # node_id -> approver
+    role_assignments: dict[str, str]                             # node_id -> instance_id
+    pending_prs: dict[str, str]                                  # node_id -> pr_id
+    cascade_pending: Annotated[list[dict], operator.add]         # paused 时挂起的级联事件
+    external_health: dict[str, ExternalHealthStatus]             # node_id -> 外部依赖健康
     node_versions: Annotated[dict[str, int], lambda a, b: {**a, **b,
-        **{k: max(a.get(k, 0), b.get(k, 0)) for k in b}}]      # per-key max
-    idempotency_seen: Annotated[set[str], operator.or_]        # 并集
-    last_checkpoint_ts: str                                    # ISO8601
+        **{k: max(a.get(k, 0), b.get(k, 0)) for k in b}}]        # per-key max
+    idempotency_seen: Annotated[set[str], operator.or_]          # 并集
+    last_checkpoint_ts: str                                      # ISO8601
 ```
+
+**字段初始值**(bootstrap 时):
+- `pipeline_status`: `active`
+- `participation`: 从 pipeline.yaml 读取
+- `node_states`: 按 required deps 判定(根节点 ready,非根 blocked)
+- `artifact_refs`/`draft_refs`/`draft_subscribers`/`pending_approvals`/`pending_prs`/`cascade_pending`: 空 dict/list
+- `active_version`: 空 dict
+- `external_health`: 空 dict(首次 ExternalHealthMonitor 轮询后填充)
 
 **为什么 `events` 用累积追加**:LangGraph 在并行 fan-out 时,多个分支节点可能同时产 event;`operator.add` 让分支汇聚时 event 自动拼接,无需手动协调。这是调研报告第3章强调的"LangGraph 精髓"。
 
@@ -730,34 +988,44 @@ sequenceDiagram
 ```mermaid
 flowchart TD
     FILE[读取 pipeline.yaml] --> PARSE[解析 YAML → Pipeline 对象]
+    PARSE --> PARTICIPATION[ParticipationProfile 校验<br/>roles_present/roles_absent]
     PARSE --> CYCLE[DAG 无环校验 Kahn]
     PARSE --> REF[节点引用完整性]
     PARSE --> CTRL[控制节点配置校验]
     PARSE --> ROLE[角色/工具权限校验]
+    PARSE --> OPT[optional 依赖 DAG 校验<br/>presence/strictness/coupling]
 
+    PARTICIPATION -->|profile 非法| FAIL0[拒绝加载<br/>error: INVALID_PROFILE]
     CYCLE -->|有环| FAIL1[拒绝加载<br/>error: CYCLE_DETECTED]
     REF -->|引用缺失| FAIL2[拒绝加载<br/>error: DANGLING_REF]
     CTRL -->|配置非法| FAIL3[拒绝加载<br/>error: INVALID_CONTROL_NODE]
     ROLE -->|角色不匹配| FAIL4[拒绝加载<br/>error: ROLE_MISMATCH]
+    OPT -->|optional 配置矛盾| FAIL5[拒绝加载<br/>error: OPTIONAL_DEP_CONFLICT]
 
+    PARTICIPATION -->|合法| OK0
     CYCLE -->|无环| OK1
     REF -->|完整| OK2
     CTRL -->|合法| OK3
     ROLE -->|匹配| OK4
+    OPT -->|一致| OK5
 
-    OK1 & OK2 & OK3 & OK4 --> BUILD[构建 StateGraph<br/>add_node + add_conditional_edges]
+    OK0 & OK1 & OK2 & OK3 & OK4 & OK5 --> MAT[materialize<br/>裁剪 roles_absent 节点<br/>删除指向已裁剪节点的 deps]
+    MAT --> BUILD[构建 StateGraph<br/>add_node + add_conditional_edges]
     BUILD --> COMPILE[graph.compile checkpointer/interrupt]
     COMPILE --> LOAD_DB[写入 pipeline_registry 表]
     LOAD_DB --> READY[就绪,等待 invoke]
 
+    style FAIL0 fill:#b3261e,color:#fff
     style FAIL1 fill:#b3261e,color:#fff
     style FAIL2 fill:#b3261e,color:#fff
     style FAIL3 fill:#b3261e,color:#fff
     style FAIL4 fill:#b3261e,color:#fff
+    style FAIL5 fill:#b3261e,color:#fff
+    style MAT fill:#58a6ff,color:#fff
     style READY fill:#3fb950,color:#fff
 ```
 
-### 7.2 DAG 无环校验(Kahn 算法)
+### 7.2 DAG 无环校验(Kahn 算法,含跨管线环检测)
 
 ```python
 def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
@@ -766,9 +1034,10 @@ def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
     adj = {n["id"]: [] for n in nodes}
     for n in nodes:
         for dep in n.get("deps", []):
-            if dep not in adj:
-                return False, [f"DANGLING_REF: {n['id']} 依赖不存在的 {dep}"]
-            adj[dep].append(n["id"])
+            dep_id = dep["node_id"] or dep["hub_ref"]
+            if dep_id not in adj:
+                return False, [f"DANGLING_REF: {n['id']} 依赖不存在的 {dep_id}"]
+            adj[dep_id].append(n["id"])
             in_degree[n["id"]] += 1
     queue = [nid for nid, d in in_degree.items() if d == 0]
     visited = 0
@@ -783,13 +1052,172 @@ def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
         cycle_nodes = [nid for nid, d in in_degree.items() if d > 0]
         return False, cycle_nodes
     return True, []
+
+
+def validate_cross_pipeline_acyclic(registry: CrossPipelineReferenceRegistry) -> tuple[bool, list[str]]:
+    """跨管线环检测:构建全局依赖图(hub:// 引用),Kahn 校验。
+
+    单管线校验无法检测跨管线环(A.n1 → B.n2 → A.n1)。
+    注册 hub:// 引用时调用本函数。
+    """
+    # 构建 全局 node_id 集 + 全局 adj
+    global_nodes = set()
+    global_adj = {}
+    global_in_degree = {}
+    for ref in registry.all_references():
+        src, dst = ref["from_node"], ref["to_node"]  # src 依赖 dst
+        global_nodes.add(src)
+        global_nodes.add(dst)
+        global_adj.setdefault(dst, []).append(src)
+        global_in_degree[src] = global_in_degree.get(src, 0) + 1
+        global_in_degree.setdefault(dst, 0)
+    queue = [n for n in global_nodes if global_in_degree.get(n, 0) == 0]
+    visited = 0
+    while queue:
+        cur = queue.pop(0)
+        visited += 1
+        for nxt in global_adj.get(cur, []):
+            global_in_degree[nxt] -= 1
+            if global_in_degree[nxt] == 0:
+                queue.append(nxt)
+    if visited != len(global_nodes):
+        cycle = [n for n in global_nodes if global_in_degree.get(n, 0) > 0]
+        return False, cycle
+    return True, []
 ```
 
-### 7.3 节点引用完整性
+### 7.3 ParticipationProfile materialize(角色参与拓扑)
+
+> 对齐主 PRD v3.0 §FR2.2.1。需求 1 要求"设计/服务端/客户端可能无",平台必须认识拓扑变体。
+
+**支持的 profile:**
+
+| profile | roles_present(典型) | 说明 |
+|---|---|---|
+| `fullstack` | product,server,design,client | 默认登录类全链路 |
+| `server_only` | product,server | 内部 API / 计费等无 UI |
+| `no_design_client` | product,server,client | Admin/组件库拼装,永久无 Figma |
+| `design_only` | design(+product?) | 设计系统/视觉改版;`allow_non_product_root` 可 true |
+| `tech_debt` | server | 无产品规格热修;强制更高人工审批 |
+| `custom` | 显式列表 | 自由组合,须通过无环 + 无悬空 deps 校验 |
+
+**materialize 规则**(LangGraph bootstrap 时执行):
+
+```python
+def materialize_pipeline(template: PipelineTemplate, profile: ParticipationProfile) -> MaterializedPipeline:
+    """按 ParticipationProfile 裁剪管线。"""
+    nodes = template["nodes"]
+    roles_absent = set(profile["roles_absent"])
+
+    # 1. 按 roles_absent / condition 裁剪节点
+    materialized_nodes = [
+        n for n in nodes
+        if n.get("role") not in roles_absent
+        and evaluate_condition(n.get("condition"), profile)
+    ]
+    materialized_ids = {n["id"] for n in materialized_nodes}
+
+    # 2. 删除指向已裁剪节点的 deps(禁止 dangling)
+    for n in materialized_nodes:
+        n["deps"] = [
+            dep for dep in n.get("deps", [])
+            if (dep.get("node_id") in materialized_ids) or dep.get("hub_ref")
+        ]
+
+    # 3. CrewAI 仅为 roles_present 建 RoleInstance(见 §FR3)
+    role_instances = {
+        role: RoleInstance(role=role, ...)
+        for role in profile["roles_present"]
+    }
+
+    # 4. completed 使用 core_nodes_done;optional 节点失败只告警不挡完成
+    completion = profile["completion"]  # mode + core_node_types + optional_node_types
+
+    return MaterializedPipeline(
+        nodes=materialized_nodes,
+        role_instances=role_instances,
+        participation=profile,
+        completion=completion,
+    )
+```
+
+**materialize 后的 ready 谓词**(对齐主 PRD 附录 E.2):
+
+```python
+def is_ready(node_id: str, state: PipelineState) -> bool:
+    """ready 谓词:仅 required deps 参与 AND;optional 不参与。"""
+    node = get_node_def(node_id)
+    for dep in node["deps"]:
+        if dep.get("presence") == "optional":
+            continue  # optional dep 不参与 ready 判定
+        if dep.get("presence") == "if_present":
+            # 仅当 dep 节点在 materialized 管线中存在时才成为 required 依赖
+            if dep["node_id"] not in state["node_states"]:
+                continue  # 节点不存在,deps 边已删除
+        # required 依赖:按 strictness 判定
+        dep_state = state["node_states"].get(dep["node_id"])
+        if dep["strictness"] == "strict":
+            if dep_state != "done":
+                return False
+        elif dep["strictness"] == "accepts_draft":
+            if dep_state not in ("done", "draft"):
+                return False
+    return True
+```
+
+> **roles_absent 裁剪 vs DepDeclaration.optional 关系**(对齐评审 P1-2.4):
+> - `roles_absent` 是**管线级裁剪**(materialize 时删除节点 + deps 边),针对"角色缺位"场景。
+> - `DepDeclaration.presence=optional` 是**依赖级标记**(节点存在但依赖关系弱),针对"可选依赖"场景。
+> - 两者正交:roles_absent 裁剪后,剩余节点的 deps 中若指向已裁剪节点,该 deps 边删除(不降级为 optional)。
+> - `completion.optional_node_types` 是**完成谓词级**标记(optional 节点未 done 时可 skip,不挡 completed),与 presence=optional 语义一致但作用层不同。
+
+### 7.4 optional 依赖 DAG 校验
+
+> 对齐主 PRD v3.0 §FR2.2 DepDeclaration + 附录 D11 P0-R5.15/P0-R5.16。optional 依赖不参与 ready 判定,但需校验配置一致性。
+
+**DepDeclaration 字段**(规范化):
+
+```python
+class DepDeclaration(TypedDict):
+    node_id: str | None
+    hub_ref: str | None
+    version_constraint: str          # 默认 "*"
+    format_slot: str | None
+    strictness: str                  # strict | accepts_draft(默认 strict)
+    presence: str                    # required | optional | if_present(默认 required)
+    coupling: str                    # hard | soft | informational(默认 hard)
+    # 兼容: optional: true → 写入时规范化为 presence=optional
+```
+
+**optional 依赖校验规则:**
 
 | 校验项 | 规则 | 失败错误码 |
 |---|---|---|
-| `deps` 引用存在 | 每个 dep 必须在 nodes 列表中 | `DANGLING_REF` |
+| `presence=optional` 的 dep 指向 required 节点 | 允许(optional 标记在依赖方,不影响被依赖方) | — |
+| `presence=if_present` 的 dep 指向 materialized 中不存在的节点 | 允许(裁剪后 deps 边删除) | — |
+| `presence=required` 的 dep 指向 materialized 中不存在的节点 | **拒绝**(required 依赖不能悬空) | `OPTIONAL_DEP_CONFLICT` + `REQUIRED_DEP_DANGLING` |
+| `strictness=accepts_draft` 但上游节点类型不支持 draft | 上游必须是产物节点(控制节点不进 draft) | `INVALID_STRICTNESS` |
+| `coupling=informational` 的 dep 同时 `presence=required` | 允许(参与 ready 判定但不级联) | — |
+| optional 节点的下游 deps 全是 optional | 允许(该节点可被 skip 不影响下游) | — |
+| required 节点的某 dep 是 optional | 允许(optional dep 不参与 ready 判定) | — |
+| `presence=optional` 节点在 `completion.core_node_types` 中 | **拒绝**(core 节点不能 optional) | `OPTIONAL_DEP_CONFLICT` + `CORE_NOT_OPTIONAL` |
+| `presence=optional` 节点在 `completion.optional_node_types` 中 | 允许(一致) | — |
+
+**optional 依赖的级联处理:**
+
+| 场景 | 行为 |
+|---|---|
+| optional dep 节点 done | 不触发下游 ready(因下游 ready 谓词忽略 optional dep);但发 `OPTIONAL_DEP_DONE` 通知 |
+| optional dep 节点 changed | 按 coupling 判定:hard→下游 blocked;soft/informational→通知不改状态 |
+| optional dep 节点 deprecated | 发 `DEPRECATED_NOTIFY`;下游保持(有限期升级) |
+| optional dep 节点 skipped | 发 `OPTIONAL_DEP_SKIPPED`;下游若全部 required deps 满足则保持 ready;若该 optional dep 是 `if_present` 则下游 ready 谓词重新评估 |
+| optional 节点后到依赖到达(`OPTIONAL_DEP_ARRIVED`) | 下游若处于 skipped 可经 S2 转 ready;若已 done 则发 `OPTIONAL_DEP_LATE_ARRIVAL` warning |
+
+### 7.5 节点引用完整性
+
+| 校验项 | 规则 | 失败错误码 |
+|---|---|---|
+| `deps` 引用存在 | 每个 dep 必须在 nodes 列表中(或为 hub_ref 跨管线引用) | `DANGLING_REF` |
 | `deps` 不自引用 | `node.deps` 不含 `node.id` | `SELF_DEPENDENCY` |
 | 控制节点 `deps` 非空 | gate/approval/fork 至少 1 dep | `CONTROL_NO_DEPS` |
 | fork 节点 `deps` ≥ 2 | fork 设计为多入边汇合 | `FORK_TOO_FEW_DEPS`(warning,非强制) |
@@ -797,9 +1225,9 @@ def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
 | gate 节点 `policy` 必填 | 至少含一项 lint/test/coverage/security | `GATE_NO_POLICY` |
 | switch 节点 `routes` 必填 | 至少 2 条路由 | `SWITCH_TOO_FEW_ROUTES` |
 | 产物节点 `role` 必填 | 在 product/server/design/client 中 | `INVALID_ROLE` |
-| 产物节点 `type` 合法 | 在 9 种产物类型中 | `INVALID_NODE_TYPE` |
+| 产物节点 `type` 合法 | 在开放命名空间({role}.{name})中 | `INVALID_NODE_TYPE` |
 
-### 7.4 控制节点配置校验
+### 7.6 控制节点配置校验
 
 | 控制节点 | 必填字段 | 取值约束 |
 |---|---|---|
@@ -809,7 +1237,7 @@ def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
 | `switch` | `routes` | `routes` 是 list,每项 `{field, op, value, target_branch}`;`op` ∈ {eq, gt, lt, gte, lte, in} |
 | `notify` | `channel`, `target` | `channel` ∈ {feishu, slack, github, webhook};`target` 非空 |
 
-### 7.5 热重载机制
+### 7.7 热重载机制
 
 **支持的热重载场景:**
 
@@ -820,26 +1248,33 @@ def validate_dag_acyclic(nodes: list[NodeDef]) -> tuple[bool, list[str]]:
 | 修改 deps | `pipeline.yaml` git push | 重新校验无环 → 重新计算下游 ready 状态 → 发 `DEPS_CHANGED` event |
 | 修改 gate policy | `set_gate_policy` MCP 工具 | 仅对未执行 gate 生效;已 `done` 的 gate 不追溯 |
 | 修改 approval approver | admin 手动 | 仅对未 approve 的 approval 生效 |
+| 修改 ParticipationProfile | `pipeline.yaml` git push | **拒绝热重载**(profile 变更影响 materialize,需新 pipeline_id 迁移) |
 
 **热重载实现**:
 - `pipeline.yaml` 进 git,webhook 触发重载
 - 重载用新 `pipeline_id`(版本化,如 `login-feature@v2`),旧 pipeline_id 继续运行至完成或手动迁移
 - 迁移工具 `migrate_pipeline(old_id, new_id)` 拷贝 state,按新 DAG 校验一致性
 
-### 7.6 管线加载校验清单
+### 7.8 管线加载校验清单
 
 - [ ] YAML 语法合法
 - [ ] 所有 `node.id` 唯一
 - [ ] 所有 `node.deps` 引用存在(`DANGLING_REF`)
 - [ ] 无自引用(`SELF_DEPENDENCY`)
 - [ ] DAG 无环(`CYCLE_DETECTED`,Kahn)
-- [ ] 产物节点 `role` + `type` 合法
-- [ ] 控制节点配置完整(§7.4)
-- [ ] 至少 1 个根节点(无 deps)
+- [ ] 跨管线 hub:// 引用无环(§7.2 `validate_cross_pipeline_acyclic`)
+- [ ] 产物节点 `role` + `type` 合法(开放命名空间)
+- [ ] 控制节点配置完整(§7.6)
+- [ ] 至少 1 个根节点(无 required deps,允许多根)
 - [ ] 至少 1 个叶子节点(无下游)
 - [ ] switch 路由目标分支都存在
 - [ ] gate policy 字段类型正确
 - [ ] approval approver 在角色列表中
+- [ ] ParticipationProfile 合法(§7.3)
+- [ ] materialize 后无 dangling deps(§7.3)
+- [ ] optional 依赖配置一致(§7.4,`OPTIONAL_DEP_CONFLICT`)
+- [ ] core_node_types 中无 optional 节点(§7.4)
+- [ ] `presence=if_present` 的 dep 指向的节点若存在则需校验类型匹配
 
 ---
 
@@ -1056,11 +1491,13 @@ async def safe_invoke(pipeline_id, inputs):
 from langgraph.types import Send
 
 def dispatch_router_fn(state: PipelineState) -> list[Send] | str:
-    """并行 fan-out:多个 ready 节点同时分发"""
+    """并行 fan-out:多个 ready 节点同时分发(11 态扩展版)"""
     ready_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.READY]
     review_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.REVIEW]
     changed_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.CHANGED]
     done_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.DONE]
+    draft_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.DRAFT]
+    deprecated_nodes = [nid for nid, s in state["node_states"].items() if s == NodeStatus.DEPRECATED]
 
     sends = []
     # 并行 fan-out 多个 ready 节点到 crewai_assign
@@ -1075,14 +1512,35 @@ def dispatch_router_fn(state: PipelineState) -> list[Send] | str:
     # done 节点并行 cascade
     for nid in done_nodes:
         sends.append(Send("cascade", {"target_node": nid}))
+    # draft 节点并行通知订阅者(draft_publish_node)
+    for nid in draft_nodes:
+        sends.append(Send("draft_publish", {"target_node": nid}))
+    # deprecated 节点并行通知引用方(external_health_node 检查 sunset)
+    for nid in deprecated_nodes:
+        sends.append(Send("external_health", {"target_node": nid}))
 
     if not sends:
-        # 无待处理 → 检查是否全 done
-        if all(s == NodeStatus.DONE for s in state["node_states"].values()):
-            return END
+        # 无待处理 → 检查 completed 谓词(core 全 done + optional done 或 skipped)
+        participation = state["participation"]
+        completion = participation["completion"]
+        core_types = set(completion["core_node_types"])
+        optional_types = set(completion.get("optional_node_types", []))
+
+        def is_complete(nid, s):
+            node = get_node_def(nid)
+            if node["type"] in core_types:
+                return s == NodeStatus.DONE
+            if node["type"] in optional_types:
+                return s in (NodeStatus.DONE, NodeStatus.SKIPPED)
+            return s == NodeStatus.DONE  # 其他节点默认需 done
+
+        if all(is_complete(nid, s) for nid, s in state["node_states"].items()):
+            return END  # 进 completed(P5)
         return "wait"
     return sends
 ```
+
+> **11 态扩展说明**:新增 `draft` 节点路由到 `draft_publish_node`(通知订阅者);`deprecated` 节点路由到 `external_health_node`(检查 sunset 倒计时);`skipped`/`sunset` 是终态,不需 dispatch。completed 谓词按 `core_nodes_done` 模式判定(core 全 done + optional done 或 skipped)。
 
 **Send API 行为**:
 - 返回 `list[Send]` 时,LangGraph 并行执行所有目标节点
@@ -1203,41 +1661,351 @@ flowchart LR
 
 ## 11. 验收扩展(补充 AC2.x)
 
-PRD §2.6 已有 AC2.1-AC2.7,本节补充深化后的验收标准:
+> **编号说明**:主 PRD v3.0 §FR2.6 已有 AC2.1-AC2.22(含 draft/deprecated/addendum/topology 相关)。本节深化验收从 **AC2.24** 起,避免与主 PRD 编号冲突(对齐评审 P0-4 的 AC 编号去重原则)。
 
 | 编号 | 验收项 | 验证方法 |
 |---|---|---|
-| AC2.8 | 非法状态转移被 Guard 拒绝 | 单测覆盖 §2.2 全部非法转移表,断言返回 `INVALID_TRANSITION` |
-| AC2.9 | 同节点并发状态变更串行化 | 50 并发对同 node_id 调 `submit_artifact`,断言只 1 成功,其余 `PR_ALREADY_PENDING` 或排队 |
-| AC2.10 | 异节点并发真并行 | 50 agent 并发提交 50 不同 node_id,断言 P95 延迟 < 单节点 5x |
-| AC2.11 | 同 commit 重提幂等 | 重复 `submit_artifact` 同 commit,断言返回首次 pr_id,不重复开 PR |
-| AC2.12 | 节点崩溃后从 checkpoint 恢复 | kill 进程后重启,断言 state 从最后 checkpoint 恢复,in_flight 节点回退 |
-| AC2.13 | DAG 有环被拒 | 构造环路 pipeline.yaml,断言加载失败 `CYCLE_DETECTED` |
-| AC2.14 | gate 部分通过打回上游 | lint 过 test 失败,断言上游产物节点回 `in_progress`,event 含失败项 |
-| AC2.15 | approval 超时自动 reject | 配置 `timeout_hours=1`,等待超时,断言自动 reject + 上游 changed |
-| AC2.16 | fork 部分上游 changed 后 blocked | fork 上游之一 changed,断言 fork 回 `blocked` |
-| AC2.17 | switch 路由字段缺失保持 blocked | 上游产物无路由字段,断言 switch 保持 `blocked` + `SWITCH_FIELD_MISSING` event |
-| AC2.18 | notify 失败不阻塞管线 | 飞书 webhook 不可达,断言 notify 仍→done + DLQ 记录 |
-| AC2.19 | 错误重试耗尽入 DLQ | 模拟 git merge 连续 3 次冲突,断言入 DLQ + 通知 admin |
-| AC2.20 | 事件回放重建 state 一致 | 回放 events 重建 state,与 checkpointer state 比对一致 |
-| AC2.21 | 热重载新增节点不影响已有 | 运行中 pipeline 添加新节点,断言旧节点状态不变,新节点 `blocked` |
-| AC2.22 | recursion_limit 触发拆分重入 | 构造 200+ 节点管线,断言 recursion_limit 后拆分恢复继续 |
-| AC2.23 | approval interrupt 暂停等人工 | invoke 到 approval 节点前自动暂停,断言 state `interrupted` |
+| AC2.24 | 非法状态转移被 Guard 拒绝(11 态全覆盖) | 单测覆盖 §2.2 全部 51 条非法转移防护表,断言返回 `INVALID_TRANSITION` |
+| AC2.25 | 同节点并发状态变更串行化 | 50 并发对同 node_id 调 `submit_artifact`,断言只 1 成功,其余 `PR_ALREADY_PENDING` 或排队 |
+| AC2.26 | 异节点并发真并行 | 50 agent 并发提交 50 不同 node_id,断言 P95 延迟 < 单节点 5x |
+| AC2.27 | 同 commit 重提幂等 | 重复 `submit_artifact` 同 commit,断言返回首次 pr_id,不重复开 PR |
+| AC2.28 | 节点崩溃后从 checkpoint 恢复 | kill 进程后重启,断言 state 从最后 checkpoint 恢复,in_flight 节点回退 |
+| AC2.29 | DAG 有环被拒 | 构造环路 pipeline.yaml,断言加载失败 `CYCLE_DETECTED` |
+| AC2.30 | gate 部分通过打回上游 | lint 过 test 失败,断言上游产物节点回 `in_progress`,event 含失败项 |
+| AC2.31 | approval 超时自动 reject | 配置 `timeout_hours=1`,等待超时,断言自动 reject + 上游 changed |
+| AC2.32 | fork 部分上游 changed 后 blocked | fork 上游之一 changed,断言 fork 回 `blocked` |
+| AC2.33 | switch 路由字段缺失保持 blocked | 上游产物无路由字段,断言 switch 保持 `blocked` + `SWITCH_FIELD_MISSING` event |
+| AC2.34 | notify 失败不阻塞管线 | 飞书 webhook 不可达,断言 notify 仍→done + DLQ 记录 |
+| AC2.35 | 错误重试耗尽入 DLQ | 模拟 git merge 连续 3 次冲突,断言入 DLQ + 通知 admin |
+| AC2.36 | 事件回放重建 state 一致 | 回放 events 重建 state,与 checkpointer state 比对一致 |
+| AC2.37 | 热重载新增节点不影响已有 | 运行中 pipeline 添加新节点,断言旧节点状态不变,新节点 `blocked` |
+| AC2.38 | recursion_limit 触发拆分重入 | 构造 200+ 节点管线,断言 recursion_limit 后拆分恢复继续 |
+| AC2.39 | approval interrupt 暂停等人工 | invoke 到 approval 节点前自动暂停,断言 state `interrupted` |
+| AC2.40 | **draft 态:soft_submit 后不触发 cascade** | 调 `soft_submit_artifact`,断言 `node_states[nid]==draft` + 下游未收到 `READY` event |
+| AC2.41 | **draft 态:草案 push 通知订阅者** | draft 节点 feat 分支 push 新 commit,断言 `draft_subscribers` 中下游收到 `DRAFT_UPDATED` |
+| AC2.42 | **draft 态:abandon 后回 ready** | 调 `abandon_draft`,断言 `node_states[nid]==ready` + `draft_refs[nid]` 清空 |
+| AC2.43 | **draft 态:in_progress 不能直接 soft_submit** | in_progress 节点调 `soft_submit_artifact`,断言返回 `INVALID_TRANSITION` + `IN_PROGRESS_NO_DRAFT` |
+| AC2.44 | **deprecated 态:仅 done 可进入** | 非 done 节点调 `mark_deprecated`,断言返回 `INVALID_TRANSITION` + `NOT_DONE` |
+| AC2.45 | **deprecated 态:不可逆(不能回 done)** | deprecated 节点调 `submit_artifact`,断言返回 `INVALID_TRANSITION` + `DEPRECATED_IRREVERSIBLE` |
+| AC2.46 | **sunset 态:终态不可转出** | sunset 节点调任意状态变更,断言返回 `INVALID_TRANSITION` + `SUNSET_TERMINAL` |
+| AC2.47 | **sunset 态:下游强制 blocked** | 上游 sunset,断言下游 `node_states[ds]==blocked` + 事件流含 `INVALIDATED` |
+| AC2.48 | **skipped 态:仅 optional 节点可 skip** | required 节点调 `skip_node`,断言返回 `INVALID_TRANSITION` + `REQUIRED_NOT_SKIPPABLE` |
+| AC2.49 | **skipped 态:不阻塞 completed** | optional 节点 skipped + core 全 done,断言管线进 `completed` |
+| AC2.50 | **skipped 态:可逆(S2 回 ready)** | skipped 节点调 `reactivate_node`,断言 `node_states[nid]==ready` + `REACTIVATED` event |
+| AC2.51 | **外部 URL 失效触发 deprecated(D7)** | ExternalHealthMonitor 检测到 URL 不可达,断言 `node_states[nid]==deprecated` + `DEPRECATED` event |
+| AC2.52 | **CVE 漏洞触发 deprecated(D9)** | 安全扫描命中 CVE,断言 `node_states[nid]==deprecated` + 触发 `handle_security_incident` |
+| AC2.53 | **optional 依赖不参与 ready 判定** | 节点有 1 required(done)+ 1 optional(blocked),断言节点 `ready` |
+| AC2.54 | **ParticipationProfile materialize 裁剪** | `server_only` profile,断言 design/client 节点被裁剪 + 无 dangling deps |
+| AC2.55 | **跨管线 hub:// 环检测** | 构造 A.n1→B.n2→A.n1 跨管线环,断言注册时拒绝 `CYCLE_DETECTED` |
+| AC2.56 | **管线 paused 时 cascade 挂起** | pause 管线后 done 节点 cascade,断言 `cascade_pending` 非空 + 下游未变 ready |
+| AC2.57 | **管线 resume 应用挂起的 cascade** | resume 管线,断言 `cascade_pending` 清空 + 下游变 ready |
+| AC2.58 | **管线 cancelled 后拒绝节点状态变更** | cancel 管线后调 `submit_artifact`,断言返回 `PIPELINE_CANCELLED` |
 
 ---
 
 ## 12. 与 PRD 主文档的对齐说明
 
-| PRD 章节 | 本深化补充 | 一致性 |
+| PRD v3.0 章节 | 本深化补充 | 一致性 |
 |---|---|---|
-| §2.1 状态机 7 态 | §2.1 完整转移表 T1-T18 | ✅ 扩展,不冲突 |
-| §2.2 DAG 规则 | §3 并发模型 + §7 加载校验 | ✅ 补全并发与校验 |
-| §2.3 PipelineState | §3.1 Annotated 累积策略 | ✅ 扩展字段(node_versions / idempotency_seen) |
-| §2.4 StateGraph 节点 | §9 编译配置 + Send API | ✅ 补全 fan-out 与 interrupt |
-| §2.5 控制节点行为 | §8 边界条件完整表 | ✅ 补全边界 |
-| §2.6 验收标准 | §11 AC2.8-AC2.23 | ✅ 扩展 16 项 |
+| §FR2.1 状态机 **11 态** | §2.1 完整转移表 T1-T18 + D1-D10 + S1-S3 | ✅ v3.0 已对齐(7→11 态) |
+| §FR2.2 DAG 规则 + DepDeclaration | §3 并发模型 + §7 加载校验 + §7.4 optional 依赖校验 | ✅ 补全并发与校验 |
+| §FR2.2.1 ParticipationProfile | §7.3 materialize 规则 + ready 谓词 | ✅ v3.0 新增对齐 |
+| §FR2.3 PipelineState(13 字段) | §3.1 Annotated 累积策略(15 字段扩展) | ✅ 对齐 + 扩展 node_versions/idempotency_seen |
+| §FR2.4 StateGraph 节点(11 节点) | §9 编译配置 + Send API | ✅ 补全 fan-out 与 interrupt |
+| §FR2.5 控制节点行为 | §8 边界条件完整表 | ✅ 补全边界 |
+| §FR2.5.1 addendum 机制 | §14 addendum 级联机制 | ✅ v3.0 新增对齐 |
+| §FR2.6 验收标准(AC2.1-AC2.22) | §11 AC2.24-AC2.58(深化编号从 AC2.24 起,避免冲突)+ §14 AC2.16-AC2.18(addendum) | ✅ 扩展 35 项 |
+| §FR2.7 管线级生命周期 5 态 | §13 管线级生命周期转移表 | ✅ v3.0 新增对齐 |
+| 附录 D11 P0-R5.17 skipped 态 | §2.1.4 skipped 转移表 S1-S3 | ✅ v3.0 新增对齐 |
 
-**本深化未引入与 PRD 冲突的设计**,所有扩展均为补全边界条件与配置细节。若实施中发现冲突,以本深化为准并回写 PRD 主文档。
+**本深化 v3.0 已修复 S1(状态机三重不一致)**:7 态 → 11 态,与主 PRD v3.0 §FR2.1 + 附录 D11 完全对齐。所有扩展均为补全边界条件与配置细节。若实施中发现冲突,以主 PRD v3.0 为权威源。
+
+---
+
+## 13. 管线级生命周期(5 态)
+
+> 对齐主 PRD v3.0 §FR2.7。管线级状态机与节点级状态机(11 态)正交:管线级状态控制节点级 dispatch 的开关,但不直接改变节点状态。
+
+### 13.1 管线级 5 态定义
+
+| 管线状态 | 含义 | 进入条件 | 退出条件 |
+|---|---|---|---|
+| `active` | 正常运行 | 管线启动(bootstrap) | paused / cancelled / completed / merged |
+| `paused` | 暂停(ready 节点不再 dispatch,级联事件挂起) | `pause_pipeline` | `resume_pipeline` |
+| `cancelled` | 取消(终态) | `cancel_pipeline` | —(终态) |
+| `merged` | 已合并到其他管线(终态) | `merge_pipelines` | —(终态) |
+| `completed` | 全节点 done(optional 节点可 skipped) | AC2.7 谓词满足 | —(终态) |
+
+### 13.2 管线级转移表
+
+| # | 源状态 | 目标状态 | 触发事件 | 前置 Guard | 副作用 | 备注 |
+|---|---|---|---|---|---|---|
+| P1 | `(初始)` | `active` | `bootstrap_node` 完成 | DAG 校验通过;ParticipationProfile 合法 | 写 `pipeline_status=active`,发 `PIPELINE_ACTIVE` event | 管线启动 |
+| P2 | `active` | `paused` | `pause_pipeline` | 调用方为 admin | 写 `pipeline_status=paused`;ready 节点不再 dispatch;**级联事件写入 `cascade_pending`**;发 `PIPELINE_PAUSED` event | 暂停 |
+| P3 | `paused` | `active` | `resume_pipeline` | 调用方为 admin | 写 `pipeline_status=active`;**逐条应用 `cascade_pending` 后清空**;校验依赖一致性;发 `PIPELINE_RESUMED` event | 恢复 |
+| P4 | `active`/`paused` | `cancelled` | `cancel_pipeline` | 调用方为 admin | 写 `pipeline_status=cancelled`;释放所有 in_progress 锁;**已 done 产物标记 deprecated**(D5);in_progress/pending_review 节点保持原状态(不再 dispatch);发 `PIPELINE_CANCELLED` event | 终态 |
+| P5 | `active` | `completed` | `skip_finalize_node` 后 core_nodes_done 谓词满足 | 所有 core 节点 done;optional 节点 done 或 skipped | 写 `pipeline_status=completed`;发 `PIPELINE_COMPLETED` event;**不再接受新的节点状态变更**(终态) | AC2.7 |
+| P6 | `active` | `merged` | `merge_pipelines` | 调用方为 admin;目标管线存在 | 写 `pipeline_status=merged`;节点 ID 重映射到目标管线;产物归属迁移;发 `PIPELINE_MERGED` event | 终态 |
+
+### 13.3 paused 与节点级状态的交互
+
+> 对齐评审 P2-2.6。明确 paused 时各节点状态的行为。
+
+| 节点状态 | paused 时的行为 | resume 时的行为 |
+|---|---|---|
+| `blocked` | 保持 blocked(无变化) | 重新评估 ready 谓词 |
+| `ready` | **不再 dispatch**(CrewAI 不分配) | 恢复 dispatch |
+| `in_progress` | agent 仍在执行 Task;完成后调 `submit_artifact` **被接受**(进 pending_review) | 无变化(已在 pending_review) |
+| `pending_review` | PR 审核仍可进行;`approve_pr`/`reject_pr` **被接受** | 无变化 |
+| `review` | approval 节点仍可 approve/reject | 无变化 |
+| `done` | cascade 解锁下游 **挂起**(写入 `cascade_pending`) | 逐条应用挂起的 cascade |
+| `changed` | invalidate 失效下游 **挂起**(写入 `cascade_pending`) | 逐条应用挂起的 invalidate |
+| `draft` | 草案 push 通知 **挂起** | 逐条应用挂起的通知 |
+| `deprecated`/`sunset`/`skipped` | 保持(无 dispatch) | 无变化 |
+
+**paused/blocked 优先级**:节点同时处于 blocked(依赖未满足)和管线 paused 时,resume 管线后该节点**仍是 blocked**(需先满足依赖才能 ready)。paused 只挂起 dispatch 和 cascade,不改变 ready 谓词判定。
+
+**cancelled 时节点终态处理**:
+- `in_progress`/`pending_review`/`review` 节点:**保持原状态**(不再 dispatch),审计标记 `cancelled_at`
+- `blocked`/`ready` 节点:保持原状态(不再 dispatch)
+- `done` 节点:标记 deprecated(D5),防止被新管线依赖
+- `draft` 节点:草案作废(D4),清 `draft_refs`
+- `skipped`/`deprecated`/`sunset`:保持(已是终态/中间终态)
+- cancelled 后**所有节点级状态变更被拒绝**(返回 `PIPELINE_CANCELLED` 错误)
+
+### 13.4 管线级状态机(图 13-1)
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> active : P1 bootstrap
+    active --> paused : P2 pause_pipeline\\n[guard: caller=admin]
+    paused --> active : P3 resume_pipeline\\n[guard: caller=admin]\\n[副作用: 应用cascade_pending]
+    active --> cancelled : P4 cancel_pipeline\\n[guard: caller=admin]\\n[副作用: done→deprecated]
+    paused --> cancelled : P4 cancel_pipeline
+    active --> completed : P5 core_nodes_done\\n[guard: core全done+optional done或skipped]
+    active --> merged : P6 merge_pipelines\\n[guard: 目标管线存在]
+
+    note right of paused
+        paused 行为:
+        - ready 不 dispatch
+        - cascade/invalidate 挂起到 cascade_pending
+        - in_progress/pending_review 可继续
+        - approve_pr/reject_pr 被接受
+    end note
+
+    note right of cancelled
+        cancelled 是终态:
+        - 释放 in_progress 锁
+        - done 产物 deprecated
+        - 不再接受节点状态变更
+    end note
+
+    note right of completed
+        completed 是终态:
+        - core 节点全 done
+        - optional 节点 done 或 skipped
+        - 不再接受节点状态变更
+    end note
+```
+
+### 13.5 管线级 MCP 工具
+
+| 工具 | 调用方 | 作用 | 关键参数 |
+|---|---|---|---|
+| `pause_pipeline` | admin | 暂停管线,挂起 cascade | pipeline_id |
+| `resume_pipeline` | admin | 恢复管线,应用挂起的 cascade | pipeline_id |
+| `cancel_pipeline` | admin | 取消管线,释放锁,done→deprecated | pipeline_id, reason |
+| `merge_pipelines` | admin | 合并管线,节点 ID 重映射 | source_pipeline_id, target_pipeline_id |
+| `split_pipeline` | admin | 拆分管线,节点分配 | pipeline_id, node_groups |
+
+---
+
+## 14. addendum 级联机制
+
+> 对齐主 PRD v3.0 §FR2.5.1。addendum 是 done 态上的"附加层",不改节点状态(done 保持 done),按 `cascade_level`(must/should/info)分级通知下游。
+
+### 14.1 addendum 数据结构
+
+```python
+class Addendum(TypedDict):
+    addendum_id: str               # 全局唯一,如 "login-feature.n2.add-001"
+    node_id: str                   # 所属节点(必须处于 done)
+    author: str                    # 添加者(current_owner 或 admin)
+    content: str                   # 补充内容(自由格式,markdown/json 均可)
+    content_integrity_hash: str    # sha256,防篡改
+    cascade_level: str             # must | should | info
+    incompatible_with: list[str]   # 声明与哪些下游版本不兼容(可选,用于 must 级判定)
+    created_at: str
+    provenance: Provenance         # 溯源(作者/时间/工具)
+    reacks: dict[str, str]         # node_id -> ack_status(pending/accepted/rejected)
+    deprecated_at: str | None      # ack 超时后下游 changed 时记录
+```
+
+**`ArtifactRef.addenda` 字段扩展**:`addenda: list[Addendum]`(append-only 补充列表,不改原产物内容/版本/provenance)。
+
+### 14.2 addendum 级联策略(三级光谱)
+
+| cascade_level | 对下游动作 | 下游是否改状态 | 下游是否需 ack | 超时处理 |
+|---|---|---|---|---|
+| `must` | 发 `ADDENDUM_MUST_ACK` 事件;下游在 `incompatible_with` 列表中则需主动 changed | **是**(下游若 incompatible 则 → changed;否则保持) | 是(7 天内) | 超时自动 → changed |
+| `should` | 发 `ADDENDUM_SHOULD_ACK` 事件;下游 warning 通知 | 否(保持原状态) | 可选 | 超时仅告警 |
+| `info` | 发 `ADDENDUM_INFO` 事件;仅记录 | 否 | 否 | — |
+
+### 14.3 addendum 级联事件定义
+
+| 事件类型 | 触发 | 接收方 | 接收方动作 |
+|---|---|---|---|
+| `ADDENDUM_MUST_ACK` | must 级 addendum 创建 | `incompatible_with` 中的下游 + 所有直接下游 | 7 天内调 `reack_addendum`;若 incompatible 则主动 changed(T10) |
+| `ADDENDUM_SHOULD_ACK` | should 级 addendum 创建 | 所有直接下游 | 可选 ack;warning 通知 |
+| `ADDENDUM_INFO` | info 级 addendum 创建 | 所有直接下游 | 仅记录,无需动作 |
+| `ADDENDUM_TIMEOUT` | must 级 addendum 7 天未 ack | 下游 owner + admin | 下游自动 → changed(强制重新审核) |
+| `ADDENDUM_ACKED` | 下游调 `reack_addendum` | addendum author | 记录 ack_status(accepted/rejected) |
+
+### 14.4 addendum_cascade_node(StateGraph 节点)
+
+> 对齐主 PRD v3.0 §FR2.4 StateGraph 节点表(行 709)。addendum 级联由独立 StateGraph 节点执行,与 cascade_node(解锁)/invalidate_node(失效)职责分离。
+
+**节点职责:**
+1. `add_addendum` 调用后,`addendum_cascade_node` 按 `cascade_level` 分发事件
+2. must 级:检查下游 `incompatible_with` 列表,委托 `invalidate_node` 触发下游 → changed
+3. should/info 级:仅发通知,不改状态
+4. 定时扫描 must 级 addendum 超时(7 天),超时则委托 `invalidate_node` 触发下游 → changed
+
+```python
+async def addendum_cascade_node(state: PipelineState, addendum: Addendum) -> dict:
+    """addendum 级联节点:按 cascade_level 分发。"""
+    events = []
+    node_id = addendum["node_id"]
+    downstream_nodes = get_downstream_nodes(node_id, state)
+
+    if addendum["cascade_level"] == "must":
+        # must 级:incompatible_with 中的下游需 changed
+        for ds_node_id in downstream_nodes:
+            if ds_node_id in addendum["incompatible_with"]:
+                # 委托 invalidate_node 触发 changed(复用现有失效逻辑)
+                events.append({
+                    "type": "ADDENDUM_MUST_ACK",
+                    "node_id": ds_node_id,
+                    "addendum_id": addendum["addendum_id"],
+                    "action": "must_changed",
+                    "deadline": addendum["created_at"] + timedelta(days=7),
+                })
+            else:
+                events.append({
+                    "type": "ADDENDUM_MUST_ACK",
+                    "node_id": ds_node_id,
+                    "addendum_id": addendum["addendum_id"],
+                    "action": "ack_required",
+                    "deadline": addendum["created_at"] + timedelta(days=7),
+                })
+    elif addendum["cascade_level"] == "should":
+        for ds_node_id in downstream_nodes:
+            events.append({
+                "type": "ADDENDUM_SHOULD_ACK",
+                "node_id": ds_node_id,
+                "addendum_id": addendum["addendum_id"],
+                "action": "ack_optional",
+            })
+    else:  # info
+        for ds_node_id in downstream_nodes:
+            events.append({
+                "type": "ADDENDUM_INFO",
+                "node_id": ds_node_id,
+                "addendum_id": addendum["addendum_id"],
+                "action": "record_only",
+            })
+
+    return {"events": events}
+
+
+async def addendum_timeout_scan(state: PipelineState) -> dict:
+    """定时任务:扫描 must 级 addendum 超时(7 天未 ack)。"""
+    events = []
+    for node_id, refs in state["artifact_refs"].items():
+        for version, ref in refs.items():
+            for addendum in ref.get("addenda", []):
+                if addendum["cascade_level"] != "must":
+                    continue
+                if is_acked(addendum):
+                    continue
+                if now() - addendum["created_at"] < timedelta(days=7):
+                    continue
+                # 超时:下游自动 → changed
+                for ds_node_id in get_downstream_nodes(node_id, state):
+                    if ds_node_id in addendum.get("reacks", {}):
+                        continue  # 已 ack
+                    # 委托 invalidate_node
+                    events.append({
+                        "type": "ADDENDUM_TIMEOUT",
+                        "node_id": ds_node_id,
+                        "addendum_id": addendum["addendum_id"],
+                        "action": "auto_changed",
+                    })
+    return {"events": events}
+```
+
+### 14.5 addendum vs changed 判定边界
+
+> 对齐主 PRD v3.0 §FR2.5.1.2。提交方在重提 PR 时必须声明 `modification_type`,审核方校验一致性。
+
+**判定矩阵**(审核方校验 `modification_type` 与实际改动一致性):
+
+| 实际改动 | 提交方声明 | 审核方动作 |
+|---|---|---|
+| 只新增内容(不改原文件) | addendum | ✅ 通过 |
+| 只新增内容(不改原文件) | changed | ⚠️ 告警:建议用 addendum,但允许(提交方可能需要版本 bump) |
+| 修改原文件内容 | addendum | ❌ reject:内容已变,必须走 changed |
+| 修改原文件内容 | changed | ✅ 通过,按 change_class 级联 |
+
+**"只新增内容"的技术判定**(管理方可执行,不违反"不解析内容"):
+- PR diff 中原文件行无删除/修改(纯新增行)
+- 原产物文件的 `content_integrity_hash` 不变
+- 新增内容在 `addenda/` 目录或原文件的 `---addendum---` 分隔符之后
+
+**强制走 changed 的场景**(即使提交方声明 addendum):
+- 修改了产物文件的 `version` 字段
+- 修改了 `deps` 声明
+- 修改了 `artifact_kind` / `artifact_qualifier` / `classification`
+- 删除了原产物文件的部分内容
+
+### 14.6 addendum 与节点状态的交互
+
+> 对齐主 PRD v3.0 §FR2.5.1.4。addendum 不改节点状态(done 保持 done),但 must 级 addendum 可能触发下游 changed。
+
+| 下游状态 | 上游 addendum(must) | 上游 addendum(should) | 上游 addendum(info) |
+|---|---|---|---|
+| `in_progress` | 发 ADDENDUM_MUST_ACK,7 天内 ack;若 incompatible 则 blocked | 通知,不改状态 | 通知,不改状态 |
+| `draft` | 发 ADDENDUM_MUST_ACK;若 incompatible 则 blocked(草案作废) | 通知,不改状态 | 通知,不改状态 |
+| `pending_review` | 发 ADDENDUM_MUST_ACK;若 incompatible 则 PR 自动 reject → ready | 通知,不改状态 | 通知,不改状态 |
+| `ready` | 发 ADDENDUM_MUST_ACK;若 incompatible 则 blocked | 通知,不改状态 | 通知,不改状态 |
+| `done` | 发 ADDENDUM_MUST_ACK;若 incompatible 则 → changed(T10);超时 → changed | 通知,不改状态 | 通知,不改状态 |
+| `blocked`/`changed`/`review` | 发 ADDENDUM_MUST_ACK(等待状态恢复后处理) | 通知 | 通知 |
+| `deprecated`/`sunset`/`skipped` | 不发(终态/废弃节点不接收 addendum) | 不发 | 不发 |
+
+### 14.7 addendum 审核规则
+
+| 规则 | 校验内容 | priority | on_fail |
+|---|---|---|---|
+| `R_ADDENDUM_FORMAT` | addendum content 非空 + content_integrity_hash 计算 | 80 | reject |
+| `R_ADDENDUM_AUTH` | author 必须是 current_owner 或 admin | 90 | reject |
+| `R_ADDENDUM_INCOMPATIBLE_VALIDITY` | `cascade_level=must` 时 `incompatible_with` 中的 node_id 必须是本节点的直接下游 | 75 | reject |
+
+### 14.8 addendum 验收标准(对齐 AC2.16-AC2.18)
+
+| 编号 | 验收项 | 验证方法 |
+|---|---|---|
+| AC2.16 | `add_addendum` 后节点状态保持 done,`addenda` 列表新增一项 | 调用 `add_addendum`,断言 `node_states[nid]==done` 且 `artifact_refs[nid][ver].addenda` 长度 +1 |
+| AC2.17 | `cascade_level=must` 的 addendum 发出后,`incompatible_with` 中的下游收到 `ADDENDUM_MUST_ACK` 事件 | 调用 `add_addendum(must, incompatible_with=[ds])`,断言下游事件流含 `ADDENDUM_MUST_ACK` |
+| AC2.18 | `must` 级 addendum 超时 7 天未 ack,下游自动 → changed | 配置超时 7 天,等待超时,断言下游 `node_states[ds]==changed` + 事件流含 `ADDENDUM_TIMEOUT` |
+
+### 14.9 addendum MCP 工具
+
+| 工具 | 调用方 | 作用 | 关键参数 |
+|---|---|---|---|
+| `add_addendum` | current_owner / admin | 给 done 产物附加补充 | node_id, content, cascade_level, incompatible_with |
+| `reack_addendum` | 下游 node 的 owner | 确认/拒绝 addendum | addendum_id, ack_status(accepted/rejected), note |
+| `list_addenda` | 任意角色 | 查询节点的所有 addendum | node_id |
 
 ---
 
@@ -1364,4 +2132,4 @@ CREATE TRIGGER no_delete_audit BEFORE DELETE ON audit_log
 
 ---
 
-**深化结束。** 本文档覆盖 FR2 的 9 个薄弱点,与 PRD 主文档 §2.1-§2.6 对齐,提供可实施的代码示例、完整状态转移表、并发与错误恢复策略、Postgres schema、控制节点边界条件,以及 6 张 Mermaid 设计图。
+**深化结束。** 本文档 v3.0 覆盖 FR2 的 11 个薄弱点(含 v3.0 新增管线级生命周期 + addendum 级联),与主 PRD v3.0 §FR2.1-§FR2.7 完全对齐(11 态状态机 + T1-T18 + D1-D10 + S1-S3 转移表 + 51 条非法转移防护),提供可实施的代码示例、完整状态转移表、并发与错误恢复策略、Postgres schema、控制节点边界条件、ParticipationProfile materialize、optional 依赖校验、管线级 5 态生命周期、addendum 级联机制,以及 7 张 Mermaid 设计图。
