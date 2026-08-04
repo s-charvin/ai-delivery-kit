@@ -945,7 +945,7 @@ class AuditLogEntry(TypedDict):
 
 ---
 
-## 附录:技术栈
+## 附录 A:技术栈
 
 | 层 | 技术 | 版本要求 |
 |---|---|---|
@@ -958,3 +958,48 @@ class AuditLogEntry(TypedDict):
 | 语言 | Python 3.11+ | — |
 | 持久化 | Postgres(checkpointer + audit) | ≥ 15 |
 | 部署 | docker compose | — |
+
+---
+
+## 附录 B:深化文档索引
+
+主 PRD 各功能需求均有配套深化文档,位于 `docs/prd/deep-dive/` 目录,共 5 份约 6950 行 + 24 张 Mermaid 设计图:
+
+| 深化文档 | 覆盖章节 | 行数 | 设计图 | 核心深化内容 |
+|---|---|---|---|---|
+| [fr1-fr6-artifact-review.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr1-fr6-artifact-review.md) | FR1 + FR6 | 1522 | 3 | manifest JSON Schema、审核规则引擎(YAML 配置+优先级+组合逻辑)、并发冲突处理(6类+锁)、SLA 与超时升级、驳回重试流程、CI 校验 |
+| [fr2-orchestration.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr2-orchestration.md) | FR2 | 1368 | 6 | 18 条合法转移 + 14 条非法防护、并发 advisory lock、PR 冲突、错误恢复 DLQ、Postgres checkpointer、管线校验、控制节点边界、事件溯源 |
+| [fr3-fr5-crew-skills.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr3-fr5-crew-skills.md) | FR3 + FR5 | 1263 | 5 | 4 agent LLM 配置 + cost 控制、失败重试降级、事件队列桥接、**6 个完整 skill.yaml**、版本化演进、SkillRegistry 热重载 |
+| [fr4-data-api.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr4-data-api.md) | FR4 + 第5章 + 第6章 | 2021 | 4 | 37 个错误码、JWT 认证、ER 关系图(15 实体)、Postgres 13 表 + 20 索引、**14 个 MCP 工具完整规范**、限流配额、langgraph_invoke 协议 |
+| [fr7-fr8-monitoring-visual.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr7-fr8-monitoring-visual.md) | FR7 + FR8 + 第7章 | 779 | 6 | 12 条告警规则、12 项 SLO、评估飞轮、Dashboard 交互规格、SSE 协议、容量规划、灾备 RTO/RPO、安全加固 |
+
+**阅读顺序建议**:先读主 PRD 建立全局认知 → 按实施阶段读对应深化文档(Phase 1 读 fr1/fr2/fr4,Phase 2 读 fr3/fr5/fr7,Phase 3 读 fr8)。
+
+---
+
+## 附录 C:深化修正记录
+
+多 agent 深化过程中发现主 PRD 需修正的 3 项内容:
+
+### C1. MCP 工具数量:13 → 14
+
+**修正**:`approve` / `reject`(作用于 approval 控制节点)与 `approve_pr` / `reject_pr`(作用于产物 PR)是两对独立工具,主 PRD 第 6 章工具总数应为 **14 个**(原误为 13)。详见 [fr4-data-api.md §9](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr4-data-api.md)。
+
+### C2. 密钥管理:v3 → 本期落地
+
+**修正**:主 PRD 第 1.4 节将"密钥管理"划为 v3 范围外,但密钥管理是安全基线,应本期落地(新增 NFR18)。MCP JWT 签名密钥、产物仓库 webhook HMAC、agent API Key 均需 Vault 管理,永不硬编码。详见 [fr7-fr8-monitoring-visual.md §10](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr7-fr8-monitoring-visual.md)。
+
+### C3. skill.yaml 双结构:artifact_constraints + review_rules
+
+**修正**:FR1/FR6 深化建议将 `artifact_constraints` 重构为规则引擎配置 `review_rules`;FR3/FR5 深化的 6 个 skill.yaml 仍用 `artifact_constraints`。**主 agent 仲裁**:两者共存,不冲突——`artifact_constraints` 是声明式简写(简单场景),`review_rules` 是规则引擎配置(复杂场景,可选)。运行时 `artifact_constraints` 自动编译为 `review_rules` 的等价子集。详见 [fr1-fr6-artifact-review.md §4](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr1-fr6-artifact-review.md) 与 [fr3-fr5-crew-skills.md §6](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr3-fr5-crew-skills.md)。
+
+### C4. 新增验收标准
+
+深化文档补充了以下验收标准,实施时一并验证:
+- AC2.8 ~ AC2.23(16 项,状态机边界 + 并发 + 错误恢复,见 fr2-orchestration.md §12)
+- AC7.6 / AC7.7(告警 + SLO,见 fr7-fr8-monitoring-visual.md §11)
+- AC8.6 ~ AC8.8(Dashboard 交互 + SSE,见 fr7-fr8-monitoring-visual.md §11)
+
+### C5. 新增非功能需求
+
+深化文档补充 NFR11 ~ NFR20(共 10 条),涵盖:容量规划、灾备 RTO/RPO、密钥管理、限流配额、审计防篡改等。详见 [fr7-fr8-monitoring-visual.md §9](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/deep-dive/fr7-fr8-monitoring-visual.md)。
