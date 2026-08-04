@@ -1,7 +1,7 @@
 # 产品需求文档 PRD:AI 多角色开发协同平台(Coordination Platform)
 
 > **文档性质**:基于《AI 多 Agent 开发协同平台调研报告》第十六~二十七章(v2 自建设计)产出的可开发 PRD
-> **版本**:v2.0 | **日期**:2026-08-04 | **状态**:待评审
+> **版本**:v3.0 | **日期**:2026-08-04 | **状态**:可开发评审
 > **设计文档**:[ai-multi-agent-dev-dashboard-research.md](file:///Users/zuiyou/develop/skills/.trae/documents/ai-multi-agent-dev-dashboard-research.md)
 
 ---
@@ -68,7 +68,7 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | MCP 工具接口(submit/review/approve) | 不生成代码、不生成设计稿 |
 | Constraint Skills 元数据约束 | 不校验产物内容格式(YAML/JSON/Figma 均可) |
 | Langfuse 监控 + 可视化 Dashboard | 不做多租户/RBAC(v3 规划) |
-| 变更级联(下游自动 blocked) | 不做成本/配额/密钥管理(v3 规划) |
+| 变更级联(下游自动 blocked) | 成本硬预算本期落地;配额管理 v3 规划;密钥管理本期落地(NFR18) |
 
 ---
 
@@ -81,16 +81,24 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | **产物节点** | 产出交付物的节点(product_spec/api_contract/design_asset/client_ui 等) |
 | **控制节点** | 编排控制节点(gate 门禁 / approval 审批 / fork 并行汇合 / switch 条件) |
 | **产物(Artifact)** | 产物节点产出的交付物,内容存产物仓库,管理方只存引用 |
-| **产物引用(ArtifactRef)** | 指向产物仓库的 `repo + path + commit`,不含内容 |
+| **产物引用(ArtifactRef)** | 指向产物仓库的引用,含 `repo + path + commit + artifact_kind + artifact_qualifier + content_integrity_hash + provenance` 等,不含内容 |
 | **Constraint Skill** | 约束技能,定义某节点类型的元数据约束 + 产出引导(superpowers 风格) |
-| **状态机** | 节点状态流转:blocked → ready → pending_review → done / changed |
-| **审核** | 管理方对产物 PR 的准入审核(skill 校验 + 依赖检查 → 批准/驳回) |
-| **级联(Cascade)** | 节点 done 后自动解锁下游;changed 后自动失效下游 |
+| **状态机** | 节点级 10 态状态机:blocked → ready → pending_review / draft → done / changed → deprecated → sunset |
+| **审核** | 管理方对产物 PR 的准入审核(skill 约束校验 + 依赖检查 + 安全扫描 → 批准/驳回) |
+| **级联(Cascade)** | 节点 done 后自动解锁下游;changed 后按依赖严格性(strictness)分级失效下游 |
 | **MCP** | Model Context Protocol,管理方暴露给 agent 的标准工具接口 |
+| **artifact_kind** | 产物类型:"content"(内容型,存在 hub 仓) / "reference"(引用型,引用文件在 hub 仓,指向代码仓 commit) |
+| **artifact_qualifier** | 产物完成度标记:"official" / "mock" / "draft" / "experimental",与 artifact_kind 正交 |
+| **format_slot** | 多格式产物时声明依赖的具体格式(如 openapi / grpc / typescript) |
+| **classification** | 产物密级:public / internal / confidential / restricted |
+| **derived_artifact** | 派生产物,由 generator 角色基于上游产物自动生成(如 SDK、文档) |
+| **管线状态** | 管线级 5 态生命周期:active / paused / cancelled / merged / completed |
 
 ### 2.1 节点类型完整清单
 
-**产物节点(9 种):**
+**产物节点(10 种,可扩展):**
+
+> 节点类型采用 `{role}.{name}` 开放命名空间。 SkillRegistry 按「精确匹配 → 角色兜底(`client.*`) → 通用(`*`)」三级匹配 skill。下列为预置节点类型,向后兼容。
 
 | 节点类型 | 角色 | 说明 |
 |---|---|---|
@@ -103,6 +111,7 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | `client_ui` | client | 客户端 UI 实现 |
 | `client_func` | client | 客户端功能联调 |
 | `client_delivery` | client | 客户端交付物 |
+| `derived_artifact` | generator | 派生产物(如 SDK、文档、发布包),基于上游产物自动生成 |
 
 **控制节点(5 种):**
 
@@ -126,8 +135,18 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | **server** | 服务端开发 | api_contract, server_impl, server_test | submit_artifact, update_progress, get_dependencies, request_approval |
 | **design** | UI 设计 | design_proto, design_asset | submit_artifact, update_progress, get_dependencies |
 | **client** | 客户端开发 | client_ui, client_func, client_delivery | submit_artifact, update_progress, get_dependencies, request_approval |
+| **generator** | 生成器 | derived_artifact | submit_artifact(derived_artifact), report_generation_status |
 | **reviewer** | 审批人 | — | approve_pr, reject_pr, get_audit_log |
 | **admin** | 管理员 | — | set_gate_policy, get_audit_log, 全部工具 |
+
+#### 修正来源:第三轮/第四轮压力测试
+
+**RoleInstance 实例化**:同一角色可存在多个实例,如 `team_a_server`、`team_b_server`。每个 RoleInstance 拥有独立的 `instance_id`、LLM 配置、可产出节点类型、可引用代码仓白名单 `allowed_external_repos`、审批人列表及密级许可 `clearance`。`build_crew_for_ready_nodes` 按 `role_assignments[node_id]` 中的 `instance_id` 分发任务,而非单值 `role_to_agent`。
+
+**Token 类型**:提交产物需持对应 token。
+- `bot_token`:管理方 bot,拥有 approve_pr / merge 权限。
+- `human_submit_token`(per-user):仅允许推 feat 分支 + 开 PR,**无 merge 权限**,用于 agent 故障时人工 fallback。
+- `admin_token`:admin 权限,含 emergency_local_commit 等降级操作。
 
 ### 3.2 权限矩阵
 
@@ -141,6 +160,18 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 | 设置门禁(set_gate_policy) | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
 | 查询审计(get_audit_log) | ❌ | ❌ | ❌ | ❌ | ✅ | ✅ |
 
+#### 修正来源:第三轮/第四轮压力测试
+
+**提交产物权限三层校验(L1/L2/L3)**:
+
+| 层级 | 校验内容 | 失败结果 |
+|---|---|---|
+| L1 node_type | 提交方角色/RoleInstance 只能产出本端允许的节点类型 | reject |
+| L2 instance_id | 提交方 RoleInstance 与 `role_assignments[node_id]` 中的 `instance_id` 匹配 | reject |
+| L3 external_repo | 引用型产物的 `external_repo` 必须在 RoleInstance.`allowed_external_repos` 白名单内 | reject |
+
+`get_dependencies` 额外增加密级过滤:调用方 `clearance` 低于上游产物 `classification` 时拒绝返回内容。
+
 ---
 
 ## 4. 功能需求详述(分)
@@ -151,62 +182,141 @@ AI 驱动的软件开发中,产品、服务端、客户端、UI 设计多方并�
 
 #### FR1.1 仓库结构
 
+> 修正来源:第三轮/第四轮压力测试
+
 ```
-artifact-repo/                        # 独立 git 仓库
-├─ product_spec/                      # 按产物类型分目录
-│  └─ 001.yaml                        # 产物文件(格式不限:yaml/json/md/figma.json)
-├─ api_contract/
-│  └─ 001.yaml
-├─ design_proto/
-│  └─ 001.json
-├─ design_asset/
-│  └─ 001_figma.json                  # 含 figma 链接
-├─ server_impl/
-│  └─ 001_ref.json                    # 引用代码仓库 commit
-├─ client_ui/
-│  └─ 001_ref.json
-├─ client_func/
-│  └─ 001_ref.json
-├─ client_delivery/
-│  └─ 001_ref.json
-└─ .github/
-   └─ pull_request_template.md        # PR 模板(强制声明 node_id/deps)
+artifact-hub/                         # 单一 hub 仓(管理方管辖,各端共同提交)
+├─ features/                          # 按 pipeline_id 命名空间隔离
+│  ├─ login-feature/                  # pipeline_id
+│  │  ├─ product_spec/
+│  │  │  └─ official/
+│  │  │     └─ 001_login-spec.yaml
+│  │  ├─ api_contract/
+│  │  │  ├─ official/
+│  │  │  │  ├─ 001_login-contract.yaml
+│  │  │  │  └─ 002_login-contract-v2.yaml   # 多版本共存
+│  │  │  └─ mock/
+│  │  │     └─ 001_login-mock.yaml          # mock 变体
+│  │  ├─ design_asset/
+│  │  │  └─ official/
+│  │  │     └─ 001_figma.json
+│  │  └─ .manifest.yaml               # 本管线产物索引(见下方)
+│  └─ user-profile/                   # 其他 pipeline
+├─ .github/ 或 .gitlab/               # 按托管类型配置
+│  └─ pull_request_template.md
+└─ config/
+   └─ hub-repo.yaml                   # HubRepoConfig(单一配置)
 ```
 
 **规则:**
-- 每种产物类型一个目录,目录名与节点 type 一致
-- 产物文件名自由(建议序号前缀:001_xxx)
+- 产物路径命名空间:`features/{pipeline_id}/{node_type}/{artifact_qualifier}/{seq}_{slug}.{ext}`
+- `artifact_qualifier`: `official` / `mock` / `draft` / `experimental`
 - 文件格式不限(YAML/JSON/Markdown/Figma 链接 JSON 均可)
-- 管理方不解析内容,只校验文件存在性 + 扩展名/大小
+- 管理方不解析业务内容,但校验文件存在性 + 扩展名/大小 + 安全扫描
+- 每个管线目录下必须包含 `.manifest.yaml`,索引本管线全部产物版本、依赖关系、消费者声明
+
+**HubRepoConfig 增强**:
+
+```yaml
+hub_repo:
+  url: git@gitlab.internal:platform/artifact-hub.git
+  provider: gitlab                     # github | gitlab | bitbucket | gitea
+  credential_ref: vault://artifact/hub-repo
+  webhook_secret_ref: vault://webhook/hub-repo
+  branch_naming: "feat/{pipeline_id}/{instance_id}/{node_type}-{seq}"  # 四维分支命名
+  clone_strategy: partial               # full | partial | shallow | on_demand
+  lfs:
+    enabled: true
+    threshold_mb: 10                    # >10MB 自动走 LFS
+  capacity:
+    max_prs_per_hour: 50
+    max_concurrent_reviews: 10
+  branch_protection:
+    main:
+      require_pr: true
+      min_reviewers: 1
+      squash_merge: true
+```
+
+**单点故障降级**(hub 仓不可用时):
+- `emergency_local_commit`: admin 在管理方本地暂存产物 manifest,标记 `pending_sync`
+- `sync_pending_artifacts`: hub 仓恢复后批量补提,走快速审核通道
+- `emergency_approve`: 紧急审批在本地记录决策,恢复后同步 PR 状态
 
 #### FR1.2 分支保护规则
+
+> 修正来源:第三轮压力测试
 
 | 规则 | 配置 |
 |---|---|
 | main 分支 | 禁止直接 push,只接受 PR 合并 |
 | PR 审核 | 至少 1 个管理方 bot approve |
-| CI 校验 | manifest schema + skill 约束(详见 FR6) |
+| CI 校验 | manifest schema + skill 约束 + 安全扫描规则族(详见 FR6) |
 | 合并方式 | squash merge(每产物一个 commit,便于追溯) |
-| feat 分支 | 命名规范 `feat/{role}/{node_type}-{seq}` |
+| feat 分支 | 四维命名规范 `feat/{pipeline_id}/{instance_id}/{node_type}-{seq}` |
+
+**四维分支命名**:
+- `pipeline_id`: 全局唯一管线标识
+- `instance_id`: 提交方 RoleInstance(如 `team_a_server`)
+- `node_type`: 节点类型(如 `api_contract`)
+- `seq`: 本实例/本节点类型的序列号
+
+分支命名示例:`feat/login-feature/team_a_server/api_contract-001`
 
 #### FR1.3 PR 模板
+
+> 修正来源:第三轮/第四轮压力测试
 
 ```yaml
 # .github/pull_request_template.md
 ## 关联节点
-node_id: n2                        # 必填,对应管线节点
+node_id: login-feature.n2          # 全局唯一节点 ID:{pipeline_id}.{local_id}
 node_type: api_contract
 role: server
+instance_id: team_a_server         # 提交方 RoleInstance
 
 ## 产物引用
 artifact:
-  path: api_contract/001.yaml
-  toolspec_framework: spec-kit     # 必填,生成工具(不限取值)
+  path: features/login-feature/api_contract/official/001_login-contract.yaml
+  artifact_kind: content            # content | reference
+  artifact_qualifier: official      # official | mock | draft | experimental
+  toolspec_framework: spec-kit
+  classification: internal          # public | internal | confidential | restricted
 
 ## 依赖声明
 deps:
-  - node_id: n1
-    artifact_path: product_spec/001.yaml
+  - node_id: login-feature.n1
+    artifact_path: features/login-feature/product_spec/official/001_login-spec.yaml
+    version_constraint: ">=1.0.0 <2.0.0"
+    format_slot: openapi            # 多格式产物时指定 slot
+    strictness: strict              # strict(默认) | accepts_draft
+  - hub_ref: "hub://other-pipeline/shared-contract@^2.0.0"  # 跨管线引用
+    strictness: strict
+
+## 外部依赖(持续监控)
+external_resources:
+  - type: figma
+    url: https://www.figma.com/file/xxx
+    health_check: head
+third_party_apis:
+  - name: sms-provider
+    url: https://api.sms-provider.com/v1
+    version: "1.2.0"
+
+## 产物消费订阅
+consumers:
+  - type: webhook
+    target: https://ci.internal/deploy
+    event: done
+    on_failure: alert
+
+## 结构化完整性契约
+completeness_contract:
+  required_structures:
+    - jsonpath: "$.endpoints"
+      min_items: 1
+    - jsonpath: "$.errors"
+      min_items: 1
 
 ## 产物说明(自由填写)
 说明: 用户登录接口契约 v1
@@ -214,10 +324,17 @@ deps:
 
 #### FR1.4 验收标准
 
+> 修正来源:第三轮/第四轮压力测试
+
 - AC1.1: main 分支直接 push 被拒绝
 - AC1.2: feat 分支提交后可开 PR
 - AC1.3: PR 模板字段缺失时 CI 报错
 - AC1.4: squash merge 后 main 上每产物一个 commit
+- AC1.5: feat 分支命名符合四维规范,冲突概率可控
+- AC1.6: >10MB 大文件自动走 LFS,不阻塞 clone
+- AC1.7: 每个管线目录包含有效的 `.manifest.yaml`
+- AC1.8: hub 仓不可用时,admin 可执行 emergency_local_commit 暂存产物
+- AC1.9: hub 仓恢复后 `sync_pending_artifacts` 批量补提并走快速审核
 
 ---
 
@@ -225,30 +342,63 @@ deps:
 
 **目标**:用 LangGraph StateGraph 实现节点状态机 + 依赖 DAG + 条件推进 + 变更级联。
 
-#### FR2.1 状态机定义(7 态)
+#### FR2.1 状态机定义(10 态)
+
+> 修正来源:第三轮压力测试
 
 | 状态 | 含义 | 进入条件 | 退出条件 |
 |---|---|---|---|
 | `blocked` | 依赖未满足 | 初始态 / 上游变更失效 | 上游全 done |
-| `ready` | 依赖满足,待产出 | cascade 解锁 / PR 驳回 | submit_artifact 提 PR |
+| `ready` | 依赖满足,待产出 | cascade 解锁 / PR 驳回 / 废弃草案 | submit_artifact 提 PR / soft_submit 进 draft |
 | `pending_review` | PR 已提交,待审核 | submit_artifact | approve_pr 合并 / reject_pr 驳回 |
 | `in_progress` | 开发中(进度更新) / 门禁失败打回 | update_progress / gate 失败 | 重新 submit |
 | `review` | 审批门等待审批 | approval 节点依赖满足 | approve / reject |
-| `done` | 产物已合并生效 | approve_pr 合并 / approval 通过 | 重新提 PR 变更 |
+| `done` | 产物已合并生效 | approve_pr 合并 / approval 通过 | 重提 PR 变更 / 标记废弃 |
 | `changed` | 已 done 产物被重新提交(变更) | 重提已 done 节点的 PR | 重新提交 commit |
+| `draft` | 草案(未完成但可共享) | soft_submit_artifact | submit_artifact(转正式) / abandon_draft |
+| `deprecated` | 已废弃(仍存在但不推荐新依赖) | 管理方标记 / 版本 superseded / 外部依赖失效 | sunset(彻底下线) |
+| `sunset` | 已下线(不可被任何新管线依赖) | deprecated 后 N 天 | —(终态) |
+
+**新增状态语义:**
+- `draft`: 不进 pending_review,不触发 cascade;可作为下游可选依赖(`strictness=accepts_draft`);变更时通知订阅者
+- `deprecated`: 仍存在但不可被新管线依赖;已依赖的下游收到 `DEPRECATED` 通知,可选择升级或保持(有限期)
+- `sunset`: 终态,不可被任何新依赖;已依赖的下游强制 blocked
 
 **状态流转图:**
-```
-blocked →(依赖满足)→ ready →(提PR)→ pending_review →(审核合并)→ done
-                       ↑                                    ↓
-                       ←─────(驳回)───── pending_review    (重提PR)
-                                                            ↓
-                                                         changed →(提PR)→ pending_review
-                                                            ↓
-                                                      (级联)→ 下游 blocked
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> blocked : T1(有deps未done)
+    [*] --> ready : T2(根节点)
+
+    blocked --> ready : T3 cascade(deps全done)
+
+    ready --> in_progress : T4 update_progress
+    ready --> pending_review : T5 submit_artifact(正式)
+    ready --> draft : D1 soft_submit_artifact(草案)
+
+    in_progress --> pending_review : T6 submit_artifact
+    in_progress --> ready : T18 gate失败打回
+
+    draft --> draft : D2 草案push新commit(通知订阅者)
+    draft --> pending_review : D3 submit_artifact(转正式)
+    draft --> ready : D4 abandon_draft
+    draft --> blocked : T16 上游changed
+
+    pending_review --> done : T7 approve_pr
+    pending_review --> ready : T8 reject_pr
+
+    done --> changed : T10 重提且commit不同
+    changed --> pending_review : T12 重提PR
+    changed --> done : T13 变更approve
+
+    done --> deprecated : D5 管理方标记废弃/版本superseded/外部依赖失效
+    deprecated --> sunset : D6 N天后下线
 ```
 
 #### FR2.2 依赖 DAG 规则
+
+> 修正来源:第三轮/第四轮压力测试
 
 | 规则 | 描述 |
 |---|---|
@@ -256,19 +406,44 @@ blocked →(依赖满足)→ ready →(提PR)→ pending_review →(审核合并
 | 单入边 | 节点依赖 1 个上游:上游 done → 本节点 ready |
 | 多入边 | 节点依赖 N 个上游:全部 done → 本节点 ready(fork 节点同理) |
 | 级联解锁 | 节点 done → 检查所有下游,依赖全满足的下游置 ready |
-| 级联失效 | 节点 changed → 所有下游产物引用清除 + 置 blocked(递归) |
+| 级联失效 | 节点 changed → 按 `strictness` 分级失效下游;`strict` 清除引用 + blocked,`accepts_draft` 可保持 draft 依赖 |
 | 无环校验 | 管线加载时校验 DAG 无环(CI 校验) |
+| 跨管线引用 | `hub_ref: "hub://{pipeline_id}/{node_id}@{version}"` 引用其他管线产物,经 CrossPipelineReferenceRegistry 注册 |
+
+**DepDeclaration 字段扩展**:
+
+```python
+class DepDeclaration(TypedDict):
+    node_id: str | None              # 管线内依赖
+    hub_ref: str | None              # 跨管线依赖:hub://{pipeline_id}/{node_id}@{version}
+    version_constraint: str          # semver 约束,如 ">=1.0.0 <2.0.0"
+    format_slot: str | None          # 多格式产物:openapi/grpc/typescript
+    strictness: str                  # strict(默认,要求 done) | accepts_draft(允许 draft 态上游)
+```
+
+**外部依赖持续监控**:
+- 产物 manifest 声明 `external_resources` / `third_party_apis`
+- `ExternalHealthMonitor` 后台任务定期 health check
+- 外部资源失效时触发 `done → deprecated` 自动转移,并通知所有已注册消费者
 
 #### FR2.3 PipelineState 数据结构
 
+> 修正来源:第三轮/第四轮压力测试
+
 ```python
 class PipelineState(TypedDict):
-    node_states: dict[str, NodeStatus]              # node_id -> 状态
-    artifact_refs: dict[str, ArtifactRef]           # node_id -> 产物引用
+    pipeline_status: PipelineStatus                 # 管线级 5 态: active/paused/cancelled/merged/completed
+    node_states: dict[str, NodeStatus]              # node_id -> 10 态状态
+    artifact_refs: dict[str, dict[str, ArtifactRef]]  # node_id -> {version -> ArtifactRef}(多版本共存)
+    active_version: dict[str, str]                  # node_id -> 当前生效版本
+    draft_refs: dict[str, DraftRef]                 # node_id -> 草案引用(feat 分支 commit)
+    draft_subscribers: dict[str, list[str]]         # node_id -> 订阅下游 node_id 列表
     events: Annotated[Sequence[dict], operator.add] # 事件流(累积追加)
     pending_approvals: dict[str, str]               # node_id -> approver
-    role_assignments: dict[str, str]                # node_id -> agent_id
+    role_assignments: dict[str, str]                # node_id -> instance_id(RoleInstance 路由)
     pending_prs: dict[str, str]                     # node_id -> pr_id(pending_review 时)
+    cascade_pending: list[dict]                     # 管线 paused 时挂起的级联事件
+    external_health: dict[str, ExternalHealthStatus] # node_id -> 外部依赖健康状态
 ```
 
 #### FR2.4 StateGraph 节点
@@ -281,27 +456,81 @@ class PipelineState(TypedDict):
 | `cascade_node` | done 节点解锁下游 | 节点 done |
 | `invalidate_node` | changed 节点失效下游(清引用 + blocked) | 节点 changed |
 | `approval_node` | 审批门等待 | approval 节点依赖满足 |
+| `draft_publish_node` | 草案发布/更新/订阅通知 | soft_submit 或 feat 分支 push |
+| `external_health_node` | 外部依赖健康检查 + 触发 deprecated | ExternalHealthMonitor 定时任务 |
 | `wait_node` | 等待(无待处理节点) | 无 ready/review/done/changed |
 
 #### FR2.5 控制节点行为
 
+> 修正来源:第三轮/第四轮压力测试
+
 | 控制节点 | 行为 |
 |---|---|
-| `gate` | 上游 done → 评估 policy(lint/test/coverage/security);全过→done;失败→上游打回 in_progress |
-| `approval` | 上游 done → review;approve→done 推进下游;reject→上游最近产物节点 changed |
+| `gate` | 上游 done → 评估 policy(lint/test/coverage/security 扫描);全过→done;失败→上游打回 in_progress |
+| `approval` | 上游 done → review;approve→done 推进下游;reject→上游最近产物节点 changed;驳回引用型产物时触发双层回滚协调 |
 | `fork` | 多入边全 done → done(透传);否则 blocked |
-| `switch` | 按上游产物字段路由(如 risk_score>7 → 走 review-agent 分支) |
-| `notify` | 上游 done → 触发外部通知(飞书/Slack)→ done |
+| `switch` | 按上游产物字段路由(如风险高走 review-agent 分支) |
+| `notify` | 通用事件出口:读取产物 `consumers` 配置,分发 webhook/API 调用/内部处理器;覆盖飞书/Slack/CI/CD/SDK 生成/文档发布 |
+
+**引用型产物分层清除 + 双层回滚**:
+- 内容型(content)产物 changed:直接 revert hub 仓 PR,清除 `artifact_refs`
+- 引用型(reference)产物 changed:
+  - hub 仓引用层:清除 `artifact_refs[node_id]`,历史版本移入 `artifact_history`
+  - 代码仓 commit 层:**不清除**(git 不可变),发 `CODE_ROLLBACK_NEEDED` 通知,追踪 `pending_code_rollbacks`
+  - 需代码团队确认 `restore` 后,管理方才重新接受该节点新引用
+
+**产物消费订阅**:
+- 产物 `consumers` 声明下游消费动作(webhook/API/内部处理器)
+- `notify` 节点在 `done` / `changed` / `deprecated` 事件时触发分发
+- 消费方可通过 `report_consumption_status` / `report_generation_status` 回传状态
+- `on_failure`: `ignore` / `mark_changed` / `alert`
 
 #### FR2.6 验收标准
+
+> 修正来源:第三轮/第四轮压力测试
 
 - AC2.1: 根节点(无依赖)启动时自动 ready
 - AC2.2: 节点 done 后,下游依赖全满足时自动 ready
 - AC2.3: 多入边节点,部分依赖 done 时仍 blocked
-- AC2.4: changed 节点的下游递归 blocked + 产物引用清除
+- AC2.4: changed 节点的下游按 strictness 分级失效
 - AC2.5: gate 失败时上游产物打回 in_progress
 - AC2.6: approval 驳回时上游最近产物节点 changed
-- AC2.7: 管线全节点 done 时自动终止
+- AC2.7: 管线全节点 done 时管线进入 completed
+- AC2.8: `soft_submit_artifact` 后节点进入 draft,不触发 cascade
+- AC2.9: draft 更新时订阅下游收到 `DRAFT_UPDATED` 通知
+- AC2.10: 外部资源失效时触发 done → deprecated 并通知消费者
+- AC2.11: 引用型产物 changed 时只清 hub 仓引用,代码仓 commit 保留并通知代码团队
+
+#### FR2.7 管线级生命周期
+
+> 修正来源:第四轮压力测试
+
+| 管线状态 | 含义 | 进入条件 | 退出条件 |
+|---|---|---|---|
+| `active` | 正常运行 | 管线启动 | paused / cancelled / completed / merged |
+| `paused` | 暂停 | `pause_pipeline` | `resume_pipeline` |
+| `cancelled` | 取消 | `cancel_pipeline` | —(终态) |
+| `merged` | 已合并到其他管线 | `merge_pipelines` | —(终态) |
+| `completed` | 全节点 done | AC2.7 | —(终态) |
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> active : 管线启动
+    active --> paused : pause_pipeline
+    paused --> active : resume_pipeline
+    active --> cancelled : cancel_pipeline
+    active --> completed : 全节点done
+    active --> merged : merge_pipelines
+    paused --> cancelled : cancel_pipeline
+```
+
+**管线级 MCP 工具**(详见 FR4):
+- `cancel_pipeline`: 取消管线,释放 in_progress 锁,已 done 产物 deprecated
+- `pause_pipeline`: 暂停管线,ready 节点不再 dispatch,级联事件挂起
+- `resume_pipeline`: 恢复管线,校验依赖一致性,应用挂起的级联
+- `merge_pipelines`: 合并管线,节点 ID 重映射 + 产物归属迁移
+- `split_pipeline`: 拆分管线,节点分配 + 跨拆分管线 hub:// 依赖
 
 ---
 
@@ -317,8 +546,12 @@ class PipelineState(TypedDict):
 | server_agent | 服务端开发 | 产出 api_contract/server_impl/server_test 并提交 | 接口协议优先,用任意工具产出契约 | mcp_submit_artifact, mcp_update_progress, mcp_get_deps, mcp_request_approval |
 | design_agent | UI 设计师 | 产出 design_proto/design_asset(含 figma 链接) | 用户体验驱动,用 Figma 或任意工具 | mcp_submit_artifact, mcp_update_progress, mcp_get_deps |
 | client_agent | 客户端开发 | 产出 client_ui/client_func/client_delivery | 还原设计+联调服务,用任意 IDE | mcp_submit_artifact, mcp_update_progress, mcp_get_deps, mcp_request_approval |
+| generator_agent | 生成器 | 产出 derived_artifact(SDK/文档/发布包) | 基于上游产物自动派生 | mcp_submit_artifact(derived_artifact), mcp_report_generation_status |
 
 **关键约束:Agent 不执行开发,只协调提交。** 真正开发由人员自由完成,Agent 是"提交协调员",调用 MCP 工具把人员产出的产物引用提交到管理方。
+
+> 修正来源:第三轮/第四轮压力测试
+> **RoleInstance 分发**:每个 role 可配置多个 RoleInstance(如 `team_a_server`、`team_b_server`)。`build_crew_for_ready_nodes` 按 `role_assignments[node_id]` 中的 `instance_id` 匹配对应 RoleInstance,再创建 Task。每个 RoleInstance 拥有独立的 LLM 配置、可产出节点类型、代码仓白名单和密级许可。
 
 #### FR3.2 Task 动态生成
 
@@ -328,12 +561,14 @@ def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
     tasks = []
     for node_id in ready_nodes:
         node = get_node(node_id)
-        agent = role_to_agent.get(node["role"])
+        instance_id = state["role_assignments"].get(node_id)
+        role_instance = get_role_instance(instance_id)  # RoleInstance 路由
+        agent = role_instance_to_agent(role_instance)
         tasks.append(Task(
             description=f"为节点 {node_id}({node['type']})产出产物,通过 MCP 提交",
             agent=agent,
             expected_output="产物已提交 PR,等待审核",
-            context={"node_id": node_id, "deps": get_deps_info(node_id, state)},
+            context={"node_id": node_id, "instance_id": instance_id, "deps": get_deps_info(node_id, state)},
         ))
     return Crew(agents=[...], tasks=tasks, process=Process.sequential)
 ```
@@ -352,6 +587,33 @@ def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
 - AC3.1: 节点 ready 时,CrewAI 自动分配 Task 给正确角色 agent
 - AC3.2: 多个节点同时 ready 时,对应角色 agent 并行执行
 - AC3.3: agent 调 submit_artifact 后,节点进入 pending_review
+- AC3.4: 同一角色多 RoleInstance 时,任务按 instance_id 正确路由
+
+#### FR3.5 Agent 行为护栏
+
+> 修正来源:第四轮压力测试
+
+**三层硬预算**:
+
+| 层级 | 限额 | 触发动作 |
+|---|---|---|
+| Task 级 | 20k token / 3 次重试 | 硬中断,转 `needs_human` |
+| Agent 级 | $10/日 | 排队等待 |
+| 管线级 | $100 | 暂停管线 |
+| 平台级 | $4000 | 全局降级(切便宜模型) |
+
+**Agent 身份强绑定**:
+- token 从 RoleInstance 级升级为 **session 级**:绑定 `node_id + allowed_tools + expires_at`
+- 每次 MCP 调用校验 token scope,防止 LLM 社交工程越权
+
+**关键约束提取**:
+- `get_dependencies` 返回增加 `key_constraints` 字段,结构化高亮上游 must 级约束
+- agent backstory 强制:"必须遵守 `key_constraints` 中 `level=must` 的约束"
+
+**行为基线与告警(ALR-13~15)**:
+- ALR-13:循环检测——同一 agent 对同一节点重复调用异常序列时告警
+- ALR-14:越权尝试——调用不在 allowed_tools 列表中的工具时告警
+- ALR-15:成本异常——单 Task / 单 Agent 成本突破基线时告警
 
 ---
 
@@ -359,39 +621,81 @@ def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
 
 **目标**:MCP 是执行层与管理层之间的唯一桥梁,暴露标准工具给 agent/人员调用。
 
-#### FR4.1 基础工具清单(7 个)
+#### FR4.1 基础工具清单
+
+> 修正来源:第三轮/第四轮压力测试
 
 | 工具名 | 调用方 | 作用 | 关键参数 | 返回 |
 |---|---|---|---|---|
-| `submit_artifact` | 各角色 agent | 提交产物(推 feat 分支 + 开 PR) | node_id, repo, branch, path, toolspec_framework, deps_decl | pr_id, status=pending_review |
+| `submit_artifact` | 各角色 agent | 提交产物(推 feat 分支 + 开 PR) | node_id, repo, branch, path, toolspec_framework, deps_decl, classification | pr_id, status=pending_review |
+| `soft_submit_artifact` | 各角色 agent | 软提交草案,节点进 draft | node_id, branch, path, version | ok, draft_ref |
+| `subscribe_draft` / `unsubscribe_draft` | 各角色 agent | 订阅/取消订阅上游草案更新 | node_id | ok |
 | `update_progress` | 各角色 agent | 更新节点进度(不提产物) | node_id, status, note | ok |
-| `get_dependencies` | 各角色 agent | 查上游产物内容(git show 拉取) | node_id | [{node_id, content}] |
-| `get_pipeline_state` | 监控/可视化 | 查全局管线状态 | — | {node_states, artifact_refs} |
+| `get_dependencies` | 各角色 agent | 查上游产物内容(git show 拉取) | node_id, include_draft, draft_version | [{node_id, content, key_constraints}] |
+| `get_pipeline_state` | 监控/可视化 | 查全局管线状态 | — | {pipeline_status, node_states, artifact_refs} |
 | `request_approval` | server/client agent | 请求审批 → 节点进 review | node_id, approver | ok |
 | `approve` / `reject` | reviewer/admin | 审批操作 | node_id | ok, state |
 | `set_gate_policy` | admin | 设置门禁策略 | node_id, policy | ok |
 
-#### FR4.2 审核工具清单(6 个,详见 FR6)
+#### FR4.2 审核工具清单(详见 FR6)
+
+> 修正来源:第三轮/第四轮压力测试
 
 | 工具名 | 调用方 | 作用 |
 |---|---|---|
 | `list_pending_prs` | 管理方/监控 | 列出待审核 PR |
 | `get_pr_detail` | 管理方 | 获取 PR 详情(产物+manifest+diff) |
-| `review_artifact_pr` | 管理方 agent | 自动审核:skill 校验 + 依赖检查 → 返回结论 |
+| `review_artifact_pr` | 管理方 agent | 自动审核:skill 校验 + 依赖检查 + 安全扫描 → 返回结论 |
 | `approve_pr` | reviewer/admin | 批准 PR → 合并 → 触发状态推进 |
 | `reject_pr` | reviewer/admin | 驳回 PR → 通知提交方 |
 | `get_audit_log` | reviewer/admin | 查审核记录 |
+| `export_compliance_report` | admin | 导出审计 hash 链 + WORM 合规报告 |
 
-#### FR4.3 Langfuse 旁路监听
+#### FR4.3 新增工具清单(管线级 / 消费 / 安全 / hub 仓降级)
+
+> 修正来源:第三轮/第四轮压力测试
+
+**管线级生命周期工具**:
+
+| 工具名 | 调用方 | 作用 |
+|---|---|---|
+| `cancel_pipeline` | admin | 取消管线;释放 in_progress 锁;已 done 产物 deprecated |
+| `pause_pipeline` | admin | 暂停管线;ready 节点不再 dispatch;级联事件挂起 |
+| `resume_pipeline` | admin | 恢复管线;校验依赖一致性;应用挂起的级联 |
+| `merge_pipelines` | admin | 合并管线;节点 ID 重映射 + 产物归属迁移 |
+| `split_pipeline` | admin | 拆分管线;节点分配 + 跨拆分管线 hub:// 依赖 |
+
+**产物消费与状态回传工具**:
+
+| 工具名 | 调用方 | 作用 |
+|---|---|---|
+| `report_consumption_status` | 外部 CI/CD / 消费者 | 回传产物消费状态(成功/失败) |
+| `report_generation_status` | generator_agent | 回传派生产物生成结果(SDK/文档) |
+
+**安全事件与 hub 仓降级工具**:
+
+| 工具名 | 调用方 | 作用 |
+|---|---|---|
+| `handle_security_incident` | admin / 安全监控 | 安全事件闭环:标记 compromised → 通知责任人 → 密钥轮换 → tombstone 替换 REDACTED → 审计记录 |
+| `emergency_local_commit` | admin | hub 仓宕机时本地暂存产物 manifest |
+| `sync_pending_artifacts` | admin | hub 仓恢复后批量补提暂存产物 |
+| `emergency_approve` | admin | hub 仓宕机时本地记录紧急审批决策 |
+
+#### FR4.4 Langfuse 旁路监听
 
 所有 MCP 工具调用经 `@langfuse_trace` 装饰器,记录 span + 属性(node_id 等)。**旁路原则:Langfuse 失败时降级,不阻塞主流程。**
 
-#### FR4.4 验收标准
+#### FR4.5 验收标准
+
+> 修正来源:第三轮/第四轮压力测试
 
 - AC4.1: MCP 工具可被 agent 原生调用(MCP 协议标准)
 - AC4.2: submit_artifact 后节点进入 pending_review(非直接 done)
 - AC4.3: get_dependencies 返回上游产物内容(git show 拉取)
 - AC4.4: Langfuse 挂掉时 MCP 工具仍正常工作(降级)
+- AC4.5: soft_submit_artifact 后节点进入 draft
+- AC4.6: cancel/pause/resume/merge/split_pipeline 可正确变更管线级状态
+- AC4.7: report_consumption_status / report_generation_status 回传后触发下游状态更新
 
 ---
 
@@ -412,16 +716,19 @@ skills/
 ├─ design-handoff-skill/       # design_proto + design_asset
 ├─ server-impl-skill/          # server_impl + server_test
 ├─ client-ui-skill/            # client_ui
-└─ client-delivery-skill/      # client_func + client_delivery
+├─ client-delivery-skill/      # client_func + client_delivery
+└─ derived-artifact-skill/     # derived_artifact
 ```
 
 #### FR5.2 skill.yaml 结构
+
+> 修正来源:第四轮压力测试
 
 ```yaml
 name: <skill-name>
 description: <描述>
 trigger:
-  node_type: <产物节点类型>
+  node_type: <产物节点类型>   # 支持精确类型、角色通配(client.*)、通用通配(*)
   role: <角色>
 artifact_constraints:
   required_fields:              # 元数据必填字段(管理方校验)
@@ -431,6 +738,7 @@ artifact_constraints:
     - source.path
     - source.commit
     - toolspec.framework        # 不限取值(中立)
+    - classification            # 产物密级(public/internal/confidential/restricted)
   deps:                         # 必须依赖的节点类型
     - <dep_node_type>
   min_version:                  # 依赖最低版本
@@ -439,6 +747,13 @@ artifact_constraints:
     allowed_extensions: [.yaml, .json, .md]
     max_size_kb: 512
   requires_human_review: false  # 是否需人工审核
+  completeness_contract:        # 结构化完整性契约(安全扫描级别的管理约束)
+    required_structures:
+      - jsonpath: "$.endpoints"
+        min_items: 1
+      - jsonpath: "$.errors"
+        min_items: 1
+    on_fail: reject             # reject | warn
 guide_ref: guide.md
 guide_summary: |
   <产出建议,非强制>
@@ -450,26 +765,33 @@ allowed_mcp_tools:              # 此 skill 激活时可调用的 MCP 工具
 
 #### FR5.3 Skill 匹配与加载
 
+> 修正来源:第三轮压力测试
+
 | 步骤 | 描述 |
 |---|---|
-| 1. 发现 | 节点 ready 时,按 `node_type` 匹配 skill |
+| 1. 发现 | 节点 ready 时,按 `node_type` 三级匹配 skill:精确 → 角色通配(`client.*`) → 通用(`*`) |
 | 2. 加载约束 | 读取 skill.yaml 的 artifact_constraints |
 | 3. 加载引导 | 读取 guide.md(供 agent 参考,非强制) |
 | 4. 绑定工具 | 按 allowed_mcp_tools 限制 agent 可用工具 |
-| 5. 审核校验 | PR 审核时按 artifact_constraints 校验元数据 + 文件格式 |
+| 5. 审核校验 | PR 审核时按 artifact_constraints 校验元数据 + 文件格式 + completeness_contract + classification |
 
-#### FR5.4 6 个 Skill 的约束摘要
+#### FR5.4 7 个 Skill 的约束摘要
+
+> 修正来源:第四轮压力测试
 
 | Skill | node_type | deps 必须包含 | requires_human_review | 引导要点 |
 |---|---|---|---|---|
 | product-spec-skill | product_spec | 无 | false | 建议含需求背景、验收标准 |
-| api-contract-skill | api_contract | product_spec | true(首次) | 建议含端点、schema、错误码 |
+| api-contract-skill | api_contract | product_spec | true(首次) | 建议含端点、schema、错误码;含 completeness_contract |
 | design-handoff-skill | design_proto/design_asset | product_spec | true(design_asset) | 建议含 figma 链接、标注 |
 | server-impl-skill | server_impl/server_test | api_contract | false | 建议含代码仓库 commit 引用 |
 | client-ui-skill | client_ui | api_contract + design_asset | false | 建议含 UI 实现引用 |
 | client-delivery-skill | client_func/client_delivery | client_ui + server_impl | true | 建议含联调结果、交付清单 |
+| derived-artifact-skill | derived_artifact | 派生来源节点 | false | 建议含 generator 信息、derived_from |
 
 #### FR5.5 验收标准
+
+> 修正来源:第四轮压力测试
 
 - AC5.1: 节点 ready 时自动匹配正确 skill
 - AC5.2: PR 审核时按 skill.required_fields 校验,缺失字段被拒
@@ -477,6 +799,8 @@ allowed_mcp_tools:              # 此 skill 激活时可调用的 MCP 工具
 - AC5.4: 文件扩展名不在 allowed_extensions 的 PR 被拒
 - AC5.5: requires_human_review=true 的 PR 转人工审核
 - AC5.6: guide.md 内容对 agent 可见但非强制
+- AC5.7: completeness_contract 结构缺失时按 on_fail 策略处理
+- AC5.8: classification 缺失或超出调用方 clearance 的 PR 被拒
 
 ---
 
@@ -486,38 +810,54 @@ allowed_mcp_tools:              # 此 skill 激活时可调用的 MCP 工具
 
 #### FR6.1 审核流程
 
+> 修正来源:第四轮压力测试
+
 ```
-PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
-  → 匹配 Constraint Skill → 校验元数据 + 依赖完整性 + 文件格式
+PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps/classification/consumers)
+  → 三层权限校验(L1 node_type / L2 instance_id / L3 external_repo)
+  → 匹配 Constraint Skill → 校验元数据 + 依赖完整性 + 文件格式 + completeness_contract + classification
+  → 安全扫描规则族(R_SECRET_SCAN / R_URL_SAFETY / R_MALWARE_SCAN / R_COMPLETENESS_CONTRACT)
+  → 引用型产物归属校验(R_EXTERNAL_REF_OWNERSHIP / R_COMMIT_STABILITY)
   → 决策:
     全过 + requires_human_review=false → 自动 approve → bot 合并
     全过 + requires_human_review=true  → 转人工 → 等待 approve → 合并
     任一失败 → reject → 通知提交方修改
-  → 合并 → 记录审计日志 + Langfuse trace → 触发 LangGraph set_done + cascade
+  → 合并 → 计算 content_integrity_hash → 记录审计日志(hash 链) + Langfuse trace → 触发 LangGraph set_done + cascade + notify consumers
 ```
 
 #### FR6.2 自动审核逻辑(review_artifact_pr)
 
+> 修正来源:第三轮/第四轮压力测试
+
 | 校验项 | 逻辑 | 失败结果 |
 |---|---|---|
+| 权限三层校验 | L1 node_type / L2 instance_id / L3 external_repo | reject |
 | 元数据校验 | skill.required_fields 全部存在 | reject |
-| 依赖完整性 | PR 声明的 deps 节点全 done | reject |
+| 密级校验 | classification 存在且 ≤ 调用方 clearance | reject |
+| 依赖完整性 | PR 声明的 deps 节点状态满足 strictness | reject |
 | 文件格式 | 扩展名在 allowed_extensions 内 + 大小 ≤ max_size | reject |
 | 文件存在 | git ls-file 校验产物文件存在于 feat 分支 | reject |
+| 结构化完整性 | completeness_contract 中 required_structures 满足 | reject |
+| 安全扫描规则族 | `R_SECRET_SCAN` / `R_URL_SAFETY` / `R_MALWARE_SCAN` / `R_COMPLETENESS_CONTRACT` | reject |
+| 引用型归属 | `R_EXTERNAL_REF_OWNERSHIP` + `R_COMMIT_STABILITY` | reject |
 | 人工审核 | skill.requires_human_review=true | needs_human(转人工) |
 
 #### FR6.3 合并逻辑(approve_pr)
+
+> 修正来源:第三轮/第四轮压力测试
 
 | 步骤 | 动作 |
 |---|---|
 | 1 | 管理方 bot approve PR |
 | 2 | squash merge 到 main |
 | 3 | 获取 merge commit hash |
-| 4 | 构造 ArtifactRef(repo + path + commit + toolspec_framework + trace_id) |
-| 5 | 记录审计日志 |
-| 6 | Langfuse trace: approve_pr + merge_commit |
-| 7 | langgraph_invoke(set_done + artifact_ref) |
-| 8 | cascade 解锁下游 |
+| 4 | 计算 `content_integrity_hash`(SHA-256 产物内容) |
+| 5 | 构造 ArtifactRef(含 repo/path/commit/artifact_kind/artifact_qualifier/external_repo/external_commit/content_integrity_hash/provenance/trace_id) |
+| 6 | 记录审计日志(hash 链:prev_hash + entry_hash) |
+| 7 | Langfuse trace: approve_pr + merge_commit |
+| 8 | langgraph_invoke(set_done + artifact_ref) |
+| 9 | cascade 解锁下游 |
+| 10 | notify 分发 consumers 配置事件 |
 
 #### FR6.4 审核策略矩阵(按产物类型分级)
 
@@ -530,10 +870,16 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
 | design_asset | ✅ | ✅ | 标注/切图影响客户端实现 |
 | client_ui | ✅ | ❌ | UI 实现,代码在代码仓库审 |
 | client_delivery | ✅ | ✅ | 交付物,最终把关 |
+| derived_artifact | ✅ | ❌ | 派生产物,依赖上游已审产物 |
+
+> 修正来源:第四轮压力测试
+> **密级策略**:confidential/restricted 产物强制 requires_human_review=true;get_dependencies 时按调用方 clearance 过滤。
 
 #### FR6.5 审计日志
 
-每条审核记录(批准/驳回/转人工)入审计日志:
+> 修正来源:第四轮压力测试
+
+每条审核记录(批准/驳回/转人工)入审计日志,并写入 WORM 表,只允许 INSERT:
 
 ```json
 {
@@ -541,22 +887,31 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
   "action": "approve",
   "pr_id": 42,
   "pr_url": "https://github.com/org/artifact-repo/pull/42",
-  "node_id": "n2",
+  "node_id": "login-feature.n2",
   "node_type": "api_contract",
-  "artifact_path": "api_contract/001.yaml",
+  "artifact_path": "features/login-feature/api_contract/official/001_login-contract.yaml",
   "merge_commit": "a1b2c3d4",
+  "content_integrity_hash": "sha256:xxxx",
+  "classification": "internal",
   "reviewer": "mgmt-bot",
   "submitter": "server-agent-01",
+  "submitter_instance_id": "team_a_server",
   "skill_used": "api-contract-skill",
   "skill_verdict": "approve",
-  "deps_at_review": {"n1": "done"},
+  "deps_at_review": {"login-feature.n1": "done"},
   "note": "自动审核通过",
   "trace_id": "lf_xxx",
+  "prev_hash": "sha256:0000...",
+  "entry_hash": "sha256:prev_hash+action+actor+payload",
   "ts": "2026-08-04T10:30:00Z"
 }
 ```
 
+**hash 链规则**:每条审计记录的 `entry_hash = SHA-256(prev_hash + action + actor + payload)`,`prev_hash` 指向上一条记录。表级权限禁止 UPDATE/DELETE,保证不可篡改。
+
 #### FR6.6 验收标准
+
+> 修正来源:第三轮/第四轮压力测试
 
 - AC6.1: PR 提交后自动触发 webhook → 管理方审核
 - AC6.2: 元数据缺失的 PR 被自动 reject
@@ -565,6 +920,9 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
 - AC6.5: approve_pr 合并后节点 done + 下游 cascade
 - AC6.6: reject_pr 后节点回 ready + 通知提交方
 - AC6.7: 审计日志可按 node_id / reviewer / 时间 / action 查询
+- AC6.8: 安全扫描检出密钥/恶意/钓鱼 URL 时阻断入 main
+- AC6.9: 引用型产物 external_repo 超出 RoleInstance 白名单时被 reject
+- AC6.10: 审计日志 hash 链连续且不可篡改
 
 ---
 
@@ -574,20 +932,30 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
 
 #### FR7.1 埋点设计
 
+> 修正来源:第四轮压力测试
+
 | 埋点源 | span 名称 | 关键属性 |
 |---|---|---|
-| MCP 工具调用 | `mcp.<tool_name>` | node_id, agent_id, tool_args |
+| MCP 工具调用 | `mcp.<tool_name>` | node_id, agent_id, tool_args, token_scope |
 | LangGraph 节点 | `langgraph.<node_name>` | node_id, from_state, to_state |
-| PR 审核 | `mcp.review_artifact_pr` | pr_id, node_id, verdict |
-| PR 合并 | `mcp.approve_pr` | pr_id, node_id, merge_commit |
+| PR 审核 | `mcp.review_artifact_pr` | pr_id, node_id, verdict, security_scan_results |
+| PR 合并 | `mcp.approve_pr` | pr_id, node_id, merge_commit, content_integrity_hash |
+| 外部依赖健康 | `external_health.check` | node_id, resource_url, status |
+| Agent 成本 | `agent.cost` | agent_id, instance_id, token_count, cost_usd |
+| 安全事件 | `security.incident` | incident_id, node_id, severity |
 
 #### FR7.2 旁路监听原则
+
+> 修正来源:第四轮压力测试
 
 - **不阻塞主流程**:Langfuse 调用失败时降级,工具正常执行
 - **trace 贯穿**:一次管线执行的 MCP 调用 + LangGraph 节点用同一 trace_id 串联
 - **trace_id 关联产物**:ArtifactRef.trace_id 记录,可从产物反查执行 trace
+- **审计 hash 链降级**:审计日志写入失败时,先将事件持久化到本地 WAL,恢复后补写 hash 链,不丢失合规证据
 
 #### FR7.3 Dashboard 视图
+
+> 修正来源:第四轮压力测试
 
 | 视图 | 数据源 | 内容 |
 |---|---|---|
@@ -596,15 +964,23 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
 | 节点耗时 | trace span | 节点从 ready→done 耗时分布 |
 | 异常告警 | trace error | gate 失败、审批超时、agent 离线 |
 | 角色负载 | trace 按 agent 聚合 | 各角色 agent 任务数/耗时 |
-| 审计日志 | 管理方 audit_log | 审核记录列表(可过滤) |
+| 审计日志 | 管理方 audit_log | 审核记录列表(可过滤) + hash 链完整性校验 |
+| 外部依赖健康 | ExternalHealthMonitor | 各产物外部资源可达性状态 |
+| 成本归因 | `agent.cost` span | Task/Agent/管线/平台四级成本汇总 |
+| Agent 行为基线 | 安全事件 + 成本 span | ALR-13~15 循环/越权/成本异常告警 |
 
 #### FR7.4 验收标准
+
+> 修正来源:第四轮压力测试
 
 - AC7.1: MCP 工具调用产生 Langfuse span
 - AC7.2: LangGraph 节点执行产生 Langfuse span
 - AC7.3: 产物 ArtifactRef.trace_id 可关联 Langfuse trace
 - AC7.4: Langfuse 挂掉时平台正常工作(降级)
 - AC7.5: Dashboard 可按 node_id 查看完整执行链路
+- AC7.6: 审计日志 hash 链可校验完整性
+- AC7.7: 外部依赖失效告警可在 Dashboard 查看
+- AC7.8: 成本归因 Dashboard 展示 Task/Agent/管线/平台四级成本
 
 ---
 
@@ -661,87 +1037,176 @@ PR 提交 → webhook 通知管理方 → 解析 PR 模板(node_id/path/deps)
 
 #### Pipeline(管线)
 
+> 修正来源:第四轮压力测试
+
 ```yaml
 pipeline:
   id: "login-feature"
   name: "登录功能全链路"
+  status: "active"                    # active | paused | cancelled | merged | completed
   nodes:
-    - id: "n1"
+    - id: "login-feature.n1"          # 全局唯一节点 ID:{pipeline_id}.{local_id}
       type: "product_spec"
       role: "product"
+      instance_id: "product_team"
       deps: []
       toolspec: { framework: "openspec" }
-    - id: "n2"
+    - id: "login-feature.n2"
       type: "api_contract"
       role: "server"
-      deps: ["n1"]
-    - id: "n7"
+      instance_id: "team_a_server"
+      deps: ["login-feature.n1"]
+    - id: "login-feature.n7"
       type: "fork"
       role: "control"
-      deps: ["n2", "n6"]
-    - id: "n9"
+      deps: ["login-feature.n2", "login-feature.n6"]
+    - id: "login-feature.n9"
       type: "gate"
       role: "control"
-      deps: ["n8"]
-      policy: { lint: true, test: true, coverage_min: 80 }
-    - id: "n10"
+      deps: ["login-feature.n8"]
+      policy: { lint: true, test: true, coverage_min: 80, security_scan: true }
+    - id: "login-feature.n10"
       type: "approval"
       role: "control"
-      deps: ["n9"]
+      deps: ["login-feature.n9"]
       approver: "reviewer_agent"
   edges: []  # 由 deps 推导
 ```
 
 #### ArtifactRef(产物引用,管理方持有)
 
-> **设计修正**:产物仓库采用**单一 hub 仓**模型(管理方管辖,各端共同提交)。ArtifactRef 区分"内容型"(产物内容在 hub 仓)和"引用型"(引用文件在 hub 仓,指向代码仓 commit)。详见 [round2-scenario-draft-multiworkflow.md §2](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md)。
+> 修正来源:第三轮/第四轮压力测试
+> **设计修正**:产物仓库采用**单一 hub 仓**模型(管理方管辖,各端共同提交)。ArtifactRef 区分"内容型"(产物内容在 hub 仓)和"引用型"(引用文件在 hub 仓,指向代码仓 commit),支持多版本共存。
 
 ```python
 class ArtifactRef(TypedDict):
     node_id: str
-    repo: str                    # hub 仓地址(单一)
-    path: str                    # 产物在 hub 仓内路径
-    commit: str                  # hub 仓 merge commit hash
-    artifact_kind: str           # "content"(内容型) | "reference"(引用型)
-    # 引用型产物额外字段(artifact_kind="reference" 时):
-    external_repo: str | None    # 代码仓地址(引用型指向代码仓)
-    external_commit: str | None  # 代码仓 commit hash
-    toolspec_framework: str      # 生成工具(中立,不限取值)
-    trace_id: str                # Langfuse trace 关联
+    repo: str                          # hub 仓地址(单一)
+    path: str                          # 产物在 hub 仓内路径
+    commit: str                        # hub 仓 merge commit hash
+    version: str                       # semver
+    artifact_kind: str                 # "content" | "reference"
+    artifact_qualifier: str            # "official" | "mock" | "draft" | "experimental"
+    # 引用型产物额外字段
+    external_repo: str | None
+    external_commit: str | None
+    commit_stability: str              # "stable" | "volatile"
+    content_integrity_hash: str        # SHA-256(产物内容)
+    classification: str                # public | internal | confidential | restricted
+    provenance: Provenance
+    derived_from: str | None           # 派生来源 node_id(derived_artifact)
+    consumers: list[ArtifactConsumer]
+    toolspec_framework: str
+    trace_id: str
+
+class Provenance(TypedDict):
+    submitter_instance_id: str
+    submitter_token_scope: str
+    llm_model: str
+    llm_prompt_hash: str
+    submitted_at: str
+    merged_at: str
+    reviewer: str
+
+# PipelineState 中 artifact_refs 改为多版本映射
+class PipelineState(TypedDict):
+    artifact_refs: dict[str, dict[str, ArtifactRef]]  # node_id -> {version -> ArtifactRef}
+    active_version: dict[str, str]                    # node_id -> 当前生效版本
 ```
 
 #### AuditLogEntry(审计日志)
 
+> 修正来源:第四轮压力测试
+
 ```python
 class AuditLogEntry(TypedDict):
     audit_id: str
-    action: str                  # approve | reject | needs_human
+    pipeline_id: str
+    action: str                  # approve | reject | needs_human | security_incident
     pr_id: int
     pr_url: str
     node_id: str
     node_type: str
     artifact_path: str
-    merge_commit: str | None     # 仅 approve 有
-    reviewer: str                # mgmt-bot | reviewer_id
+    merge_commit: str | None
+    content_integrity_hash: str | None
+    classification: str
+    reviewer: str
     submitter: str
+    submitter_instance_id: str
     skill_used: str
     skill_verdict: str
-    deps_at_review: dict         # {node_id: status}
+    deps_at_review: dict
     note: str
     trace_id: str
+    prev_hash: str
+    entry_hash: str
     ts: str                      # ISO 8601
+```
+
+**WORM 存储**:审计表只允许 INSERT,禁止 UPDATE/DELETE,通过数据库权限保证。
+
+#### CrossPipelineReferenceRegistry(跨管线引用注册表)
+
+> 修正来源:第四轮压力测试
+
+```sql
+CREATE TABLE cross_pipeline_reference (
+    source_pipeline_id TEXT NOT NULL,
+    source_node_id TEXT NOT NULL,
+    target_pipeline_id TEXT NOT NULL,
+    target_node_id TEXT NOT NULL,
+    version_constraint TEXT,
+    registered_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (source_pipeline_id, source_node_id, target_pipeline_id, target_node_id)
+);
+```
+
+目标产物 deprecated 时,查此表通知所有引用方管线。
+
+#### ExternalHealthMonitor(外部依赖健康监控)
+
+> 修正来源:第四轮压力测试
+
+```python
+class ExternalHealthMonitor:
+    """定期 health check 外部依赖,失效时触发 done→deprecated"""
+    def run(self):
+        for artifact in get_all_done_artifacts():
+            for resource in artifact.external_resources:
+                if not self.check_reachable(resource):
+                    self.trigger_deprecated(artifact.node_id, reason="external_resource_unreachable")
+```
+
+#### RoleInstance(角色实例)
+
+> 修正来源:第三轮压力测试
+
+```python
+class RoleInstance(TypedDict):
+    instance_id: str                 # 如 "team_a_server"
+    role: str                        # product | server | design | client | generator
+    agent_config: dict               # LLM 配置、backstory、max_concurrent
+    allowed_node_types: list[str]    # 可产出节点类型
+    allowed_external_repos: list[str] # 可引用代码仓白名单
+    approvers: list[str]             # 该实例审批人
+    clearance: str                   # 可见最高密级 public/internal/confidential/restricted
 ```
 
 ### 5.2 存储方案
 
+> 修正来源:第四轮压力测试
+
 | 数据 | 存储 | 说明 |
 |---|---|---|
 | PipelineState | LangGraph checkpointer(Postgres/SQLite) | 状态持久化 + 中断恢复 |
-| artifact_refs | PipelineState 内 | 随 state 持久化 |
-| audit_log | 独立表(Postgres)或独立 audit git 仓库 | 审计可追溯 |
+| artifact_refs | PipelineState 内 | 随 state 持久化(多版本映射) |
+| audit_log | 独立 Postgres 表,WORM 权限 | 审计可追溯,hash 链防篡改 |
 | 产物内容 | 产物仓库(git) | 管理方不存内容,只存引用 |
 | Constraint Skills | 文件系统(skills/ 目录) | YAML + Markdown |
 | Langfuse trace | Langfuse 自托管(Postgres) | 独立存储 |
+| CrossPipelineReferenceRegistry | Postgres 表 | 跨管线引用关系 |
+| 审计 WAL(降级) | 本地文件 | Langfuse/DB 失败时先写 WAL |
 
 ---
 
@@ -757,13 +1222,18 @@ class AuditLogEntry(TypedDict):
     "type": "object",
     "properties": {
       "node_id": {"type": "string", "description": "管线节点 ID"},
-      "repo": {"type": "string", "description": "产物 git 仓库地址"},
+      "repo": {"type": "string", "description": "产物 git 仓库地址(hub 仓)"},
       "branch": {"type": "string", "description": "feat 分支名"},
       "path": {"type": "string", "description": "产物在仓库内路径"},
       "toolspec_framework": {"type": "string", "description": "生成工具(中立,不限)"},
+      "artifact_kind": {"type": "string", "enum": ["content", "reference"], "description": "产物类型:内容型或引用型"},
+      "artifact_qualifier": {"type": "string", "enum": ["official", "mock", "draft", "experimental"], "description": "产物完成度标记"},
+      "classification": {"type": "string", "enum": ["public", "internal", "confidential", "restricted"], "description": "产物密级"},
+      "external_repo": {"type": "string", "description": "引用型产物指向的代码仓(仅 artifact_kind=reference)"},
+      "external_commit": {"type": "string", "description": "引用型产物指向的代码仓 commit(仅 artifact_kind=reference)"},
       "deps_decl": {"type": "array", "items": {"type": "object"}, "description": "依赖声明"}
     },
-    "required": ["node_id", "repo", "branch", "path", "toolspec_framework"]
+    "required": ["node_id", "repo", "branch", "path", "toolspec_framework", "artifact_kind", "artifact_qualifier", "classification"]
   }
 }
 ```
@@ -831,13 +1301,15 @@ class AuditLogEntry(TypedDict):
   "inputSchema": {
     "type": "object",
     "properties": {
-      "node_id": {"type": "string"}
+      "node_id": {"type": "string"},
+      "include_draft": {"type": "boolean", "default": false, "description": "是否拉取上游草案(feat 分支 commit)"},
+      "draft_version": {"type": "string", "description": "指定草案版本(可选)"}
     },
     "required": ["node_id"]
   }
 }
 ```
-**返回**: `[{"node_id": "n1", "content": "..."}]`
+**返回**: `[{"node_id": "n1", "content": "...", "stability": "stable|draft", "key_constraints": [{"level": "must", "text": "..."}]}]`
 
 ### 6.6 其他工具
 
@@ -851,6 +1323,20 @@ class AuditLogEntry(TypedDict):
 | `list_pending_prs` | status=pending | [{pr_id, node_id, submitter}] |
 | `get_pr_detail` | pr_id | {pr_id, template, files, diff} |
 | `get_audit_log` | filter(node_id/reviewer/action/ts) | [AuditLogEntry] |
+| `export_compliance_report` | pipeline_id, date_range | {report_url, hash_chain_valid} |
+| `soft_submit_artifact` | node_id, branch, path, version | {ok, draft_ref} |
+| `subscribe_draft` / `unsubscribe_draft` | node_id | {ok} |
+| `cancel_pipeline` | pipeline_id | {ok} |
+| `pause_pipeline` | pipeline_id | {ok} |
+| `resume_pipeline` | pipeline_id | {ok} |
+| `merge_pipelines` | source_id, target_id, node_id_map | {ok} |
+| `split_pipeline` | source_id, new_id, node_assignment | {ok} |
+| `report_consumption_status` | node_id, consumer_id, status | {ok} |
+| `report_generation_status` | node_id, status, artifact_ref | {ok} |
+| `handle_security_incident` | node_id, severity, reason | {incident_id, actions} |
+| `emergency_local_commit` | pipeline_id, manifest | {ok, pending_id} |
+| `sync_pending_artifacts` | pending_ids | {ok, synced_count} |
+| `emergency_approve` | pending_id, note | {ok} |
 
 ---
 
@@ -868,6 +1354,14 @@ class AuditLogEntry(TypedDict):
 | NFR8 | 可观测 | 全链路 trace 可从产物反查执行链路 |
 | NFR9 | 审计 | 审核日志不可篡改,保留 ≥ 1 年 |
 | NFR10 | 部署 | Langfuse 自托管 docker compose;管理方 Python 进程 |
+| NFR11 | 成本 | Task/Agent/管线/平台四级成本硬预算,超限触发降级或人工介入 |
+| NFR12 | 安全 | Agent 身份按 session 级 token 强绑定,越权调用被阻断并告警 |
+| NFR13 | 安全 | 产物 PR 强制通过安全扫描规则族(密钥/URL/恶意/完整性),零容忍阻断入 main |
+| NFR14 | 可靠性 | 外部依赖(figma/第三方 API/代码仓 commit)持续健康监控,失效触发 deprecated |
+| NFR15 | 可观测 | 审计日志采用 hash 链 + WORM 存储,支持合规导出与完整性校验 |
+| NFR16 | 可靠性 | 管线级生命周期操作(取消/暂停/恢复/合并/拆分)不丢失节点状态与级联事件 |
+| NFR17 | 安全 | 产物密级(classification)与 RoleInstance clearance 匹配,低密级调用方无法访问高密级产物 |
+| NFR18 | 安全 | MCP JWT 签名密钥、webhook HMAC、agent API Key 由 Vault 统一管理,永不硬编码 |
 
 ---
 
