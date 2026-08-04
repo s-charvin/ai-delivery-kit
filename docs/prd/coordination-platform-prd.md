@@ -323,6 +323,16 @@ completeness_contract:
     - jsonpath: "$.errors"
       min_items: 1
 
+## 修改声明(重提已 done 节点时必填,首次提交可省略)
+modification:
+  modification_type: changed        # addendum(轻量补充,不改原内容) | changed(正式变更,改原内容)
+  # 若 modification_type=addendum:
+  addendum_cascade_level: should    # must | should | info
+  addendum_incompatible_with: []    # must 级时声明不兼容的下游 node_id
+  # 若 modification_type=changed:
+  change_class: compatible          # breaking | compatible | docs_only
+  impact_claim: [login-feature.n7]  # 声称受影响下游 node_id 列表
+
 ## 产物说明(自由填写)
 说明: 用户登录接口契约 v1
 ```
@@ -340,6 +350,9 @@ completeness_contract:
 - AC1.7: 每个管线目录包含有效的 `.manifest.yaml`
 - AC1.8: hub 仓不可用时,admin 可执行 emergency_local_commit 暂存产物
 - AC1.9: hub 仓恢复后 `sync_pending_artifacts` 批量补提并走快速审核
+- AC1.10: 重提已 done 节点时 PR 模板 `modification` 字段缺失,CI 报错(第五轮)
+- AC1.11: `modification_type=addendum` 但 PR diff 包含删除行,CI 报错(第五轮)
+- AC1.12: addendum 内容存储在 `addenda/` 子目录或 `---addendum---` 分隔符后,原产物文件 content_integrity_hash 不变(第五轮)
 
 ---
 
@@ -349,7 +362,7 @@ completeness_contract:
 
 #### FR2.1 状态机定义(10 态)
 
-> 修正来源:第三轮压力测试
+> 修正来源:第三轮压力测试 / 第五轮补充(addendum)
 
 | 状态 | 含义 | 进入条件 | 退出条件 |
 |---|---|---|---|
@@ -363,6 +376,8 @@ completeness_contract:
 | `draft` | 草案(未完成但可共享) | soft_submit_artifact | submit_artifact(转正式) / abandon_draft |
 | `deprecated` | 已废弃(仍存在但不推荐新依赖) | 管理方标记 / 版本 superseded / 外部依赖失效 | sunset(彻底下线) |
 | `sunset` | 已下线(不可被任何新管线依赖) | deprecated 后 N 天 | —(终态) |
+
+> **addendum 不引入新状态**:addendum 是 done 态上的"附加层",节点状态保持 done,通过 `addenda` 字段挂载。下游级联通过事件机制触发,不改节点状态。详见 §FR2.5.1。
 
 **新增状态语义:**
 - `draft`: 不进 pending_review,不触发 cascade;可作为下游可选依赖(`strictness=accepts_draft`);变更时通知订阅者
@@ -412,6 +427,7 @@ stateDiagram-v2
 | 多入边 | 节点依赖 N 个上游:全部 done → 本节点 ready(fork 节点同理) |
 | 级联解锁 | 节点 done → 检查所有下游,依赖全满足的下游置 ready |
 | 级联失效 | 节点 changed → 按 `strictness` 分级失效下游;`strict` 清除引用 + blocked,`accepts_draft` 可保持 draft 依赖 |
+| addendum 级联 | done 节点附加 addendum → 按 `cascade_level`(must/should/info)分级通知下游,不改节点状态(详见 §FR2.5.1) |
 | 无环校验 | 管线加载时校验 DAG 无环(CI 校验) |
 | 跨管线引用 | `hub_ref: "hub://{pipeline_id}/{node_id}@{version}"` 引用其他管线产物,经 CrossPipelineReferenceRegistry 注册 |
 
@@ -478,10 +494,170 @@ participation:
 ```python
 class ArtifactResubmitMeta(TypedDict):
     change_class: str      # breaking | compatible | docs_only
-    impact_claim: list[str]  # 声称受影响下游;低估可被审核驳回
+    impact_claim: list[str]  # 声称受影响下游;低估可被审核驳回(详见 §FR2.5.1 校验规则)
 ```
 
 级联:`breaking+hard → hard_invalidate`;`compatible+soft → soft + ack`;`docs_only|informational → cascade_skip(通知)`。
+
+> **addendum vs changed 判定边界**:详见 §FR2.5.1。addendum 适用于"不改原产物内容、只附加说明/约束"的场景;changed 适用于"修改原产物内容"的场景。判定规则由 `modification_type` 字段显式声明,审核方校验一致性。
+
+#### FR2.5.1 产物修改机制:addendum / changed / draft 三级光谱
+
+> 修正来源:第五轮压力测试(A40 owner 交接)
+
+**设计目标**:done 产物的修改不应只有"全链路回滚"一种力度。真实开发中"补充约束/澄清说明/纠正笔误"不应触发 changed 强级联。本节定义三级修改光谱:
+
+| 修改力度 | 机制 | 节点状态 | 级联 | 典型场景 |
+|---|---|---|---|---|
+| 零修改 | owner 转移 | done(不变) | 零级联 | A40-1 完全认同 |
+| 轻量补充 | addendum | done(不变) | 弱级联(must/should/info) | A40-2 部分认同 |
+| 正式变更 | changed | done → changed → pending_review | 强级联(全链路失效) | A40-3 推翻重做 |
+| 草案迭代 | draft | ready → draft | 不级联(通知订阅者) | 开发中草案修改 |
+
+##### 2.5.1.1 addendum 机制
+
+**数据结构**:
+
+```python
+class Addendum(TypedDict):
+    addendum_id: str               # 全局唯一,如 "login-feature.n2.add-001"
+    node_id: str                   # 所属节点
+    author: str                    # 添加者(current_owner 或 admin)
+    content: str                   # 补充内容(自由格式,markdown/json 均可)
+    content_integrity_hash: str    # sha256,防篡改
+    cascade_level: str             # must | should | info
+    incompatible_with: list[str]   # 声明与哪些下游版本不兼容(可选,用于 must 级判定)
+    created_at: str
+    provenance: Provenance         # 溯源(作者/时间/工具)
+    reacks: dict[str, str]         # node_id -> ack_status(pending/accepted/rejected)
+```
+
+**`ArtifactRef.addenda` 字段扩展**:
+
+```python
+class ArtifactRef(TypedDict):
+    # ... 既有字段
+    addenda: list[Addendum]        # append-only 补充列表(不改原产物内容/版本/provenance)
+```
+
+**addendum 级联策略**:
+
+| cascade_level | 对下游动作 | 下游是否改状态 | 下游是否需 ack | 超时处理 |
+|---|---|---|---|---|
+| `must` | 发 `ADDENDUM_MUST_ACK` 事件;下游在 `incompatible_with` 列表中则需主动 changed | 是(下游若 incompatible 则 → changed;否则保持) | 是(7 天内) | 超时自动 → changed |
+| `should` | 发 `ADDENDUM_SHOULD_ACK` 事件;下游 warning 通知 | 否(保持原状态) | 可选 | 超时仅告警 |
+| `info` | 发 `ADDENDUM_INFO` 事件;仅记录 | 否 | 否 | — |
+
+**MCP 工具**:
+
+| 工具 | 调用方 | 作用 | 关键参数 |
+|---|---|---|---|
+| `add_addendum` | current_owner / admin | 给 done 产物附加补充 | node_id, content, cascade_level, incompatible_with |
+| `reack_addendum` | 下游 node 的 owner | 确认/拒绝 addendum | addendum_id, ack_status(accepted/rejected), note |
+| `list_addenda` | 任意角色 | 查询节点的所有 addendum | node_id |
+
+**审核规则**:
+- `R_ADDENDUM_FORMAT`:addendum content 非空 + content_integrity_hash 计算(priority 80,on_fail=reject)
+- `R_ADDENDUM_AUTH`:author 必须是 current_owner 或 admin(priority 90,on_fail=reject)
+- `R_ADDENDUM_INCOMPATIBLE_VALIDITY`:`cascade_level=must` 时 `incompatible_with` 中的 node_id 必须是本节点的直接下游(priority 75,on_fail=reject)
+
+##### 2.5.1.2 addendum vs changed 判定边界
+
+**判定规则**:提交方在重提 PR 时必须声明 `modification_type`,审核方校验一致性。
+
+```python
+class ModificationDeclaration(TypedDict):
+    modification_type: str         # addendum | changed
+    # 若 addendum:
+    addendum_cascade_level: str    # must | should | info
+    addendum_incompatible_with: list[str]
+    # 若 changed:
+    change_class: str              # breaking | compatible | docs_only
+    impact_claim: list[str]
+```
+
+**判定矩阵**(审核方校验 `modification_type` 与实际改动一致性):
+
+| 实际改动 | 提交方声明 | 审核方动作 |
+|---|---|---|
+| 只新增内容(不改原文件) | addendum | ✅ 通过 |
+| 只新增内容(不改原文件) | changed | ⚠️ 告警:建议用 addendum,但允许(提交方可能需要版本 bump) |
+| 修改原文件内容 | addendum | ❌ reject:内容已变,必须走 changed |
+| 修改原文件内容 | changed | ✅ 通过,按 change_class 级联 |
+
+**"只新增内容"的技术判定**(管理方可执行,不违反"不解析内容"):
+- PR diff 中原文件行无删除/修改(纯新增行)
+- 原产物文件的 `content_integrity_hash` 不变
+- 新增内容在 `addenda/` 目录或原文件的 `---addendum---` 分隔符之后
+
+**强制走 changed 的场景**(即使提交方声明 addendum):
+- 修改了产物文件的 `version` 字段
+- 修改了 `deps` 声明
+- 修改了 `artifact_kind` / `artifact_qualifier` / `classification`
+- 删除了原产物文件的部分内容
+
+##### 2.5.1.3 change_class 声明校验规则
+
+**问题**:提交方声明 `change_class=compatible` 但实际是 breaking,低估影响导致下游未回滚。
+
+**校验机制**(三层):
+
+| 层次 | 校验方 | 规则 | 失败动作 |
+|---|---|---|---|
+| L1 自动校验 | CI | `R_CHANGE_CLASS_CONSISTENCY`:若 PR diff 包含删除字段/改类型签名/改 HTTP 方法,自动标记为 `breaking` | 标记 mismatch,要求提交方修改声明 |
+| L2 agent 校验 | review_artifact_pr | agent 对比上下游产物,若 `impact_claim` 遗漏了直接下游节点,标记 `underclaim` | 驳回 PR,要求补充 impact_claim |
+| L3 人工审核 | reviewer | 对 `breaking` 级变更强制人工确认 | reviewer 可 override agent 结论 |
+
+**L1 自动校验规则**(技术判定,不解析业务语义):
+
+```yaml
+# R_CHANGE_CLASS_CONSISTENCY(priority 85, on_fail=reject)
+rules:
+  - condition: "diff.contains_removed_fields or diff.contains_type_change"
+    expected_class: breaking
+    message: "PR 删除字段或修改类型,必须声明 change_class=breaking"
+  - condition: "diff.contains_http_method_change or diff.contains_url_path_change"
+    expected_class: breaking
+    message: "HTTP 方法/路径变更,必须声明 change_class=breaking"
+  - condition: "diff.only_adds_fields or diff.only_adds_endpoints"
+    expected_class: compatible
+    message: "PR 仅新增字段/端点,建议声明 change_class=compatible"
+  - condition: "diff.only_changes_docs or diff.only_changes_description"
+    expected_class: docs_only
+    message: "PR 仅修改文档/描述,建议声明 change_class=docs_only"
+```
+
+**L2 agent 校验**(`impact_claim` 完整性):
+- agent 读取本节点的所有直接下游(`get_downstream_nodes(node_id)`)
+- 对比 `impact_claim` 列表
+- 若遗漏直接下游,标记 `underclaim`,驳回 PR
+- 若 `impact_claim` 包含非直接下游,标记 `overclaim`(警告,不驳回)
+
+**L3 人工审核**:
+- `change_class=breaking` 的 PR 强制需要 reviewer approve(不能仅 bot approve)
+- reviewer 可 override agent 的 `underclaim` 判定(如 reviewer 确认遗漏的下游确实不受影响)
+
+##### 2.5.1.4 已进入开发节点的修改处理
+
+上游 changed/addendum 对下游不同状态的处理:
+
+| 下游状态 | 上游 changed(breaking) | 上游 changed(compatible) | 上游 addendum(must) | 上游 addendum(should/info) |
+|---|---|---|---|---|
+| `in_progress` | → blocked,清引用 | soft + ack(保持) | 发 ADDENDUM_MUST_ACK,7 天内 ack | 通知,不改状态 |
+| `draft` | → blocked,草案作废 | soft + ack(可保持) | 发 ADDENDUM_MUST_ACK | 通知,不改状态 |
+| `pending_review` | PR 自动 reject → ready | soft + ack(PR 继续) | 发 ADDENDUM_MUST_ACK | 通知,不改状态 |
+| `ready` | → blocked | 保持 ready | 发 ADDENDUM_MUST_ACK | 通知,不改状态 |
+| `done` | → blocked(若 strict)/ soft(若 accepts_draft) | soft + ack | 发 ADDENDUM_MUST_ACK,若 incompatible 则 → changed | 通知,不改状态 |
+
+**addendum 超时处理**:
+- `must` 级 addendum 发出后 7 天(可配置)下游未 ack:
+  - 下游自动 → `changed`(强制重新审核)
+  - 发 `ADDENDUM_TIMEOUT` 事件,通知下游 owner
+
+**引用型产物特殊处理**:
+- 上游 changed 时,引用型下游的 `external_commit` 保留(git 不可变),但 `artifact_refs` 清除
+- 发 `CODE_ROLLBACK_NEEDED`,追踪 `pending_code_rollbacks`
+- 代码团队确认 `restore` 后,管理方重新接受新引用
 
 #### FR2.3 PipelineState 数据结构
 
@@ -562,6 +738,13 @@ class PipelineState(TypedDict):
 - AC2.13: `no_design_client` 下 client_ui 不因缺 design_asset 被 R_DEPS_DONE 拒绝(第五轮)
 - AC2.14: `tech_debt` / `design_only` 允许非 product 根,且 Crew 仅 roles_present(第五轮)
 - AC2.15: product_spec `change_class=docs_only` 不 hard_invalidate 下游(第五轮)
+- AC2.16: `add_addendum` 后节点状态保持 done,`addenda` 列表新增一项(第五轮)
+- AC2.17: `cascade_level=must` 的 addendum 发出后,`incompatible_with` 中的下游收到 `ADDENDUM_MUST_ACK` 事件(第五轮)
+- AC2.18: `must` 级 addendum 超时 7 天未 ack,下游自动 → changed(第五轮)
+- AC2.19: 提交方声明 `modification_type=addendum` 但 PR diff 包含删除行,审核 reject(第五轮)
+- AC2.20: `change_class=compatible` 但 L1 校验检测到删除字段,CI 标记 mismatch 要求修改声明(第五轮)
+- AC2.21: `impact_claim` 遗漏直接下游,L2 agent 标记 `underclaim` 驳回 PR(第五轮)
+- AC2.22: `change_class=breaking` 的 PR 强制需要 reviewer approve(不能仅 bot)(第五轮)
 
 #### FR2.7 管线级生命周期
 
@@ -710,6 +893,11 @@ def build_crew_for_ready_nodes(ready_nodes: list, state: PipelineState) -> Crew:
 | `request_approval` | server/client agent | 请求审批 → 节点进 review | node_id, approver | ok |
 | `approve` / `reject` | reviewer/admin | 审批操作 | node_id | ok, state |
 | `set_gate_policy` | admin | 设置门禁策略 | node_id, policy | ok |
+| `add_addendum` | current_owner / admin | 给 done 产物附加补充(不改原内容) | node_id, content, cascade_level, incompatible_with | addendum_id |
+| `reack_addendum` | 下游 node 的 owner | 确认/拒绝 addendum | addendum_id, ack_status, note | ok |
+| `list_addenda` | 任意角色 | 查询节点的所有 addendum | node_id | [{addendum_id, content, cascade_level, reacks}] |
+| `transfer_owner` | current_owner / admin | 转移产物 owner | node_id, new_owner_id | ok, audit_id |
+| `revoke_human_token` | admin | 撤销人工 fallback token | token_id | ok |
 
 #### FR4.2 审核工具清单(详见 FR6)
 
