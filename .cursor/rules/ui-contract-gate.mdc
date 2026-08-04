@@ -8,12 +8,12 @@ alwaysApply: true
 When editing `**/ui-contract.html`:
 
 1. Read `.agents/skills/ui-truth-mapping/templates/ui-contract-template.html` first.
-2. Copy template structure verbatim — never invent a fifth region beyond `#ui-contract-meta`, `<style>`, `<main data-ui-contract>`, and `[data-ui-review-panel]`.
+2. Copy template structure verbatim — never invent a fifth region beyond `#ui-contract-meta`, `<style>`, `<main data-ui-contract>`, and `[data-ui-review-panel]`. Required preview infrastructure (`[data-ui-state-switcher]`, `[data-ui-state-host]`, `<template data-ui-state>`, `script[data-ui-state-preview]`) lives inside `<main>` and must be kept.
 3. After every write, run:
    `python3 scripts/validate-ui-contract-html.py <contract-path>`
    (bootstrapped repos: `python3 .ai-delivery/scripts/validate-ui-contract-html.py <contract-path>`)
-4. Do not claim `frozen`, 1:1 fidelity, `implemented`, or `merged` until validator prints `OK`.
+4. Do not claim `frozen`, 1:1 fidelity, `implemented`, or `merged` until validator prints `OK` **and** the browser-hydrated default state is visible (empty `[data-ui-state-host]` after load = not frozen). Use the state switcher to preview every declared state.
 
-Forbidden: a companion YAML/JSON/markdown truth file beside `ui-contract.html`; `data-ui-kind` values `status-bar`, `system-navigation`, `soft-keyboard`, `device-chrome`; any structure outside the four allowed regions.
+Forbidden: a companion YAML/JSON/markdown truth file beside `ui-contract.html`; `data-ui-kind` values `status-bar`, `system-navigation`, `soft-keyboard`, `device-chrome`; any structure outside the four allowed regions; whole-page dumps when the requirement slice only hits a local subtree; hand-authored layout rewrites that drop `get_code` geometry.
 
 UI work enters through `ai-delivery-orchestrator`. TemPad MCP errors → STOP, do not guess.

@@ -82,7 +82,7 @@ Each stage has one legal next skill. Full table: [references/handoff-table.md](r
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per SDD).
 - Do not invoke `writing-plans` or write design docs under `docs/superpowers/` during orchestrator design mode; store design summary in subreq `notes`.
 - Do not fork official `speckit-*` skills.
-- Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html`.
+- Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
 
@@ -90,7 +90,7 @@ Each stage has one legal next skill. Full table: [references/handoff-table.md](r
 
 | Target | Requirement |
 |--------|-------------|
-| `acceptance_frozen` | All contracts pass `validate-ui-contract-html.py` |
+| `acceptance_frozen` | All contracts pass `validate-ui-contract-html.py`; hydrated default + state switcher preview OK; scope matches slice In Scope |
 | `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; contracts still pass |
 | `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + contracts pass |
 

@@ -8,7 +8,9 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求。SDD 映射与
 
 ## 切片执行顺序
 
-来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`：`shared-component` → `page` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
+来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
+
+UI 切片必须对照已冻结、浏览器可预览（hydrate 默认态 + 状态切换）且与需求 scope 对齐的 `ui-contract.html` 实现。`figma-design-to-code` 只在本阶段（或后续视觉修复）使用，绝不当作 Stage 2 契约作者 — 冻结契约才是视觉真值来源。
 
 ## 子代理策略
 

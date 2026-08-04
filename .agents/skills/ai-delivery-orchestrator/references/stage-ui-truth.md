@@ -10,11 +10,20 @@ For each sub-requirement where `ui_bearing: true` and a Figma design source is a
 - Gather Figma file key and target node id.
 - Set output directory to the sub-requirement directory.
 
-## Run `ui-truth-mapping`
+## Run `ui-truth-mapping` only (Stage 2)
 
-Feed requirement-slice and design source. Produces one `ui-contract.html` (schema v2) per independent unit, each under its own `<unit-id>/` directory in the sub-requirement. There is no aggregate index file or companion YAML/JSON — each unit's `meta.unit.type` (`page` / `modal` / `shared-component`) and `meta.unit.dependencies` are the sole source for cross-unit relationships and delivery ordering.
+Stage 2 runs **`ui-truth-mapping` alone**. Do **not** run `figma-design-to-code` here — that skill is an implementation-time consumer, not a contract author. Mixing them in Stage 2 confuses authorship and skips scope/layout gates.
+
+Feed requirement-slice and design source. Produces one `ui-contract.html` (schema v2) per independent unit, each under its own `<unit-id>/` directory in the sub-requirement. There is no aggregate index file or companion YAML/JSON — each unit's `meta.unit.type` (`page` / `modal` / `shared-component` / `component`) and `meta.unit.dependencies` are the sole source for cross-unit relationships and delivery ordering.
 
 `ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.
+
+**Freeze bar (all required):**
+
+1. Validator prints `OK` for every unit contract.
+2. Browser open shows **hydrated default state** in `[data-ui-state-host]` (preview script present); empty host = not frozen.
+3. `[data-ui-state-switcher]` can flip every declared state to a matching preview.
+4. Contract root matches requirement-slice **In Scope** (minimal ancestor; not an unrelated whole-page dump).
 
 ## After completion
 
@@ -24,7 +33,7 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 Run once per unit's `ui-contract.html`.
 
-- Set `acceptance_frozen` only when every validator run prints `OK`.
+- Set `acceptance_frozen` only when every validator run prints `OK` **and** the freeze bar above is satisfied (hydrated preview + scope alignment).
 - On failure → `blocked_verification_failure` with validator output; do not advance status.
 - Update `status.json`.
 

@@ -82,7 +82,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按 SDD）。
 - 编排器设计模式不要 invoke `writing-plans`，不要在 `docs/superpowers/` 写设计文档；设计摘要存入子需求 `notes`。
 - 不要 fork 官方 `speckit-*` 技能。
-- 所有 unit 的 `ui-contract.html` 未经 `scripts/validate-ui-contract-html.py` 退出 0 之前，不得设置 `acceptance_frozen`。
+- 所有 unit 的 `ui-contract.html` 未经 `scripts/validate-ui-contract-html.py` 退出 0，且浏览器 hydrate 默认态预览与需求 scope 对齐通过之前，不得设置 `acceptance_frozen`（见 Stage 2 冻结门槛）。Stage 2 仅通过 `ui-truth-mapping` 写契约 — 绝不经由 `figma-design-to-code`。
 - UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且契约仍通过时，不得 `merged`。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
 
@@ -90,7 +90,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | 所有契约通过 `validate-ui-contract-html.py` |
+| `acceptance_frozen` | 所有契约通过 `validate-ui-contract-html.py`；hydrate 默认态 + 状态切换预览 OK；scope 对齐切片 In Scope |
 | `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；契约仍通过 |
 | `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + 契约通过 |
 

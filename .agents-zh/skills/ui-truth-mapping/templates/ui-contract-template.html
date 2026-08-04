@@ -16,9 +16,18 @@
     1. <script id="ui-contract-meta" type="application/json">
        — schema_version, contract_id, source, unit, states, revision, delivery
     2. <style> — CSS custom properties + evidence-backed layout/visual rules
-    3. <main data-ui-contract> — the single unit's semantic, renderable DOM
+    3. <main data-ui-contract> — the single unit's renderable DOM, including
+       required preview infrastructure (switcher / host / state templates /
+       preview script) and truth-bearing nodes transferred from get_code
     4. [data-ui-review-panel] — collapsible source-node / inference evidence,
-       nested inside <main data-ui-contract> as the last child
+       nested inside <main data-ui-contract> as the last truth-adjacent child
+       before the preview script
+
+  Required preview infrastructure INSIDE <main> (not a fifth region):
+    - [data-ui-state-switcher] — state tabs built/filled by the preview script
+    - [data-ui-state-host] — live mount point; empty in source, hydrated on load
+    - <template data-ui-state> — ONE per meta.states[].id (including default)
+    - script[data-ui-state-preview] — fixed hydrate + switch script (keep verbatim)
 
   FORBIDDEN:
     - A second UI truth source next to this file (no companion YAML, JSON,
@@ -28,6 +37,8 @@
       Use CSS safe-area handling on the affected unit instead.
     - Free-form markup outside the four regions above.
     - Any value that is not traceable to a get_code/get_structure payload.
+    - Putting the default state ONLY inside <template> without the preview
+      script — browsers do not render <template>; hydration is mandatory.
 -->
 <script type="application/json" id="ui-contract-meta">
 {
@@ -64,6 +75,10 @@
     TemPad returns a canonical token binding; otherwise keep the literal
     value TemPad returned. Never guess a value from a screenshot, a node
     name, or a descendant that get_code/get_structure did not return.
+
+    Transfer layout geometry from get_code mechanically (width/height,
+    position, gap, padding, margin, display, flex/grid props, z-index).
+    Do not rewrite into a hand-authored semantic flex page.
   */
   :root {
     --color-surface: #PLACEHOLDER;
@@ -74,6 +89,33 @@
     background: var(--color-surface);
     color: var(--color-text);
     min-height: 100vh;
+  }
+  /* Preview chrome — not design truth; do not mirror into product code. */
+  [data-ui-state-switcher] {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 12px;
+    margin: 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+    background: #f6f6f6;
+    font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+  }
+  [data-ui-state-switcher] button {
+    appearance: none;
+    border: 1px solid #bbb;
+    background: #fff;
+    border-radius: 4px;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  [data-ui-state-switcher] button[aria-pressed="true"] {
+    border-color: #111;
+    background: #111;
+    color: #fff;
+  }
+  [data-ui-state-host] {
+    position: relative;
   }
   /*
     [data-ui-id="PLACEHOLDER-region-id"] { ...evidence-backed rules only... }
@@ -88,7 +130,25 @@
     data-ui-state-default names the default state id from meta.states.
   -->
   <main data-ui-contract data-ui-unit-id="PLACEHOLDER-unit-id" data-ui-unit-type="page" data-ui-state-default="PLACEHOLDER-state-id">
+    <!-- Preview chrome (not truth — no data-ui-id). Script fills buttons from meta.states. -->
+    <nav data-ui-state-switcher aria-label="UI contract states"></nav>
+
     <!--
+      Shared chrome that appears identically in every state may live HERE,
+      outside [data-ui-state-host], but ONLY when it is in In Scope and
+      identical across states. Otherwise put it inside each state template.
+      Mark out-of-scope positioning chrome with data-ui-scope="context".
+    -->
+
+    <!-- Live mount: empty in source; script hydrates meta default on load. -->
+    <div data-ui-state-host></div>
+
+    <!--
+      EVERY declared state (including default) must have exactly one
+      <template data-ui-state="<id>">. Put state-varying truth DOM inside.
+      Transfer get_code markup + layout styles mechanically; only add
+      data-ui-* / data-figma-node / data-evidence attributes.
+
       Every truth-bearing node needs:
         data-ui-id      — stable, unique within this file
         data-ui-kind    — container | card | list | list-item | form | text |
@@ -99,36 +159,75 @@
         data-evidence   — "code" | "structure" | "structure+code" | "inferred"
                            ("inferred" requires a matching note in the review
                            panel below — never leave an inference silent)
-      Nest child elements recursively the same way; there is no fixed depth.
-    -->
-    <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
-      <!-- children go here, one data-ui-id per truth-bearing element -->
-    </section>
-
-    <!--
-      State-only content: wrap in <template data-ui-state="<id>">, where
-      <id> matches one of meta.states[].id. Components always visible across
-      every state stay outside any <template>. Move a component inside a
-      <template> only when the design shows it appearing/changing for that
-      specific state.
     -->
     <template data-ui-state="PLACEHOLDER-state-id">
-      <div data-ui-id="PLACEHOLDER-state-only-id" data-ui-kind="text" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">PLACEHOLDER visible text from Figma</div>
+      <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
+        <div data-ui-id="PLACEHOLDER-state-only-id" data-ui-kind="text" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">PLACEHOLDER visible text from Figma</div>
+      </section>
     </template>
 
     <!--
       Review panel: collapsed-by-default detail layer for source nodes,
-      state notes, and inference reasoning. Every data-evidence="inferred"
-      element above MUST have a matching dt[data-ui-evidence-for]/dd pair
-      here — silent inference is a process failure, not a shortcut.
+      scope inventory, state notes, and inference reasoning. Every
+      data-evidence="inferred" element above MUST have a matching
+      dt[data-ui-evidence-for]/dd pair here — silent inference is a
+      process failure, not a shortcut.
     -->
     <details data-ui-review-panel>
       <summary>Contract evidence</summary>
       <dl>
+        <dt data-ui-scope="in_scope">In scope</dt>
+        <dd>PLACEHOLDER: list the visual artifacts this requirement must freeze (node ids + short labels).</dd>
+        <dt data-ui-scope="out_of_scope">Out of scope context</dt>
+        <dd>PLACEHOLDER: list chrome kept only for positioning, or write "none".</dd>
         <dt data-ui-evidence-for="PLACEHOLDER-region-id">Inference</dt>
         <dd>PLACEHOLDER explanation of which Figma nodes this was derived from and why normalization was needed.</dd>
       </dl>
     </details>
+
+    <!-- Fixed preview script — keep verbatim; do not reimplement. -->
+    <script data-ui-state-preview>
+(function () {
+  var main = document.querySelector("main[data-ui-contract]");
+  if (!main) return;
+  var metaEl = document.getElementById("ui-contract-meta");
+  var host = main.querySelector("[data-ui-state-host]");
+  var switcher = main.querySelector("[data-ui-state-switcher]");
+  if (!metaEl || !host) return;
+  var meta;
+  try { meta = JSON.parse(metaEl.textContent); } catch (e) { return; }
+  var states = Array.isArray(meta.states) ? meta.states : [];
+  var defaultId =
+    main.getAttribute("data-ui-state-default") ||
+    (states.find(function (s) { return s && s.default; }) || states[0] || {}).id;
+  function templateFor(id) {
+    return main.querySelector('template[data-ui-state="' + id + '"]');
+  }
+  function activate(id) {
+    var tpl = templateFor(id);
+    if (!tpl) return;
+    host.replaceChildren(tpl.content.cloneNode(true));
+    host.setAttribute("data-active-state", id);
+    if (!switcher) return;
+    switcher.querySelectorAll("button[data-state-id]").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-state-id") === id ? "true" : "false");
+    });
+  }
+  if (switcher) {
+    switcher.replaceChildren();
+    states.forEach(function (s) {
+      if (!s || !s.id) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-state-id", s.id);
+      btn.textContent = s.id + (s.default ? " (default)" : "");
+      btn.addEventListener("click", function () { activate(s.id); });
+      switcher.appendChild(btn);
+    });
+  }
+  if (defaultId) activate(defaultId);
+})();
+    </script>
   </main>
 </body>
 </html>

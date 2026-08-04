@@ -23,7 +23,8 @@
       "dependencies": []
     },
     "states": [
-      { "id": "idle", "source_node": "1:200", "default": true }
+      { "id": "idle", "source_node": "1:200", "default": true },
+      { "id": "empty", "source_node": "1:300", "default": false }
     ],
     "revision": 1,
     "delivery": {
@@ -39,25 +40,90 @@
       --space-page-x: 16px;
     }
     [data-ui-contract] { background: var(--color-surface); color: var(--color-text); min-height: 100vh; }
+    [data-ui-state-switcher] {
+      display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 12px; margin: 0;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.12); background: #f6f6f6;
+      font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
+    }
+    [data-ui-state-switcher] button {
+      appearance: none; border: 1px solid #bbb; background: #fff;
+      border-radius: 4px; padding: 4px 10px; cursor: pointer;
+    }
+    [data-ui-state-switcher] button[aria-pressed="true"] {
+      border-color: #111; background: #111; color: #fff;
+    }
     [data-ui-id="profile-header"] { padding: 24px var(--space-page-x); }
     [data-ui-id="profile-title"] { font-size: 24px; line-height: 32px; font-weight: 600; text-align: center; }
   </style>
 </head>
 <body>
   <main data-ui-contract data-ui-unit-id="profile-page" data-ui-unit-type="page" data-ui-state-default="idle">
-    <section data-ui-id="profile-header" data-ui-kind="container" data-figma-node="1:201" data-evidence="structure+code">
-      <h1 data-ui-id="profile-title" data-ui-kind="text" data-figma-node="1:202" data-evidence="code">Profile</h1>
-    </section>
+    <nav data-ui-state-switcher aria-label="UI contract states"></nav>
+    <div data-ui-state-host></div>
     <template data-ui-state="idle">
-      <div data-ui-id="profile-idle-note" data-ui-kind="text" data-figma-node="1:203" data-evidence="code">No notifications.</div>
+      <section data-ui-id="profile-header" data-ui-kind="container" data-figma-node="1:201" data-evidence="structure+code">
+        <h1 data-ui-id="profile-title" data-ui-kind="text" data-figma-node="1:202" data-evidence="code">Profile</h1>
+        <div data-ui-id="profile-idle-note" data-ui-kind="text" data-figma-node="1:203" data-evidence="code">No notifications.</div>
+      </section>
+    </template>
+    <template data-ui-state="empty">
+      <section data-ui-id="profile-empty" data-ui-kind="container" data-figma-node="1:301" data-evidence="code">
+        <div data-ui-id="profile-empty-note" data-ui-kind="text" data-figma-node="1:302" data-evidence="code">Nothing here yet.</div>
+      </section>
     </template>
     <details data-ui-review-panel>
       <summary>Contract evidence</summary>
       <dl>
+        <dt data-ui-scope="in_scope">In scope</dt>
+        <dd>1:201 profile header; 1:202 title; 1:203 idle note; 1:301–1:302 empty state.</dd>
+        <dt data-ui-scope="out_of_scope">Out of scope context</dt>
+        <dd>none</dd>
         <dt data-ui-evidence-for="profile-header">Inference</dt>
         <dd>Grouped repeated Figma rows into a semantic header container from nodes 1:201-1:202.</dd>
       </dl>
     </details>
+    <script data-ui-state-preview>
+(function () {
+  var main = document.querySelector("main[data-ui-contract]");
+  if (!main) return;
+  var metaEl = document.getElementById("ui-contract-meta");
+  var host = main.querySelector("[data-ui-state-host]");
+  var switcher = main.querySelector("[data-ui-state-switcher]");
+  if (!metaEl || !host) return;
+  var meta;
+  try { meta = JSON.parse(metaEl.textContent); } catch (e) { return; }
+  var states = Array.isArray(meta.states) ? meta.states : [];
+  var defaultId =
+    main.getAttribute("data-ui-state-default") ||
+    (states.find(function (s) { return s && s.default; }) || states[0] || {}).id;
+  function templateFor(id) {
+    return main.querySelector('template[data-ui-state="' + id + '"]');
+  }
+  function activate(id) {
+    var tpl = templateFor(id);
+    if (!tpl) return;
+    host.replaceChildren(tpl.content.cloneNode(true));
+    host.setAttribute("data-active-state", id);
+    if (!switcher) return;
+    switcher.querySelectorAll("button[data-state-id]").forEach(function (btn) {
+      btn.setAttribute("aria-pressed", btn.getAttribute("data-state-id") === id ? "true" : "false");
+    });
+  }
+  if (switcher) {
+    switcher.replaceChildren();
+    states.forEach(function (s) {
+      if (!s || !s.id) return;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.setAttribute("data-state-id", s.id);
+      btn.textContent = s.id + (s.default ? " (default)" : "");
+      btn.addEventListener("click", function () { activate(s.id); });
+      switcher.appendChild(btn);
+    });
+  }
+  if (defaultId) activate(defaultId);
+})();
+    </script>
   </main>
 </body>
 </html>

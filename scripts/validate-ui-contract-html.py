@@ -33,10 +33,12 @@ VOID_ELEMENTS = frozenset(
     }
 )
 
-VALID_UNIT_TYPES = frozenset({"page", "modal", "shared-component"})
+VALID_UNIT_TYPES = frozenset({"page", "modal", "shared-component", "component"})
 FORBIDDEN_KINDS = frozenset({"status-bar", "system-navigation", "soft-keyboard", "device-chrome"})
 DELIVERY_STATUSES_REQUIRING_IMPLEMENTED = frozenset({"implemented", "merged"})
 DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
+PREVIEW_INFRA_ATTRS = ("data-ui-state-switcher", "data-ui-state-host")
+REQUIRED_SCOPE_KEYS = ("in_scope", "out_of_scope")
 
 
 class ValidationError(Exception):
@@ -314,6 +316,9 @@ class ContractValidator:
         self.validate_ui_ids(root)
         self.validate_forbidden_kinds(root)
         self.validate_states_in_dom(root)
+        self.validate_preview_infrastructure(root)
+        self.validate_default_state_content(root)
+        self.validate_scope_inventory(root)
         self.validate_evidence(root)
         self.validate_assets(root)
 
@@ -394,14 +399,202 @@ class ContractValidator:
                     if isinstance(state, dict) and is_nonempty_str(state.get("id"))
                 }
 
+        template_state_ids: set[str] = set()
         for node in walk(root):
             if node.tag != "template" or not node.has("data-ui-state"):
                 continue
             state_id = node.get("data-ui-state")
+            if not is_nonempty_str(state_id):
+                self.add_error("STATE", "template data-ui-state must be a non-empty string")
+                continue
+            if state_id in template_state_ids:
+                self.add_error("STATE", f'duplicate template data-ui-state "{state_id}"')
+            else:
+                template_state_ids.add(state_id)
             if known_state_ids is not None and state_id not in known_state_ids:
                 self.add_error(
                     "STATE",
                     f'template state "{state_id}" is not declared in meta.states',
+                )
+
+        if known_state_ids is not None:
+            for state_id in sorted(known_state_ids - template_state_ids):
+                self.add_error(
+                    "STATE",
+                    f'meta.states id "{state_id}" has no matching <template data-ui-state>',
+                )
+
+        mains = [
+            node for node in walk(root) if node.tag == "main" and node.has("data-ui-contract")
+        ]
+        if len(mains) == 1 and isinstance(meta, dict):
+            default_id = self._default_state_id()
+            main_default = mains[0].get("data-ui-state-default")
+            if is_nonempty_str(default_id) and main_default != default_id:
+                self.add_error(
+                    "STATE",
+                    f'main data-ui-state-default "{main_default}" does not match '
+                    f'meta default state "{default_id}"',
+                )
+
+    def _default_state_id(self) -> str | None:
+        meta = self.meta
+        if not isinstance(meta, dict):
+            return None
+        states = meta.get("states")
+        if not isinstance(states, list):
+            return None
+        for state in states:
+            if isinstance(state, dict) and state.get("default") is True and is_nonempty_str(
+                state.get("id")
+            ):
+                return state.get("id")
+        return None
+
+    def _find_main(self, root: Node) -> Node | None:
+        mains = [
+            node for node in walk(root) if node.tag == "main" and node.has("data-ui-contract")
+        ]
+        return mains[0] if len(mains) == 1 else None
+
+    def validate_preview_infrastructure(self, root: Node) -> None:
+        main = self._find_main(root)
+        if main is None:
+            return
+
+        for attr in PREVIEW_INFRA_ATTRS:
+            matches = [node for node in walk(main) if node.has(attr)]
+            if not matches:
+                self.add_error(
+                    "PREVIEW",
+                    f'missing required [{attr}] inside <main data-ui-contract> '
+                    "(needed to hydrate/switch <template data-ui-state> in the browser)",
+                )
+            elif len(matches) > 1:
+                self.add_error(
+                    "PREVIEW",
+                    f'multiple [{attr}] elements found ({len(matches)}); exactly one is required',
+                )
+
+        scripts = [
+            node
+            for node in walk(main)
+            if node.tag == "script" and node.has("data-ui-state-preview")
+        ]
+        if not scripts:
+            self.add_error(
+                "PREVIEW",
+                'missing required <script data-ui-state-preview> inside <main>; '
+                "without it default/alternate states stay invisible in the browser",
+            )
+        elif len(scripts) > 1:
+            self.add_error(
+                "PREVIEW",
+                f"multiple script[data-ui-state-preview] elements found ({len(scripts)}); "
+                "exactly one is required",
+            )
+        else:
+            raw = "".join(scripts[0].text)
+            if "data-ui-state-host" not in raw or "cloneNode" not in raw:
+                self.add_error(
+                    "PREVIEW",
+                    "script[data-ui-state-preview] looks incomplete; keep the template "
+                    "hydrate/switch script (must reference data-ui-state-host and cloneNode)",
+                )
+
+    def validate_default_state_content(self, root: Node) -> None:
+        """Default state template must contain at least one truth-bearing node.
+
+        Browsers do not render <template>; preview script hydrates the host.
+        Static check: the default template itself must be non-empty.
+        """
+        default_id = self._default_state_id()
+        if not is_nonempty_str(default_id):
+            return
+
+        main = self._find_main(root)
+        search_root = main if main is not None else root
+        templates = [
+            node
+            for node in walk(search_root)
+            if node.tag == "template" and node.get("data-ui-state") == default_id
+        ]
+        if not templates:
+            # Missing template already reported by validate_states_in_dom.
+            return
+
+        truth_nodes = [
+            node
+            for node in walk(templates[0])
+            if node is not templates[0] and is_nonempty_str(node.get("data-ui-id"))
+        ]
+        if not truth_nodes:
+            self.add_error(
+                "PREVIEW",
+                f'default state template "{default_id}" has no truth-bearing data-ui-id nodes; '
+                "hydrated browser preview would be empty",
+            )
+            return
+
+        # At least one truth node should carry visible text, img/svg, or children with text.
+        has_visible = False
+        for node in truth_nodes:
+            if text_content(node):
+                has_visible = True
+                break
+            if node.tag in {"img", "svg", "canvas", "video"}:
+                has_visible = True
+                break
+            if node.has("data-src") or node.has("src"):
+                has_visible = True
+                break
+        if not has_visible:
+            self.add_error(
+                "PREVIEW",
+                f'default state template "{default_id}" truth nodes have no visible text/media; '
+                "hydrated browser preview would appear blank",
+            )
+
+    def validate_scope_inventory(self, root: Node) -> None:
+        panels = [node for node in walk(root) if node.has("data-ui-review-panel")]
+        if not panels:
+            self.add_error(
+                "SCOPE",
+                "missing [data-ui-review-panel]; required for in_scope / out_of_scope inventory",
+            )
+            return
+
+        found: dict[str, str] = {}
+        for panel in panels:
+            for node in walk(panel):
+                if node.tag != "dt":
+                    continue
+                scope_key = node.get("data-ui-scope")
+                if scope_key not in REQUIRED_SCOPE_KEYS:
+                    continue
+                dd_node = None
+                if node.parent is not None:
+                    siblings = node.parent.children
+                    idx = siblings.index(node)
+                    for sibling in siblings[idx + 1 :]:
+                        if sibling.tag == "dd":
+                            dd_node = sibling
+                            break
+                        if sibling.tag == "dt":
+                            break
+                found[scope_key] = text_content(dd_node)
+
+        for key in REQUIRED_SCOPE_KEYS:
+            if key not in found:
+                self.add_error(
+                    "SCOPE",
+                    f'missing dt[data-ui-scope="{key}"] with a following dd in '
+                    "[data-ui-review-panel]",
+                )
+            elif not found[key]:
+                self.add_error(
+                    "SCOPE",
+                    f'dt[data-ui-scope="{key}"] has an empty dd; list artifacts or write "none"',
                 )
 
     def validate_evidence(self, root: Node) -> None:

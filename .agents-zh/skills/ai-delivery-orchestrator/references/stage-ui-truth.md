@@ -10,11 +10,20 @@
 - 收集 Figma file key 与目标 node id。
 - 输出目录设为子需求目录。
 
-## 运行 `ui-truth-mapping`
+## 仅运行 `ui-truth-mapping`（Stage 2）
 
-传入需求切片与设计源。每个独立 unit 产出一份 `ui-contract.html`（schema v2），各自位于子需求下自己的 `<unit-id>/` 目录中。不存在聚合索引文件或配套 YAML/JSON——跨 unit 关系与交付顺序唯一来自各 unit 自身的 `meta.unit.type`（`page` / `modal` / `shared-component`）与 `meta.unit.dependencies`。
+Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code` — 该技能是实现期消费者，不是契约作者。Stage 2 混用会搞乱归属并跳过 scope/布局门禁。
+
+传入需求切片与设计源。每个独立 unit 产出一份 `ui-contract.html`（schema v2），各自位于子需求下自己的 `<unit-id>/` 目录中。不存在聚合索引文件或配套 YAML/JSON——跨 unit 关系与交付顺序唯一来自各 unit 自身的 `meta.unit.type`（`page` / `modal` / `shared-component` / `component`）与 `meta.unit.dependencies`。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
+
+**冻结门槛（全部满足）：**
+
+1. 每个 unit 契约校验器打印 `OK`。
+2. 浏览器打开后 `[data-ui-state-host]` 显示 **hydrate 后的默认态**（预览脚本存在）；空 host = 未冻结。
+3. `[data-ui-state-switcher]` 可切换每个已声明状态并看到对应预览。
+4. 契约 root 对齐需求切片 **In Scope**（最小祖先；非无关整页 dump）。
 
 ## 完成后
 
@@ -24,7 +33,7 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 每个 unit 的 `ui-contract.html` 各运行一次。
 
-- 仅当每次校验输出 `OK` 时设置 `acceptance_frozen`。
+- 仅当每次校验输出 `OK` **且**满足上方冻结门槛（hydrate 预览 + scope 对齐）时设置 `acceptance_frozen`。
 - 失败 → `blocked_verification_failure` 并附校验输出；不推进状态。
 - 更新 `status.json`。
 

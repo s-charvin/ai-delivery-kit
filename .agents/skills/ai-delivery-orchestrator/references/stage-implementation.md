@@ -8,7 +8,9 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation. See [stage
 
 ## Slice execution order
 
-Derived from each unit's embedded `meta.unit.type` and `meta.unit.dependencies`: `shared-component` → `page` → `modal` (each modal after its trigger page). A unit starts only when the units listed in its `meta.unit.dependencies` are `merged`.
+Derived from each unit's embedded `meta.unit.type` and `meta.unit.dependencies`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when the units listed in its `meta.unit.dependencies` are `merged`.
+
+For UI-bearing slices, implement against an already-frozen `ui-contract.html` that is browser-previewable (hydrated default + state switcher) and requirement-scope aligned. Run `figma-design-to-code` only in this stage (or later visual fix loops), never as a Stage 2 contract author — the frozen contract is the visual source of truth.
 
 ## Subagent policy
 
