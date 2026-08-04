@@ -80,4 +80,179 @@
 
 ---
 
-## 3. P0 修正项(17 项
+## 3. P0 修正项(17 项)
+
+### 3.1 角色缺位(8 项 P0,来自 A37-A39)
+
+| # | P0 修正 | 场景 | 章节 | 说明 |
+|---|---|---|---|---|
+| P0-R5.1 | skill.deps 支持条件依赖 | A37/A39/A41 | §FR5 | deps 新增 `required: false` + `condition` + `deps_mode: conditional` |
+| P0-R5.2 | 新增 client_logic 节点类型 + client-logic-skill | A39 | §2.1 | 区分"UI 联调"(client_func)与"纯逻辑"(client_logic) |
+| P0-R5.3 | 新增 server_delivery 节点类型 + server-delivery-skill | A38 | §2.1 | 对称补全 client_delivery,纯服务端管线有交付门禁 |
+| P0-R5.4 | fr2 §7.3 加载校验对齐开放命名空间 | A39 | §FR2.7 | 修正"声称开放但实现封闭"矛盾,支持 {role}.{name} 自定义节点 |
+| P0-R5.5 | pipeline.yaml 新增 participants 声明 | A37-A39 | §5 | 显式声明参与角色,agent 按需实例化 |
+| P0-R5.6 | 节点类型清单补 research_spike | A41 | §2.1 | 明确列入主清单 |
+| P0-R5.7 | 角色缺位管线模板(pure-ui/pure-server/pure-logic) | A37-A39 | §FR2 附录 | 预置 3 个标准模板 |
+| P0-R5.8 | 轻量执行路径(execution_mode: lightweight) | A39 | §FR2 | 节点 ≤3 时跳过 CrewAI,用 MemorySaver + 简化 StateGraph |
+
+### 3.2 owner 交接(5 项 P0,来自 A40)
+
+| # | P0 修正 | 场景 | 章节 | 说明 |
+|---|---|---|---|---|
+| P0-R5.9 | ArtifactRef 新增 current_owner 字段 | A40 | §5.1 | 可变状态,与 provenance(不可变历史)解耦 |
+| P0-R5.10 | transfer_owner MCP 工具 | A40 | §FR4 | 权限校验 + 密级继承 + 审计 action |
+| P0-R5.11 | addendum 轻量补充机制 | A40 | §FR1/§FR2 | done 产物 append-only 附加,不改原内容/版本 |
+| P0-R5.12 | addendum 分级级联(must/should/info) | A40 | §FR2 | must: incompatible 时下游 changed;should: warning;info: 不通知 |
+| P0-R5.13 | revoke_human_token + 权限继承 | A40 | §FR4 | owner 转移时撤销旧 token,新 owner 继承权限 |
+
+### 3.3 多源头 + 可选依赖(4 项 P0,来自 A41)
+
+| # | P0 修正 | 场景 | 章节 | 说明 |
+|---|---|---|---|---|
+| P0-R5.14 | 多根 DAG 显式支持 | A41 | §FR2.4/AC2.1 | bootstrap 对所有根节点并行 fan-out,根节点不限于 product_spec |
+| P0-R5.15 | DepDeclaration 新增 optional 标记 | A41 | §5 | `optional: true` 与 strictness 正交,4 种组合语义 |
+| P0-R5.16 | 级联公式修正 | A41 | §FR2.2 | T3 ready 判定改为"仅 required deps 全 done"(optional 不参与) |
+| P0-R5.17 | 状态机扩展 skipped 态 + AC2.7 修正 | A41 | §FR2.1/AC2.7 | optional 节点未 done 自动 skipped,终止条件改为"required 全 done" |
+
+---
+
+## 4. 关键设计图
+
+### 4.1 通用管线模型(支持角色缺位 + 多源头 + 可选依赖)
+
+```mermaid
+graph TB
+    subgraph "多根 DAG(根节点不限于 product_spec)"
+        N1[n1: product_spec<br/>required root]
+        N2[n2: research_spike<br/>required root]
+        N3[n3: design_asset<br/>optional, 可不在本管线]
+    end
+
+    subgraph "下游节点(条件依赖)"
+        N4[n4: api_contract<br/>deps: n1+n2 全 required]
+        N5[n5: client_ui<br/>deps: n4 required + n3 optional]
+        N6[n6: client_delivery<br/>deps: n5 required]
+    end
+
+    N1 --> N4
+    N2 --> N4
+    N4 --> N5
+    N3 -.->|optional| N5
+    N5 --> N6
+
+    style N3 stroke-dasharray: 5 5
+    style N5 fill:#fff8dc
+```
+
+### 4.2 owner 交接三种路径
+
+```mermaid
+flowchart LR
+    Start[A 离职 B 接手] --> Check{B 读完 product_spec}
+
+    Check -->|完全认同| P1[路径 1:owner 转移<br/>零级联]
+    Check -->|部分认同| P2[路径 2:addendum 补充<br/>弱级联 re-ack]
+    Check -->|完全不认同| P3[路径 3:changed 重做<br/>强级联全失效]
+
+    P1 --> R1[产物不变<br/>current_owner 更新<br/>审计 owner_transfer]
+    P2 --> R2[原产物不变<br/>附加 addendum<br/>must/should/info 级联]
+    P3 --> R3[产物 changed<br/>下游递归 blocked<br/>引用型双层回滚]
+
+    style P1 fill:#e8f5e9
+    style P2 fill:#fff8dc
+    style P3 fill:#ffebee
+```
+
+### 4.3 状态机扩展(10 → 11 态,新增 skipped)
+
+```mermaid
+stateDiagram-v2
+    direction TB
+    [*] --> blocked : T1 bootstrap(有 required deps 未 done)
+    [*] --> ready : T2 bootstrap(根节点 / required deps 全 done)
+    [*] --> skipped : T_NEW optional 节点管线终止时
+
+    blocked --> ready : T3 cascade(required deps 全 done)
+
+    ready --> in_progress : T4 update_progress
+    ready --> pending_review : T5 submit_artifact
+    ready --> draft : D1 soft_submit
+
+    in_progress --> pending_review : T6 submit_artifact
+    in_progress --> ready : T18 gate 失败打回
+
+    draft --> pending_review : D3 submit_artifact(正式)
+    draft --> ready : D4 abandon_draft
+    draft --> blocked : T16 上游 changed
+
+    pending_review --> done : T7 approve_pr
+    pending_review --> ready : T8 reject_pr
+
+    done --> changed : T10 重提且 commit 不同
+    done --> deprecated : D7 外部依赖失效
+    done --> done : T19 superseded(竞争胜出)
+    changed --> pending_review : T12 重提 PR
+
+    deprecated --> sunset : sunset_date 到达
+
+    note right of skipped
+        skipped 态特性:
+        · optional 节点未 done 且管线将终止
+        · 不阻塞管线 completed
+        · 不触发 cascade
+        · 后到可触发 OPTIONAL_DEP_ARRIVED
+    end note
+```
+
+---
+
+## 5. 五轮累计统计
+
+| 轮次 | 场景数 | 缺陷数 | Critical | High | P0 修正 |
+|---|---|---|---|---|---|
+| 第一轮+第三轮 | 16 | 83 | 1 | 44 | 14 |
+| 第二轮 | 12 | 107 | 0 | — | — |
+| 第四轮 | 20 | 99 | 17 | 45 | 18 |
+| **第五轮** | **5** | **32** | **5** | **15** | **17** |
+| **累计** | **53** | **~321** | **23** | **~104** | **49** |
+
+---
+
+## 6. 核心认知升级
+
+### 6.1 通用性的三层含义
+
+第五轮揭示了"通用性"(需求 1)的三层含义,前四轮只覆盖了第一层:
+
+| 层次 | 含义 | 覆盖轮次 |
+|---|---|---|
+| 第一层:产物格式通用 | 产物怎么定义由各端决定(YAML/JSON/Figma/Markdown) | 第一~四轮 |
+| 第二层:角色组合通用 | 不是所有功能都需要 4 角色全参与(可缺位) | **第五轮** |
+| 第三层:依赖拓扑通用 | 不是所有管线都单源头、全量依赖(可多源头、可选依赖) | **第五轮** |
+
+### 6.2 两个正交维度
+
+第五轮发现了两个之前未显式建模的正交维度:
+
+1. **依赖严格性(strictness) × 依赖必要性(optional)**:第三轮引入 strictness(accepts_draft),第五轮引入 optional,组合出 4 种依赖语义
+2. **团队维度(RoleInstance) × 个人维度(current_owner)**:第三轮 RoleInstance 解决多团队,第五轮 current_owner 解决人员交接,两者正交
+
+### 6.3 产物修改的完整光谱
+
+第五轮 addendum 机制补全了"产物修改"的完整光谱:
+
+| 修改力度 | 机制 | 级联 | 场景 |
+|---|---|---|---|
+| 零修改 | owner 转移 | 零级联 | A40-1 完全认同 |
+| 轻量补充 | addendum | 弱级联(must/should/info) | A40-2 部分认同 |
+| 正式变更 | changed | 强级联(全链路失效) | A40-3 推翻重做 |
+
+---
+
+## 7. 下一步建议
+
+1. **将 17 项 P0-R5 修正回写到主 PRD 各章节**(附录 D10 记录,各章节落地)
+2. **更新 implementation-plan.md**:Phase 1 新增 P0-R5.1/R5.5/R5.14/R5.15/R5.16/R5.17(通用性基础),Phase 2 新增 P0-R5.9~R5.13(owner 交接)
+3. **节点类型清单更新**:新增 client_logic、server_delivery、research_spike(正式列入 §2.1)
+4. **状态机更新**:10 态 → 11 态(新增 skipped)
+5. **第六轮压测方向**:若仍有余力,可测试"跨管线模板复用 + 多管线并发资源调度"(但预计边际收益递减)

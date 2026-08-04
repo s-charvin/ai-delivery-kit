@@ -1891,3 +1891,69 @@ flowchart TB
   LG --> LF[Langfuse<br/>profile 标签]
   Hub --> LF
 ```
+
+### D11. 第五轮压力测试补充:owner 交接 + 多源头可选依赖(A37–A41)
+
+> **评审修正**:D10 用 ParticipationProfile 抽象覆盖了"角色缺位"拓扑(B1–B5)。本轮在 D10 基础上补充两个 D10 未充分覆盖的真实全流程维度:**人员交接**(A40)和**多源头并行+可选依赖**(A41),同时用 A37–A39 从"产物类型/skill 条件依赖"角度交叉验证 D10 的角色缺位结论。共 5 场景,32 缺陷(5 Critical / 15 High / 12 Medium / 2 Low),17 项 P0 修正(其中 8 项与 D10 互补验证,9 项为 D10 未覆盖的新增)。
+
+**与 D10 的关系**:
+
+| 维度 | D10(B1–B5) | D11(A37–A41) | 关系 |
+|---|---|---|---|
+| 角色缺位 | ParticipationProfile + materialize | skill.deps 条件依赖 + 节点类型补全 | 互补:D10 从管线级裁剪,D11 从 skill/节点级条件依赖 |
+| owner 交接 | 未覆盖 | current_owner + transfer_owner + addendum | **D10 未覆盖,D11 新增** |
+| 多源头并行 | 未覆盖 | 多根 DAG + optional 标记 + skipped 态 | **D10 未覆盖,D11 新增** |
+| 可选依赖 | effective_deps 部分覆盖 | DepDeclaration.optional + 级联公式修正 | 互补:D10 隐式,D11 显式建模 |
+
+**5 大根因**(D11 新发现 3 个 + 互补验证 2 个):
+
+| 根因 | 缺陷数 | 核心问题 | 新/互补 |
+|---|---|---|---|
+| 隐含"4 角色全参与 + product 唯一起点"假设 | 12 | DAG 根节点/叶子节点/交付门禁假设全角色 | 互补 D10 |
+| skill.deps 静态硬约束,不支持条件依赖 | 8 | design/client skill 硬编码 deps 阻断角色缺位 | 互补 D10 |
+| RoleInstance 团队级,无人员级 owner | 7 | 同团队内人员交接无机制,provenance 无当前 owner | **新发现** |
+| DAG 级联和终止不支持"可选节点" | 5 | 全量依赖+全 done 终止,无 optional/skipped | **新发现** |
+| 节点类型清单不够通用 | 3 | 缺 client_logic/server_delivery/research_spike | **新发现** |
+
+**17 项 P0 修正**(详见 [round5-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round5-summary.md)):
+
+| # | 修正项 | D10 是否覆盖 | 影响章节 |
+|---|---|---|---|
+| P0-R5.1 | skill.deps 支持条件依赖(required: false + condition) | 互补(D10 effective_deps) | §FR5 |
+| P0-R5.2 | 新增 client_logic 节点类型 + client-logic-skill | **新增** | §2.1 |
+| P0-R5.3 | 新增 server_delivery 节点类型 + server-delivery-skill | **新增** | §2.1 |
+| P0-R5.4 | fr2 §7.3 加载校验对齐开放命名空间 | 互补 | §FR2.7 |
+| P0-R5.5 | pipeline.yaml 新增 participants 声明 | 互补(D10 ParticipationProfile) | §5 |
+| P0-R5.6 | 节点类型清单补 research_spike | **新增** | §2.1 |
+| P0-R5.7 | 角色缺位管线模板(pure-ui/pure-server/pure-logic) | **新增** | §FR2 附录 |
+| P0-R5.8 | 轻量执行路径(execution_mode: lightweight) | **新增** | §FR2 |
+| P0-R5.9 | ArtifactRef 新增 current_owner 字段 | **新增**(D10 未覆盖) | §5.1 |
+| P0-R5.10 | transfer_owner MCP 工具 | **新增**(D10 未覆盖) | §FR4 |
+| P0-R5.11 | addendum 轻量补充机制 | **新增**(D10 未覆盖) | §FR1/§FR2 |
+| P0-R5.12 | addendum 分级级联(must/should/info) | **新增**(D10 未覆盖) | §FR2 |
+| P0-R5.13 | revoke_human_token + 权限继承 | **新增**(D10 未覆盖) | §FR4 |
+| P0-R5.14 | 多根 DAG 显式支持 | **新增**(D10 未覆盖) | §FR2.4/AC2.1 |
+| P0-R5.15 | DepDeclaration 新增 optional 标记 | 互补(D10 effective_deps) | §5 |
+| P0-R5.16 | 级联公式修正(仅 required deps 参与 ready 判定) | **新增**(D10 未覆盖) | §FR2.2 |
+| P0-R5.17 | 状态机扩展 skipped 态 + AC2.7 修正 | 互补(D10 completed 谓词) | §FR2.1/AC2.7 |
+
+**状态机扩展**:10 态 → **11 态**(新增 `skipped`,optional 节点未 done 且管线将终止时自动进入,不阻塞 completed)。
+
+**产物修改完整光谱**(D11 新认知):
+
+| 修改力度 | 机制 | 级联 | 场景 |
+|---|---|---|---|
+| 零修改 | owner 转移 | 零级联 | A40-1 完全认同 |
+| 轻量补充 | addendum(append-only) | 弱级联(must/should/info) | A40-2 部分认同 |
+| 正式变更 | changed | 强级联(全链路失效) | A40-3 推翻重做 |
+
+**两个正交维度**(D11 新认知):
+
+1. **依赖严格性(strictness) × 依赖必要性(optional)**:第三轮 strictness + 第五轮 optional = 4 种依赖语义组合
+2. **团队维度(RoleInstance) × 个人维度(current_owner)**:第三轮 RoleInstance + 第五轮 current_owner,两者正交
+
+**关联文档**:
+- [round5-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round5-summary.md)(总报告)
+- [scenario-role-absence.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-role-absence.md)(A37-A39,12 缺陷,2 Critical)
+- [scenario-owner-handover.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-owner-handover.md)(A40,10 缺陷,1 Critical)
+- [scenario-multi-source-optional-dep.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-source-optional-dep.md)(A41,10 缺陷,2 Critical)
