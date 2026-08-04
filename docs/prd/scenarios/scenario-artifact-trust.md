@@ -1058,3 +1058,1149 @@ flowchart TD
 ---
 
 **文档结束。** 本报告基于 3 个真实场景的压力测试,定位 22 项设计缺陷,给出可落地的修正方案,均不破坏 PRD 核心不变项。建议与 [fr1-fr6-artifact-review.md](../deep-dive/fr1-fr6-artifact-review.md)、[fr4-data-api.md](../deep-dive/fr4-data-api.md) 配套评审。
+
+---
+
+## 第三部分:基于需求 9(产物自由)+ 单一 hub 仓模型的重新走查(第三轮)
+
+> **重新走查背景**:PRD 经历 RepoRegistry → 单一 hub 仓修正后,需求 9(产物完全自由)与单一 hub 仓(各端共同提交)之间的张力需要重新评估。本部分针对原 3 个场景在新设计下重新走查。
+>
+> **版本**:v2.1-R3 | **日期**:2026-08-04 | **状态**:架构评审输入(第三轮)
+> **被测设计**:主 PRD v2.1 §1.2(单一 hub 仓)、§5.1(ArtifactRef + artifact_kind)、附录 D7(单一 hub 仓 + GitProvider 抽象)
+
+### 3.0 重新走查方法论
+
+#### 3.0.1 新设计核心变化(相对旧走查)
+
+| 维度 | 旧设计(本报告第一部分) | 新设计(单一 hub 仓) |
+|---|---|---|
+| 产物仓库 | 独立 git 仓库(隐含多仓假设) | **1 个 hub 仓**(管理方管辖,各端共同提交) |
+| 代码仓库 | 未显式区分 | **N 个**(各业务方独立,不归管理方管) |
+| ArtifactRef | repo + path + commit(单一) | 增加 `artifact_kind`(content/reference)+ `external_repo` + `external_commit` |
+| 引用校验 | 无(只校验 hub 仓内文件) | `git ls-remote` 存在性校验(不 clone 代码仓) |
+| 托管抽象 | 无 | `GitProvider` 抽象层(GitHub/GitLab/Bitbucket) |
+| 范围边界 | 模糊 | 显式:代码仓不归管理方管,产物必须在 hub 仓 |
+
+#### 3.0.2 需求 9 的四个自由维度
+
+需求 9"产物完全自由"可拆解为四个维度,每个维度在单一 hub 仓下产生不同张力:
+
+| 自由维度 | 含义 | 与单一 hub 仓的核心张力 |
+|---|---|---|
+| **格式自由** | YAML/JSON/MD/Figma 链接/zip/任意自定义 | hub 仓需承载异构格式,大文件 + 小文件混存,clone/审核策略难以统一 |
+| **完成度自由** | 草案/正式/废弃都是合理状态 | 草案反复提交大文件累积存储;废弃产物引用清除语义不清 |
+| **方法论自由** | ECC/OpenSpec/spec-kit/superpowers/custom 均可 | 不同方法论产物结构差异大,管线模板 deps 声明无法固化 |
+| **代码开发自由** | 客户端/服务端怎么开发不限制 | 引用型产物只校验 commit 存在性,错误引用问题在无规范下加剧 |
+
+#### 3.0.3 重新走查的三个核心问题
+
+1. **新设计是否解决了旧缺陷?**——附录 D7 明确了 `git ls-remote` 校验,但审核规则层/manifest schema 层是否对齐?
+2. **单一 hub 仓是否引入新缺陷?**——各端共同提交一个仓库,clone 放大、跨托管认证、路径耦合等新问题
+3. **需求 9 的四个自由维度在新设计下是否有新张力?**——产物自由与单一仓库集中管理的根本矛盾
+
+---
+
+### 3.1 场景 5 重新走查:大文件产物在单一 hub 仓中的存储与审核
+
+#### 3.1.1 旧结论回顾
+
+本报告第一部分定位 8 个缺陷(D5-1 ~ D5-8),核心问题:
+- `max_size_kb: 512` 对设计资产不现实(D5-1)
+- `allowed_extensions` 不支持 zip/二进制(D5-2)
+- 无 Git LFS / 对象存储集成(D5-3)
+- `ArtifactRef` 只能指向 git 仓库(D5-4)
+- 无 Figma 外部依赖追溯(D5-5)
+- 无仓库克隆优化(D5-6)
+- `get_dependencies` 512KB 截断(D5-7)
+- 人工审核无法预览 zip(D5-8)
+
+旧修正方案:L1/L2/L3 分层存储、`ArtifactRef.storage` 字段、`large_file_support`、`external_refs`、partial clone、预签名 URL。
+
+#### 3.1.2 新设计影响
+
+**走查 1:单一 hub 仓是否解决了大文件问题?**
+
+附录 D7 明确"产物仓库采用单一 hub 仓模型",但 **hub 仓仍是普通 git 仓库**,大文件问题(50MB zip)的存储本质未变。旧修正方案的 L1/L2/L3 分层存储仍适用,但需评估单一仓库下的新影响。
+
+**走查 2:clone 放大效应**
+
+旧设计隐含多仓库假设(各端独立仓库),各端只需 clone 自己的仓库:
+- server_agent clone server 仓库(~5MB,YAML/JSON 为主)
+- design_agent clone design 仓库(~50MB,含切图 zip)
+- client_agent clone client 仓库(~10MB)
+
+新设计单一 hub 仓,**所有端 clone 同一个仓库**:
+- hub 仓 = server 产物(5MB)+ design 产物(50MB)+ client 产物(10MB)+ product 产物(1MB)= ~66MB
+- server_agent 只需 server 产物,但仍需 clone 全部 66MB
+- 随项目累积,hub 仓可能达 GB 级
+
+fr4 NFR5 "git show 拉取产物内容 < 5s" 在单一 hub 仓下:**git show 单文件不受仓库体积影响**(直接读 blob),但首次 clone 和 CI 全量校验受影响。
+
+**走查 3:GitProvider 抽象的 LFS 能力差异**
+
+附录 D7 说"GitProvider 接口屏蔽托管差异",但 GitHub/GitLab/Bitbucket 的 LFS 能力差异显著:
+
+| 托管 | LFS 存储 | LFS 带宽 | 大文件策略 |
+|---|---|---|---|
+| GitHub | 免费 1GB,超出 $5/50GB | 免费 1GB/月,超出付费 | LFS 配额易超限 |
+| GitLab(自托管) | 可配置,无硬限制 | 无限制 | 自托管灵活 |
+| Bitbucket | 免费 1GB,超出付费 | 免费 1GB/月 | 类似 GitHub |
+
+设计稿 50MB zip × 20 次提交/月 = 1GB,**GitHub LFS 免费带宽刚好用尽**。GitProvider 抽象若不屏蔽此差异,hub 仓托管在 GitHub 时大文件提交会因配额超限失败。
+
+**走查 4:artifact_kind 区分对大文件问题的影响**
+
+`artifact_kind` 区分了 content/reference:
+- content 型:产物内容在 hub 仓(设计稿 zip 是 content 型,大文件问题存在)
+- reference 型:引用文件在 hub 仓(指向代码仓 commit,引用文件本身很小)
+
+**结论**:artifact_kind 区分了"大文件产物"和"引用产物",但**设计稿切图包是 content 型**,大文件问题仍然存在。artifact_kind 不解决大文件问题,只是让引用型产物避免了存储大文件。
+
+#### 3.1.3 需求 9 张力
+
+**张力 1:格式自由 × 单一 hub 仓存储**
+
+需求 9 说"产物格式自由",设计稿可以是 zip/tar.gz/fig/psd/任意格式。单一 hub 仓需承载所有端的异构格式产物,大文件 + 小文件混存:
+- server 的 YAML(~10KB)与 design 的 zip(~50MB)在同一仓库
+- `file_constraints.allowed_extensions` 白名单需覆盖所有端的格式,否则阻断
+- 旧 D5-2(扩展名白名单)在需求 9 下更严重:自由格式意味着白名单几乎无法穷举
+
+**张力 2:完成度自由 × 存储成本**
+
+需求 9 说"草案/正式/废弃都是合理状态"。草案阶段设计师可能反复提交大文件:
+- 草案 v1:50MB zip(初稿)
+- 草案 v2:50MB zip(修改切图)
+- 草案 v3:50MB zip(最终)
+- 正式 v1.0.0:50MB zip
+
+单一 hub 仓下,4 个版本 × 50MB = 200MB 存储一个设计资产。草案产物也进 hub 仓(即使有 draft 状态),存储成本累积。旧修正方案的 L1/L2/L3 分层存储**没有考虑草案产物的存储策略**(草案是否走 L3?草案废弃后 L2/L3 实体是否清理?)。
+
+**张力 3:方法论自由 × 文件结构**
+
+需求 9 说"ECC/OpenSpec/spec-kit/superpowers/custom 均可"。不同方法论的产物结构差异大:
+- spec-kit:分文件(contract.md + schema.json + examples/)
+- superpowers:单文件(skill.yaml)
+- custom:任意结构
+
+单一 hub 仓需承载所有方法论的产物,目录结构难以统一。fr1-fr6 §2.1.1 "禁止子目录"约束在 spec-kit(分文件)下会阻断。
+
+#### 3.1.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | 定位 |
+|---|---|---|---|
+| D5-R3.1 | 单一 hub 仓的 clone 放大效应未被识别:旧设计各端 clone 自己的仓库(~5MB),新设计所有端 clone 同一 hub 仓(~66MB+),首次 clone 和 CI 全量校验时间线性增长 | **高** | 主 PRD §1.2、fr4 NFR5、fr4 §9.5 |
+| D5-R3.2 | GitProvider 抽象未定义 LFS/大文件能力的差异屏蔽:GitHub LFS 免费 1GB/月带宽,设计稿 50MB × 20 次/月即超限;GitProvider 接口只说"屏蔽托管差异",未抽象 LFS 配额查询/大文件上传/外部存储校验能力 | **中** | 主 PRD 附录 D7、round2-scenario-draft-multiworkflow.md §2.4 |
+| D5-R3.3 | 需求 9"完成度自由"与单一 hub 仓存储成本冲突:草案阶段反复提交大文件(50MB × 多版本),旧修正方案的 L1/L2/L3 分层存储未定义草案产物的存储策略(草案上限/保留期/废弃后清理) | **中** | 主 PRD §1.2、fr1-fr6 §2、round2-scenario-draft-multiworkflow.md(草案状态) |
+| D5-R3.4 | artifact_kind=reference 指向代码仓,代码仓可能含大文件(二进制资源),但管理方完全不约束(需求 9 代码开发自由),代码仓大文件完全不受管理方管理 | **低** | 主 PRD §1.4(范围边界)、附录 D7 |
+
+#### 3.1.5 修正方案
+
+##### 3.1.5.1 HubRepoConfig 增加 clone 策略(解决 D5-R3.1)
+
+单一 hub 仓的 clone 策略必须显式配置,避免全量 clone:
+
+```yaml
+# HubRepoConfig(单一配置,取代 RepoRegistry)
+hub_repo:
+  url: https://github.com/org/artifact-hub
+  provider: github  # github | gitlab | bitbucket
+  clone_strategy:
+    agent_default: partial_clone    # git clone --filter=blob:none(默认不拉 LFS 对象)
+    ci_review: shallow              # git clone --depth 1(CI 审核只需最新 commit)
+    get_deps: on_demand             # git show 单文件(不 clone,按需拉取)
+  lfs:
+    enabled: true
+    auto_track: true                # .gitattributes 自动配置 *.zip filter=lfs
+    threshold_kb: 512               # 超过 512KB 自动走 LFS
+  object_storage:                   # L3 对象存储(超 LFS 配额时降级)
+    enabled: true
+    provider: s3                    # s3 | oss | gcs
+    bucket: artifact-large-files
+    threshold_kb: 51200             # 超过 50MB 走对象存储
+```
+
+**关键**:clone 策略由 HubRepoConfig 统一配置,各端 agent 和 CI 按角色读取不同策略。server_agent 用 partial_clone(不拉 design 的 LFS 对象),CI 用 shallow(只需最新 commit)。
+
+##### 3.1.5.2 GitProvider 大文件能力抽象(解决 D5-R3.2)
+
+```python
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+
+@dataclass
+class LfsQuota:
+    """LFS 配额状态"""
+    storage_used_gb: float
+    storage_limit_gb: float
+    bandwidth_used_gb_month: float
+    bandwidth_limit_gb_month: float
+    reset_at: str  # 配额重置时间
+
+class GitProvider(ABC):
+    """Git 托管抽象层(屏蔽 GitHub/GitLab/Bitbucket 差异)"""
+
+    @abstractmethod
+    def supports_lfs(self) -> bool:
+        """是否支持 LFS"""
+
+    @abstractmethod
+    def lfs_quota_status(self) -> LfsQuota:
+        """查询 LFS 配额使用情况(大文件提交前预检)"""
+
+    @abstractmethod
+    def upload_large_file(self, content: bytes, path: str) -> dict:
+        """上传大文件,返回存储信息(LFS pointer 或对象存储 URI)"""
+
+    @abstractmethod
+    def verify_external_storage(self, uri: str, etag: str, sha256: str) -> bool:
+        """校验外部存储存在性(HEAD 请求 + ETag + sha256)"""
+
+    @abstractmethod
+    def ls_remote(self, repo_url: str, commit: str, credentials: 'GitCredentials') -> bool:
+        """校验 commit 是否存在于指定仓库(跨托管引用校验,见 3.2.5.2)"""
+
+
+class GitHubProvider(GitProvider):
+    def lfs_quota_status(self) -> LfsQuota:
+        # 调用 GitHub API: /repos/{owner}/{repo}/lfs
+        ...
+    # ...
+
+
+class GitLabProvider(GitProvider):
+    def lfs_quota_status(self) -> LfsQuota:
+        # 调用 GitLab API: /projects/{id}/lfs_objects
+        ...
+    # ...
+```
+
+**审核规则扩展**(fr1-fr6 §4 新增):
+
+```yaml
+- id: R_LFS_QUOTA_CHECK
+  name: LFS 配额预检
+  priority: 77
+  combinators: AND
+  on_fail: reject
+  applies_to_artifact_kind: [content]
+  checks:
+    - field: source.storage
+      op: lfs_quota_available    # 预检 LFS 配额是否足够
+  on_fail_action:
+    fallback_to_object_storage: true  # 配额不足时自动降级到对象存储
+```
+
+##### 3.1.5.3 草案产物存储策略(解决 D5-R3.3)
+
+skill.yaml 扩展 `draft_storage_policy`(需求 9 完成度自由的存储约束):
+
+```yaml
+# skill.yaml
+file_constraints:
+  allowed_extensions: [.yaml, .json, .md]
+  max_size_kb: 512
+  large_file_support:
+    enabled: true
+    lfs_threshold_kb: 512
+    object_storage_threshold_kb: 51200
+  # 新增:草案产物存储策略(需求 9 完成度自由)
+  draft_storage_policy:
+    draft_max_size_kb: 10240        # 草案产物上限 10MB(比正式 50MB 小,降低草案反复提交成本)
+    draft_retention_days: 30        # 草案 30 天后自动归档到 L3 对象存储
+    draft_auto_cleanup: true        # 草案废弃后自动清理 L2/L3 实体(保留 L1 manifest 引用)
+    draft_version_limit: 5          # 草案版本数上限(超过强制转正式或废弃)
+```
+
+**草案产物生命周期**:
+1. 草案提交 → L1 manifest + L2 LFS(草案上限 10MB)
+2. 草案 30 天未更新 → 自动迁移到 L3 对象存储(降低 LFS 占用)
+3. 草案废弃 → L2/L3 实体自动清理,保留 L1 manifest(可追溯)
+4. 草案转正式 → 重新提交正式版本,走正式存储策略
+
+##### 3.1.5.4 需求 9 格式自由的文件约束放宽
+
+fr1-fr6 §2.1.1 "禁止子目录"约束在需求 9 下需放宽(方法论自由 + 格式自由):
+
+```yaml
+# skill.yaml
+file_constraints:
+  allowed_extensions: [.yaml, .json, .md, .mdx]
+  # 新增:自由格式支持(需求 9)
+  free_format_support:
+    enabled: true
+    allow_subdirectories: true       # 允许子目录(spec-kit 分文件结构)
+    custom_extensions_allowed: true  # 允许自定义扩展名(需 manifest 声明 content_type)
+    require_content_type: true       # 自定义扩展名必须声明 content_type
+  # 大文件支持(见 3.1.5.3)
+  large_file_support: {...}
+```
+
+manifest schema 扩展 `content_type` 字段(管理方不解析内容,但记录格式类型):
+
+```json
+"content_type": {
+  "type": "string",
+  "description": "产物内容类型(管理方记录,不解析)。自定义扩展名必填",
+  "examples": ["application/yaml", "application/json", "application/zip", "image/png", "text/markdown"]
+}
+```
+
+#### 3.1.6 设计图:单一 hub 仓大文件分层存储与 clone 策略
+
+```mermaid
+flowchart TB
+    subgraph HUB["单一 hub 仓(管理方管辖)"]
+        direction TB
+        L1["L1 Inline(git)<br/>manifest + 引用 JSON + YAML/MD<br/>所有端共同提交"]
+        L2["L2 Git LFS<br/>中型二进制(切图 zip ≤ 50MB)<br/>.gitattributes 自动 track"]
+        L3["L3 对象存储 S3/OSS<br/>大型二进制(原型包 > 50MB)<br/>草案归档"]
+    end
+
+    subgraph AGENTS["各端 agent(共同提交 hub 仓)"]
+        SA["server_agent<br/>提交 api_contract YAML ~10KB"]
+        DA["design_agent<br/>提交 design_asset zip ~50MB"]
+        CA["client_agent<br/>提交 client_ui ref.json ~2KB"]
+    end
+
+    subgraph CLONE_STRATEGY["clone 策略(HubRepoConfig)"]
+        CS1["agent_default: partial_clone<br/>--filter=blob:none<br/>不拉 LFS 对象"]
+        CS2["ci_review: shallow<br/>--depth 1<br/>只需最新 commit"]
+        CS3["get_deps: on_demand<br/>git show 单文件<br/>不 clone"]
+    end
+
+    SA -->|"L1 inline"| L1
+    DA -->|"L2 LFS(>512KB)"| L2
+    DA -.->|"L3 对象存储(>50MB 或草案归档)"| L3
+    CA -->|"L1 inline"| L1
+
+    SA -.->|"clone 时"| CS1
+    DA -.->|"clone 时"| CS1
+    CS1 -->|"server_agent 不拉 design LFS 对象<br/>节省带宽"| L2
+
+    subgraph CI["CI 审核(shallow clone)"]
+        CICD["git clone --depth 1<br/>只拉最新 commit<br/>L1 文件全拉,L2/L3 按需"]
+        CICD -->|"校验 L1"| L1
+        CICD -->|"校验 LFS pointer"| L2
+        CICD -->|"HEAD 请求校验"| L3
+    end
+
+    subgraph GETDEP["get_dependencies(on_demand)"]
+        GD["git show 单文件<br/>不 clone 仓库<br/>大文件返回预签名 URL"]
+        GD -->|"L1 内容直接返回"| L1
+        GD -.->|"L2/L3 返回预签名 URL"| L2
+        GD -.->|"L2/L3 返回预签名 URL"| L3
+    end
+
+    L1 --> CICD
+    L1 --> GD
+
+    subgraph QUOTA["GitProvider 配额管理"]
+        GQ["lfs_quota_status()<br/>GitHub: 1GB/月免费<br/>GitLab: 无限制<br/>超限降级到 L3"]
+    end
+    L2 -.->|"配额预检"| GQ
+    GQ -.->|"配额不足"| L3
+
+    style L1 fill:#4a8ad6,color:#fff
+    style L2 fill:#a371f7,color:#fff
+    style L3 fill:#e3b341,color:#fff
+    style HUB fill:#1a2a4a,color:#fff
+    style CLONE_STRATEGY fill:#2a4a1a,color:#fff
+```
+
+---
+
+### 3.2 场景 8 重新走查:引用型产物错误引用在单一 hub 仓中的校验
+
+#### 3.2.1 旧结论回顾
+
+本报告第二部分定位 7 个缺陷(D8-1 ~ D8-7),核心问题:
+- `R_FILE_EXISTS` 只校验产物仓库内 ref.json 文件,不校验代码仓 commit(D8-1)
+- 无"引用存在性校验",假 commit 可过审(D8-2)
+- 无"引用签名"机制(implements 声明)(D8-3)
+- 无"下游上报不符"机制(report_mismatch)(D8-4)
+- 审计日志不记录引用校验结果(D8-5)
+- 无 REF_TARGET_NOT_FOUND 错误码(D8-6)
+- 引用一致性裸奔(D8-7)
+
+旧修正方案:R_REF_EXISTS(git ls-remote)、implements 声明、report_mismatch 工具、disputed 态、审计扩展。
+
+#### 3.2.2 新设计影响
+
+**走查 1:新设计是否解决了 D8-1/D8-2(引用存在性校验)?**
+
+附录 D7 明确:"引用型产物指向代码仓 commit,只做 `git ls-remote` 存在性校验,不 clone 代码仓"。这正是旧 D8-2 的修正方案 R_REF_EXISTS。
+
+**但走查发现数据模型与审核规则层未对齐**:
+- 主 PRD §5.1 ArtifactRef 已增加 `artifact_kind`、`external_repo`、`external_commit` 字段 ✓
+- fr1-fr6 §3.4 引用型产物子 schema **仍是 `code_repo` / `code_commit` / `code_path`**,未对齐 `external_repo` / `external_commit` ✗
+- fr1-fr6 §4.1.4 op 清单**仍无 `ref_target_exists` op** ✗
+- fr4 §2.2 错误码表**仍无 `REF_TARGET_NOT_FOUND`** ✗
+
+即:**数据模型层(ArtifactRef)支持了引用型产物,但 manifest schema 层和审核规则层未对齐**。审核规则引擎无法执行 `git ls-remote` 校验,因为 op 清单里没有这个操作符。
+
+**走查 2:单一 hub 仓对引用校验的影响**
+
+旧设计隐含多仓库假设,引用型产物在独立的代码仓库,内容型产物在产物仓库。新设计下:
+- 引用文件(`server_impl/001_ref.json`)和内容文件(`design_asset/001.zip`)都在 hub 仓
+- 好处:审核时只需 clone hub 仓一个仓库
+- 坏处:webhook 触发时,内容型 PR 和引用型 PR 混在一起,审核策略难以区分
+
+fr1-fr6 §4.4 审核策略矩阵按产物类型分级(`server_impl` → 自动校验 + 无人工),但**未按 `artifact_kind` 分级**。引用型产物应额外执行 R_REF_EXISTS,但当前规则引擎未配置。
+
+**走查 3:GitProvider 抽象的跨托管认证问题**
+
+附录 D7 说"GitProvider 接口屏蔽托管差异"。但 hub 仓和代码仓可能托管在不同平台:
+- hub 仓:GitHub(管理方管辖)
+- 代码仓:GitLab(各业务方独立,不归管理方管)
+
+管理方做 `git ls-remote gitlab.com/business/repo commit` 时,需要 GitLab 的访问 token。但:
+- GitProvider 抽象只说"屏蔽 hub 仓托管差异",**未定义"代码仓 token 管理"**
+- 代码仓不归管理方管,但管理方需要访问代码仓做 ls-remote → **认证边界模糊**
+- fr4 §3 认证授权只覆盖 MCP 调用方(agent/human)的认证,**未覆盖管理方访问代码仓的认证**
+
+**走查 4:新设计是否解决了 D8-3 ~ D8-7?**
+
+| 缺陷 | 新设计是否解决 | 说明 |
+|---|---|---|
+| D8-3 无 implements 声明 | ❌ 未解决 | 新设计未引入 implements 字段 |
+| D8-4 无 report_mismatch | ❌ 未解决 | 新设计未引入下游反馈机制 |
+| D8-5 审计不记录引用校验 | ❌ 未解决 | 审计日志未扩展 ref_verification |
+| D8-6 无 REF_TARGET_NOT_FOUND | ❌ 未解决 | 错误码表未更新 |
+| D8-7 引用一致性裸奔 | ❌ 未解决 | 需求 9 下更严重 |
+
+#### 3.2.3 需求 9 张力
+
+**张力 1:代码开发自由 × 引用一致性**
+
+需求 9 说"客户端和服务端开发怎么开发也不需要限制"。各端代码仓的 commit 规范、分支策略完全自由:
+- server 仓:可能用 `feat/login-001` 分支,commit message 含 node_id
+- client 仓:可能用 `feature/LoginFeature` 分支,commit message 自由
+
+引用型产物只校验 commit 存在性(`git ls-remote`),不校验内容。开发方更容易搞混 commit(因为代码仓无统一规范)。旧 D8-7(引用一致性裸奔)在需求 9 下**加剧**:
+- 无统一 commit 规范 → 开发方更难正确填写 external_commit
+- 错误引用到联调才暴露 → 回溯成本高
+- 旧修正方案的 implements 声明在需求 9 下更重要(唯一的一致性证据),但新设计未引入
+
+**张力 2:格式自由 × 引用文件格式**
+
+需求 9 说"产物格式自由"。引用型产物的引用文件(`server_impl/001_ref.json`)本身也是产物,格式自由:
+- 可以是 JSON(标准)
+- 可以是 YAML(自定义)
+- 可以是 TOML(自定义)
+
+但 fr1-fr6 §3.4 引用型产物子 schema 固定为 JSON 格式(`required: ["code_repo", "code_commit", "code_path"]`)。需求 9 下,引用文件格式也应自由,但 schema 未放宽。
+
+**张力 3:完成度自由 × 引用有效性**
+
+需求 9 说"草案/正式/废弃都是合理状态"。引用型产物也有完成度:
+- 草案引用:开发方提交了 commit,但代码尚未完成(草案 commit)
+- 正式引用:代码已 review 合并
+- 废弃引用:代码被 revert/删除
+
+`git ls-remote` 只校验 commit 存在,不区分 commit 状态(草案/正式/废弃)。草案 commit 可能被 rebase 删除,导致引用失效。需求 9 的完成度自由与引用稳定性冲突。
+
+#### 3.2.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | 定位 |
+|---|---|---|---|
+| D8-R3.1 | ArtifactRef 已增加 external_repo/external_commit,但 fr1-fr6 §3.4 引用型子 schema 仍是 code_repo/code_commit(字段名不一致),§4.1.4 op 清单无 ref_target_exists,数据模型层与审核规则层未对齐 | **高** | 主 PRD §5.1 vs fr1-fr6 §3.4、§4.1.4 |
+| D8-R3.2 | GitProvider 抽象未定义"跨托管"代码仓引用的认证模型:hub 仓 GitHub,代码仓可能 GitLab,管理方做 ls-remote 需要代码仓 token,但代码仓不归管理方管,认证边界模糊 | **高** | 主 PRD 附录 D7、fr4 §3(认证授权) |
+| D8-R3.3 | 需求 9"代码开发自由"加剧引用一致性:各端代码仓无统一 commit 规范,开发方更易搞混 commit,implements 声明(旧 D8-3 修正方案)在新设计下缺失,错误引用到联调才暴露 | **高** | 主 PRD §1.4、附录 D7、fr1-fr6 §3.3 |
+| D8-R3.4 | manifest schema 未区分 content/reference 的校验规则:引用型应额外执行 R_REF_EXISTS,但 fr1-fr6 §4.1.1 规则配置无 applies_to_artifact_kind 字段,审核规则未按 artifact_kind 分级 | **中** | fr1-fr6 §3.3、§4.1.1 |
+| D8-R3.5 | hub 仓 webhook 无法区分内容型 PR 和引用型 PR,fr1-fr6 §4.4 审核策略矩阵按产物类型分级但未按 artifact_kind 分级,引用型产物的 R_REF_EXISTS 未配置 | **中** | fr1-fr6 §4.4、主 PRD FR6.4 |
+
+#### 3.2.5 修正方案
+
+##### 3.2.5.1 对齐数据模型与审核规则(解决 D8-R3.1)
+
+**Step 1:更新 fr1-fr6 §3.4 引用型产物子 schema**(字段名对齐 ArtifactRef):
+
+```json
+{
+  "$id": "https://coordination-platform/schemas/artifact-ref-content.json",
+  "title": "Artifact Reference Content (引用型产物)",
+  "type": "object",
+  "required": ["artifact_kind", "external_repo", "external_commit"],
+  "properties": {
+    "artifact_kind": { "const": "reference" },
+    "external_repo": {
+      "type": "string",
+      "description": "代码仓库地址(各业务方独立,不归管理方管)"
+    },
+    "external_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{7,40}$",
+      "description": "代码仓 commit hash"
+    },
+    "external_path": {
+      "type": "string",
+      "description": "代码路径(可选,管理方不校验)"
+    },
+    "build_status": { "enum": ["passed", "failed", "skipped"] }
+  },
+  "additionalProperties": true
+}
+```
+
+**Step 2:fr1-fr6 §4.1.4 op 清单新增**(解决 op 缺失):
+
+| op | 适用 field | 说明 |
+|---|---|---|
+| `ref_target_exists` | `external_repo` / `external_commit` | `git ls-remote` 确认 commit 存在于代码仓(不 clone) |
+| `ref_target_reachable` | `external_commit` | commit 未被 git gc 回收 |
+| `implements_subset_of_deps` | `implements` | implements 声明的 node_id 必须在 deps 内 |
+
+**Step 3:fr4 §2.2 错误码新增**(解决错误码缺失):
+
+| 错误码 | HTTP | 含义 | retryable |
+|---|---|---|---|
+| `REF_TARGET_NOT_FOUND` | 404 | external_commit 在 external_repo 中不存在 | false |
+| `REF_REPO_UNREACHABLE` | 502 | external_repo 不可达(网络/认证失败) | true |
+| `REF_TARGET_GC` | 410 | external_commit 已被 git gc 回收 | false |
+| `REF_CREDENTIAL_MISSING` | 401 | 管理方未配置代码仓的访问凭证 | false |
+
+##### 3.2.5.2 GitProvider 跨托管认证模型(解决 D8-R3.2)
+
+```python
+@dataclass
+class GitCredentials:
+    """代码仓访问凭证"""
+    repo_url: str
+    provider: str          # github | gitlab | bitbucket
+    token_ref: str         # Vault 凭证引用(不存明文)
+    token_scope: str       # read_repo / ls_remote
+
+
+class GitCredentialRegistry:
+    """代码仓凭证注册表(管理方持有,用于跨托管 ls-remote)"""
+
+    def __init__(self, vault: VaultClient):
+        self.vault = vault
+        self._cache: dict[str, GitCredentials] = {}
+
+    def register(self, repo_pattern: str, provider: str, token_ref: str):
+        """admin 注册代码仓凭证(代码仓不归管理方管,但需凭证做 ls-remote)"""
+        ...
+
+    def get_credentials(self, repo_url: str) -> GitCredentials | None:
+        """根据代码仓 URL 匹配凭证(按 repo_pattern 前缀匹配)"""
+        for pattern, cred in self._cache.items():
+            if self._match(repo_url, pattern):
+                return cred
+        return None  # 未注册凭证 → REF_CREDENTIAL_MISSING
+```
+
+**HubRepoConfig 扩展**(配置代码仓凭证):
+
+```yaml
+hub_repo:
+  url: https://github.com/org/artifact-hub
+  provider: github
+
+# 新增:代码仓凭证注册(跨托管 ls-remote 用)
+external_repo_credentials:
+  - repo_pattern: "github.com/org/*"
+    provider: github
+    credential_ref: "vault:github-org-readonly-token"
+    token_scope: "ls_remote"
+  - repo_pattern: "gitlab.com/business/*"
+    provider: gitlab
+    credential_ref: "vault:gitlab-business-readonly-token"
+    token_scope: "ls_remote"
+  - repo_pattern: "bitbucket.org/team/*"
+    provider: bitbucket
+    credential_ref: "vault:bitbucket-team-readonly-token"
+    token_scope: "ls_remote"
+```
+
+**关键**:凭证只读(`ls_remote` scope),管理方不修改代码仓。凭证存 Vault,不入 git,不入日志。
+
+##### 3.2.5.3 引入 implements 声明(解决 D8-R3.3,需求 9 下更重要)
+
+需求 9"代码开发自由"下,implements 声明是**唯一的一致性证据**(管理方不解析代码内容,只记录开发方声明):
+
+```json
+// manifest schema 扩展(fr1-fr6 §3.3)
+"implements": {
+  "type": "array",
+  "description": "声明本产物实现了哪些上游产物(开发方声明,管理方记录但不验证内容)。需求 9 下是唯一的一致性证据",
+  "items": {
+    "type": "object",
+    "required": ["node_id", "version"],
+    "properties": {
+      "node_id": { "type": "string", "pattern": "^n[0-9]+$" },
+      "version": { "type": "string", "description": "声明的上游版本(semver)" },
+      "declared_at": { "type": "string", "format": "date-time" },
+      "declared_by": { "type": "string", "description": "agent_id | user_id" }
+    }
+  }
+}
+```
+
+**审核规则**(fr1-fr6 §4 新增):
+
+```yaml
+- id: R_REF_EXISTS
+  name: 引用目标存在性校验(引用型产物专用)
+  priority: 78
+  combinators: AND
+  on_fail: reject
+  applies_to_artifact_kind: [reference]    # 仅引用型产物执行
+  checks:
+    - field: external_repo
+      op: ref_target_exists                # git ls-remote 确认 commit 存在
+      timeout_s: 5
+    - field: external_commit
+      op: ref_target_reachable             # commit 未被 gc
+
+- id: R_IMPLEMENTS_IN_DEPS
+  name: 实现声明与依赖一致
+  priority: 73
+  combinators: AND
+  on_fail: reject
+  applies_to_artifact_kind: [reference]
+  checks:
+    - field: implements
+      op: implements_subset_of_deps        # implements 的 node_id 必须在 deps 内
+```
+
+##### 3.2.5.4 审核规则按 artifact_kind 分级(解决 D8-R3.4 / D8-R3.5)
+
+skill.yaml 扩展 `review_rules_by_kind`(按 artifact_kind 分级配置规则):
+
+```yaml
+# skills/server-impl-skill/skill.yaml
+artifact_kind_support: [content, reference]  # 此 skill 支持的 artifact_kind
+
+review_rules_by_kind:
+  content:                              # 内容型产物(产物内容在 hub 仓)
+    - R_META_REQUIRED
+    - R_DEPS_DONE
+    - R_DEPS_MIN_VERSION
+    - R_FILE_FORMAT
+    - R_FILE_EXISTS                      # 校验 hub 仓内产物文件存在
+    - R_VERSION_BUMP
+    - R_HUMAN_REVIEW
+  reference:                            # 引用型产物(引用文件在 hub 仓,指向代码仓)
+    - R_META_REQUIRED
+    - R_DEPS_DONE
+    - R_DEPS_MIN_VERSION
+    - R_FILE_EXISTS                      # 校验 hub 仓内引用文件存在
+    - R_REF_EXISTS                       # 额外:校验代码仓 commit 存在(git ls-remote)
+    - R_IMPLEMENTS_IN_DEPS               # 额外:声明一致性
+    - R_VERSION_BUMP
+    - R_HUMAN_REVIEW
+```
+
+**审核策略矩阵扩展**(主 PRD FR6.4 + fr1-fr6 §4.4):
+
+| 产物类型 | artifact_kind | 自动校验 | 人工审核 | 额外规则 |
+|---|---|---|---|---|
+| server_impl | reference | ✅ | ❌ | R_REF_EXISTS + R_IMPLEMENTS_IN_DEPS |
+| client_ui | reference | ✅ | ❌ | R_REF_EXISTS + R_IMPLEMENTS_IN_DEPS |
+| client_func | reference | ✅ | ✅ | R_REF_EXISTS + R_IMPLEMENTS_IN_DEPS |
+| design_asset | content | ✅ | ✅ | R_LFS_POINTER_VALID(若 LFS) |
+| api_contract | content | ✅ | ✅(首次) | — |
+
+##### 3.2.5.5 引用校验审计扩展(解决旧 D8-5,对齐新设计)
+
+audit_log 表增加 `ref_verification` 字段:
+
+```sql
+ALTER TABLE audit_log ADD COLUMN ref_verification JSONB;
+-- 示例值:
+-- {
+--   "artifact_kind": "reference",
+--   "external_repo": "gitlab.com/business/backend",
+--   "external_commit": "abc123",
+--   "ref_exists": true,
+--   "ref_checked_at": "2026-08-04T10:30:00Z",
+--   "implements": [{"node_id": "n2", "version": "1.0.0"}]
+-- }
+```
+
+#### 3.2.6 设计图:引用型产物跨托管校验时序
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant SA as server_agent
+    participant HUB as hub 仓(GitHub)
+    participant HOOK as Webhook
+    participant ENG as 审核规则引擎
+    participant GP as GitProvider
+    participant CR as GitCredentialRegistry
+    participant VAULT as Vault
+    participant CODE as 代码仓(GitLab)
+    participant AUD as AuditLog
+
+    Note over SA,CODE: 场景:server_agent 提交 server_impl(引用型产物)
+
+    SA->>HUB: 推 feat 分支 + 开 PR<br/>server_impl/001_ref.json<br/>{external_repo: gitlab.com/business/backend, external_commit: abc123}
+    HUB->>HOOK: PR webhook
+
+    Note over HOOK,ENG: 步骤 1:标准校验(与内容型相同)
+    HOOK->>ENG: review_artifact_pr(pr_id=42)
+    ENG->>ENG: R_META_REQUIRED ✓
+    ENG->>ENG: R_DEPS_DONE ✓
+    ENG->>ENG: R_FILE_EXISTS(hub 仓内 ref.json)✓
+
+    Note over ENG,GP: 步骤 2:引用型专用校验(R_REF_EXISTS)
+    ENG->>ENG: 识别 artifact_kind=reference<br/>加载 R_REF_EXISTS 规则
+
+    ENG->>CR: get_credentials(gitlab.com/business/backend)
+    CR->>CR: 按 repo_pattern 匹配<br/>gitlab.com/business/* → vault:gitlab-token
+    CR->>VAULT: 读取 token(只读,ls_remote scope)
+    VAULT-->>CR: token(不入日志)
+    CR-->>ENG: GitCredentials(provider=gitlab, token)
+
+    ENG->>GP: ls_remote(gitlab.com/business/backend, abc123, credentials)
+    GP->>CODE: git ls-remote gitlab.com/business/backend abc123
+
+    alt commit 存在
+        CODE-->>GP: abc123 exists
+        GP-->>ENG: true
+
+        Note over ENG: R_REF_EXISTS ✓
+
+        ENG->>ENG: R_IMPLEMENTS_IN_DEPS<br/>校验 implements:[{n2, 1.0.0}] ⊆ deps:[n2]
+        ENG->>ENG: R_IMPLEMENTS_IN_DEPS ✓
+
+        ENG->>AUD: 记录审核日志<br/>ref_verification={kind:reference,<br/>external_repo:..., ref_exists:true,<br/>implements:[{n2,1.0.0}]}
+        ENG-->>HOOK: verdict=approve
+        HOOK->>HUB: bot squash merge
+        HUB-->>SA: PR 合并,节点 done
+
+    else commit 不存在
+        CODE-->>GP: not found
+        GP-->>ENG: false
+        ENG->>AUD: 记录审核日志<br/>ref_verification={ref_exists:false}
+        ENG-->>HOOK: verdict=reject<br/>code=REF_TARGET_NOT_FOUND
+        HOOK->>HUB: 评论 PR 驳回原因
+        HUB-->>SA: 通知:commit abc123 不存在于 gitlab.com/business/backend
+    else 代码仓不可达(网络/认证)
+        GP-->>ENG: error
+        ENG-->>HOOK: verdict=reject<br/>code=REF_REPO_UNREACHABLE(retryable=true)
+        HOOK->>HUB: 评论 PR 驳回原因
+        HUB-->>SA: 通知:代码仓不可达,请检查网络或联系 admin
+    else 凭证未配置
+        CR-->>ENG: None(未注册凭证)
+        ENG-->>HOOK: verdict=reject<br/>code=REF_CREDENTIAL_MISSING
+        HOOK->>HUB: 评论:未配置代码仓凭证
+        HUB-->>SA: 通知:联系 admin 注册 gitlab.com/business/* 凭证
+    end
+```
+
+---
+
+### 3.3 场景 9 重新走查:管线热重载与产物自由演进的张力
+
+#### 3.3.1 旧结论回顾
+
+本报告第三部分定位 7 个缺陷(D9-1 ~ D9-7),核心问题:
+- 无管线热重载机制(D9-1)
+- cascade 触发点只有"上游 done",无"新节点加入"初始化(D9-2)
+- 删除已 done 节点后下游状态未定义(D9-3)
+- 修改已 done 节点 deps 是否重做未定义(D9-4)
+- 无管线版本化(D9-5)
+- 旧版本 state 与新版本 DSL 兼容性未定义(D9-6)
+- 热重载 vs 冷重启边界未定义(D9-7)
+
+旧修正方案:pipeline_version、变更分类矩阵、reconcile 逻辑、stale_deps 态、软删除、reload_pipeline action。
+
+#### 3.3.2 新设计影响
+
+**走查 1:新设计是否解决了 D9-1 ~ D9-7?**
+
+新设计(单一 hub 仓 + artifact_kind)与管线热重载无直接关系,旧 D9-1 ~ D9-7 **全部仍然存在**。旧修正方案(pipeline_version + reconcile + stale_deps)仍适用。
+
+**走查 2:单一 hub 仓对管线热重载的新影响**
+
+旧设计隐含多仓库假设,管线热重载时各端产物在自己的仓库,路径独立。新设计单一 hub 仓:
+- 所有产物在同一个仓库,路径含 `pipeline_id`(若按 P0-4 修正项 `features/{pipeline_id}/...`)
+- 管线版本变更若导致 `pipeline_id` 变化(如重命名),所有产物路径失效
+- ArtifactRef.path 指向旧路径,新版本下无法解析
+
+**关键矛盾**:主 PRD FR1.1 仓库结构是扁平的(`product_spec/001.yaml`,不含 pipeline_id),但 P0-4 修正项说"产物路径改 `features/{pipeline_id}/...`"。在单一 hub 仓下:
+- 扁平结构:多管线同类产物在同一目录,靠 seq 区分(seq 全局唯一)→ 管线重命名不影响路径
+- 按 pipeline_id 分:`features/{pipeline_id}/...` → 管线重命名导致路径失效
+
+**走查 3:需求 9"完成度自由"与管线热重载的冲突**
+
+需求 9 说"草案/正式/废弃都是合理状态"。管线热重载后,已 done 节点的产物完成度可能变更:
+- 正式 → 废弃:产物被废弃,但管线节点仍 done(产物引用未清除)
+- 草案 → 正式:产物从草案转正式,但管线节点可能已 done(基于草案)
+
+旧修正方案的 stale_deps 态只处理 deps 变更,**未处理"产物完成度变更"**。废弃产物引用是否清除?下游是否级联?
+
+**走查 4:需求 9"方法论自由"与管线模板的冲突**
+
+需求 9 说"ECC/OpenSpec/spec-kit/superpowers/custom 均可"。旧修正方案的管线模板(deps 声明)依赖产物结构:
+- spec-kit:分文件,deps 可能指向 contract.md
+- superpowers:单文件,deps 指向 skill.yaml
+
+不同方法论的产物结构差异大,管线模板的 deps 声明无法固化统一结构。模板继承时,子管线可能用不同方法论,deps 不兼容。
+
+#### 3.3.3 需求 9 张力
+
+**张力 1:格式自由 × 管线版本化**
+
+需求 9 格式自由意味着产物结构多样,管线版本化时难以统一描述"变更"。旧修正方案的 `dsl_diff`(add/remove/modify nodes)只描述节点级变更,不描述产物结构变更。
+
+**张力 2:完成度自由 × 级联失效**
+
+需求 9 完成度自由意味着产物有"草案/正式/废弃"状态。级联失效(changed → 下游 blocked)在完成度变更时语义不清:
+- 正式 → 废弃:是否触发 changed?下游是否 blocked?
+- 草案 → 正式:是否触发下游 ready?
+
+旧修正方案的级联失效只考虑"产物内容变更"(重提 PR),未考虑"完成度变更"。
+
+**张力 3:方法论自由 × 管线模板**
+
+需求 9 方法论自由意味着不同管线可能用不同方法论。管线模板(deps 声明)如何兼容多种方法论?
+- 模板的 deps 按 node_type 声明(方法论无关)→ 可行
+- 模板的 deps 按产物结构声明(方法论相关)→ 不可行
+
+**张力 4:代码开发自由 × reconcile**
+
+需求 9 代码开发自由意味着引用型产物的代码仓 commit 可能随时变化(rebase/force push)。管线热重载的 reconcile 逻辑需要处理:
+- 新增节点 deps 已 done(reference 型),reconcile 时是否重新 ls-remote?
+- 已 done 节点的 external_commit 被 rebase 删除,reconcile 时是否标记失效?
+
+#### 3.3.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | 定位 |
+|---|---|---|---|
+| D9-R3.1 | 单一 hub 仓下,产物路径与 pipeline_id 耦合:若按 P0-4 用 `features/{pipeline_id}/...`,管线重命名导致所有产物路径失效;若用扁平结构,多管线同类产物路径冲突。ArtifactRef.path 稳定性未定义 | **高** | 主 PRD §5.1 ArtifactRef.path、fr1-fr6 §2.1(目录规范)、P0-4 修正项 |
+| D9-R3.2 | 需求 9"完成度自由"与管线热重载冲突:已 done 节点产物从"正式"变"废弃",级联失效语义未定义。旧修正方案的 stale_deps 态只处理 deps 变更,未处理完成度变更 | **中** | 主 PRD §1.2、fr2(状态机)、round2-scenario-draft-multiworkflow.md(草案状态) |
+| D9-R3.3 | 需求 9"方法论自由"与管线模板兼容性:不同方法论产物结构差异大,模板 deps 声明无法固化统一结构,模板继承时子管线用不同方法论会 deps 不兼容 | **中** | 主 PRD §1.2、fr2(管线模板) |
+| D9-R3.4 | 单一 hub 仓下多 PR 并发热重载:多端同时提交 PR,管线热重载时多个 PR 的 deps 同时变更,旧修正方案只定义单 PR 处理,未定义批量并发处理 | **中** | fr1-fr6 §5.3(冲突检测)、fr2(热重载) |
+| D9-R3.5 | 管线热重载 reconcile 与 artifact_kind 交互未定义:reference 型产物 reconcile 时需重新 ls-remote(代码仓 commit 可能被 rebase 删除),content 型只需校验 hub 仓路径 | **低** | 主 PRD §5.1、fr2(reconcile) |
+
+#### 3.3.5 修正方案
+
+##### 3.3.5.1 产物路径与管线版本解耦(解决 D9-R3.1)
+
+**推荐方案:扁平结构 + node_id 映射**(放弃 P0-4 的 `features/{pipeline_id}/...`):
+
+```
+# 单一 hub 仓目录结构(扁平,不含 pipeline_id)
+artifact-hub/
+├─ product_spec/
+│  ├─ 001_login.manifest.json     # node_id=n1, pipeline=login-feature
+│  └─ 002_profile.manifest.json   # node_id=n1, pipeline=profile-feature
+├─ api_contract/
+│  ├─ 001_login-contract.yaml     # node_id=n2, pipeline=login-feature
+│  └─ 002_profile-contract.yaml   # node_id=n2, pipeline=profile-feature
+├─ design_asset/
+│  └─ 001_login-assets.zip.lfs    # node_id=n6, pipeline=login-feature
+└─ server_impl/
+   └─ 001_login-ref.json          # node_id=n4, pipeline=login-feature
+```
+
+**关键**:seq 在类型目录内全局递增(不按 pipeline_id 分段),node_id 与 seq 的映射通过 manifest 的 `node_id` + `pipeline_id` 字段维护。管线重命名(pipeline_id 变化)不影响产物路径,只更新 manifest 的 pipeline_id 字段。
+
+ArtifactRef 扩展(记录管线版本,路径稳定):
+
+```python
+class ArtifactRef(TypedDict):
+    node_id: str
+    pipeline_id: str               # 管线 ID(可变,不影响 path)
+    repo: str                      # hub 仓地址(单一)
+    path: str                      # 产物在 hub 仓内路径(稳定,不含 pipeline_id)
+    commit: str                    # hub 仓 merge commit hash
+    artifact_kind: str             # "content" | "reference"
+    external_repo: str | None      # 引用型:代码仓地址
+    external_commit: str | None    # 引用型:代码仓 commit
+    toolspec_framework: str
+    pipeline_version: str          # 新增:产物合并时的管线版本
+    trace_id: str
+```
+
+##### 3.3.5.2 产物完成度与管线热重载交互(解决 D9-R3.2)
+
+manifest 增加 `maturity` 字段(需求 9 完成度自由显式化):
+
+```json
+"maturity": {
+  "type": "string",
+  "enum": ["draft", "formal", "deprecated"],
+  "default": "formal",
+  "description": "产物完成度(需求 9)。draft=草案,formal=正式,deprecated=废弃"
+}
+```
+
+**完成度变更与级联失效的处理矩阵**:
+
+| 完成度变更 | 节点状态影响 | 下游级联 | 理由 |
+|---|---|---|---|
+| draft → formal | 保持 done | 通知下游可正式消费 | 草案转正式,产物引用不变 |
+| formal → deprecated | → changed | 下游递归 blocked + 清引用 | 正式废弃,产物不可用 |
+| formal → draft | → changed | 下游递归 blocked | 降级为草案,产物不可正式依赖 |
+| draft → deprecated | 保持 done(若下游未消费) | 不级联 | 草案废弃,下游本不应依赖草案 |
+
+**reconcile 逻辑扩展**(旧修正方案 reconcile_new_node 基础上增加 maturity 处理):
+
+```python
+def reconcile_maturity_change(node_id: str, old_maturity: str, new_maturity: str, state: PipelineState):
+    """产物完成度变更的 reconcile(管线热重载或产物重提时触发)"""
+    if old_maturity == "formal" and new_maturity == "deprecated":
+        # 正式 → 废弃:触发 changed,级联失效下游
+        return set_changed_and_invalidate(node_id, state)
+    elif old_maturity == "formal" and new_maturity == "draft":
+        # 正式 → 草案:触发 changed,下游不应依赖草案
+        return set_changed_and_invalidate(node_id, state)
+    elif old_maturity == "draft" and new_maturity == "formal":
+        # 草案 → 正式:保持 done,通知下游可正式消费
+        return notify_downstream(node_id, "maturity_upgraded", state)
+    # 其他情况保持原状
+    return state
+```
+
+##### 3.3.5.3 管线模板方法论兼容(解决 D9-R3.3)
+
+管线模板的 deps 声明改为**按 node_type 声明(方法论无关)**,不按产物结构:
+
+```yaml
+# 管线模板(方法论无关)
+template:
+  id: standard-feature-pipeline
+  version: "1.0.0"
+  nodes:
+    - id: "{auto}"
+      type: product_spec
+      role: product
+      deps: []                        # 按 node_type 声明,不按产物结构
+    - id: "{auto}"
+      type: api_contract
+      role: server
+      deps: ["product_spec"]          # 依赖 product_spec 类型的节点
+    - id: "{auto}"
+      type: design_asset
+      role: design
+      deps: ["product_spec"]
+    - id: "{auto}"
+      type: client_ui
+      role: client
+      deps: ["api_contract", "design_asset"]
+  # 方法论在实例化时选择(需求 9 方法论自由)
+  allowed_frameworks: [spec-kit, openspec, ecc, superpowers, custom]
+  # 各节点的方法论可不同(更灵活)
+  framework_per_node:
+    product_spec: [spec-kit, openspec, custom]
+    api_contract: [spec-kit, ecc, custom]
+    design_asset: [custom]            # 设计稿用 Figma,不限方法论
+```
+
+**实例化时选择方法论**:
+
+```yaml
+# 管线实例(从模板派生)
+pipeline:
+  id: "login-feature"
+  template_ref: "standard-feature-pipeline@1.0.0"
+  nodes:
+    - id: "n1"
+      type: product_spec
+      toolspec: { framework: "openspec" }   # 实例化时选择
+    - id: "n2"
+      type: api_contract
+      toolspec: { framework: "spec-kit" }   # 不同节点可用不同方法论
+```
+
+##### 3.3.5.4 并发热重载批量处理(解决 D9-R3.4)
+
+新增 `langgraph_invoke` action(旧修正方案 reload_pipeline 基础上增加批量 PR 处理):
+
+```python
+def reload_pipeline(pipeline_id: str, new_dsl: dict, mode: str = "hot"):
+    """管线热重载 + 批量处理 pending PRs"""
+    dsl_diff = compute_diff(old_dsl, new_dsl)
+    pipeline_version = bump_version(dsl_diff)
+
+    # 1. reconcile 节点状态(旧修正方案)
+    reconcile_result = reconcile_nodes(dsl_diff, state)
+
+    # 2. 批量处理受影响的 pending PRs(新增)
+    pending_prs = list_pending_prs(pipeline_id)
+    affected_prs = []
+    for pr in pending_prs:
+        if pr_affected_by_dsl_diff(pr, dsl_diff):
+            affected_prs.append(pr)
+
+    for pr in affected_prs:
+        reject_pr(pr.id, reason={
+            "code": "R_PIPELINE_RELOADED",
+            "category": "pipeline",
+            "hint": f"管线已从 v{old_version} 升级到 v{pipeline_version},请基于新 DSL 重新评估并重提",
+            "retryable": True,
+            "dsl_diff": dsl_diff
+        })
+
+    # 3. 记录审计
+    audit_log(action="pipeline_reloaded", dsl_diff=dsl_diff,
+              reconcile_result=reconcile_result, affected_prs=affected_prs,
+              pipeline_version=pipeline_version)
+
+    return {"reconcile_result": reconcile_result, "affected_prs": affected_prs}
+```
+
+新增错误码:
+
+| 错误码 | HTTP | 含义 | retryable |
+|---|---|---|---|
+| `R_PIPELINE_RELOADED` | 409 | 管线已热重载,PR 基于旧 DSL,需重提 | true |
+
+##### 3.3.5.5 reconcile 按 artifact_kind 分支(解决 D9-R3.5)
+
+```python
+def reconcile_node_by_kind(node_id: str, state: PipelineState):
+    """reconcile 时按 artifact_kind 分支处理"""
+    artifact_ref = state.artifact_refs.get(node_id)
+    if not artifact_ref:
+        return  # 控制节点无产物
+
+    if artifact_ref["artifact_kind"] == "content":
+        # 内容型:校验 hub 仓内产物路径存在
+        path_exists = git_ls_file(hub_repo, artifact_ref["path"], artifact_ref["commit"])
+        if not path_exists:
+            set_changed(node_id, reason="artifact_path_missing")
+    elif artifact_ref["artifact_kind"] == "reference":
+        # 引用型:额外校验代码仓 commit 是否仍存在(可能被 rebase 删除)
+        ref_exists = git_ls_remote(
+            artifact_ref["external_repo"],
+            artifact_ref["external_commit"],
+            credentials=get_credentials(artifact_ref["external_repo"])
+        )
+        if not ref_exists:
+            # 代码仓 commit 被删除(rebase/force push),标记失效
+            set_changed(node_id, reason="external_commit_missing")
+```
+
+#### 3.3.6 设计图:产物完成度与管线状态机交互
+
+```mermaid
+stateDiagram-v2
+    [*] --> blocked: 初始态
+
+    blocked --> ready: 上游全 done
+    ready --> pending_review: submit_artifact
+    pending_review --> in_progress: 驳回重做
+    in_progress --> pending_review: 重新 submit
+    pending_review --> done: approve_pr 合并
+
+    done --> changed: 重提 PR(内容变更)
+    done --> changed: maturity formal→deprecated(新增)
+    done --> changed: maturity formal→draft(新增)
+    done --> disputed: report_mismatch(旧 D8-4 修正)
+
+    changed --> pending_review: 重提 PR
+    changed --> blocked: 级联失效下游(递归)
+
+    disputed --> changed: reviewer 裁定成立
+    disputed --> done: reviewer 裁定不成立(恢复)
+
+    done --> stale_deps: 管线热重载追加未 done deps(旧 D9-4 修正)
+    stale_deps --> done: 新 deps 全 done
+
+    note right of done
+        maturity 字段(需求 9):
+        - draft: 草案(可提交,下游不正式依赖)
+        - formal: 正式(下游可依赖)
+        - deprecated: 废弃(触发 changed)
+    end note
+
+    note right of changed
+        触发条件(含完成度变更):
+        1. 重提 PR(内容变更)
+        2. maturity: formal → deprecated
+        3. maturity: formal → draft
+        4. external_commit 被 rebase 删除(reference 型)
+    end note
+```
+
+---
+
+### 3.4 第三轮缺陷汇总表
+
+| 缺陷编号 | 缺陷描述 | 定位 | 严重度 | 修正方案 |
+|---|---|---|---|---|
+| D5-R3.1 | 单一 hub 仓 clone 放大效应:各端 clone 同一仓库(~66MB+),首次 clone 和 CI 全量校验时间线性增长 | 主 PRD §1.2、fr4 NFR5、fr4 §9.5 | 高 | §3.1.5.1 HubRepoConfig 增加 clone_strategy(partial/shallow/on_demand) |
+| D5-R3.2 | GitProvider 抽象未定义 LFS/大文件能力差异屏蔽:GitHub LFS 免费 1GB/月,设计稿 50MB×20 次/月即超限 | 主 PRD 附录 D7、round2 §2.4 | 中 | §3.1.5.2 GitProvider 增加 lfs_quota_status/supports_lfs/upload_large_file |
+| D5-R3.3 | 需求 9 完成度自由与单一 hub 仓存储成本冲突:草案反复提交大文件累积,L1/L2/L3 分层存储未定义草案策略 | 主 PRD §1.2、fr1-fr6 §2 | 中 | §3.1.5.3 skill.yaml 增加 draft_storage_policy |
+| D5-R3.4 | artifact_kind=reference 指向代码仓大文件,管理方完全不约束(需求 9 代码开发自由) | 主 PRD §1.4、附录 D7 | 低 | §3.1.5.4 文档明确边界 + content_type 记录 |
+| D8-R3.1 | ArtifactRef 增加 external_repo/external_commit,但 fr1-fr6 §3.4 引用型子 schema 仍用 code_repo/code_commit(字段名不一致),§4.1.4 op 清单无 ref_target_exists,数据模型与审核规则未对齐 | 主 PRD §5.1 vs fr1-fr6 §3.4、§4.1.4 | 高 | §3.2.5.1 更新引用型子 schema + 新增 op + 新增错误码 |
+| D8-R3.2 | GitProvider 抽象未定义跨托管代码仓引用认证:hub 仓 GitHub,代码仓 GitLab,管理方 ls-remote 需代码仓 token,认证边界模糊 | 主 PRD 附录 D7、fr4 §3 | 高 | §3.2.5.2 GitCredentialRegistry + Vault 凭证管理 |
+| D8-R3.3 | 需求 9 代码开发自由加剧引用一致性:各端无统一 commit 规范,implements 声明(旧 D8-3 修正)在新设计下缺失,错误引用到联调才暴露 | 主 PRD §1.4、附录 D7、fr1-fr6 §3.3 | 高 | §3.2.5.3 manifest 增加 implements + R_IMPLEMENTS_IN_DEPS |
+| D8-R3.4 | manifest schema 未区分 content/reference 校验规则:引用型应额外执行 R_REF_EXISTS,但规则配置无 applies_to_artifact_kind | fr1-fr6 §3.3、§4.1.1 | 中 | §3.2.5.4 review_rules_by_kind 按 artifact_kind 分级 |
+| D8-R3.5 | hub 仓 webhook 无法区分内容型/引用型 PR,审核策略矩阵未按 artifact_kind 分级 | fr1-fr6 §4.4、主 PRD FR6.4 | 中 | §3.2.5.4 审核策略矩阵增加 artifact_kind 维度 |
+| D9-R3.1 | 单一 hub 仓下产物路径与 pipeline_id 耦合:按 P0-4 用 features/{pipeline_id}/ 则重命名失效,扁平结构则多管线冲突 | 主 PRD §5.1、fr1-fr6 §2.1、P0-4 | 高 | §3.3.5.1 扁平结构 + node_id 映射 + pipeline_version 记录 |
+| D9-R3.2 | 需求 9 完成度自由与管线热重载冲突:正式→废弃的级联失效语义未定义,stale_deps 态只处理 deps 变更 | 主 PRD §1.2、fr2、round2(草案状态) | 中 | §3.3.5.2 manifest 增加 maturity + reconcile_maturity_change |
+| D9-R3.3 | 需求 9 方法论自由与管线模板兼容性:不同方法论产物结构差异大,模板 deps 无法固化 | 主 PRD §1.2、fr2(管线模板) | 中 | §3.3.5.3 模板 deps 按 node_type 声明 + allowed_frameworks |
+| D9-R3.4 | 单一 hub 仓多 PR 并发热重载:多端同时提交 PR,热重载时多个 PR deps 同时变更,未定义批量处理 | fr1-fr6 §5.3、fr2(热重载) | 中 | §3.3.5.4 reload_pipeline 批量处理 + R_PIPELINE_RELOADED |
+| D9-R3.5 | 管线热重载 reconcile 与 artifact_kind 交互未定义:reference 型需重新 ls-remote(代码仓 commit 可能被 rebase 删除) | 主 PRD §5.1、fr2(reconcile) | 低 | §3.3.5.5 reconcile_node_by_kind 分支处理 |
+
+### 3.5 缺陷统计
+
+| 严重度 | 数量 | 缺陷编号 |
+|---|---|---|
+| 高 | 5 | D5-R3.1, D8-R3.1, D8-R3.2, D8-R3.3, D9-R3.1 |
+| 中 | 7 | D5-R3.2, D5-R3.3, D8-R3.4, D8-R3.5, D9-R3.2, D9-R3.3, D9-R3.4 |
+| 低 | 2 | D5-R3.4, D9-R3.5 |
+| **合计** | **14** | |
+
+### 3.6 不变项验证
+
+本部分所有修正方案均**不破坏** PRD 的两大不变项:
+
+**1. 管理方不解析产物内容(中立性)**:
+- clone 策略:只优化 git 操作方式,不解析内容
+- GitProvider LFS 抽象:只校验对象存在性(HEAD + ETag + sha256),不下载/解压内容
+- 草案存储策略:只管理存储生命周期,不解析内容
+- R_REF_EXISTS:只 `git ls-remote` 确认 commit 存在,不读 commit 内容
+- implements 声明:管理方记录声明,不验证声明真实性
+- maturity 字段:管理方记录完成度,不评判内容质量
+- 跨托管凭证:只读 `ls_remote` scope,不修改代码仓
+
+**2. 合并即推进**:
+- 大文件校验通过 + PR 合并后才 set_done
+- R_REF_EXISTS 通过才 approve_pr
+- 管线热重载:不改变"合并即推进"语义,只补充"DSL 变更后 reconcile"
+- maturity 变更:废弃产物触发 changed(经重提 PR 流程),不绕过审核
+
+### 3.7 与旧走查(第一部分)的关系
+
+| 旧缺陷 | 新设计是否解决 | 新设计引入的新缺陷 |
+|---|---|---|
+| D5-1 ~ D5-8 | 部分解决(L1/L2/L3 仍适用) | D5-R3.1(clone 放大)、D5-R3.2(LFS 配额)、D5-R3.3(草案存储) |
+| D8-1/D8-2 | 附录 D7 明确 ls-remote(但审核层未对齐) | D8-R3.1(数据模型与规则未对齐)、D8-R3.2(跨托管认证)、D8-R3.3(一致性加剧) |
+| D8-3 ~ D8-7 | 未解决 | D8-R3.4(规则未分级)、D8-R3.5(策略矩阵未分级) |
+| D9-1 ~ D9-7 | 未解决(与仓库模型无关) | D9-R3.1(路径耦合)、D9-R3.2(完成度冲突)、D9-R3.3(模板兼容) |
+
+### 3.8 实施建议
+
+| 阶段 | 修正项 | 优先级 | 理由 |
+|---|---|---|---|
+| Phase 1 MVP 补丁 | D8-R3.1(数据模型对齐)、D8-R3.2(跨托管认证)、D8-R3.3(implements)、D9-R3.1(路径解耦) | P0 | 阻塞引用型产物校验和管线稳定性 |
+| Phase 2 | D5-R3.1(clone 策略)、D5-R3.2(GitProvider LFS)、D8-R3.4/R3.5(规则分级)、D9-R3.2(maturity)、D9-R3.4(并发热重载) | P1 | 提升可靠性与可演进性 |
+| Phase 3 | D5-R3.3(草案存储)、D5-R3.4(边界文档)、D9-R3.3(模板兼容)、D9-R3.5(reconcile 分支) | P2 | 增强可观测与长期演进 |
+
+### 3.9 关键认知升级(第三轮)
+
+1. **单一 hub 仓不是免费午餐**:简化了仓库管理,但引入 clone 放大、跨托管认证、路径耦合三个新问题。旧修正方案(L1/L2/L3 分层存储)仍适用,但需补充 clone 策略和 GitProvider 大文件能力抽象。
+
+2. **artifact_kind 区分是必要但不充分的**:`content` / `reference` 区分了产物存储位置,但审核规则层和 manifest schema 层未对齐。数据模型层的修正必须传导到审核规则层,否则 `git ls-remote` 校验无法落地。
+
+3. **需求 9 的四个自由维度在单一 hub 仓下产生差异化张力**:
+   - 格式自由 → 大文件 + 小文件混存,clone/审核策略难以统一
+   - 完成度自由 → 草案存储成本 + 废弃产物级联语义不清
+   - 方法论自由 → 管线模板 deps 无法固化
+   - 代码开发自由 → 引用一致性裸奔加剧,implements 声明是唯一证据
+
+4. **跨托管认证是单一 hub 仓的隐藏成本**:hub 仓 GitHub,代码仓 GitLab,管理方做 ls-remote 需要代码仓 token。代码仓不归管理方管,但管理方需要访问 → GitCredentialRegistry + Vault 是必需的,不是可选的。
+
+5. **产物路径与 pipeline_id 必须解耦**:单一 hub 仓下,若产物路径含 pipeline_id,管线重命名会导致所有产物路径失效。推荐扁平结构 + node_id 映射,ArtifactRef 记录 pipeline_version 但 path 稳定。
+
+---
+
+**第三轮走查结束。** 本部分在新设计(单一 hub 仓 + 需求 9)下重新走查 3 个场景,定位 14 项新设计缺陷(高 5 / 中 7 / 低 2),给出可落地的修正方案,均不破坏"管理方中立性"与"合并即推进"两大不变项。建议与 [round2-scenario-draft-multiworkflow.md](round2-scenario-draft-multiworkflow.md)(单一 hub 仓设计)配套评审。

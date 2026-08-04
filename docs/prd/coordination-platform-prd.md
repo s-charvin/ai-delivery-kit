@@ -1154,3 +1154,50 @@ class AuditLogEntry(TypedDict):
 - 附录 D4 P0 项:原"多产物仓库 RepoRegistry"相关条目移除,替换为"单一 hub 仓 + GitProvider 抽象"
 
 **GitProvider 抽象保留**:hub 仓虽单一,但 git 托管类型可配置(GitHub/GitLab/Bitbucket),GitProvider 接口屏蔽托管差异。详见 [round2-scenario-draft-multiworkflow.md §2.4](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round2-scenario-draft-multiworkflow.md)。
+
+### D8. 第三轮压力测试修正:需求 9(产物自由)+ 单一 hub 仓重新走查
+
+> **评审修正**:针对第一轮 5 个场景文件,在"RepoRegistry → 单一 hub 仓"修正后,针对需求 9(产物完全自由)重新走查 16 个场景,发现 83 个缺陷(1 Critical / 44 High / 35 Medium / 3 Low),归因为 5 大根因,提出 14 项 P0 修正。
+
+**5 大根因**:
+
+| 根因 | 影响缺陷数 | 核心问题 |
+|---|---|---|
+| 状态机不完整 | 22 | 7 态无法表达需求 9"完成度自由"(草案/正式/废弃) |
+| ArtifactRef 单值模型 | 18 | 无法表达多版本/多格式/多 qualifier 共存 |
+| 单一 hub 仓单点故障 | 15 | hub 仓宕机 = 全局停摆;clone 体积膨胀 |
+| 引用型产物管控盲区 | 16 | 只校验 commit 存在性,不校验归属/持续有效 |
+| 权限模型扁平 | 12 | 1 角色 = 1 agent,无法表达多团队实例 |
+
+**14 项 P0 修正**(详见 [round3-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round3-summary.md)):
+
+| # | 修正项 | 修正根因 | 影响章节 |
+|---|---|---|---|
+| 1 | 状态机扩展为 10 态(draft/deprecated/sunset) | 根因 1 | §2 术语、§FR2.1 |
+| 2 | ArtifactRef 多版本映射 + artifact_qualifier | 根因 2 | §5.1 |
+| 3 | deps 增 format_slot / strictness / hub_ref | 根因 2 | §FR2.2、§FR4.1 |
+| 4 | hub 仓单点故障降级系列(emergency_*) | 根因 3 | §FR4.1 |
+| 5 | HubRepoConfig 增强(clone_strategy / lfs / capacity) | 根因 3 | §FR1.1 |
+| 6 | 引用型产物分层清除 + 双层回滚 | 根因 4 | §FR2.5 |
+| 7 | 引用型产物持续校验(R_EXTERNAL_REF_OWNERSHIP) | 根因 4 | §FR6 |
+| 8 | RoleInstance 实例化 | 根因 5 | §FR3.1 |
+| 9 | 权限三层校验 + 分支四维命名 | 根因 5 | §3.2、§FR6 |
+| 10 | GitProvider 接口扩展 7 项 | 根因 3/5 | §FR4.1 |
+| 11 | 节点类型开放命名空间({role}.{name}) | 根因 1 | §2.1 |
+| 12 | artifact_qualifier 二维标记(official/mock/draft/experimental) | 根因 2 | §5.1 |
+| 13 | 跨管线引用 hub:// 协议 | 根因 2 | §FR2.2 |
+| 14 | human_submit_token 权限隔离 | 根因 5 | §FR4.1 |
+
+**关键认知**:
+1. 需求 9"自由"≠"无约束"——格式/方法论/完成度自由,但分支/路径/seq/权限需全局唯一
+2. 单一 hub 仓是"信息枢纽"而非"权限枢纽"——权限隔离需在 RoleInstance + CODEOWNERS 层补充
+3. 引用型产物是"代码仓的 hub 仓投影"——回滚需跨系统协调(代码团队 ack)
+4. 状态机必须覆盖产物全生命周期:draft → done → deprecated → sunset
+
+**关联文档**:
+- [round3-summary.md](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/round3-summary.md)(总报告)
+- [scenario-artifact-trust.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-artifact-trust.md)(14 缺陷)
+- [scenario-contract-versioning.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-contract-versioning.md)(17 缺陷,含 1 Critical)
+- [scenario-exception-human.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-exception-human.md)(20 缺陷)
+- [scenario-multi-team-rollback.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-multi-team-rollback.md)(19 缺陷)
+- [scenario-parallel-dependency.md §3](file:///Users/zuiyou/develop/skills/ai-delivery-kit/docs/prd/scenarios/scenario-parallel-dependency.md)(13 缺陷)

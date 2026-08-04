@@ -804,3 +804,857 @@ graph TB
 ---
 
 **报告结束。** 共定位 12 个设计缺陷(8 高 / 4 中 / 0 低),提出 3 套修正方案(节点拆分 / swap_deps + SWITCHED / artifact_registry + external dep),包含 3 张 Mermaid 设计图。所有缺陷均可定位到 PRD 具体章节,修正方案与现有深化文档对齐不冲突。
+
+---
+
+## 第三部分:基于需求 9(产物自由)+ 单一 hub 仓模型的重新走查(第三轮)
+
+> **重新走查背景**:需求 9(产物完成度自由 + 产物自由定义)与严格依赖图、固定节点类型之间的张力需要重新评估。同时,产物仓库模型已从"多产物仓库 RepoRegistry"修正为"单一 hub 仓"(附录 D7),ArtifactRef 增加 `artifact_kind`(content/reference)、`external_repo`、`external_commit` 字段,引用型产物只做 `git ls-remote` 存在性校验。第二轮 A13 已引入 `draft` 态(P0-12),A6 已引入 `free_artifact` + `side_node`(P0-13)。本部分基于这些演进,对场景 2 / 12 / 10 重新走查。
+
+### 3.1 场景 2 重新走查:设计稿延迟下的草案依赖与产物完成度自由
+
+#### 3.1.1 旧结论回顾
+
+第一轮走查定位 4 个缺陷:
+- 2-A:client_ui 节点粒度过粗(拆分为 client_logic + client_ui_render)
+- 2-B:严格 AND 依赖,缺少"部分满足可启动子任务"机制
+- 2-C:变更级联粒度过粗
+- 2-D:节点类型扩展成本高,无插件化机制
+
+修正方案 2-1 提出拆分 client_ui 为 `client_logic`(deps: api_contract)+ `client_ui_render`(deps: design_asset + client_logic),并建议节点类型分"核心+扩展"两层。
+
+#### 3.1.2 新设计影响
+
+**影响 1:draft 态( A13)与需求 9"完成度自由"的叠加**
+
+第二轮 A13 已引入 `draft` 状态(P0-12),允许"软提交"草案产物。需求 9 进一步说"产物完成度自由",意味着 client_logic 可以是部分完成的草案。但旧修正方案 2-1 假设 client_logic 是正式节点(done 态),未考虑 draft 态下 client_ui_render 能否依赖 draft 产物。
+
+**走查点**:fr2 §2.1 T3 转移要求 `all(dep_state==done for dep in deps(nid))`,draft ≠ done,client_ui_render 仍 blocked。需求 9 的"完成度自由"在依赖链上被严格依赖图截断。
+
+**影响 2:单一 hub 仓下草案产物的存储**
+
+旧方案假设产物仓库按类型分目录(`client_logic/001.yaml`)。单一 hub 仓模型下(附录 D7),所有产物在一个 git 仓库。若 draft 产物也 squash merge 到 main,会污染正式产物视图——下游 get_dependencies 拉取时无法区分正式产物与草案。
+
+**走查点**:PRD §5.1 ArtifactRef 只有 `artifact_kind`(content/reference)区分物理形态,没有区分"正式/draft"的逻辑角色。fr1-fr6 §2 的目录结构没有 draft 专属区域。
+
+**影响 3:引用型 draft 产物的 commit 稳定性**
+
+client_logic 是客户端代码,在单一 hub 仓中作为**引用型产物**(`artifact_kind=reference`),`external_commit` 指向客户端代码仓的 commit。附录 D7 明确"引用型产物只做 `git ls-remote` 存在性校验"。
+
+**走查点**:draft 阶段的 client_logic 指向代码仓 WIP 分支的 commit。WIP 分支常被 force-push,commit 可能消失。`git ls-remote` 只校验 commit 当前存在,不保证未来稳定。下游 client_ui_render 若依赖 draft 引用,后续追溯产物时 commit 可能已失效。
+
+#### 3.1.3 需求 9 张力
+
+**张力 1:"产物完成度自由" vs 严格依赖图(全部 done 才 ready)**
+
+需求 9 允许产物以任意完成度存在(draft / partial / done),但 fr2 §2.1 T3 要求上游全 done 下游才 ready。这意味着:
+- client_logic 以 draft 提交后,client_ui_render 仍 blocked
+- 客户端 agent 无法基于"功能逻辑草案"并行启动 UI 还原的预备工作(如读 draft 契约确定数据结构)
+- 需求 9 的"完成度自由"在单节点内有意义,但跨节点依赖链上被严格 DAG 否定
+
+**张力 2:"产物自由定义" vs 节点类型固定(9 种)+ SkillRegistry 一对一**
+
+需求 9 说"产物怎么定义,由各端自己定义和演进"。client_logic 是客户端自定义的节点类型(旧方案 2-1 提出)。但:
+- fr3-fr5 §8.1 SkillRegistry.build_index 强制 `node_type → skill` 一对一,重复 raise
+- fr2 §7.3 校验"产物节点 type 在 9 种产物类型中",否则 `INVALID_NODE_TYPE`
+- client_logic 不在 9 种中,管线加载时直接拒绝
+
+A6 引入的 `free_artifact` + `side_node`(P0-13)是为"无依赖旁路产物"设计的,但 client_logic 在主依赖链上(被 client_ui_render 依赖),不是旁路产物。
+
+#### 3.1.4 新发现的设计缺陷
+
+**D2-R3.1:草案产物作为下游依赖的语义未定义(高)**
+
+A13 引入 draft 态 + soft_submit,但未定义 draft 产物能否作为下游依赖。fr2 §2.1 T3 的 `all(dep_state==done)` 明确排除 draft。需求 9"完成度自由"与严格依赖图直接冲突:若允许 draft 依赖,破坏 DAG 严格性;若不允许,需求 9 在依赖链上失效。当前设计无 `accepts_draft_dep` 之类的声明机制。
+
+**D2-R3.2:引用型 draft 产物的 commit 稳定性无保障(高)**
+
+附录 D7 规定引用型产物只做 `git ls-remote` 存在性校验。但 draft 引用型产物指向代码仓 WIP 分支 commit,WIP 分支常被 force-push。当前设计:
+- 无 `commit_stability` 字段区分 stable/volatile commit
+- 无定期校验机制确认 commit 仍存在
+- commit 消失后下游产物引用追溯失败,审计链断裂
+
+**D2-R3.3:单一 hub 仓中 draft 产物的存储位置与正式产物混存(中)**
+
+PRD §5.1 ArtifactRef 只有 `artifact_kind`(content/reference),无 draft/official 逻辑角色区分。fr1-fr6 §2 目录结构无 draft 专属区域。draft 产物若 squash merge 到 main,正式产物视图被污染;若不开 PR(soft_submit),又不进 main,get_dependencies 无法拉取。
+
+**D2-R3.4:client_logic 自定义节点类型被 SkillRegistry + fr2 §7.3 双重拒绝(高)**
+
+需求 9"各端自己演进"要求节点类型可扩展。但:
+- fr2 §7.3 `INVALID_NODE_TYPE` 拒绝 9 种外的节点类型
+- fr3-fr5 §8.1 SkillRegistry 重复匹配 raise
+- A6 的 free_artifact 不适用主链路节点
+- 旧方案 2-1 的"核心+扩展分层"未落地,无具体命名空间与匹配规则
+
+#### 3.1.5 修正方案
+
+**方案 2-R3:引入 draft 依赖声明 + commit 稳定性分级 + 自定义节点命名空间**
+
+**步骤 1:draft 依赖声明(对应 D2-R3.1)**
+
+节点 deps 扩展 `strictness` 字段:
+
+```yaml
+nodes:
+  - id: "n8"
+    type: "client.ui_render"
+    role: client
+    deps:
+      - node_id: "n7"            # client_logic
+        strictness: accepts_draft  # 接受 draft 态上游(开发态依赖)
+      - node_id: "n6"            # design_asset
+        strictness: done_only      # 必须 done(默认)
+```
+
+**语义**:
+- `done_only`(默认):上游必须 done,符合现有 T3 严格依赖
+- `accepts_draft`:上游 draft 或 done 均可让本节点 ready
+- 当上游为 draft 时,本节点进入 `draft_dependent` 新态(非 done,产物可提交但标注依赖草案)
+- `draft_dependent` 节点的下游若声明 `done_only`,则 blocked(草案依赖不传递)
+- 交付门禁(client_delivery)可声明 `require_all_done: true`,强制全链路 done 才放行
+
+**状态机扩展**(fr2 §2.1 新增):
+```
+T24 | blocked → draft_ready | cascade 上游全 done 或 draft(accepts_draft dep) | 上游为 draft 时进入 draft_ready
+T25 | draft_ready → draft_dependent | submit_artifact(草案产物提交) | 产物合并但标注 draft_dependent
+T26 | draft_dependent → blocked | 上游 draft → changed/失效 | 级联失效
+T27 | draft_dependent → done | 上游升级 done + 本节点重新验证 | 草案依赖升级为正式依赖
+```
+
+**步骤 2:引用型产物 commit 稳定性分级(对应 D2-R3.2)**
+
+ArtifactRef 引用型字段扩展:
+
+```python
+class ArtifactRef(TypedDict):
+    # ... 现有字段
+    external_commit: str | None
+    commit_stability: str        # "stable"(默认) | "volatile"(draft 专用)
+    commit_verified_at: str      # ISO8601,上次 git ls-remote 校验时间
+```
+
+**校验规则**:
+- `stable`:代码仓必须配置 branch protection 禁止 force-push;平台合并时校验 branch protection 存在
+- `volatile`:允许 force-push;平台每小时 git ls-remote 校验 commit 存在性,消失时标 `stale_ref` 状态并通知引用方
+- draft 引用型产物默认 volatile;升级 done 时强制要求 stable(否则拒绝升级)
+
+**步骤 3:单一 hub 仓 draft 存储区(对应 D2-R3.3)**
+
+hub 仓增加 `drafts/` 顶层目录:
+
+```
+artifact-hub-repo/
+├─ features/{pipeline_id}/{node_type}/...     # 正式产物(P0-4 路径)
+├─ drafts/{pipeline_id}/{node_type}/...        # 草案产物(新)
+│  └─ {node_id}.yaml
+└─ .manifest.yaml                              # 产物元数据索引
+```
+
+- draft 产物用 `soft_submit`(A13)合并到 main 的 `drafts/` 目录(不走正式 PR 审核,仅格式校验)
+- get_dependencies 返回时带 `artifact_qualifier: draft` 字段,agent 可自主决定是否接受
+- draft 升级 done 时,产物从 `drafts/` 移到 `features/`,触发 changed 级联
+
+**步骤 4:自定义节点类型命名空间(对应 D2-R3.4)**
+
+节点类型改为 `{role}.{custom_name}` 命名空间:
+
+```yaml
+# pipeline.yaml
+nodes:
+  - id: "n7"
+    type: "client.logic"          # 自定义:client 角色的 logic 节点
+    role: client
+    deps: ["n2"]
+  - id: "n8"
+    type: "client.ui_render"      # 自定义:client 角色的 ui_render 节点
+    role: client
+    deps:
+      - node_id: "n6"
+      - node_id: "n7"
+        strictness: accepts_draft
+```
+
+**SkillRegistry 改为三级匹配**(fr3-fr5 §8.1 扩展):
+1. 精确匹配:`client.logic` → `client-logic-skill`(若存在)
+2. 前缀匹配:`client.logic` → `client-default-skill`(角色级兜底)
+3. 无匹配:用 `generic-artifact-skill`(通用校验:文件存在 + 元数据基本字段)
+
+**fr2 §7.3 校验放宽**:产物节点 type 不再限定 9 种,改为 `{role}.{name}` 命名空间格式校验 + role 一致性校验(`type` 前缀 == `role`)。
+
+#### 3.1.6 设计图:草案依赖与 commit 稳定性
+
+```mermaid
+graph TB
+    subgraph HUB["单一 hub 仓"]
+        FORMAL["features/{pid}/<br/>正式产物区"]
+        DRAFT["drafts/{pid}/<br/>草案产物区(新)"]
+    end
+
+    subgraph CODE["客户端代码仓(external)"]
+        WIP["WIP 分支<br/>commit: abc123<br/>volatile(允许 force-push)"]
+        MAIN["main 分支<br/>commit: def456<br/>stable(禁止 force-push)"]
+    end
+
+    subgraph DAG["依赖 DAG"]
+        AC["api_contract<br/>done"] --> CL["client.logic<br/>draft 态<br/>引用 WIP commit"]
+        DA["design_asset<br/>done"] --> CUR["client.ui_render<br/>draft_dependent 态<br/>accepts_draft: client.logic"]
+        CL -.accepts_draft.-> CUR
+        CUR --> CD["client.delivery<br/>blocked<br/>require_all_done: true"]
+    end
+
+    CL -.soft_submit.-> DRAFT
+    DRAFT -.引用型<br/>commit_stability=volatile.-> WIP
+    WIP -.force-push<br/>commit 消失.-> STALE["stale_ref 告警<br/>每小时 ls-remote 校验"]
+
+    CL -.升级 done.-> FORMAL
+    FORMAL -.引用型<br/>commit_stability=stable.-> MAIN
+    MAIN -.branch protection<br/>禁止 force-push.-> STABLE["commit 稳定"]
+
+    CUR -.上游升级 done<br/>T27 重新验证.-> CD
+
+    classDef done fill:#3fb950,color:#fff
+    classDef draft fill:#e3b341,color:#fff
+    classDef draftDep fill:#a371f7,color:#fff
+    classDef blocked fill:#b3261e,color:#fff
+    classDef stable fill:#3fb950,color:#fff
+    classDef volatile fill:#d29922,color:#fff
+
+    class AC,DA,MAIN done
+    class CL,WIP draft
+    class CUR draftDep
+    class CD,STALE blocked
+    class STABLE stable
+
+    style DRAFT fill:#4a3a1a,color:#fff
+    style FORMAL fill:#1a3a1a,color:#fff
+```
+
+**关键说明**:
+- client.logic 以 draft 态提交到 hub 仓 `drafts/` 区,引用代码仓 WIP commit(volatile)
+- client.ui_render 声明 `accepts_draft`,可基于 draft 上游进入 `draft_dependent` 态并行开发
+- client.delivery 声明 `require_all_done`,强制全链路 done 才放行(交付门禁)
+- draft 升级 done 时,产物从 drafts/ 移到 features/,commit 从 volatile 升级为 stable
+- volatile commit 被 force-push 消失时,平台每小时 ls-remote 校验,标 stale_ref 通知引用方
+
+#### 3.1.7 修正前后对比
+
+| 维度 | 旧修正方案 2-1 | 第三轮修正 |
+|---|---|---|
+| client_logic 完成度 | 必须 done 才能被下游依赖 | draft 态即可被 accepts_draft 下游依赖 |
+| 引用型 commit 稳定性 | 未考虑 | stable/volatile 分级 + 定期 ls-remote 校验 |
+| draft 产物存储 | 未定义 | hub 仓 drafts/ 专属区,与正式产物隔离 |
+| 节点类型扩展 | "核心+扩展分层"(未落地) | {role}.{name} 命名空间 + SkillRegistry 三级匹配 |
+| 交付门禁 | 无差别 | require_all_done 强制全链路 done 才放行 |
+
+---
+
+### 3.2 场景 12 重新走查:mock 数据产物的自由定义与节点类型扩展
+
+#### 3.2.1 旧结论回顾
+
+第一轮走查定位 4 个缺陷:
+- 12-A:产物类型缺失,无 mock 类型(新增 client_mock)
+- 12-B:依赖模型过于线性,无"并行替代依赖"(swap_deps)
+- 12-C:mock → 真实接口切换无表达(SWITCHED 事件 + revalidating)
+- 12-D:mock 产物归属模糊(归 client)
+
+修正方案 12-1 提出新增 `client_mock` 节点类型 + `swap_deps` 可替换依赖组 + `SWITCHED` 事件 + `revalidating` 状态。
+
+#### 3.2.2 新设计影响
+
+**影响 1:需求 9"产物自由定义"下 mock 的定位**
+
+旧方案 12-1 把 mock 定义为新的固定节点类型 `client_mock`。但需求 9 说"产物怎么定义,由各端自己定义和演进",mock 的形态应由客户端自主决定:
+- 可能是 JSON mock 数据文件(内容型,存 hub 仓)
+- 可能是 MSW mock 配置(引用型,指向客户端代码仓 mock 目录)
+- 可能是 mock server 启动脚本(引用型)
+- 可能是 OpenAPI examples 字段(内容型,附在 api_contract 产物中)
+
+固定为 `client_mock` 节点类型无法覆盖所有形态,违反需求 9。
+
+**走查点**:PRD §5.1 ArtifactRef 的 `artifact_kind` 只有 content/reference 两值,无法表达"这是 mock 数据"。下游 client_func 如何区分拉取的是 mock 还是真实契约?
+
+**影响 2:单一 hub 仓中 mock 与真实产物的区分**
+
+单一 hub 仓中,mock 产物和正式产物在同一个 git 仓库。若 mock 用 `client_mock/` 目录、正式用 `server_impl/` 目录,路径隐含了类型。但需求 9 说"各端自由定义",客户端可能把 mock 放在 `client.mock/` 自定义节点类型下,路径变成 `features/{pid}/client.mock/...`,与 `server_impl` 平级,下游无法从路径判断 mock/real 性质。
+
+**走查点**:fr1-fr6 §2 目录结构 + P0-4 的 `features/{pipeline_id}/...` 路径模型,没有 mock/real 的路径段或元数据字段。
+
+**影响 3:mock → 真实接口切换的"自主性"**
+
+旧方案 12-1 提出平台强制的 `SWITCHED` 事件 + `revalidating` 状态。但需求 9 说"客户端和服务端开发怎么开发也不需要限制,提供产物和更新状态即可"。切换 mock→real 本质是客户端的自主决策:客户端在 client_func 产物提交时声明"我已切换到真实接口"即可,平台不应强制 revalidating 流程。
+
+**走查点**:旧方案的 `swap_deps` + `require_final` 是平台强制的门禁,与需求 9 的"不限制开发方式"有张力。
+
+#### 3.2.3 需求 9 张力
+
+**张力 1:"产物自由定义" vs 节点类型固定(9 种)+ mock 类型归属**
+
+mock 数据不是单一节点类型能覆盖的。需求 9 要求各端自主定义 mock 形态,但:
+- 固定 `client_mock` 类型无法覆盖 MSW/mock server/OpenAPI examples 等多形态
+- 用 `free_artifact`(A6)则 mock 成为旁路产物,无法被 client_func 声明为开发态依赖
+- mock 归属也因形态而异:JSON mock 归 client,OpenAPI examples 归 server,mock server 归 client
+
+**张力 2:"各端自己演进" vs mock/real 区分的平台级机制**
+
+需求 9 说各端自主演进产物定义,但 mock 与 real 的区分是**跨端协作的关键信息**——client_func 需要知道自己依赖的是 mock 还是 real。若完全由各端自定义,平台不记录 mock/real 性质,下游无法自动判断。这是"自由定义"与"协作可感知"的张力。
+
+**张力 3:"不需要限制开发方式" vs 平台强制 SWITCHED/revalidating**
+
+旧方案的 SWITCHED 事件 + revalidating 是平台强制的切换流程。需求 9 说"提供产物和更新状态即可",暗示切换应由客户端在产物提交时声明,而非平台触发独立的状态机流程。
+
+#### 3.2.4 新发现的设计缺陷
+
+**D12-R3.1:ArtifactRef 缺少 mock/real 逻辑角色维度(高)**
+
+PRD §5.1 ArtifactRef 只有 `artifact_kind`(content/reference)区分物理形态,没有 `artifact_qualifier` 区分逻辑角色(official/mock/draft)。单一 hub 仓中,mock 产物与正式产物混存,下游 get_dependencies 无法区分。需求 9"自由定义"下,mock 形态多样,路径命名无法可靠区分。
+
+**D12-R3.2:mock 产物在单一 hub 仓中的路径与正式产物冲突(中)**
+
+P0-4 路径模型 `features/{pipeline_id}/{node_type}/...` 下,mock 产物若用自定义节点类型 `client.mock`,路径为 `features/{pid}/client.mock/...`;若用 `client_mock`,路径为 `features/{pid}/client_mock/...`。无论哪种,都与正式产物平级,无独立的 mock 区域。同一管线内 mock 产物与正式产物共存于 `features/{pid}/` 下,产物视图混乱。
+
+**D12-R3.3:mock 作为开发态依赖的声明机制与 free_artifact 冲突(高)**
+
+mock 是 client_func 的开发态依赖(用 mock 跑联调),但又不是 done_only 硬依赖(交付时切到 real)。A6 的 `free_artifact` + `side_node` 是为"无依赖旁路产物"设计的,不参与主 DAG。但 mock 需要被 client_func 声明为依赖(开发态),且需要在交付时被替换为 real。当前设计无"开发态可替换依赖"的声明机制——旧方案 swap_deps 未在第二轮落地,A6 的 free_artifact 不适用。
+
+**D12-R3.4:mock → real 切换的平台强制性与需求 9"自主性"冲突(中)**
+
+旧方案 12-1 的 SWITCHED 事件 + revalidating 是平台强制流程。需求 9 说"不需要限制开发方式",切换应由客户端自主声明。当前设计无"客户端自主声明切换"的轻量机制,只有平台强制的状态机流程。
+
+#### 3.2.5 修正方案
+
+**方案 12-R3:artifact_qualifier 二维标记 + 开发态依赖声明 + 自主切换声明**
+
+**步骤 1:ArtifactRef 增加 artifact_qualifier 字段(对应 D12-R3.1)**
+
+```python
+class ArtifactRef(TypedDict):
+    # ... 现有字段
+    artifact_kind: str          # "content" | "reference"(物理形态,不变)
+    artifact_qualifier: str     # "official" | "mock" | "draft" | "experimental"(逻辑角色,新)
+```
+
+**二维组合语义**:
+
+| artifact_kind | artifact_qualifier | 含义 | 示例 |
+|---|---|---|---|
+| content | official | 正式内容型产物 | api_contract YAML |
+| content | mock | mock 数据文件 | JSON mock 数据 |
+| content | draft | 草案内容型产物 | draft 契约 |
+| reference | official | 正式引用型产物 | 代码仓 main commit |
+| reference | mock | 引用型 mock | 代码仓 mock 目录 commit |
+| reference | draft | 草案引用型产物 | 代码仓 WIP commit |
+
+- get_dependencies 返回时包含 `artifact_qualifier`,agent 自主决定是否接受 mock/draft
+- 产物提交时由提交方声明 `artifact_qualifier`,平台不解析内容,只记录标记
+
+**步骤 2:hub 仓路径增加 qualifier 段(对应 D12-R3.2)**
+
+```
+artifact-hub-repo/
+├─ features/{pipeline_id}/{node_type}/{qualifier}/...   # qualifier: official/mock/draft
+│  └─ {node_id}.yaml
+```
+
+示例:
+```
+features/login-feature/client.mock/mock/001.json          # mock 数据
+features/login-feature/client.logic/draft/001_ref.json     # 草案引用
+features/login-feature/api_contract/official/001.yaml     # 正式契约
+```
+
+- qualifier 段由 submit_artifact 根据 artifact_qualifier 自动推导
+- 同一 node_id 的产物可在不同 qualifier 下共存(如 client_logic 既有 draft 又有 official)
+
+**步骤 3:开发态可替换依赖声明(对应 D12-R3.3)**
+
+节点 deps 扩展 `dev_alternatives` 字段(替代旧方案 swap_deps,更轻量):
+
+```yaml
+nodes:
+  - id: "n9"
+    type: "client.func"
+    role: client
+    deps:
+      - node_id: "n8"              # client.ui_render(硬依赖)
+        strictness: done_only
+      - group: backend_data        # 可替换依赖组
+        dev_alternatives:
+          - node_id: "n11"         # client.mock(开发态)
+            artifact_qualifier: mock
+          - node_id: "n3"          # server_impl(生产态)
+            artifact_qualifier: official
+        require_final: "n3"        # 交付前必须切换到 server_impl
+```
+
+**语义**:
+- `dev_alternatives`:任一 alternative 存在(含 draft/mock)即可让节点进入 `dev_ready` 新态(开发态就绪)
+- `require_final`:声明交付态必须满足的 alternative,client_delivery gate 校验
+- 与旧方案 swap_deps 的区别:不引入 SWITCHED 事件 + revalidating 状态机,切换由客户端在产物提交时自主声明(见步骤 4)
+
+**状态机扩展**(fr2 §2.1 新增,轻量版):
+```
+T28 | blocked → dev_ready | dev_alternatives 任一存在 | 开发态就绪,可提交 dev 产物
+T29 | dev_ready → dev_done | submit_artifact(mock 依赖下提交) | 产物合并但标注 dev_done
+T30 | dev_done → dev_done | 客户端自主声明切换(resolved_deps 变更) | 不触发 revalidating,只记录切换事实
+T31 | dev_done → ready | require_final 满足 | 升级为正式 ready,可进 pending_review → done
+```
+
+**步骤 4:客户端自主声明切换(对应 D12-R3.4)**
+
+切换不由平台触发 SWITCHED 事件,而是客户端在 client_func 产物提交时通过 `resolved_deps` 字段声明:
+
+```yaml
+# client_func 产物提交时的 PR 模板
+node_id: n9
+artifact:
+  path: features/login-feature/client.func/official/001_ref.json
+resolved_deps:                       # 声明实际依赖(新字段)
+  backend_data: server_impl          # 已切换到真实接口
+  # backend_data: client.mock       # 仍在用 mock(开发态)
+```
+
+- 平台只记录 `resolved_deps` 事实,不强制 revalidating
+- client_delivery gate 校验 `resolved_deps.backend_data == server_impl`(require_final 满足)
+- 需求 9 的"不限制开发方式"得到尊重:客户端自主决定何时切换,平台只在交付门禁校验
+
+#### 3.2.6 设计图:mock 产物的二维标记与自主切换
+
+```mermaid
+graph LR
+    subgraph HUB["单一 hub 仓(路径含 qualifier 段)"]
+        AC_OFF["features/login/api_contract/official/001.yaml<br/>kind=content, qualifier=official"]
+        CM_MOCK["features/login/client.mock/mock/001.json<br/>kind=content, qualifier=mock"]
+        SI_OFF["features/login/server_impl/official/001_ref.json<br/>kind=reference, qualifier=official"]
+        CF_DEV["features/login/client.func/mock/001_ref.json<br/>kind=reference, qualifier=mock<br/>resolved_deps: client.mock"]
+        CF_OFF["features/login/client.func/official/001_ref.json<br/>kind=reference, qualifier=official<br/>resolved_deps: server_impl"]
+    end
+
+    subgraph DAG["依赖 DAG"]
+        AC_OFF --> CM_MOCK
+        AC_OFF --> SI_OFF
+        CM_MOCK -.dev_alternative.-> CF_DEV
+        SI_OFF -.require_final.-> CF_OFF
+        CF_OFF --> CD["client.delivery<br/>gate: resolved_deps.backend_data == server_impl"]
+    end
+
+    CF_DEV -.客户端自主声明切换<br/>T30 dev_done→dev_done.-> CF_OFF
+
+    subgraph STATES["节点状态(轻量)"]
+        BLOCKED[blocked] -->|dev_alternatives 存在| DEV_READY[dev_ready]
+        DEV_READY -->|提交 mock 依赖产物| DEV_DONE[dev_done]
+        DEV_DONE -->|自主声明切换<br/>不触发 revalidating| DEV_DONE
+        DEV_DONE -->|require_final 满足<br/>T31| READY[ready]
+        READY -->|提 PR| PENDING[pending_review]
+        PENDING -->|合并| DONE[done]
+    end
+
+    classDef official fill:#3fb950,color:#fff
+    classDef mock fill:#e3b341,color:#fff
+    classDef dev fill:#a371f7,color:#fff
+    classDef blocked fill:#b3261e,color:#fff
+
+    class AC_OFF,SI_OFF,CF_OFF,CD,READY,PENDING,DONE official
+    class CM_MOCK,CF_DEV mock
+    class DEV_READY,DEV_DONE dev
+    class BLOCKED blocked
+
+    style HUB fill:#1a2a4a,color:#fff
+    style DAG fill:#2a4a1a,color:#fff
+    style STATES fill:#4a2a4a,color:#fff
+```
+
+**关键说明**:
+- mock 产物用 `artifact_qualifier=mock` 标记,路径含 `mock/` 段,与正式产物隔离
+- client.func 通过 `dev_alternatives` 声明 mock/real 可替换依赖,开发态用 mock 进入 `dev_done`
+- 切换由客户端在产物提交时通过 `resolved_deps` 自主声明,平台不强制 revalidating(需求 9)
+- client.delivery gate 校验 `resolved_deps` 满足 `require_final`,确保交付前切到真实接口
+- 二维标记(kind × qualifier)覆盖所有 mock 形态:content+mock(JSON 数据)、reference+mock(代码仓 mock 目录)
+
+#### 3.2.7 修正前后对比
+
+| 维度 | 旧修正方案 12-1 | 第三轮修正 |
+|---|---|---|
+| mock 节点类型 | 固定 client_mock | 自定义节点类型 + artifact_qualifier=mock 标记 |
+| mock 形态覆盖 | 仅内容型 | content/reference × official/mock/draft 二维组合 |
+| mock/real 区分 | 路径命名 | artifact_qualifier 字段 + 路径 qualifier 段 |
+| 切换机制 | 平台强制 SWITCHED + revalidating | 客户端自主声明 resolved_deps,平台只记录 |
+| 交付门禁 | require_final gate | 同(保留),但校验 resolved_deps 而非状态机 |
+| 需求 9 对齐 | 部分冲突(平台强制切换) | 完全对齐(自主声明 + 门禁兜底) |
+
+---
+
+### 3.3 场景 10 重新走查:跨管线共享产物在单一 hub 仓中的引用与变更通知
+
+#### 3.3.1 旧结论回顾
+
+第一轮走查定位 4 个缺陷:
+- 10-A:Pipeline 强隔离,无跨管线依赖(external dep)
+- 10-B:无产物注册表(artifact_registry)
+- 10-C:跨管线变更感知缺失(EXTERNAL_CHANGED + stale)
+- 10-D:版本对齐无机制(version_range)
+
+修正方案 10-1 提出引入 `artifact_registry` 全局表 + `external` 依赖引用 + `EXTERNAL_CHANGED` 事件 + `stale` 状态 + semver version_range。
+
+#### 3.3.2 新设计影响
+
+**影响 1:单一 hub 仓简化跨仓库 clone,但跨管线引用仍然存在**
+
+附录 D7 修正后,所有内容型产物在单一 hub 仓,get_dependencies 不需要跨仓库 clone。但 Pipeline 隔离模型(fr2 §7.3 DANGLING_REF)仍然禁止跨管线节点引用——Feature A 的节点 deps 不能引用 Feature C 的 node_id。
+
+旧方案 10-1 的 artifact_registry + external dep 仍然适用,但存储模型变了:artifact_registry 不再是跨仓库索引,而是同仓库内的跨管线索引。
+
+**走查点**:P0-4 路径模型 `features/{pipeline_id}/{node_type}/...` 下,跨管线引用是引用 `features/{另一 pipeline_id}/...` 的产物。fr2 §7.3 的 `DANGLING_REF` 校验只查本管线 nodes 列表,跨管线引用仍被拒绝。
+
+**影响 2:artifact_registry 在单一 hub 仓中的必要性存疑**
+
+旧方案 10-1 提出 Postgres `artifact_registry` 表。但单一 hub 仓本身是全局视图——所有产物在一个 git 仓库,`git ls-tree` 即可列出所有产物。是否还需要单独的 Postgres 表?
+
+**走查点**:单一 hub 仓的 git log + 路径约定 + manifest 文件即可构建轻量索引,不需要额外 Postgres 表。但跨管线引用的版本绑定(哪个 commit 的产物)仍需明确。
+
+**影响 3:需求 9"各端自己演进"与跨管线共享产物的格式兼容性**
+
+需求 9 说"产物怎么定义,由各端自己定义和演进"。跨管线共享产物时,产物定义可能变化:
+- Feature C 的 api_contract 从 v1 OpenAPI 格式升级到 v2 gRPC 格式
+- Feature A 的客户端还在用 REST client,不兼容 gRPC
+- 单一 hub 仓中,产物路径不变(`features/pipeline-c/api_contract/official/...`),但内容格式变了
+
+**走查点**:旧方案 10-1 的 `version_range`(semver)只校验版本号,不校验格式兼容性。需求 9 的"自主演进"下,格式变化是各端自主决策,但引用方需要感知格式变化并判断兼容性。
+
+#### 3.3.3 需求 9 张力
+
+**张力 1:"各端自己演进" vs 跨管线共享产物的格式兼容性**
+
+需求 9 允许各端自主演进产物定义(如 OpenAPI→gRPC)。但跨管线共享产物时,产物方演进格式,引用方可能不兼容。当前设计:
+- semver version_range 只校验版本号,不校验格式
+- 没有"格式兼容性声明"机制
+- 引用方无法在加载时判断新版本是否兼容
+
+**张力 2:"不需要限制开发方式" vs 跨管线变更通知的强制性**
+
+需求 9 说"提供产物和更新状态即可"。跨管线共享产物变更时:
+- 旧方案 10-1 的 EXTERNAL_CHANGED + stale 是平台强制推送
+- 需求 9 暗示变更通知应是"各端自主订阅",而非平台强制
+- 若引用方不订阅,变更感知缺失(旧缺陷 10-C 复现);若平台强制推送,违反需求 9
+
+**张力 3:引用型产物跨管线共享的 force-push 风险**
+
+附录 D7 规定引用型产物(代码仓 commit)只做 `git ls-remote` 存在性校验。跨管线共享的引用型产物(如 Feature C 的 server_impl commit 被 Feature A 引用):
+- Feature C 的代码仓 force-push 会导致 commit 消失
+- 所有引用方(Feature A/B)的引用同时失效
+- 单一 hub 仓不存代码内容,无法兜底恢复
+
+#### 3.3.4 新发现的设计缺陷
+
+**D10-R3.1:单一 hub 仓中跨管线引用的路径模型与 P0-4 冲突(高)**
+
+P0-4 路径模型 `features/{pipeline_id}/{node_type}/...` 按管线分目录。跨管线引用需要引用 `features/{另一 pipeline_id}/...` 的产物,但 fr2 §7.3 `DANGLING_REF` 禁止跨管线节点引用。旧方案 10-1 的 external dep 用 `registry_id`,但单一 hub 仓中 registry_id 与路径的映射关系未定义。引用方如何在 hub 仓中定位共享产物?
+
+**D10-R3.2:artifact_registry 在单一 hub 仓中的必要性与实现形态未重新评估(中)**
+
+旧方案 10-1 假设多产物仓库,需 Postgres artifact_registry 表做跨仓库索引。单一 hub 仓下,所有产物在一个 git 仓库,artifact_registry 的必要性存疑。但第二轮未重新评估,旧方案直接沿用可能导致冗余设计。需明确:是用 Postgres 表,还是用 hub 仓 git 索引 + manifest 文件?
+
+**D10-R3.3:产物定义变化(格式演进)对引用方的兼容性判定缺失(高)**
+
+需求 9 允许各端自主演进产物定义。旧方案 10-1 的 semver version_range 只校验版本号,不校验格式兼容性。例如 api_contract 从 OpenAPI(REST)升级到 gRPC,版本号 2.0.0,引用方 `^1.0.0` 不接受——但若引用方改成 `^2.0.0` 接受,格式不兼容(REST client 无法调 gRPC),运行时才暴露。当前设计无格式兼容性声明与校验机制。
+
+**D10-R3.4:跨管线变更通知在单一 hub 仓中的机制与需求 9"自主性"冲突(中)**
+
+旧方案 10-1 用 EXTERNAL_CHANGED + stale 状态做平台强制推送。单一 hub 仓下,可用 post-receive hook 检测路径变更,但需求 9 说"不需要限制开发方式",变更通知应是自主订阅而非强制推送。当前设计无"自主订阅 + 软通知"机制——stale 是平台强制的状态变更,引用方无法选择"不接收通知"。
+
+**D10-R3.5:引用型产物跨管线共享的 force-push 风险(高)**
+
+附录 D7 规定引用型产物只做 `git ls-remote` 存在性校验。跨管线共享的引用型产物(代码仓 commit)被多管线引用时:
+- 代码仓 force-push 导致 commit 消失
+- 所有引用方同时失效
+- 场景 2 的 D2-R3.2(commit 稳定性)在跨管线场景下放大:单管线内 force-push 影响一个管线,跨管线共享时影响所有引用方
+- 当前设计无跨管线引用型产物的 commit 稳定性强制要求
+
+#### 3.3.5 修正方案
+
+**方案 10-R3:hub:// 协议跨管线引用 + 轻量 manifest 索引 + 兼容性声明 + 自主订阅通知**
+
+**步骤 1:hub:// 协议跨管线引用(对应 D10-R3.1)**
+
+节点 deps 扩展 `hub_ref` 字段,用 `hub://` 协议引用同仓库内跨管线产物:
+
+```yaml
+# pipeline-a.yaml(Feature A)
+nodes:
+  - id: "a2"
+    type: "client.ui"
+    role: client
+    deps:
+      - node_id: "a1"                          # 管线内依赖
+      - hub_ref:                                # 跨管线引用(新)
+          path: "features/pipeline-c/api_contract/official/001.yaml"
+          commit: "def456"                      # 锁定的 hub 仓 commit
+          version_range: "^1.0.0"               # 接受的版本范围
+```
+
+**fr2 §7.3 校验扩展**:
+- `hub_ref` 不查本管线 nodes 列表(不触发 DANGLING_REF)
+- 校验 `hub_ref.path` 在 hub 仓 `commit` 上存在(`git cat-file -e {commit}:{path}`)
+- 校验 `hub_ref.commit` 在 hub 仓历史中存在(非 force-push 消失)
+- `hub_ref` 视为"已 done 虚拟上游",不参与状态机,只提供产物内容
+
+**步骤 2:轻量 manifest 索引替代 Postgres artifact_registry(对应 D10-R3.2)**
+
+单一 hub 仓下,不需要 Postgres artifact_registry 表。改用 hub 仓根目录的 `.manifest.yaml` 索引文件:
+
+```yaml
+# .manifest.yaml(hub 仓根目录,随产物提交自动更新)
+artifacts:
+  - path: "features/pipeline-c/api_contract/official/001.yaml"
+    registry_id: "user-login-contract"          # 人类可读 ID
+    version: "1.2.0"
+    pipeline_id: "pipeline-c"
+    node_id: "c2"
+    artifact_kind: "content"
+    artifact_qualifier: "official"
+    published_at: "2026-08-01T10:00:00Z"
+    deprecated: false
+```
+
+- 产物合并时,CIM 自动更新 `.manifest.yaml`(类似 npm 的 package-lock.json)
+- 跨管线引用方通过 `git show {commit}:.manifest.yaml` 查询可用产物
+- 无需额外 Postgres 表,索引与产物同仓库,版本一致
+
+**步骤 3:兼容性声明与校验(对应 D10-R3.3)**
+
+产物提交时声明兼容性(产物方声明),引用方声明接受范围(引用方声明):
+
+```yaml
+# 产物方提交 api_contract v2.0.0 时声明
+artifact:
+  path: "features/pipeline-c/api_contract/official/001.yaml"
+  version: "2.0.0"
+  compatibility:
+    format: "grpc"                               # 格式标识
+    compatible_with: ["grpc-client", "grpc-gateway"]
+    breaking_changes: ["removed REST endpoints"]  # 破坏性变更说明
+```
+
+```yaml
+# 引用方 pipeline-a.yaml 声明接受范围
+nodes:
+  - id: "a2"
+    deps:
+      - hub_ref:
+          path: "features/pipeline-c/api_contract/official/001.yaml"
+          version_range: "^1.0.0"
+          accepts_compat: ["rest-client"]        # 引用方只接受 REST 格式
+```
+
+**校验逻辑**:
+- 加载时校验 `hub_ref.accepts_compat` 与产物方 `compatibility.compatible_with` 有交集
+- 无交集 → 加载失败 `INCOMPATIBLE_FORMAT`,明确提示格式不兼容
+- 有交集 → 允许引用,记录兼容性匹配事实
+
+**步骤 4:自主订阅变更通知(对应 D10-R3.4)**
+
+变更通知改为"自主订阅 + 软通知",非平台强制:
+
+```yaml
+# pipeline-a.yaml 声明订阅
+subscriptions:
+  - hub_ref: "features/pipeline-c/api_contract/official/001.yaml"
+    notify_on: ["changed", "deprecated"]         # 订阅变更/废弃事件
+    action: "stale"                                # 收到通知后置 stale(软通知)
+    # action: "ignore"                             # 也可选择忽略(需求 9 自主性)
+```
+
+**通知机制**:
+- hub 仓 post-receive hook 检测某路径变更,扫描所有管线的 `subscriptions`,匹配则推送 `HUB_CHANGED` 事件
+- 引用方节点进入 `stale` 态(保留旧方案 10-1 的 stale 态,但改为可选)
+- `action: "ignore"` 的引用方不接收通知(需求 9 自主性)
+- `stale` 不强制失效下游,由引用方自主决定是否升级(保留旧方案语义)
+
+**步骤 5:跨管线引用型产物的 commit 稳定性强制(对应 D10-R3.5)**
+
+跨管线共享的引用型产物(代码仓 commit)强制 `commit_stability: stable`:
+
+- 跨管线 `hub_ref` 引用引用型产物时,校验 `commit_stability == stable`
+- 若为 volatile(draft),拒绝跨管线引用 `CROSS_PIPELINE_VOLATILE_REF`
+- 代码仓必须配置 branch protection 禁止 force-push
+- 平台每小时 git ls-remote 校验跨管线引用型 commit 存在性,消失时标 `stale_ref` 并通知所有订阅方
+
+#### 3.3.6 设计图:跨管线共享产物在单一 hub 仓中的引用
+
+```mermaid
+graph TB
+    subgraph HUB["单一 hub 仓"]
+        MANIFEST[".manifest.yaml<br/>产物索引(随提交自动更新)"]
+        FC_AC["features/pipeline-c/api_contract/official/001.yaml<br/>registry_id: user-login-contract<br/>v1.2.0, format=rest"]
+        FC_AC_V2["features/pipeline-c/api_contract/official/001.yaml<br/>v2.0.0, format=grpc(破坏性升级)"]
+        FA_UI["features/pipeline-a/client.ui/official/..."]
+        FB_UI["features/pipeline-b/client.ui/official/..."]
+    end
+
+    subgraph PIPE_C["Feature C 管线(来源)"]
+        CC["api_contract<br/>publish_to_manifest: true"]
+    end
+
+    subgraph PIPE_A["Feature A 管线(引用方)"]
+        FA_UI_NODE["client.ui<br/>hub_ref: pipeline-c/api_contract<br/>version_range: ^1.0.0<br/>accepts_compat: rest-client"]
+    end
+
+    subgraph PIPE_B["Feature B 管线(引用方)"]
+        FB_UI_NODE["client.ui<br/>hub_ref: pipeline-c/api_contract<br/>version_range: ^2.0.0<br/>accepts_compat: grpc-client"]
+    end
+
+    CC -.done 时合并.-> FC_AC
+    FC_AC -.自动更新.-> MANIFEST
+    CC -.升级 v2.0.0(grpc).-> FC_AC_V2
+
+    FA_UI_NODE -.hub_ref 查询 manifest<br/>accepts_compat=rest-client.-> MANIFEST
+    MANIFEST -.v1.2.0 兼容 rest<br/>v2.0.0 不兼容.-> FA_UI_NODE
+
+    FB_UI_NODE -.hub_ref 查询 manifest<br/>accepts_compat=grpc-client.-> MANIFEST
+    MANIFEST -.v2.0.0 兼容 grpc.-> FB_UI_NODE
+
+    FC_AC_V2 -.post-receive hook<br/>HUB_CHANGED 事件.-> SUB_A["Feature A 订阅<br/>action: stale<br/>软通知,自主升级"]
+    FC_AC_V2 -.post-receive hook<br/>HUB_CHANGED 事件.-> SUB_B["Feature B 订阅<br/>action: stale<br/>软通知,自主升级"]
+
+    subgraph COMPAT["兼容性校验"]
+        CHECK["加载时校验<br/>产物 compatibility.compatible_with<br/>∩ 引用方 accepts_compat"]
+        CHECK -->|有交集| ALLOW["允许引用"]
+        CHECK -->|无交集| REJECT["INCOMPATIBLE_FORMAT<br/>加载失败"]
+    end
+
+    classDef official fill:#3fb950,color:#fff
+    classDef v2 fill:#e3b341,color:#fff
+    classDef ref fill:#58a6ff,color:#fff
+    classDef stale fill:#a371f7,color:#fff
+    classDef reject fill:#b3261e,color:#fff
+
+    class FC_AC,FA_UI,FB_UI official
+    class FC_AC_V2 v2
+    class FA_UI_NODE,FB_UI_NODE ref
+    class SUB_A,SUB_B stale
+    class REJECT reject
+
+    style HUB fill:#1a2a4a,color:#fff
+    style COMPAT fill:#4a2a1a,color:#fff
+```
+
+**关键说明**:
+- Feature C 的 api_contract done 后自动更新 hub 仓 `.manifest.yaml`(轻量索引,无需 Postgres 表)
+- Feature A/B 通过 `hub_ref` + `accepts_compat` 声明引用,加载时校验格式兼容性
+- Feature C 升级 v2.0.0(grpc)后,post-receive hook 推送 `HUB_CHANGED` 给订阅方
+- Feature A(rest-client)收到通知置 stale,自主决定是否升级(需求 9 自主性)
+- Feature B(grpc-client)兼容 v2.0.0,可自主升级
+- 跨管线引用型产物强制 `commit_stability: stable`,防止 force-push 导致多管线引用失效
+
+#### 3.3.7 修正前后对比
+
+| 维度 | 旧修正方案 10-1 | 第三轮修正 |
+|---|---|---|
+| 跨管线引用 | external dep + registry_id | hub:// 协议 + hub_ref 路径引用 |
+| 产物索引 | Postgres artifact_registry 表 | hub 仓 .manifest.yaml 轻量索引(同仓库) |
+| 格式兼容性 | 仅 semver version_range | compatibility.compatible_with × accepts_compat 交集校验 |
+| 变更通知 | 平台强制 EXTERNAL_CHANGED + stale | 自主订阅 + 软通知(action: stale/ignore) |
+| 引用型 commit 稳定性 | 未考虑 | 跨管线强制 stable,拒绝 volatile |
+| 需求 9 对齐 | 部分冲突(平台强制推送) | 完全对齐(自主订阅 + 兼容性声明) |
+
+---
+
+### 3.4 第三轮缺陷汇总表
+
+| 缺陷 ID | 场景 | 缺陷描述 | 影响 PRD 章节 | 严重度 | 修正方案 |
+|---|---|---|---|---|---|
+| **D2-R3.1** | 场景 2 | draft 态产物能否作为下游依赖的语义未定义,需求 9"完成度自由"被严格依赖图截断 | fr2 §2.1 T3 / A13 draft 态 | 高 | 引入 strictness: accepts_draft + draft_dependent 态(T24-T27) |
+| **D2-R3.2** | 场景 2 | 引用型 draft 产物的 commit 稳定性无保障,git ls-remote 不防 force-push | 附录 D7 / §5.1 ArtifactRef | 高 | commit_stability: stable/volatile 分级 + 定期 ls-remote 校验 |
+| **D2-R3.3** | 场景 2 | 单一 hub 仓中 draft 产物与正式产物混存,无隔离区 | §5.1 / fr1-fr6 §2 | 中 | hub 仓 drafts/ 专属区 + artifact_qualifier 标记 |
+| **D2-R3.4** | 场景 2 | client_logic 自定义节点类型被 SkillRegistry + fr2 §7.3 双重拒绝 | §2.1 / fr2 §7.3 / fr3-fr5 §8.1 | 高 | {role}.{name} 命名空间 + SkillRegistry 三级匹配 |
+| **D12-R3.1** | 场景 12 | ArtifactRef 缺少 mock/real 逻辑角色维度,仅 content/reference 不够 | §5.1 ArtifactRef | 高 | 新增 artifact_qualifier: official/mock/draft/experimental |
+| **D12-R3.2** | 场景 12 | mock 产物在 hub 仓路径与正式产物混存,无独立 qualifier 段 | fr1-fr6 §2 / P0-4 | 中 | 路径增加 qualifier 段 features/{pid}/{type}/{qualifier}/ |
+| **D12-R3.3** | 场景 12 | mock 作为开发态依赖的声明机制缺失,free_artifact 不适用主链路 | A6 free_artifact / fr2 §2.2 | 高 | dev_alternatives + require_final + dev_ready/dev_done 态(T28-T31) |
+| **D12-R3.4** | 场景 12 | mock→real 切换的平台强制性(SWITCHED)与需求 9"自主性"冲突 | 旧方案 12-1 / 需求 9 | 中 | 改为 resolved_deps 自主声明,平台只记录不强制 |
+| **D10-R3.1** | 场景 10 | 单一 hub 仓中跨管线引用的路径模型与 P0-4 + DANGLING_REF 冲突 | P0-4 / fr2 §7.3 | 高 | hub:// 协议 + hub_ref 字段,绕过 DANGLING_REF |
+| **D10-R3.2** | 场景 10 | artifact_registry Postgres 表在单一 hub 仓下冗余,未重新评估 | 旧方案 10-1 / §5.2 | 中 | 改用 hub 仓 .manifest.yaml 轻量索引 |
+| **D10-R3.3** | 场景 10 | 产物格式演进(OpenAPI→gRPC)对引用方的兼容性判定缺失 | 需求 9 / 旧方案 version_range | 高 | compatibility.compatible_with × accepts_compat 交集校验 |
+| **D10-R3.4** | 场景 10 | 跨管线变更通知的平台强制性(EXTERNAL_CHANGED)与需求 9"自主性"冲突 | 旧方案 10-1 / 需求 9 | 中 | 自主订阅 subscriptions + action: stale/ignore |
+| **D10-R3.5** | 场景 10 | 跨管线引用型产物的 force-push 风险,多管线引用同时失效 | 附录 D7 / §5.1 | 高 | 跨管线引用强制 commit_stability: stable,拒绝 volatile |
+
+### 3.4.1 严重度统计
+
+| 严重度 | 数量 | 缺陷 ID |
+|---|---|---|
+| 高 | 8 | D2-R3.1, D2-R3.2, D2-R3.4, D12-R3.1, D12-R3.3, D10-R3.1, D10-R3.3, D10-R3.5 |
+| 中 | 5 | D2-R3.3, D12-R3.2, D12-R3.4, D10-R3.2, D10-R3.4 |
+| 低 | 0 | — |
+| **合计** | **13** | — |
+
+### 3.4.2 修正涉及的 PRD 章节变更清单
+
+| PRD 章节 | 变更内容 | 关联缺陷 |
+|---|---|---|
+| §5.1 ArtifactRef | 新增 artifact_qualifier(official/mock/draft/experimental)+ commit_stability(stable/volatile)+ commit_verified_at | D2-R3.2, D12-R3.1, D10-R3.5 |
+| §2.1 状态机 | 新增 draft_dependent / dev_ready / dev_done 三态 + T24~T31 转移 | D2-R3.1, D12-R3.3 |
+| §2.2 依赖 DAG 规则 | deps 扩展 strictness(done_only/accepts_draft)+ dev_alternatives + require_final + hub_ref | D2-R3.1, D12-R3.3, D10-R3.1 |
+| §2.1 节点类型 | 节点类型改为 {role}.{name} 命名空间,不限于 9 种 | D2-R3.4 |
+| fr1-fr6 §2 目录结构 | 路径增加 qualifier 段:features/{pid}/{type}/{qualifier}/ + drafts/ 专属区 | D2-R3.3, D12-R3.2 |
+| fr2 §7.3 节点引用完整性 | hub_ref 校验规则(绕过 DANGLING_REF)+ {role}.{name} 命名空间校验 | D10-R3.1, D2-R3.4 |
+| fr2 §2.1 状态转移表 | 新增 T24~T31(draft_dependent / dev_ready / dev_done 相关) | D2-R3.1, D12-R3.3 |
+| fr3-fr5 §8.1 SkillRegistry | 改为三级匹配:精确 → 角色前缀兜底 → generic-artifact-skill | D2-R3.4 |
+| §5.2 存储方案 | artifact_registry 改为 hub 仓 .manifest.yaml 轻量索引(非 Postgres 表) | D10-R3.2 |
+| FR6 PR 模板 | 新增 resolved_deps 字段(自主声明切换)+ compatibility 字段(格式兼容性声明) | D12-R3.4, D10-R3.3 |
+| fr2 §7 管线加载 | 加载时校验 hub_ref.accepts_compat ∩ compatibility.compatible_with | D10-R3.3 |
+| 新增 subscriptions 机制 | pipeline.yaml 声明订阅 + post-receive hook 推送 HUB_CHANGED | D10-R3.4 |
+| 附录 D7 | 引用型产物增加 commit_stability 强制要求(跨管线引用必须 stable) | D10-R3.5 |
+
+### 3.4.3 根因归纳
+
+第三轮 13 个缺陷的根因可归纳为 **3 类需求 9 与旧设计的张力**:
+
+| 根因 | 涉及缺陷 | 表现 |
+|---|---|---|
+| **需求 9"完成度自由" vs 严格依赖图** | D2-R3.1, D2-R3.2, D2-R3.3 | draft 态产物在依赖链上被 done_only 截断,引用型 draft commit 不稳定,hub 仓无 draft 隔离区 |
+| **需求 9"产物自由定义" vs 固定节点类型 + 单维 artifact_kind** | D2-R3.4, D12-R3.1, D12-R3.2, D12-R3.3 | 自定义节点类型被双重拒绝,mock/real 无逻辑角色维度,free_artifact 不适用主链路依赖 |
+| **需求 9"各端自主演进" vs 平台强制流程** | D12-R3.4, D10-R3.1, D10-R3.2, D10-R3.3, D10-R3.4, D10-R3.5 | 切换/通知的平台强制性与自主性冲突,跨管线引用的路径/索引/兼容性/commit 稳定性未在单一 hub 仓下重新评估 |
+
+### 3.4.4 修正优先级建议
+
+**P0(本期必须修,否则需求 9 在依赖链上失效)**:
+- D2-R3.1:draft 依赖声明(strictness: accepts_draft + draft_dependent 态)
+- D2-R3.4:自定义节点命名空间({role}.{name} + SkillRegistry 三级匹配)
+- D12-R3.1:artifact_qualifier 二维标记(official/mock/draft)
+- D12-R3.3:dev_alternatives 开发态依赖声明
+- D10-R3.1:hub:// 协议跨管线引用
+- D10-R3.3:兼容性声明与校验
+- D10-R3.5:跨管线引用型 commit 强制 stable
+
+**P1(本期建议修,否则产物视图混乱)**:
+- D2-R3.2:commit_stability 分级 + 定期校验
+- D2-R3.3:hub 仓 drafts/ 隔离区
+- D12-R3.2:路径 qualifier 段
+- D10-R3.2:.manifest.yaml 轻量索引
+- D10-R3.4:自主订阅通知
+
+**P2(本期可缓,自主性优化)**:
+- D12-R3.4:resolved_deps 自主声明切换(已有 dev_alternatives 兜底)
+
+### 3.4.5 与前两轮修正的对齐说明
+
+本第三轮修正**不否定**前两轮修正,而是**在需求 9 + 单一 hub 仓模型下重新校准**:
+
+| 前两轮修正 | 第三轮校准 | 关系 |
+|---|---|---|
+| 旧方案 2-1:拆分 client_ui 为 client_logic + client_ui_render | 节点类型改为 {role}.{name} 命名空间 | 推广:不止 client_logic,所有自定义节点统一命名空间 |
+| 旧方案 12-1:swap_deps + SWITCHED + revalidating | dev_alternatives + resolved_deps 自主声明 | 简化:去掉平台强制的 SWITCHED/revalidating,改为客户端自主声明 |
+| 旧方案 10-1:artifact_registry Postgres 表 + external dep | hub 仓 .manifest.yaml + hub_ref | 简化:单一 hub 仓下无需 Postgres 表,用 git 索引 |
+| A13 draft 态(P0-12) | strictness: accepts_draft + draft_dependent 态 | 扩展:draft 态可声称为下游依赖,但限制传递(draft_dependent 不传递给 done_only 下游) |
+| A6 free_artifact + side_node(P0-13) | dev_alternatives(主链路)+ free_artifact(旁路)区分 | 澄清:free_artifact 仅限旁路,主链路开发态依赖用 dev_alternatives |
+| 附录 D7 单一 hub 仓 + artifact_kind | artifact_qualifier(逻辑角色)+ commit_stability | 扩展:二维标记(kind × qualifier)+ commit 稳定性分级 |
+
+### 3.4.6 第三轮核心认知升级
+
+1. **需求 9"完成度自由"需要依赖图支持 draft 依赖**:严格 done_only 依赖图在依赖链上否定完成度自由,需引入 `accepts_draft` 声明 + `draft_dependent` 态,但限制 draft 依赖不传递(交付门禁兜底)。
+2. **需求 9"产物自由定义"需要节点类型开放 + 二维产物标记**:固定 9 种节点类型 + 单维 artifact_kind 无法覆盖 mock/draft/自定义形态,需 {role}.{name} 命名空间 + artifact_qualifier 二维标记。
+3. **需求 9"各端自主演进"需要平台从"强制"退为"记录 + 门禁"**:SWITCHED/EXTERNAL_CHANGED 等平台强制流程与需求 9 冲突,改为 resolved_deps 自主声明 + subscriptions 自主订阅 + 交付门禁兜底。
+4. **单一 hub 仓简化存储但需重新评估跨管线机制**:artifact_registry 从 Postgres 表简化为 .manifest.yaml 索引;跨管线引用用 hub:// 协议;引用型 commit 跨管线共享时强制 stable。
+
+---
+
+**第三轮走查结束。** 共定位 13 个新设计缺陷(8 高 / 5 中 / 0 低),提出 3 套修正方案(strictness + commit_stability + 命名空间 / artifact_qualifier + dev_alternatives + resolved_deps / hub_ref + manifest + compatibility + subscriptions),包含 3 张 Mermaid 设计图。所有缺陷均源于需求 9(产物完成度自由 + 产物自由定义 + 各端自主演进)与严格依赖图、固定节点类型、平台强制流程之间的张力,在单一 hub 仓模型下重新评估后暴露。修正方案不否定前两轮,而是校准为需求 9 + 单一 hub 仓模型下的最终形态。

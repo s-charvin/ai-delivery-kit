@@ -703,3 +703,809 @@ artifact_refs_history: dict[str, list[ArtifactRef]]  # 历史版本(含 deprecat
 ```
 
 推荐方案一(多版本映射),语义更清晰
+
+---
+
+## 第三部分:基于需求 9(产物自由)+ 单一 hub 仓模型的重新走查(第三轮)
+
+> **重新走查背景**:PRD 经历 RepoRegistry → 单一 hub 仓修正后,需求 9(产物完全自由演进)与单一 hub 仓(集中管理)之间的张力需要重新评估。
+>
+> **本轮走查范围**:场景 1(契约中途变更)、场景 6(多格式契约)、场景 14(v2 不兼容版本共存)
+>
+> **核心矛盾**:需求 9 主张"产物完全自由(格式/完成度/方法论自由),管理方不解析内容,只做管理约束";而单一 hub 仓主张"集中管理,各端共同提交,分支保护 + PR 审核"。自由与集中之间存在天然张力,且第二轮融资已识别的级联分级(R3)、多版本共存(D14)等缺陷在单一 hub 仓修正后**未被解决**,反而因"各端共仓"产生新张力。
+
+### 3.1 场景 1 重新走查:契约中途变更在单一 hub 仓中的级联与版本演进
+
+#### 3.1.1 旧结论回顾
+
+第一轮走查(基于多产物仓库 + RepoRegistry 设计)得出 6 项缺陷:
+
+| 缺陷 | 严重度 | 核心问题 |
+|---|---|---|
+| D1-1 | 高 | changed 级联无条件清引用 + blocked,不区分 breaking/compatible/cosmetic |
+| D1-2 | 高 | semver 的 MAJOR/MINOR/PATCH 语义未与级联行为关联(信息-行为脱节) |
+| D1-3 | 高 | 引用型产物清引用后无"快速恢复"机制,兼容场景下需重走完整审核 |
+| D1-4 | 中 | 无"兼容期/宽限期"机制,changed 立即硬失效 |
+| D1-5 | 高 | 无"下游确认兼容"的快速通道 |
+| D1-6 | 中 | 兼容性变更反复触发易触达 5 次重试上限 |
+
+第一轮提出的修正方向:manifest 增加 `change_type` 字段;级联按 breaking/compatible/cosmetic 分级;状态机增加 `needs_reconfirm` 态;新增 `confirm_compatibility` MCP 工具。
+
+#### 3.1.2 新设计影响(单一 hub 仓 + artifact_kind)
+
+**单一 hub 仓修正要点**(附录 D7):
+- 引用型产物(client_ui `*_ref.json`)现在存放在**单一 hub 仓**中,文件内容是引用 JSON,指向代码仓 commit(`external_repo` + `external_commit`)
+- `ArtifactRef` 增加 `artifact_kind`(content/reference)、`external_repo`、`external_commit` 字段
+- 代码仓 commit 只做 `git ls-remote` 存在性校验,不 clone 代码仓
+- `GitProvider` 抽象层屏蔽 GitHub/GitLab/Bitbucket 差异
+
+**旧缺陷是否被解决?**
+
+**结论:6 项旧缺陷均未被单一 hub 仓修正解决。**
+
+单一 hub 仓修正的核心目标是解决"多产物仓库跨托管 webhook/CI 不统一"问题(场景 A14),并未触及级联分级(R3)。附录 D4 P0-6 仅给出方向("deps 增 coupling 字段,分级失效:hard_invalidate/soft_invalidate/cascade_skip"),但未落地到状态机 T10/T16 与规则引擎。第一轮提出的 `change_type` / `needs_reconfirm` / `confirm_compatibility` 修正方案在主 PRD 与深化文档中**均未采纳**。
+
+**新设计引入的新问题**:
+
+1. **引用型产物"清引用"语义更复杂**:旧设计下,引用型产物的 ArtifactRef 指向产物仓 commit;新设计下,引用型产物的 ArtifactRef 同时持有 hub 仓 commit(`commit` 字段)和代码仓 commit(`external_commit` 字段)。T16 级联失效时,"清引用"清的是哪个?如果只清 hub 仓 commit,代码仓 commit 追踪仍保留,下游"恢复"时是否复用?如果都清,下游丢失代码仓 commit 追踪,与"代码不可变"事实矛盾。
+
+2. **`git ls-remote` 是一次性校验**:提交时校验 `external_commit` 存在,但代码仓后续可能 force-push 或删除分支,`external_commit` 失效。`needs_reconfirm` 快速恢复时,若复用旧 `external_commit`,该校验已过期,可能指向已不存在的 commit。
+
+#### 3.1.3 需求 9 张力分析
+
+**张力 T1-1:"自由演进" vs "强制级联重做"**
+
+需求 9 说"产物怎么定义,由各端自己定义和演进"。这意味着:
+- 服务端自由决定 api_contract 的演进节奏(breaking/compatible)
+- 客户端自由决定 client_ui 的演进节奏(是否跟随)
+
+但当前级联逻辑(breaking → 下游 blocked + 清引用)是**机械的**:服务端一变更,客户端被迫重做。服务端的"自由演进"直接剥夺了客户端的"自由演进"——客户端没有"拒绝跟随"的选项。
+
+更深层的矛盾:需求 9 说"管理方不解析内容",因此管理方**无法判断**变更是否真的 breaking。`change_type` 字段由提交者(服务端)单方面声明,客户端无权质疑。若服务端声明 `compatible` 但实际 breaking(管理方不校验内容),客户端 `confirm_compatibility(compatible=true)` 后联调时才发现不兼容,损失已造成。
+
+**张力 T1-2:"各端共仓" vs "缓冲期缺失"**
+
+旧设计(多产物仓库)下,各端仓库隔离,服务端变更 api_contract 后,客户端仓库不会立即看到新文件——客户端有自己的节奏 pull。单一 hub 仓下,各端共同提交到同一 main 分支,服务端 v2 合并后,客户端下次操作 hub 仓时立即看到 v2 文件。这消除了"仓库隔离天然缓冲",使级联失效更加"即时"。
+
+需求 9 的"自由演进"隐含各端有自己的节奏,但单一 hub 仓的"共仓即同步"破坏了这种节奏。
+
+**张力 T1-3:"完成度自由" vs "清引用硬失效"**
+
+需求 9 说"产物完成度自由(草案/正式/废弃都是合理状态)"。但当前级联是硬失效(changed → 清引用 + blocked),不支持"渐进完成度"。例如客户端希望先标记"部分兼容,正在适配"(in_progress),再标记"完全兼容"(done),但级联逻辑只有 blocked(完全失效)和 done(完全生效)两极。
+
+#### 3.1.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | PRD 位置 |
+|---|---|---|---|
+| D1-R3.1 | 引用型产物在单一 hub 仓下"清引用"语义模糊:T16 级联失效时,未明确是清除 hub 仓 commit(`ArtifactRef.commit`)还是代码仓 commit(`ArtifactRef.external_commit`),或两者皆清。若皆清,下游丢失代码仓 commit 追踪(与代码不可变矛盾);若只清 hub 仓 commit,下游"恢复"时 external_commit 是否复用未定义 | **高** | 主 PRD §5.1 ArtifactRef(第 699-711 行);FR2 深化 T16(第 78 行) |
+| D1-R3.2 | 需求 9"不解析内容"导致 `change_type` 声明不可靠:提交者可声明 `compatible` 但实际 breaking,管理方无法校验。下游 `confirm_compatibility(compatible=true)` 后联调才发现不兼容,损失已造成。缺少"声明准确性"的约束机制(如声明方担保、下游申诉、违规惩罚) | **高** | FR1/FR6 深化 §3.3 manifest change_type(第一轮修正 1.1,未采纳);需求 9"管理方不解析内容" |
+| D1-R3.3 | 需求 9"各端自由演进"与级联"强制重做"矛盾:服务端变更直接剥夺客户端"自由演进"权,客户端无"拒绝跟随"选项。缺少"演进契约"机制让各端协商变更节奏(如服务端提 breaking 变更前需下游确认,或下游可声明"延后适配") | **高** | 主 PRD §1.2 产品定位(第 47-54 行);需求 9;FR2.2 级联规则(第 259 行) |
+| D1-R3.4 | 单一 hub 仓"共仓即同步"消除仓库隔离缓冲:服务端 v2 合并后,客户端下次操作 hub 仓立即看到 v2 文件,但 ArtifactRef 可能尚未更新(级联异步)。hub 仓文件可见性与 ArtifactRef 生效未解耦,客户端可能基于"可见但未生效"的 v2 文件误判兼容性 | **中** | 主 PRD FR1.1 仓库结构(第 154-174 行);§5.1 ArtifactRef;FR2 深化 cascade 异步性 |
+| D1-R3.5 | `git ls-remote` 一次性校验无法保障 `external_commit` 持续有效:代码仓后续 force-push 或删分支会使 external_commit 失效。`needs_reconfirm` 快速恢复复用旧 external_commit 时,该校验已过期,可能指向已不存在的 commit。缺少"引用健康度"持续监控机制 | **中** | 主 PRD §5.1 ArtifactRef.external_commit(第 708 行);附录 D7"git ls-remote 存在性校验"(第 1146 行) |
+
+#### 3.1.5 修正方案
+
+##### 修正 1-R3.1:引用型产物级联失效的"分层清除"语义
+
+明确 T16 级联失效时,引用型产物(`artifact_kind="reference"`)的分层清除规则:
+
+```python
+# FR2 深化 T16 副作用细化(引用型产物)
+def invalidate_reference_artifact(node_id: str, state: PipelineState):
+    """引用型产物级联失效:分层清除"""
+    ref = state["artifact_refs"][node_id]
+    assert ref["artifact_kind"] == "reference"
+
+    # 分层清除:
+    # 1. hub 仓 commit(指向 *_ref.json 的引用)→ 清除
+    # 2. external_repo / external_commit(指向代码仓)→ 保留,迁移到 artifact_refs_history
+    #    理由:代码不可变,external_commit 是"历史事实",清除无意义且丢失追踪
+    state["artifact_refs_history"].setdefault(node_id, []).append({
+        **ref,
+        "invalidated_at": now_iso(),
+        "invalidated_reason": "upstream_changed",
+    })
+    # 当前 ArtifactRef 仅清除 hub 仓侧,external 侧迁移到 history
+    ref["commit"] = None              # hub 仓引用清除
+    ref["invalidated"] = True         # 标记失效
+    # external_repo / external_commit 保留(供恢复时复用)
+```
+
+**ArtifactRef 增加字段**(主 PRD §5.1):
+
+```python
+class ArtifactRef(TypedDict):
+    # ... 原有字段 ...
+    invalidated: bool                # 是否处于失效状态(级联失效但 external 保留)
+    invalidated_reason: str | None   # 失效原因:upstream_changed / manual / external_gone
+```
+
+##### 修正 1-R3.2:`change_type` 声明的"担保+申诉"机制
+
+需求 9 不解析内容,但可通过"声明担保+下游申诉"约束声明准确性:
+
+```yaml
+# manifest 新增字段(FR1/FR6 深化 §3.3)
+change_type:
+  declared: "compatible"          # 提交者声明
+  guarantor: "server-agent-01"   # 声明担保人(提交者 agent_id)
+  guarantee_window_days: 7       # 担保期:7 天内下游可申诉
+```
+
+**新增 MCP 工具 `dispute_change_type`**(主 PRD FR4.1):
+
+```json
+{
+  "name": "dispute_change_type",
+  "description": "下游对上游声明的 change_type 提出争议,触发人工仲裁",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "upstream_node_id": {"type": "string"},
+      "disputed_change_type": {"type": "string", "enum": ["breaking", "compatible", "cosmetic"]},
+      "actual_impact": {"type": "string", "description": "下游实际受影响描述"},
+      "evidence": {"type": "string", "description": "证据(如联调失败日志)"}
+    },
+    "required": ["upstream_node_id", "disputed_change_type", "actual_impact"]
+  }
+}
+```
+
+**行为**:
+- 担保期内,下游调 `dispute_change_type` → 上游 `change_type` 标记 `disputed`
+- 触发 admin 仲裁:若判定声明不准确,上游节点回 `changed`(重新声明),担保人记违规(累计 3 次降权)
+- 担保期外,声明视为准确(下游丧失申诉权)
+
+##### 修正 1-R3.3:"演进契约"机制让各端协商变更节奏
+
+引入"演进契约(Evolution Contract)"——各端在管线 DSL 中声明"变更容忍度":
+
+```yaml
+# pipeline.yaml 节点定义扩展
+- id: "n8"
+  type: "client_ui"
+  role: "client"
+  deps: ["n2"]
+  evolution_contract:               # 演进契约
+    breaking_tolerance: "deferred"  # deferred(延后适配)/ immediate(立即适配)/ veto(有否决权)
+    deferred_window_days: 14        # 延后适配窗口(14 天内完成)
+    compatible_tolerance: "auto"    # auto(自动确认兼容)/ manual(人工确认)
+```
+
+**级联逻辑修正**(FR2.2):
+
+| 上游 change_type | 下游 breaking_tolerance | 级联行为 |
+|---|---|---|
+| breaking | immediate | 当前行为(blocked + 清引用) |
+| breaking | deferred | 下游 → `needs_adapt`(新态),保留引用 14 天,窗口内完成适配 |
+| breaking | veto | 下游可 veto(阻塞上游变更,强制协商) |
+| compatible | auto | 下游 → `needs_reconfirm`,auto-confirm(24h 超时自动 confirm) |
+| compatible | manual | 下游 → `needs_reconfirm`,人工 confirm |
+
+##### 修正 1-R3.4:hub 仓文件可见性与 ArtifactRef 生效解耦
+
+明确"hub 仓文件可见"≠"ArtifactRef 生效":
+
+- hub 仓 main 分支文件可见:git 层面,任何 pull 都能看到
+- ArtifactRef 生效:管理方 state 层面,`artifact_refs[nid]` 指向该 commit 后才生效
+
+**新增规则**:下游 `get_dependencies` 只返回 ArtifactRef 已生效的上游产物,**不返回** hub 仓可见但未生效的文件。避免下游基于"可见但未生效"的文件误判。
+
+```python
+def get_dependencies(node_id: str, state: PipelineState) -> list[dict]:
+    """只返回已生效的上游产物"""
+    deps = get_node(node_id)["deps"]
+    result = []
+    for dep_id in deps:
+        if dep_id in state["artifact_refs"] and not state["artifact_refs"][dep_id].get("invalidated"):
+            ref = state["artifact_refs"][dep_id]
+            content = git_show(ref["repo"], ref["path"], ref["commit"])
+            result.append({"node_id": dep_id, "content": content, "version": ref.get("version")})
+        # 未生效的依赖不返回(下游看不到)
+    return result
+```
+
+##### 修正 1-R3.5:引用型产物"健康度"持续监控
+
+新增后台任务定期校验 `external_commit` 持续有效:
+
+```python
+async def check_external_refs_health():
+    """定期(每 6 小时)校验所有引用型产物的 external_commit 是否仍存在"""
+    for node_id, ref in state["artifact_refs"].items():
+        if ref["artifact_kind"] != "reference":
+            continue
+        exists = await git_provider(ref["external_repo"]).ls_remote_commit_exists(
+            ref["external_commit"]
+        )
+        if not exists:
+            # external_commit 失效,标记节点
+            ref["invalidated"] = True
+            ref["invalidated_reason"] = "external_gone"
+            emit_event("EXTERNAL_REF_GONE", node_id=node_id, payload={
+                "external_repo": ref["external_repo"],
+                "external_commit": ref["external_commit"],
+            })
+            # 通知下游:上游引用失效,需重新提交
+            cascade_invalidate(node_id, reason="external_gone")
+```
+
+#### 3.1.6 设计图:单一 hub 仓下契约变更级联改进流程
+
+```mermaid
+flowchart TD
+    HUB["单一 hub 仓<br/>api_contract/001.yaml v1.0.0 (n2 done)<br/>client_ui/001_ref.json (n8 done, external_commit=e5f6)"]
+    HUB --> CHANGE["服务端重提 PR<br/>api_contract/002.yaml v2.0.0<br/>manifest.change_type=breaking<br/>guarantor=server-agent-01"]
+
+    CHANGE --> CT{"change_type 声明<br/>(管理方不解析内容,<br/>仅记录声明)"}
+    CT -->|breaking| EC{"下游 evolution_contract<br/>breaking_tolerance?"}
+    CT -->|compatible| RECONFIRM["下游 → needs_reconfirm<br/>保留 artifact_refs<br/>(含 external_commit)"]
+    CT -->|cosmetic| NOTIFY["仅通知<br/>下游保持 done"]
+
+    EC -->|immediate| INV_BREAK["invalidate_node<br/>分层清除:<br/>hub commit 清除<br/>external_commit 迁移 history<br/>n8 → blocked"]
+    EC -->|deferred| NEEDS_ADAPT["下游 → needs_adapt(新态)<br/>保留引用 14 天<br/>窗口内完成适配"]
+    EC -->|veto| VETO["下游 veto<br/>阻塞上游变更<br/>强制协商"]
+
+    INV_BREAK --> HEALTH["后台健康度监控<br/>每 6h 校验 external_commit<br/>若失效 → external_gone 告警"]
+    NEEDS_ADAPT --> ADAPT_DECIDE{"14 天内适配?"}
+    ADAPT_DECIDE -->|完成| RESUBMIT["重新 submit_artifact<br/>新 external_commit"]
+    ADAPT_DECIDE -->|超时| FORCE_BLOCK["自动 → blocked<br/>清引用"]
+
+    RECONFIRM --> DISPUTE{"担保期 7 天内<br/>下游是否 dispute?"}
+    DISPUTE -->|无 dispute| AUTO_CONFIRM["auto-confirm<br/>(或人工 confirm_compatibility)"]
+    DISPUTE -->|dispute| ARBITRATE["admin 仲裁<br/>判定声明准确性"]
+    ARBITRATE -->|声明准确| AUTO_CONFIRM
+    ARBITRATE -->|声明不准| UPSTREAM_RECHANGE["上游回 changed<br/>重新声明<br/>担保人记违规"]
+
+    AUTO_CONFIRM --> FAST_REVIEW["快速审核<br/>仅校验引用存在性<br/>+ external_commit 仍有效"]
+    FAST_REVIEW --> DONE_COMPAT["n8 done<br/>(引用未变,基于 v2 兼容)"]
+
+    style INV_BREAK fill:#b3261e,color:#fff
+    style NEEDS_ADAPT fill:#e3b341,color:#fff
+    style RECONFIRM fill:#e3b341,color:#fff
+    style NOTIFY fill:#3fb950,color:#fff
+    style VETO fill:#b3261e,color:#fff
+    style FAST_REVIEW fill:#a371f7,color:#fff
+    style HEALTH fill:#4a8ad6,color:#fff
+```
+
+### 3.2 场景 6 重新走查:多格式契约产物在单一 hub 仓中的共存与消费
+
+#### 3.2.1 旧结论回顾
+
+第一轮走查得出 6 项缺陷:
+
+| 缺陷 | 严重度 | 核心问题 |
+|---|---|---|
+| D6-1 | 高 | 无"派生产物"概念,同一契约多格式无法建模 |
+| D6-2 | 高 | manifest 无 `derived_from` 字段 |
+| D6-3 | 高 | 派生产物不纳入管理时联调不一致无法追溯 |
+| D6-4 | 中 | 源契约 changed 时派生产物无法自动重新生成 |
+| D6-5 | 中 | 扁平化目录丢失派生关系语义 |
+| D6-6 | 中 | 审核规则无派生产物校验规则 |
+
+第一轮提出的修正方向:引入 `derived_from` 字段;复用 `api_contract` 类型通过 `derived_from` 区分源/派生;放宽扁平化约束;新增派生产物校验规则;源 changed 时按 `auto_regenerable` 分流。
+
+#### 3.2.2 新设计影响(单一 hub 仓 + 需求 9)
+
+**单一 hub 仓 + 需求 9 对本场景的影响**:
+
+1. **多格式物理共存**:OpenAPI YAML、gRPC proto、TypeScript .d.ts 都在同一个 hub 仓的 `api_contract/` 目录下(以不同 seq + 扩展名共存)
+2. **需求 9"格式自由"**:多格式共存被明确允许,管理方不限制格式
+3. **artifact_kind 二元分类**:多格式产物都是 `content` 型(在 hub 仓);除非 TS 类型作为代码仓一部分(则 `reference` 型,指向代码仓)
+4. **各端共同提交**:服务端提交 OpenAPI,客户端提交 gRPC proto,前端提交 TS 类型,都推到同一 hub 仓
+
+**旧缺陷是否被解决?**
+
+**结论:6 项旧缺陷部分缓解但未完全解决。**
+
+- D6-5(扁平化目录)部分缓解:单一 hub 仓下多格式可同目录共存
+- D6-1/D6-2(派生产物概念/derived_from)**未解决**:主 PRD §5.1 ArtifactRef 未增加 `derived_from` 字段,manifest schema 未采纳第一轮修正
+- D6-3(可观测性黑洞)**加剧**:单一 hub 仓下各端共仓,多格式产物散落,管理方更难识别"同一契约的多格式表达"
+- D6-4(自动重新生成)**未解决**:级联逻辑未引入 `auto_regenerable` 分流
+- D6-6(审核规则)**未解决**:规则引擎未新增派生产物校验规则
+
+#### 3.2.3 需求 9 张力分析
+
+**张力 T6-1:"各端自由定义" vs "派生关系丢失"**
+
+需求 9 说"产物怎么定义,由各端自己定义和演进"。在单一 hub 仓下:
+- 服务端提交 OpenAPI YAML(api_contract/001.yaml)
+- 移动端用 openapi-generator 生成 gRPC proto(api_contract/002.proto)
+- 前端用 ts-openapi 生成 TS 类型(api_contract/003.d.ts)
+
+这三个文件在 hub 仓中以独立 seq 共存,但管理方视它们为**三个独立产物**——因为需求 9 说"各端自己定义",管理方不解析内容,无法知道 002 和 003 是从 001 派生的。派生关系丢失。
+
+第一轮提出的 `derived_from` 字段可解决此问题,但需求 9 的"自由定义"暗示各端不强制声明派生关系——移动端可能认为"我是独立契约,不是派生的"。`derived_from` 是可选的,不声明时管理方无法识别派生关系。
+
+**张力 T6-2:"方法论自由" vs "格式识别困难"**
+
+需求 9 说"开发方法论自由(ECC/OpenSpec/spec-kit/superpowers/custom 均可)"。不同方法论产出的契约格式不同:
+- OpenSpec → YAML(特定 schema)
+- spec-kit → JSON(特定 schema)
+- custom → Markdown / 自定义格式
+
+这些格式在 hub 仓中共存,但管理方无法判断"这是同一契约的不同方法论表达"还是"两个不同契约"。`toolspec_framework` 字段记录了生成工具,但不用于派生关系识别。
+
+**张力 T6-3:"格式自由" vs "扩展名白名单"**
+
+需求 9 说"产物格式自由",但 skill 的 `file_constraints.allowed_extensions` 是白名单(如 [.yaml, .json, .md])。若某端用自定义格式(如 .proto、.d.ts、.avro),skill 未配置该扩展名会被 CI 拒绝。"自由"与"白名单"矛盾。
+
+第一轮走查未触及此矛盾(旧设计下 skill 同样有白名单),但需求 9 的"完全自由"使此矛盾凸显。
+
+**张力 T6-4:"deps 只到 node_id" vs "多格式精确依赖"**
+
+需求 9 下,同一契约 n2 可能有多种格式产物(OpenAPI/gRPC/TS)。下游 client_ui 依赖 n2,但 deps 只声明 `node_id: n2`,无法表达"我依赖 n2 的 gRPC 格式"。`get_dependencies(n8)` 返回 n2 的哪个格式?当前设计返回 ArtifactRef 指向的"当前生效版本",但多格式下"当前生效版本"是哪个格式?
+
+**张力 T6-5:"artifact_kind 二元" vs "混合型产物"**
+
+需求 9 下,TS 类型定义既是契约内容(供前端类型检查),又是代码仓的一部分(随代码演进)。`artifact_kind` 是 `content` 还是 `reference`?二元分类无法表达"既是内容又是引用"的混合型产物。
+
+#### 3.2.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | PRD 位置 |
+|---|---|---|---|
+| D6-R3.1 | 单一 hub 仓下多格式契约产物以独立 seq 共存,但需求 9"不解析内容"使管理方无法识别"同一契约的多格式表达"vs"不同契约"。第一轮提出的 `derived_from` 字段未采纳,且需求 9"自由定义"暗示派生关系声明可选,不声明时派生关系彻底丢失 | **高** | 主 PRD §5.1 ArtifactRef(第 699-711 行);FR1/FR6 深化 §3.3 manifest schema(第 266-443 行)无 derived_from |
+| D6-R3.2 | deps 仅声明 `node_id`,无法表达"依赖 n2 的 gRPC 格式"。多格式产物下,下游 `get_dependencies` 返回哪个格式未定义。下游无法精确声明依赖哪个格式,导致消费歧义 | **高** | FR1/FR6 深化 §3.3 deps schema(第 379-409 行);主 PRD FR4.1 get_dependencies(第 368 行) |
+| D6-R3.3 | 多格式产物版本管理混乱:OpenAPI v1.0.0(seq=001)与 gRPC proto v1.0.0(seq=002)各自 semver 独立。源契约升 v2.0.0 时,派生产物是否必须同步升级?需求 9"自由演进"允许派生产物保持 v1.0.0,但派生关系隐含版本同步需求。版本同步与自由演进矛盾 | **高** | FR1/FR6 深化 §2.2 版本化策略(第 135-165 行);§2.3 多产物共存(第 167-207 行) |
+| D6-R3.4 | 需求 9"格式自由"与 skill `allowed_extensions` 白名单矛盾:自定义格式(.proto/.d.ts/.avro)未被 skill 配置时被 CI 拒绝。"自由"的边界未明确——是完全自由(任意扩展名)还是"白名单内自由" | **中** | 主 PRD FR5.2 skill.yaml file_constraints(第 438-439 行);FR1/FR6 深化 §4.1 R_FILE_FORMAT(第 531-539 行) |
+| D6-R3.5 | `artifact_kind` 二元分类(content/reference)无法表达"混合型"产物:TS 类型定义既是契约内容(供类型检查)又是代码仓一部分(随代码演进)。二元分类导致混合型产物归属模糊 | **中** | 主 PRD §5.1 ArtifactRef.artifact_kind(第 705 行);附录 D7 |
+| D6-R3.6 | 源契约 changed 时,单一 hub 仓中 v2 文件已合并,但派生产物(gRPC proto)的 `derived_from.source_commit`(若采纳)仍指向 v1 commit。级联逻辑未定义派生产物的失效策略——是 blocked+清引用,还是自动重新生成?需求 9"不解析内容"使管理方无法判断派生产物是否需要重新生成 | **高** | 主 PRD FR2.2 级联规则(第 259 行);FR2 深化 T10/T16;需求 9 |
+
+#### 3.2.5 修正方案
+
+##### 修正 6-R3.1:`derived_from` 字段 + "派生声明激励"机制
+
+采纳第一轮修正 6.1,在 manifest 增加 `derived_from` 字段。同时针对需求 9"自由定义"导致的"声明可选"问题,引入**派生声明激励**:
+
+```yaml
+# manifest 新增字段(FR1/FR6 深化 §3.3)
+derived_from:
+  source_node_id: "n2"
+  source_version: "1.0.0"
+  source_commit: "a1b2c3d4"
+  derivation_tool: "openapi-generator"
+  derivation_tool_version: "6.6.0"
+  auto_regenerable: true
+```
+
+**派生声明激励**(不强制,但激励):
+- 声明 `derived_from` 的产物:走**轻量审核**(仅校验源版本+文件存在性),审核 SLA 减半
+- 未声明 `derived_from` 的产物:走**完整审核**(默认)
+- 激励各端主动声明派生关系,换取更快审核
+
+##### 修正 6-R3.2:deps 增加 `format_slot` 维度
+
+deps schema 扩展,支持声明依赖哪个格式:
+
+```json
+{
+  "deps": {
+    "items": {
+      "properties": {
+        "node_id": {"type": "string", "pattern": "^n[0-9]+$"},
+        "node_type": {"type": "string"},
+        "min_version": {"type": "string"},
+        "format_slot": {
+          "type": "string",
+          "description": "依赖的格式槽位(多格式产物时指定),单格式产物可省略",
+          "examples": ["openapi", "grpc", "typescript", "figma"]
+        }
+      }
+    }
+  }
+}
+```
+
+**`get_dependencies` 行为修正**:
+- 若 deps 声明 `format_slot`,只返回该格式的产物内容
+- 若 deps 未声明 `format_slot` 且上游有多格式产物,返回所有格式(附 `format_slot` 标识),由下游自行选择
+- 若 deps 未声明且上游单格式,返回该格式
+
+##### 修正 6-R3.3:派生产物"版本同步"策略
+
+派生产物的版本同步采用"软约束 + 告警":
+
+```yaml
+# 派生产物 manifest 版本同步策略
+derived_from:
+  source_node_id: "n2"
+  source_version: "1.0.0"           # 派生时所基于的源版本
+  sync_policy: "soft"               # soft(告警不阻断) / strict(必须同步) / independent(完全独立)
+```
+
+| sync_policy | 源升 v2 时派生行为 |
+|---|---|
+| `strict` | 派生必须同步升级,否则 CI warn(不阻断,但 Dashboard 标黄) |
+| `soft` | 派生可保持旧版本,发 `DERIVED_STALE` event,Dashboard 提示"派生产物基于过期源版本" |
+| `independent` | 派生完全独立,不追踪源版本(需求 9"自由演进"最大化的场景) |
+
+##### 修正 6-R3.4:扩展名"注册制"取代"白名单"
+
+将 `allowed_extensions` 从"白名单"改为"注册制":
+- skill 定义 `default_extensions`(默认允许)
+- 产物可在 manifest 声明 `custom_extension` + `mime_type`,注册自定义扩展名
+- CI 校验:扩展名在 default_extensions 内,或 manifest 声明了 custom_extension 且 mime_type 合法
+
+```yaml
+# manifest 新增字段
+format:
+  extension: ".proto"
+  mime_type: "text/x-protobuf"
+  custom: true                   # 自定义扩展名
+  schema_ref: "https://protobuf.dev/..."   # 自定义 schema 引用(管理方不强校验)
+```
+
+##### 修正 6-R3.5:`artifact_kind` 扩展为三元或增加 `hybrid` 标记
+
+```python
+class ArtifactRef(TypedDict):
+    artifact_kind: str  # "content" | "reference" | "hybrid"
+    # hybrid 型:既在 hub 仓有内容,又指向代码仓 commit
+    # 新增字段(hybrid 时):
+    external_repo: str | None
+    external_commit: str | None
+    content_in_hub: bool           # hybrid 时 True(内容也在 hub 仓)
+```
+
+##### 修正 6-R3.6:派生产物的级联策略
+
+源契约 changed 时,派生产物的级联按 `auto_regenerable` + `sync_policy` 分流:
+
+| 源变更类型 | 派生 auto_regenerable | 派生 sync_policy | 派生产物行为 |
+|---|---|---|---|
+| breaking | true | strict/soft | `needs_regen`(新态),自动调 `regenerate_derived` 重新生成 |
+| breaking | true | independent | 仅通知,不级联(派生独立) |
+| breaking | false | strict/soft | blocked + 清引用(需人工重新生成) |
+| breaking | false | independent | 仅通知 |
+| compatible | any | any | `needs_reconfirm`(同场景 1) |
+
+### 3.3 场景 14 重新走查:v2 不兼容版本在单一 hub 仓中的共存机制
+
+#### 3.3.1 旧结论回顾
+
+第一轮走查得出 7 项缺陷:
+
+| 缺陷 | 严重度 | 核心问题 |
+|---|---|---|
+| D14-1 | 高 | ArtifactRef 单值,无法同时持有多版本引用 |
+| D14-2 | 高 | 7 态状态机无 `deprecated` 中间态 |
+| D14-3 | 高 | deps 仅有 `min_version`,无版本范围约束 |
+| D14-4 | 高 | changed 路径清掉旧版本客户端引用,丢失运维追踪 |
+| D14-5 | 中 | 新增节点路径无"版本节点分组"机制 |
+| D14-6 | 中 | 无"版本生命周期"管理 |
+| D14-7 | 中 | 无 MCP 工具标记版本 deprecated |
+
+第一轮提出的修正方向:状态机新增 `deprecated` 态;ArtifactRef 改多版本映射;deps 增加版本范围约束;新增 `deprecate_version` MCP 工具。
+
+#### 3.3.2 新设计影响(单一 hub 仓 + 需求 9)
+
+**单一 hub 仓 + 需求 9 对本场景的影响**:
+
+1. **v1/v2 文件物理共存**:单一 hub 仓中,`api_contract/001.yaml`(v1)和 `api_contract/003.yaml`(v2)以不同 seq 物理共存于同一目录
+2. **需求 9"完成度自由"**:"草案/正式/废弃都是合理状态"——这**直接要求**支持 deprecated 状态
+3. **artifact_kind/external_repo/external_commit**:仍未支持多版本引用,ArtifactRef 仍单值
+4. **代码仓不归管理方管**:client_ui_v1 的引用指向代码仓 commit A,client_ui_v2 指向 commit B,代码仓的分支策略管理方不知道
+
+**旧缺陷是否被解决?**
+
+**结论:7 项旧缺陷部分缓解但未完全解决,且需求 9 使 D14-2 升级为 Critical。**
+
+- D14-1(ArtifactRef 单值)**未解决**:主 PRD §5.1 仍 `dict[str, ArtifactRef]` 单值
+- D14-2(无 deprecated)**升级为 Critical**:需求 9 明确"废弃是合理状态",但状态机仍 7 态无 deprecated,直接矛盾
+- D14-3(无版本范围)**未解决**:deps 仍只有 `min_version`
+- D14-4(changed 清引用)**未解决**:T16 仍清 `artifact_refs[nid]`
+- D14-5/D14-6/D14-7 **未解决**
+
+#### 3.3.3 需求 9 张力分析
+
+**张力 T14-1:"完成度自由" vs "7 态状态机"——直接矛盾**
+
+需求 9 明确:"产物完成度自由(草案/正式/废弃都是合理状态)"。这是对状态机的**直接要求**:
+- 草案 → 需 `draft` 态(附录 D4 P0-12 已识别,但未落地)
+- 正式 → 需 `done` 态(已有)
+- 废弃 → 需 `deprecated` 态(第一轮已提,未采纳)
+
+当前 7 态(blocked/ready/pending_review/in_progress/review/done/changed)无法表达"废弃但可用"。需求 9 与状态机**直接矛盾**,这是本轮走查发现的最严重缺陷。
+
+**张力 T14-2:"自由定义版本模型" vs "数据模型不一致"**
+
+需求 9 说"产物怎么定义,由各端自己定义和演进"。版本共存场景下:
+- 服务端可能认为 v1 和 v2 是**同一节点的两个版本**(节点内多版本,n2 → 001.yaml + 003.yaml)
+- 客户端可能认为 v1 和 v2 是**两个独立节点**(各自依赖,n2 → 001.yaml,n17 → 003.yaml)
+
+需求 9 的"自由定义"导致版本模型不统一:同一功能的 v1/v2 既可能是同节点多版本,也可能是不同节点。管理方无法用统一逻辑处理两种模型——级联、依赖、共存规则都不同。
+
+**张力 T14-3:"格式自由" vs "semver 强制"**
+
+需求 9 说"产物格式自由"。但 deps 的 `min_version` 用 semver(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$`),版本范围约束(`^1.0.0`/`~1.2`/`<2.0.0`)也基于 semver。需求 9 允许自定义版本格式(如 CalVer `2026.08`、自定义 `v1-final`),但这些非 semver 版本无法用版本范围约束。
+
+第一轮走查未触及此矛盾,但需求 9 的"完全自由"使版本格式与版本范围约束的矛盾凸显。
+
+**张力 T14-4:"代码仓不归管理方管" vs "版本共存引用追踪"**
+
+需求 9 + 附录 D7:"代码仓 N 个,各业务方独立,不归管理方管"。版本共存场景下:
+- client_ui_v1 引用代码仓 commit A(代码仓的 v1 分支)
+- client_ui_v2 引用代码仓 commit B(代码仓的 v2 分支)
+
+代码仓的分支策略由业务方自管,管理方只做 `git ls-remote` 一次性校验。当代码仓删除 v1 分支(老版本下线)时,client_ui_v1 的 `external_commit` 失效,但管理方不知道(git ls-remote 不持续监控)。线上系统的引用追踪可能指向已不存在的 commit。
+
+#### 3.3.4 新发现的设计缺陷
+
+| # | 缺陷 | 严重度 | PRD 位置 |
+|---|---|---|---|
+| D14-R3.1 | **需求 9 明确"产物完成度自由(草案/正式/废弃都是合理状态)",但 7 态状态机无 deprecated/sunset/draft 态。需求 9 与状态机直接矛盾,废弃版本无法表达"废弃但可用",线上系统的版本共存无法建模** | **Critical** | 主 PRD FR2.1 状态机(第 228-238 行);需求 9"产物完成度自由" |
+| D14-R3.2 | 单一 hub 仓中 v1/v2 文件物理共存(不同 seq),但 ArtifactRef 单值(`dict[str, ArtifactRef]`)只指向当前生效版本。需求 9"完成度自由"要求多版本同时可用(草案/正式/废弃),但 ArtifactRef 单值无法同时持有多个版本的引用,旧版本引用丢失 | **高** | 主 PRD §5.1 ArtifactRef(第 699-711 行);FR2 深化 §3.1(第 213-242 行) |
+| D14-R3.3 | 需求 9"自由定义"导致版本模型不统一:同一功能的 v1/v2 既可能是同节点多版本(n2 → 001+003),也可能是不同节点(n2 → 001,n17 → 003)。两种模型混用,管理方无法用统一逻辑处理级联/依赖/共存 | **高** | 主 PRD §5.1 Pipeline(第 664-693 行);FR1/FR6 深化 §2.3 多产物共存(第 167-207 行) |
+| D14-R3.4 | deps `min_version` 用 semver,但需求 9 允许自定义版本格式(CalVer/自定义)。版本范围约束(`^1.0.0`/`<2.0.0`)无法适用于非 semver 版本。需求 9"格式自由"与 deps"semver 强制"矛盾 | **中** | FR1/FR6 深化 §3.3 version 字段 pattern(第 330-335 行);§4.1 R_DEPS_MIN_VERSION(第 522-529 行) |
+| D14-R3.5 | deprecated 信号传播机制未定义:需求 9"不解析内容"使 deprecated 标记只在 manifest 中,下游 `get_dependencies` 拉取当前生效版本,看不到 deprecated 标记。新下游可能误依赖已 deprecated 的版本,无法感知下线风险 | **中** | 主 PRD FR4.1 get_dependencies(第 368 行);FR2 深化 T22(第一轮修正,未采纳) |
+| D14-R3.6 | 代码仓分支策略管理方不知道:client_ui_v1 的 external_commit 指向代码仓 v1 分支,当代码仓删除 v1 分支时,external_commit 失效但管理方不知道(git ls-remote 一次性校验)。线上系统引用追踪可能指向已不存在的 commit | **中** | 主 PRD §5.1 ArtifactRef.external_commit(第 708 行);附录 D7"git ls-remote 存在性校验"(第 1146 行) |
+
+#### 3.3.5 修正方案
+
+##### 修正 14-R3.1:状态机扩展为 10 态,覆盖需求 9"完成度自由"
+
+需求 9 明确要求"草案/正式/废弃都是合理状态",状态机必须扩展:
+
+| 状态 | 含义 | 进入条件 | 退出条件 |
+|---|---|---|---|
+| `draft`(新) | 草案产物,可被下游预览但不触发级联 | `soft_submit`(P0-12) | 正式 submit → pending_review |
+| `deprecated`(新) | 已 done 但不再推荐新下游依赖;旧下游引用保留;有计划下线时间 | admin 调 `deprecate_version` | sunset / 重新激活回 done |
+| `sunset`(新) | 彻底下线,清引用,下游 cascade blocked | 到达 sunset_date 或 admin 手动 | (终态) |
+
+**新增转移**(FR2 深化 §2.1 补充):
+- T19: `ready` → `draft` | `soft_submit` | 草案提交,不触发级联,下游可预览但不依赖
+- T20: `draft` → `pending_review` | 正式 submit | 草案转正式
+- T21: `done` → `deprecated` | admin `deprecate_version(node_id, sunset_date)` | 保留 artifact_refs,发 `DEPRECATED` event
+- T22: `deprecated` → `sunset` | 到达 sunset_date / admin `sunset_version` | 清 artifact_refs,下游 cascade blocked
+- T23: `deprecated` → `done` | admin 重新激活 | 撤销 deprecated
+
+##### 修正 14-R3.2:ArtifactRef 多版本映射 + `lifecycle` 字段
+
+```python
+# 修改前(主 PRD §5.1)
+artifact_refs: dict[str, ArtifactRef]              # node_id -> 单个引用
+
+# 修改后
+artifact_refs: dict[str, dict[str, ArtifactRef]]   # node_id -> {version -> ArtifactRef}
+
+class ArtifactRef(TypedDict):
+    # ... 原有字段 ...
+    version: str                  # 该引用对应的版本(semver 或自定义)
+    lifecycle: str                # "active" | "deprecated" | "sunset"
+    sunset_date: str | None       # deprecated 时的计划下线日期
+```
+
+**管理方 state 中,一个 node_id 可同时持有多个版本的 ArtifactRef**:
+- v1.0.0: lifecycle=deprecated, sunset_date=2026-12-31
+- v2.0.0: lifecycle=active
+
+下游 deps 声明版本范围后,`get_dependencies` 返回匹配范围的版本。
+
+##### 修正 14-R3.3:版本模型统一为"节点内多版本 + 版本槽"
+
+统一版本模型为"节点内多版本"(而非"新增独立节点"),引入 `version_slot` 概念:
+
+```yaml
+# pipeline.yaml 节点定义
+- id: "n2"
+  type: "api_contract"
+  role: "server"
+  deps: ["n1"]
+  version_slots:                  # 版本槽(声明该节点支持哪些版本)
+    - slot: "v1"
+      version: "1.0.0"
+      lifecycle: "deprecated"
+      sunset_date: "2026-12-31"
+    - slot: "v2"
+      version: "2.0.0"
+      lifecycle: "active"
+```
+
+**约束**:
+- 同一功能的 v1/v2 必须用"节点内多版本"模型,禁止"新增独立节点"表达版本共存
+- 管理方 CI 校验:若发现两个节点产物内容相似度高(基于 manifest title + toolspec),提示合并为节点内多版本
+- 下游 deps 声明 `version_slot` 而非 `min_version`,精确依赖哪个版本槽
+
+##### 修正 14-R3.4:版本格式"双轨制"(semver + 自定义)
+
+```yaml
+# manifest version 字段扩展
+version:
+  scheme: "semver"          # semver | calver | custom
+  value: "1.0.0"            # 或 "2026.08" / "v1-final"
+  # semver 时支持版本范围约束;custom 时仅支持精确匹配
+```
+
+**deps 版本范围约束**(semver 时):
+
+```json
+{
+  "deps": {
+    "items": {
+      "properties": {
+        "node_id": {"type": "string"},
+        "version_constraint": {
+          "type": "string",
+          "description": "版本范围约束(semver 时支持 ^/~/<>/=;custom 时仅 =)",
+          "examples": ["^1.0.0", "~1.2", ">=1.0.0 <2.0.0", "=v1-final"]
+        }
+      }
+    }
+  }
+}
+```
+
+**规则引擎新增 `R_DEPS_VERSION_RANGE`**:
+- semver 版本:用 semver-satisfies 库校验 `version_constraint`
+- custom 版本:仅校验精确匹配(`=`)
+- 非 semver 版本声明 semver 范围约束 → CI warn(无法校验,仅记录)
+
+##### 修正 14-R3.5:deprecated 信号传播
+
+`get_dependencies` 返回上游产物时,附 `lifecycle` 标识:
+
+```python
+def get_dependencies(node_id: str, state: PipelineState) -> list[dict]:
+    deps = get_node(node_id)["deps"]
+    result = []
+    for dep in deps:
+        dep_id = dep["node_id"]
+        if dep_id in state["artifact_refs"]:
+            for version, ref in state["artifact_refs"][dep_id].items():
+                result.append({
+                    "node_id": dep_id,
+                    "version": version,
+                    "lifecycle": ref["lifecycle"],        # active/deprecated/sunset
+                    "sunset_date": ref.get("sunset_date"),
+                    "content": git_show(ref["repo"], ref["path"], ref["commit"]),
+                })
+    return result
+```
+
+**新下游依赖 deprecated 版本时**:
+- CI 不阻断(需求 9"自由")
+- 但 Dashboard 标黄,发 `DEPRECATED_DEP_WARNING` event
+- PR 评论提示:"本节点依赖 n2 v1.0.0(已 deprecated,计划 2026-12-31 下线),建议依赖 v2.0.0"
+
+##### 修正 14-R3.6:引用型产物"健康度"持续监控(同修正 1-R3.5)
+
+同场景 1 修正 1-R3.5,后台任务定期校验 `external_commit` 持续有效。版本共存场景下,对 deprecated 版本的 external_commit 也需监控——若代码仓删除 v1 分支,deprecated 版本的 external_commit 失效,需通知 admin 决定是否提前 sunset。
+
+#### 3.3.6 设计图:单一 hub 仓中 v1/v2 版本共存与生命周期
+
+```mermaid
+flowchart TD
+    HUB["单一 hub 仓<br/>api_contract/<br/>├─ 001.yaml (v1.0.0, n2)<br/>└─ 003.yaml (v2.0.0, n2)"]
+
+    HUB --> V1["v1.0.0 (seq=001)<br/>lifecycle=deprecated<br/>sunset_date=2026-12-31"]
+    HUB --> V2["v2.0.0 (seq=003)<br/>lifecycle=active"]
+
+    subgraph STATE["管理方 PipelineState(多版本 ArtifactRef)"]
+        AR["artifact_refs['n2'] = {<br/>  '1.0.0': {lifecycle: deprecated, commit: a1b2, external_commit: e5f6},<br/>  '2.0.0': {lifecycle: active, commit: c3d4, external_commit: f7g8}<br/>}"]
+    end
+
+    V1 --> AR
+    V2 --> AR
+
+    AR --> DOWNSTREAM_V1["旧客户端 n8<br/>deps: n2 version_constraint='^1.0.0'<br/>→ 匹配 v1.0.0 (deprecated)<br/>→ get_dependencies 返回 v1 + lifecycle 标记"]
+    AR --> DOWNSTREAM_V2["新客户端 n18<br/>deps: n2 version_constraint='^2.0.0'<br/>→ 匹配 v2.0.0 (active)<br/>→ get_dependencies 返回 v2"]
+
+    DOWNSTREAM_V1 --> WARN["Dashboard 标黄<br/>DEPRECATED_DEP_WARNING<br/>'n8 依赖 n2 v1.0.0(已 deprecated,<br/>计划 2026-12-31 下线),<br/>建议迁移 v2.0.0'"]
+    DOWNSTREAM_V2 --> OK["正常消费<br/>n18 done"]
+
+    V1 --> HEALTH["后台健康度监控(每 6h)<br/>校验 external_commit=e5f6<br/>在代码仓 v1 分支是否存在"]
+
+    HEALTH --> EXISTS{"external_commit 存在?"}
+    EXISTS -->|是| KEEP["v1 保持 deprecated<br/>线上客户端继续运行"]
+    EXISTS -->|否| GONE["EXTERNAL_REF_GONE 告警<br/>通知 admin<br/>代码仓 v1 分支已删除"]
+
+    GONE --> DECIDE{"admin 决策"}
+    DECIDE -->|提前下线| SUNSET["v1 → sunset<br/>清 artifact_refs['n2']['1.0.0']<br/>下游 n8 cascade blocked"]
+    DECIDE -->|保留追踪| KEEP_TRACK["v1 标记 external_gone<br/>但保留引用记录<br/>(线上代码仍运行,只是追踪失效)"]
+
+    V1 --> SUNSET_DATE{"到达 sunset_date?<br/>2026-12-31"}
+    SUNSET_DATE -->|是| AUTO_SUNSET["v1 → sunset<br/>清引用 + 下游 cascade"]
+    SUNSET_DATE -->|否| KEEP
+
+    V1 --> REACTIVATE{"admin 重新激活?"}
+    REACTIVATE -->|是| BACK_DONE["v1 → done<br/>撤销 deprecated"]
+
+    style V1 fill:#e3b341,color:#fff
+    style V2 fill:#3fb950,color:#fff
+    style WARN fill:#e3b341,color:#fff
+    style SUNSET fill:#b3261e,color:#fff
+    style GONE fill:#b3261e,color:#fff
+    style OK fill:#3fb950,color:#fff
+    style HEALTH fill:#4a8ad6,color:#fff
+```
+
+### 3.4 第三轮缺陷汇总表
+
+#### 3.4.1 缺陷总览
+
+| 场景 | 缺陷数 | Critical | High | Medium | Low |
+|---|---|---|---|---|---|
+| 场景 1 | 5 | 0 | 3 | 2 | 0 |
+| 场景 6 | 6 | 0 | 4 | 2 | 0 |
+| 场景 14 | 6 | 1 | 2 | 3 | 0 |
+| **合计** | **17** | **1** | **9** | **7** | **0** |
+
+#### 3.4.2 缺陷明细
+
+| 编号 | 场景 | 缺陷 | 严重度 | PRD 位置 |
+|---|---|---|---|---|
+| D1-R3.1 | 1 | 引用型产物"清引用"语义模糊(hub commit vs external_commit 分层未定义) | 高 | 主 PRD §5.1;FR2 深化 T16 |
+| D1-R3.2 | 1 | change_type 声明不可靠(需求 9 不解析内容,无担保+申诉机制) | 高 | FR1/FR6 深化 §3.3;需求 9 |
+| D1-R3.3 | 1 | "自由演进"与"强制级联重做"矛盾,无演进契约机制 | 高 | 主 PRD §1.2;需求 9;FR2.2 |
+| D1-R3.4 | 1 | hub 仓文件可见性与 ArtifactRef 生效未解耦 | 中 | 主 PRD FR1.1;§5.1 |
+| D1-R3.5 | 1 | git ls-remote 一次性校验无法保障 external_commit 持续有效 | 中 | 主 PRD §5.1;附录 D7 |
+| D6-R3.1 | 6 | 多格式产物以独立 seq 共存,derived_from 未采纳,派生关系丢失 | 高 | 主 PRD §5.1;FR1/FR6 深化 §3.3 |
+| D6-R3.2 | 6 | deps 仅声明 node_id,无法表达依赖哪个格式(format_slot 缺失) | 高 | FR1/FR6 深化 §3.3 deps;主 PRD FR4.1 |
+| D6-R3.3 | 6 | 多格式产物版本管理混乱,自由演进与版本同步矛盾 | 高 | FR1/FR6 深化 §2.2;§2.3 |
+| D6-R3.4 | 6 | "格式自由"与 allowed_extensions 白名单矛盾 | 中 | 主 PRD FR5.2;FR1/FR6 深化 §4.1 |
+| D6-R3.5 | 6 | artifact_kind 二元分类无法表达混合型产物 | 中 | 主 PRD §5.1;附录 D7 |
+| D6-R3.6 | 6 | 源契约 changed 时派生产物级联策略未定义 | 高 | 主 PRD FR2.2;FR2 深化 T10/T16 |
+| D14-R3.1 | 14 | **需求 9"完成度自由"与 7 态状态机直接矛盾,无 deprecated/sunset/draft 态** | **Critical** | 主 PRD FR2.1;需求 9 |
+| D14-R3.2 | 14 | 单一 hub 仓 v1/v2 物理共存,但 ArtifactRef 单值无法多版本逻辑引用 | 高 | 主 PRD §5.1;FR2 深化 §3.1 |
+| D14-R3.3 | 14 | "自由定义"导致版本模型不统一(节点内多版本 vs 独立节点) | 高 | 主 PRD §5.1;FR1/FR6 深化 §2.3 |
+| D14-R3.4 | 14 | deps min_version 用 semver,需求 9 允许非 semver 版本格式 | 中 | FR1/FR6 深化 §3.3;§4.1 |
+| D14-R3.5 | 14 | deprecated 信号传播机制未定义,下游看不到 deprecated 标记 | 中 | 主 PRD FR4.1;FR2 深化 |
+| D14-R3.6 | 14 | 代码仓分支删除使 external_commit 失效,管理方不知道 | 中 | 主 PRD §5.1;附录 D7 |
+
+#### 3.4.3 缺陷根因归类
+
+| 根因类别 | 涉及缺陷 | 核心问题 |
+|---|---|---|
+| **R3-A. 需求 9"自由"与"集中管理"张力未化解** | D1-R3.3, D6-R3.3, D6-R3.4, D14-R3.1, D14-R3.4 | 需求 9 主张完全自由,但 hub 仓/状态机/deps/skill 均有约束,自由边界未明确 |
+| **R3-B. 单一 hub 仓"共仓"引入的新耦合** | D1-R3.4, D6-R3.1, D14-R3.2 | 各端共仓使文件可见性、派生关系、版本共存更耦合,旧多仓模型的"天然隔离"丧失 |
+| **R3-C. 引用型产物 external_commit 持续有效性缺失** | D1-R3.1, D1-R3.5, D14-R3.6 | git ls-remote 一次性校验,不持续监控,代码仓变更后引用失效无感知 |
+| **R3-D. 第一轮修正未落地** | D1-R3.2, D6-R3.1, D6-R3.6, D14-R3.1~D14-R3.5 | change_type/derived_from/deprecated/版本范围等第一轮修正方案在 RepoRegistry→hub 仓修正中未采纳 |
+| **R3-E. 多格式/多版本的"维度"缺失** | D6-R3.2, D6-R3.5, D14-R3.2, D14-R3.3 | deps 无 format_slot,artifact_kind 二元,ArtifactRef 单值,无法表达多格式多版本 |
+
+#### 3.4.4 修正方案优先级
+
+| 优先级 | 修正项 | 影响章节 | 理由 |
+|---|---|---|---|
+| **P0(Phase 1 必做)** | 修正 14-R3.1:状态机扩展为 10 态(draft/deprecated/sunset) | 主 PRD FR2.1;FR2 深化 §2.1 | 需求 9 与状态机直接矛盾,不修正则废弃版本无法表达 |
+| **P0** | 修正 14-R3.2:ArtifactRef 多版本映射 | 主 PRD §5.1;FR2 深化 §3.1 | 单值 ArtifactRef 阻断版本共存,数据模型层阻断 |
+| **P0** | 修正 1-R3.1:引用型产物分层清除语义 | 主 PRD §5.1;FR2 深化 T16 | external_commit 清除语义不明导致级联行为不确定 |
+| **P0** | 修正 6-R3.2:deps 增加 format_slot | FR1/FR6 深化 §3.3;主 PRD FR4.1 | 多格式产物下消费歧义,下游无法精确依赖 |
+| **P1(Phase 2)** | 修正 1-R3.2:change_type 担保+申诉机制 | FR1/FR6 深化 §3.3;主 PRD FR4.1 | 声明不可靠导致级联分级失效 |
+| **P1** | 修正 1-R3.3:演进契约机制 | 主 PRD §1.2;FR2.2;pipeline DSL | 自由演进与强制重做矛盾 |
+| **P1** | 修正 6-R3.1:derived_from + 派生声明激励 | FR1/FR6 深化 §3.3 | 派生关系丢失,可观测性黑洞 |
+| **P1** | 修正 14-R3.3:版本模型统一(节点内多版本) | 主 PRD §5.1;FR1/FR6 深化 §2.3 | 版本模型不统一导致管理方逻辑分裂 |
+| **P1** | 修正 14-R3.5:deprecated 信号传播 | 主 PRD FR4.1;FR2 深化 | 下游看不到 deprecated 标记 |
+| **P2(Phase 3)** | 修正 1-R3.5 / 14-R3.6:external_commit 健康度监控 | 主 PRD §5.1;附录 D7 | 持续有效性保障,非阻断但重要 |
+| **P2** | 修正 6-R3.4:扩展名注册制 | 主 PRD FR5.2;FR1/FR6 深化 §4.1 | 格式自由与白名单矛盾 |
+| **P2** | 修正 6-R3.5:artifact_kind 三元/hybrid | 主 PRD §5.1 | 混合型产物归属 |
+| **P2** | 修正 14-R3.4:版本格式双轨制 | FR1/FR6 深化 §3.3 | 非 semver 版本支持 |
+
+### 3.5 第三轮走查总结
+
+#### 3.5.1 核心认知升级
+
+1. **需求 9 与状态机的矛盾是 Critical 级阻断**:需求 9 明确"完成度自由(草案/正式/废弃)",但 7 态状态机无法表达。这不是"可选优化",而是"需求与设计的直接冲突",必须在 Phase 1 解决。
+
+2. **单一 hub 仓"共仓"是新张力的根源**:旧多仓模型下,各端仓库隔离,变更影响是"逻辑级联";单一 hub 仓下,各端共仓,变更影响是"物理级联"——文件可见性即时同步,缓冲期消失。这要求级联逻辑更精细(分层清除、演进契约、文件可见性与 ArtifactRef 生效解耦)。
+
+3. **引用型产物的 external_commit 是"暗物质"**:管理方只做 `git ls-remote` 一次性校验,不持续监控。代码仓的 force-push、分支删除、rebase 都会使 external_commit 失效,但管理方无感知。需引入"引用健康度"持续监控。
+
+4. **第一轮修正未落地是系统性问题**:change_type、derived_from、deprecated、版本范围等第一轮修正方案,在 RepoRegistry→hub 仓修正中均未采纳。这反映了"修正追踪机制"缺失——每轮修正应有明确的"采纳/拒绝/延期"决策记录,避免修正丢失。
+
+#### 3.5.2 与前两轮的对比
+
+| 维度 | 第一轮(多产物仓库) | 第二轮(需求 9 识别) | 第三轮(单一 hub 仓 + 需求 9) |
+|---|---|---|---|
+| 场景 1 缺陷数 | 6 | — | 5(新张力:external_commit 语义、共仓即时同步) |
+| 场景 6 缺陷数 | 6 | — | 6(新张力:格式自由 vs 白名单、混合型产物) |
+| 场景 14 缺陷数 | 7 | — | 6(D14-2 升级为 Critical:需求 9 直接矛盾) |
+| 核心矛盾 | 级联分级缺失 | 需求 9"格式中立≠格式不可知" | **需求 9"自由"vs"集中管理"张力未化解** |
+| 修正方向 | change_type/derived_from/deprecated | format_type 记录、slot/variant | 状态机扩展(10 态)、ArtifactRef 多版本、演进契约、external_commit 监控 |
+
+#### 3.5.3 建议后续行动
+
+1. **立即修正 D14-R3.1(Critical)**:状态机扩展为 10 态,这是需求 9 与设计的直接矛盾,不修正则废弃版本无法表达。
+2. **追踪第一轮修正落地状态**:建立"修正追踪表",记录每轮修正的"采纳/拒绝/延期"决策,避免修正丢失。
+3. **明确需求 9"自由"的边界**:需求 9 说"完全自由",但 hub 仓/状态机/deps/skill 均有约束。需在主 PRD §1.4 范围边界中明确"自由"的边界——"格式自由"指"管理方不解析内容",不等于"任意扩展名/任意版本格式/任意状态"。
+4. **引入"引用健康度"监控**:external_commit 的持续有效性是单一 hub 仓 + 引用型产物的核心保障,需在 Phase 2 落地。
