@@ -31,10 +31,7 @@ for rel in \
   ai-delivery-orchestrator/templates/status-template.json \
   requirement-breakdown/agents/openai.yaml \
   ui-truth-mapping/agents/openai.yaml \
-  ui-truth-mapping/templates/section-map-template.json \
-  ui-truth-mapping/fixtures/section-map-good.json \
-  ui-truth-mapping/fixtures/ui-acceptance-contract-good.yaml \
-  ui-truth-mapping/fixtures/ui-acceptance-contract-bad.yaml
+  ui-truth-mapping/templates/ui-contract-template.html
 do
   require_identical "$rel"
 done
@@ -63,10 +60,6 @@ require_file "$SRC/ai-delivery-orchestrator/templates/todo-template.md"
 require_file "$DST/ai-delivery-orchestrator/templates/todo-template.md"
 grep -q '[\u4e00-\u9fff]' "$DST/ai-delivery-orchestrator/templates/todo-template.md" \
   || fail "Expected Chinese todo-template in .agents-zh"
-
-# ui-truth yaml template exists in both (structure synced; comments localized)
-require_file "$SRC/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
-require_file "$DST/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
 
 # zh tree must not advertise .agents-zh as a runtime command path
 if grep -R -- '.agents-zh/skills/.*/scripts/' "$DST" >/dev/null 2>&1; then

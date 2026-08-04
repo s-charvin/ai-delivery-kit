@@ -70,8 +70,7 @@ fi
 require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
-require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
-require_file "$SKILL_ROOT/ui-truth-mapping/templates/section-map-template.json"
+require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-contract-template.html"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"
 

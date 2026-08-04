@@ -141,7 +141,7 @@ templates/
 python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
 
-仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `frozen`/`acceptance_frozen`。
+仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `acceptance_frozen`。
 
 ### 8. 开发完成后 — 回填交付信息并重新校验
 
@@ -163,5 +163,5 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - 使用 `data-evidence="inferred"` 却没有匹配的审查面板说明。
 - 扫描每一份历史契约文件来"寻找"某个单元，而不是使用需求 ID、语义或用户显式指定的路径。
 - 为一个很小的需求变更重写整份已匹配的契约，而不是做增量修补。
-- 未运行校验器得到 `OK` 就声称 `frozen`/`implemented`/`merged` 状态。
+- 未运行校验器得到 `OK` 就声称 `acceptance_frozen`/`implemented`/`merged` 状态。
 - 不先复制模板就手写 DOM 结构。

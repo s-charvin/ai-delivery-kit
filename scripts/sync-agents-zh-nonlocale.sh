@@ -23,7 +23,6 @@ done
 
 copy_identical "ai-delivery-orchestrator/scripts/reconcile-delivery.py"
 copy_identical "ai-delivery-orchestrator/templates/status-template.json"
-copy_identical "ui-truth-mapping/templates/section-map-template.json"
-cp -R "$SRC/ui-truth-mapping/fixtures" "$DST/ui-truth-mapping/"
+copy_identical "ui-truth-mapping/templates/ui-contract-template.html"
 
 print -- "Synced non-localized assets to .agents-zh/skills"

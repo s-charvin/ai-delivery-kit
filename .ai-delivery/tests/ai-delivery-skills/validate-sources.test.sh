@@ -53,13 +53,24 @@ VALIDATE_SCRIPT=$(resolve_project_asset_path "scripts/validate-project-ai-delive
 
 zsh "$VALIDATE_SCRIPT"
 
+CONTRACT_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
+PRESSURE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
+zsh "$CONTRACT_TEST"
+zsh "$PRESSURE_TEST"
+
+if [[ -f "$ROOT/managedassets.go" ]]; then
+  RECONCILE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/reconcile-delivery.test.sh")
+  SYNC_ZH_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/sync-agents-zh.test.sh")
+  zsh "$RECONCILE_TEST"
+  zsh "$SYNC_ZH_TEST"
+fi
+
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
 
 require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
-require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-acceptance-contract-template.yaml"
-require_file "$SKILL_ROOT/ui-truth-mapping/templates/section-map-template.json"
+require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-contract-template.html"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"
 

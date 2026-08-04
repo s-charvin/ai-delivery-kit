@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>UI Contract: fixture-bad</title>
+  <style>
+    [data-ui-contract] { min-height: 100vh; }
+  </style>
+</head>
+<body>
+  <main data-ui-contract data-ui-unit-id="bad-page" data-ui-unit-type="screen" data-ui-state-default="idle">
+    <div data-ui-id="duplicate-id" data-ui-kind="text" data-figma-node="1:301" data-evidence="code">First</div>
+    <div data-ui-id="duplicate-id" data-ui-kind="text" data-figma-node="1:302" data-evidence="code">Second</div>
+    <div data-ui-id="missing-node" data-ui-kind="text" data-evidence="code">No source node</div>
+    <div data-ui-kind="status-bar" data-figma-node="1:303" data-evidence="code">System UI</div>
+  </main>
+</body>
+</html>

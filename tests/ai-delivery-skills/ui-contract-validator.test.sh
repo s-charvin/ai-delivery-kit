@@ -17,12 +17,14 @@ fail() {
 if [[ -f "$ROOT/managedassets.go" ]]; then
   VALIDATOR="$ROOT/scripts/validate-ui-contract-html.py"
   STATUS_VALIDATOR="$ROOT/scripts/validate-delivery-status.py"
+  GOOD="$ROOT/tests/ai-delivery-skills/fixtures/ui-contract-good.html"
+  BAD="$ROOT/tests/ai-delivery-skills/fixtures/ui-contract-bad.html"
 else
   VALIDATOR="$ROOT/.ai-delivery/scripts/validate-ui-contract-html.py"
   STATUS_VALIDATOR="$ROOT/.ai-delivery/scripts/validate-delivery-status.py"
+  GOOD="$ROOT/.ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-good.html"
+  BAD="$ROOT/.ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-bad.html"
 fi
-GOOD="$ROOT/tests/ai-delivery-skills/fixtures/ui-contract-good.html"
-BAD="$ROOT/tests/ai-delivery-skills/fixtures/ui-contract-bad.html"
 
 [[ -f "$VALIDATOR" ]] || fail "Missing HTML contract validator: $VALIDATOR"
 [[ -f "$STATUS_VALIDATOR" ]] || fail "Missing status validator: $STATUS_VALIDATOR"

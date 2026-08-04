@@ -32,6 +32,8 @@ func Manifest() []ManagedAsset {
 		{Source: "tests/ai-delivery-skills/validate-sources.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/ui-contract-validator.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/ui-contract-validator.test.sh", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh", Target: ".ai-delivery/tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh", Kind: "file"},
+		{Source: "tests/ai-delivery-skills/fixtures/ui-contract-good.html", Target: ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-good.html", Kind: "file"},
+		{Source: "tests/ai-delivery-skills/fixtures/ui-contract-bad.html", Target: ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-bad.html", Kind: "file"},
 	}
 }
 

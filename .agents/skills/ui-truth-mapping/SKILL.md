@@ -141,7 +141,7 @@ Open the contract HTML in a browser (or the IDE's rendered preview) and compare 
 python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
 
-Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `frozen`/`acceptance_frozen` on a failing contract.
+Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `acceptance_frozen` on a failing contract.
 
 ### 8. After implementation — backfill delivery and revalidate
 
@@ -163,5 +163,5 @@ Re-run the validator — it enforces that `delivery.implemented` is complete whe
 - Using `data-evidence="inferred"` with no matching review-panel note.
 - Scanning every historical contract file to "find" a unit instead of using requirement id, semantics, or an explicit user-specified path.
 - Rewriting an entire matched contract for a small requirement instead of an incremental patch.
-- Claiming `frozen`/`implemented`/`merged` status without running the validator to `OK`.
+- Claiming `acceptance_frozen`/`implemented`/`merged` status without running the validator to `OK`.
 - Hand-authoring DOM structure without copying the template first.

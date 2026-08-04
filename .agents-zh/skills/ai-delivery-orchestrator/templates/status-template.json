@@ -5,12 +5,12 @@
   "_status_meanings": {
     "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
     "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
-    "acceptance_frozen": "YAML 契约已冻结，所有屏幕状态有源依据（仅 UI 子需求；非 UI 子需求跳过此状态）",
+    "acceptance_frozen": "HTML UI 契约（ui-contract.html）已冻结并通过校验，所有屏幕状态有源依据（仅 UI 子需求；非 UI 子需求跳过此状态）",
     "spec_ready": "spec.md 已生成并对照契约审计通过",
     "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
     "tasks_ready": "tasks.md 已生成，任务粒度合适、按依赖排序且文件级范围 — 等待用户确认进入开发",
     "in_dev": "实现进行中 — 工作树已创建，TDD 循环活跃",
-    "visual_acceptance_passed": "截图匹配 YAML 契约的屏幕状态（仅 UI 切片；非 UI 切片直接跳过此状态）",
+    "visual_acceptance_passed": "截图匹配 HTML UI 契约的屏幕状态（仅 UI 切片；非 UI 切片直接跳过此状态）",
     "merged": "代码已变基合并到开发分支（无合并提交）",
 
     "blocked_missing_requirement": "源中缺少关键业务事实",

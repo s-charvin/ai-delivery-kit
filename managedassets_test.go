@@ -21,6 +21,8 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		"tests/ai-delivery-skills/validate-sources.test.sh",
 		"tests/ai-delivery-skills/ui-contract-validator.test.sh",
 		"tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh",
+		"tests/ai-delivery-skills/fixtures/ui-contract-good.html",
+		"tests/ai-delivery-skills/fixtures/ui-contract-bad.html",
 	}
 
 	for _, path := range required {
