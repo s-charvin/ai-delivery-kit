@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from html.parser import HTMLParser
 from pathlib import Path
@@ -39,6 +40,19 @@ DELIVERY_STATUSES_REQUIRING_IMPLEMENTED = frozenset({"implemented", "merged"})
 DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
 PREVIEW_INFRA_ATTRS = ("data-ui-state-switcher", "data-ui-state-host")
 REQUIRED_SCOPE_KEYS = ("in_scope", "out_of_scope")
+CONTEXT_SCOPE_VALUE = "context"
+# State ids become CSS selector fragments inside the preview script
+# (template[data-ui-state="<id>"]); keep them kebab-case ASCII so the
+# selector never breaks and the browser switcher stays functional.
+STATE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
+# Figma numeric node ids look like "1:201" or "I4:2:3". Used only to extract
+# tokens from the in_scope inventory for a cross-check against data-figma-node
+# values actually frozen in the DOM. Tokens that do not match are ignored.
+FIGMA_NODE_ID_PATTERN = re.compile(r"\b\d+:\d+\b")
+# Unfilled template placeholders leak into data-figma-node; reject them so a
+# contract copied from the template but never filled in cannot pass.
+FIGMA_NODE_PLACEHOLDER_TOKEN = "placeholder"
+MEDIA_TAGS = frozenset({"img", "svg", "canvas", "video", "picture", "source"})
 
 
 class ValidationError(Exception):
@@ -108,6 +122,37 @@ def text_content(node: Node | None) -> str:
     for child in node.children:
         parts.append(text_content(child))
     return "".join(parts).strip()
+
+
+def has_media_descendant(node: Node | None) -> bool:
+    """Recursively detect visible media inside a truth node.
+
+    A truth-bearing element often wraps its media in a container
+    (``<div data-ui-id><img></div>``); the previous check only inspected the
+    truth node's own tag/attrs and falsely flagged such containers as blank.
+    """
+    if node is None:
+        return False
+    for descendant in walk(node):
+        if descendant is node:
+            continue
+        if descendant.tag in MEDIA_TAGS:
+            return True
+        if descendant.has("src") or descendant.has("data-src"):
+            return True
+    return False
+
+
+def collect_figma_node_values(root: Node) -> set[str]:
+    """All data-figma-node values on non-context truth-bearing elements."""
+    values: set[str] = set()
+    for node in walk(root):
+        if node.get("data-ui-scope") == CONTEXT_SCOPE_VALUE:
+            continue
+        value = node.get("data-figma-node")
+        if is_nonempty_str(value):
+            values.add(value)
+    return values
 
 
 def is_nonempty_str(value: Any) -> bool:
@@ -256,6 +301,13 @@ class ContractValidator:
                 self.add_error("STATE", f'duplicate state id "{state_id}" in states')
             else:
                 seen_ids.add(state_id)
+                if not STATE_ID_PATTERN.match(state_id):
+                    self.add_error(
+                        "STATE",
+                        f'state id "{state_id}" must be kebab-case lowercase ASCII '
+                        '(^[a-z][a-z0-9-]*$); the preview script builds CSS selectors '
+                        "from state ids and would break on spaces, quotes, or brackets",
+                    )
 
             if not is_nonempty_str(state.get("source_node")):
                 self.add_error(
@@ -317,8 +369,10 @@ class ContractValidator:
         self.validate_forbidden_kinds(root)
         self.validate_states_in_dom(root)
         self.validate_preview_infrastructure(root)
-        self.validate_default_state_content(root)
+        self.validate_context_not_truth(root)
+        self.validate_state_content(root)
         self.validate_scope_inventory(root)
+        self.validate_scope_node_coverage(root)
         self.validate_evidence(root)
         self.validate_assets(root)
 
@@ -351,6 +405,11 @@ class ContractValidator:
         for node in walk(root):
             if not node.has("data-ui-id"):
                 continue
+            # Context chrome is positioning-only and must not be truth-annotated;
+            # validate_context_not_truth reports the misuse. Skip it here so the
+            # truth-bearing rules do not fire on positioning wrappers.
+            if node.get("data-ui-scope") == CONTEXT_SCOPE_VALUE:
+                continue
             ui_id = node.get("data-ui-id")
             if not is_nonempty_str(ui_id):
                 self.add_error(
@@ -363,10 +422,17 @@ class ContractValidator:
             else:
                 seen_ids.add(ui_id)
 
-            if not is_nonempty_str(node.get("data-figma-node")):
+            figma_node = node.get("data-figma-node")
+            if not is_nonempty_str(figma_node):
                 self.add_error(
                     "SOURCE_NODE",
                     f'element with data-ui-id "{ui_id}" is missing required data-figma-node',
+                )
+            elif figma_node and FIGMA_NODE_PLACEHOLDER_TOKEN in figma_node.lower():
+                self.add_error(
+                    "SOURCE_NODE",
+                    f'element with data-ui-id "{ui_id}" has a placeholder data-figma-node '
+                    f'"{figma_node}"; copy the template then fill real Figma node ids',
                 )
 
             if not is_nonempty_str(node.get("data-ui-kind")):
@@ -374,6 +440,25 @@ class ContractValidator:
                     "HTML",
                     f'element with data-ui-id "{ui_id}" is missing required data-ui-kind',
                 )
+
+    def validate_context_not_truth(self, root: Node) -> None:
+        """Context chrome must not be truth-annotated.
+
+        data-ui-scope="context" elements exist only to preserve layout geometry
+        for the in-scope subtree. They must not carry data-ui-id / data-ui-kind
+        / data-figma-node — mixing context with truth would create a second
+        acceptance surface the freeze bar cannot govern.
+        """
+        for node in walk(root):
+            if node.get("data-ui-scope") != CONTEXT_SCOPE_VALUE:
+                continue
+            for attr in ("data-ui-id", "data-ui-kind", "data-figma-node"):
+                if node.has(attr):
+                    self.add_error(
+                        "SCOPE",
+                        f'element marked data-ui-scope="context" must not carry {attr}; '
+                        "context chrome is positioning-only and is not acceptance truth",
+                    )
 
     def validate_forbidden_kinds(self, root: Node) -> None:
         for node in walk(root):
@@ -502,58 +587,80 @@ class ContractValidator:
                     "hydrate/switch script (must reference data-ui-state-host and cloneNode)",
                 )
 
-    def validate_default_state_content(self, root: Node) -> None:
-        """Default state template must contain at least one truth-bearing node.
+    def validate_state_content(self, root: Node) -> None:
+        """Every declared state template must contain visible truth-bearing nodes.
 
-        Browsers do not render <template>; preview script hydrates the host.
-        Static check: the default template itself must be non-empty.
+        Browsers do not render ``<template>``; the preview script hydrates the
+        host from the active template. If any state template is empty (no
+        ``data-ui-id`` nodes) or its truth nodes carry no visible text/media,
+        the switcher would flip to a blank host for that state. The default
+        state is the most common failure, but every declared state must pass —
+        otherwise ``validator OK`` would not imply "every state previews".
         """
-        default_id = self._default_state_id()
-        if not is_nonempty_str(default_id):
+        meta = self.meta
+        if not isinstance(meta, dict):
+            return
+        states = meta.get("states")
+        if not isinstance(states, list):
             return
 
         main = self._find_main(root)
         search_root = main if main is not None else root
-        templates = [
-            node
-            for node in walk(search_root)
-            if node.tag == "template" and node.get("data-ui-state") == default_id
-        ]
-        if not templates:
-            # Missing template already reported by validate_states_in_dom.
-            return
 
-        truth_nodes = [
-            node
-            for node in walk(templates[0])
-            if node is not templates[0] and is_nonempty_str(node.get("data-ui-id"))
-        ]
-        if not truth_nodes:
-            self.add_error(
-                "PREVIEW",
-                f'default state template "{default_id}" has no truth-bearing data-ui-id nodes; '
-                "hydrated browser preview would be empty",
-            )
-            return
+        for state in states:
+            if not isinstance(state, dict):
+                continue
+            state_id = state.get("id")
+            if not is_nonempty_str(state_id):
+                continue
 
-        # At least one truth node should carry visible text, img/svg, or children with text.
-        has_visible = False
-        for node in truth_nodes:
-            if text_content(node):
-                has_visible = True
-                break
-            if node.tag in {"img", "svg", "canvas", "video"}:
-                has_visible = True
-                break
-            if node.has("data-src") or node.has("src"):
-                has_visible = True
-                break
-        if not has_visible:
-            self.add_error(
-                "PREVIEW",
-                f'default state template "{default_id}" truth nodes have no visible text/media; '
-                "hydrated browser preview would appear blank",
-            )
+            templates = [
+                node
+                for node in walk(search_root)
+                if node.tag == "template" and node.get("data-ui-state") == state_id
+            ]
+            if not templates:
+                # Missing template already reported by validate_states_in_dom.
+                continue
+
+            truth_nodes = [
+                node
+                for node in walk(templates[0])
+                if node is not templates[0]
+                and is_nonempty_str(node.get("data-ui-id"))
+                and node.get("data-ui-scope") != CONTEXT_SCOPE_VALUE
+            ]
+            if not truth_nodes:
+                self.add_error(
+                    "PREVIEW",
+                    f'state template "{state_id}" has no truth-bearing data-ui-id nodes; '
+                    "hydrated browser preview would be empty for this state",
+                )
+                continue
+
+            # A truth node is visible when it (or any descendant) carries text
+            # or media. Containers wrapping ``<img>``/``<svg>`` must count as
+            # visible — earlier code only inspected the truth node's own tag.
+            has_visible = False
+            for node in truth_nodes:
+                if text_content(node):
+                    has_visible = True
+                    break
+                if node.tag in MEDIA_TAGS:
+                    has_visible = True
+                    break
+                if node.has("src") or node.has("data-src"):
+                    has_visible = True
+                    break
+                if has_media_descendant(node):
+                    has_visible = True
+                    break
+            if not has_visible:
+                self.add_error(
+                    "PREVIEW",
+                    f'state template "{state_id}" truth nodes have no visible text/media; '
+                    "hydrated browser preview would appear blank for this state",
+                )
 
     def validate_scope_inventory(self, root: Node) -> None:
         panels = [node for node in walk(root) if node.has("data-ui-review-panel")]
@@ -595,6 +702,52 @@ class ContractValidator:
                 self.add_error(
                     "SCOPE",
                     f'dt[data-ui-scope="{key}"] has an empty dd; list artifacts or write "none"',
+                )
+
+    def validate_scope_node_coverage(self, root: Node) -> None:
+        """Cross-check in_scope node ids against frozen data-figma-node values.
+
+        The in_scope inventory lists the Figma nodes this contract must freeze.
+        A common false-pass was listing node ids in the review panel while the
+        DOM froze different (or no) nodes. Extract ``\\d+:\\d+`` tokens from the
+        in_scope dd and require each one to appear on a non-context
+        ``data-figma-node`` somewhere in the contract DOM. Tokens that do not
+        look like Figma numeric ids (labels, prose) are ignored, so free-form
+        inventory text never produces false positives.
+        """
+        panels = [node for node in walk(root) if node.has("data-ui-review-panel")]
+        if not panels:
+            return
+
+        in_scope_text = ""
+        for panel in panels:
+            for node in walk(panel):
+                if node.tag != "dt" or node.get("data-ui-scope") != "in_scope":
+                    continue
+                dd_node = None
+                if node.parent is not None:
+                    siblings = node.parent.children
+                    idx = siblings.index(node)
+                    for sibling in siblings[idx + 1 :]:
+                        if sibling.tag == "dd":
+                            dd_node = sibling
+                            break
+                        if sibling.tag == "dt":
+                            break
+                in_scope_text += " " + text_content(dd_node)
+
+        required_ids = set(FIGMA_NODE_ID_PATTERN.findall(in_scope_text))
+        if not required_ids:
+            return
+
+        frozen_ids = collect_figma_node_values(root)
+        for node_id in sorted(required_ids):
+            if node_id not in frozen_ids:
+                self.add_error(
+                    "SCOPE",
+                    f'in_scope node "{node_id}" is not frozen in the contract DOM '
+                    "(no non-context element carries this data-figma-node); either "
+                    "freeze the matching subtree or correct the in_scope inventory",
                 )
 
     def validate_evidence(self, root: Node) -> None:

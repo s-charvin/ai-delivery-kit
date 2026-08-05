@@ -138,6 +138,9 @@
       outside [data-ui-state-host], but ONLY when it is in In Scope and
       identical across states. Otherwise put it inside each state template.
       Mark out-of-scope positioning chrome with data-ui-scope="context".
+      Context chrome must NOT carry data-ui-id / data-ui-kind /
+      data-figma-node — it is positioning only, not acceptance truth; the
+      validator rejects truth-annotated context.
     -->
 
     <!-- Live mount: empty in source; script hydrates meta default on load. -->
@@ -148,6 +151,11 @@
       <template data-ui-state="<id>">. Put state-varying truth DOM inside.
       Transfer get_code markup + layout styles mechanically; only add
       data-ui-* / data-figma-node / data-evidence attributes.
+
+      State ids MUST be kebab-case lowercase ASCII (^[a-z][a-z0-9-]*$,
+      e.g. "loading", "empty-state"). The preview script builds CSS
+      selectors from state ids (template[data-ui-state="<id>"]); spaces,
+      quotes, or brackets would break the selector and the switcher.
 
       Every truth-bearing node needs:
         data-ui-id      — stable, unique within this file
