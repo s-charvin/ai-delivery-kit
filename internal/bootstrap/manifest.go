@@ -65,11 +65,7 @@ func SeededPlaceholderFiles() []string {
 		".ai-delivery/.gitkeep",
 		".ai-delivery/requirements/.gitkeep",
 		".ai-delivery/figma-cache/.gitkeep",
-		".ai-delivery/logs/sessions/.gitkeep",
-		".ai-delivery/logs/subagents/.gitkeep",
 		".ai-delivery/meta/.gitkeep",
-		".ai-delivery/runtime/.gitkeep",
-		".ai-delivery/logs/events.ndjson",
 	}
 }
 
@@ -78,14 +74,6 @@ func SeededJSONFiles() []string {
 		".ai-delivery/meta/project-binding.json",
 		".ai-delivery/meta/workflow-policy.json",
 		".ai-delivery/meta/naming-rules.json",
-		".ai-delivery/runtime/main-branch.json",
-		".ai-delivery/runtime/worktrees.json",
-		".ai-delivery/runtime/merge-queue.json",
-		".ai-delivery/runtime/dependency-graph.json",
-		".ai-delivery/runtime/blockers.json",
-		".ai-delivery/runtime/task-board.json",
-		".ai-delivery/runtime/slice-closures.json",
-		".ai-delivery/runtime/agent-sessions.json",
 	}
 }
 

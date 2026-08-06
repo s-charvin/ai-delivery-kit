@@ -22,12 +22,6 @@
     "visual_acceptance_passed",
     "merged"
   ],
-  "governance_events": [
-    "screen_contract_frozen",
-    "visual_acceptance_started",
-    "visual_acceptance_passed",
-    "visual_acceptance_failed"
-  ],
   "source_index_policy": {
     "required_traceability_keys": [
       "requirement",
@@ -50,11 +44,6 @@
   "worktree_policy": {
     "require_isolated_worktree": true,
     "allow_precreate_before_dependencies": false
-  },
-  "logging_policy": {
-    "require_logs_for_main_session": true,
-    "require_logs_for_subagent": true,
-    "require_logs_for_state_change": true
   },
   "updated_at": "2026-05-06T00:00:00Z",
   "updated_by": "skill-flatten-v0.0.3"

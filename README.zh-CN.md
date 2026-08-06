@@ -41,7 +41,7 @@ ai-delivery init --upgrade /path/to/repo
 curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash -s -- --upgrade-init /path/to/repo
 ```
 
-`init --upgrade` 会刷新目标仓库中受管的 `ai-delivery` 资产，并保留需求与运行时数据。
+`init --upgrade` 会刷新目标仓库中受管的 `ai-delivery` 资产，并保留需求数据。
 
 ## `ai-delivery init` 做什么
 
@@ -49,13 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 - 发现 git 根目录
 - 从仓库名推导 `project_id`
-- 检测主分支并写入 `.ai-delivery/runtime/main-branch.json`
 - 检查 `specify-cli` 与 `superpowers`
 - 在通过官方路径安装缺失前置条件前征求确认
 - 仅当 `specify-cli` 已可用或在入驻过程中已安装时，才运行 `specify init`
 - 写入受治理的 `.ai-delivery` 契约、项目本地技能、校验器与配套文件
 
-公开路径不再要求用户提供 `project_id` 或 `main-branch`。
+公开路径不再要求用户提供 `project_id`。
 
 ## 默认需求入口
 

@@ -29,7 +29,7 @@
 - `Figma` 是视觉真相
 - `Spec Kit` 只负责 `constitution / spec / plan / tasks`
 - `Superpowers` 只负责 agent 执行纪律
-- `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、日志、依赖和追踪
+- `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、依赖和追踪等重要产物存放
 
 推荐主链路：
 
@@ -49,20 +49,14 @@
 
 ```bash
 cd <reference-repo-root>
-zsh scripts/bootstrap-ai-delivery-project.sh \
-  --target-repo <target-repo-root> \
-  --project-id <project-id> \
-  --main-branch main
+zsh scripts/bootstrap-ai-delivery-project.sh <target-repo-root>
 ```
 
 例子：
 
 ```bash
 cd /Users/xxx/Projects/delivery-dev
-zsh scripts/bootstrap-ai-delivery-project.sh \
-  --target-repo /Users/xxx/Projects/my-app \
-  --project-id my-app \
-  --main-branch main
+zsh scripts/bootstrap-ai-delivery-project.sh /Users/xxx/Projects/my-app
 ```
 
 这一步会把下面这些内容落进目标仓库：
@@ -74,7 +68,7 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 - `.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh`
 - `.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh`
 - `.ai-delivery/tests/ai-delivery-skills/ui-composition-guardrails.test.sh`
-- 最小 `.ai-delivery/` 目录契约与基础 meta/runtime 文件
+- 最小 `.ai-delivery/` 目录契约与基础 meta 文件
 
 也就是说，`project-local skills` 的初始化已经并入 bootstrap 本身，目标仓库不再需要额外执行单独的 skill 安装步骤。
 
@@ -84,7 +78,6 @@ zsh scripts/bootstrap-ai-delivery-project.sh \
 - 不会自动执行 `specify init`
 - 不会创建真实 requirement package
 - 不会绑定 Figma
-- 不会启动 `ai-delivery-admin`
 
 ### Step 2: 在目标仓库里安装 Spec Kit
 
@@ -138,19 +131,6 @@ cd <target-repo-root>
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```
 
-### Step 3: 可选安装 admin support skill
-
-如果你还要接入控制面治理，从 `ai-delivery-admin` 仓库执行：
-
-```bash
-cd <ai-delivery-admin-root>
-zsh scripts/install-admin-support-skill.sh
-```
-
-这样就能在 Codex 里使用：
-
-- `$ai-delivery-admin-support`
-
 ## 目标仓库最小目录契约
 
 bootstrap 完成后，目标仓库至少具备：
@@ -168,30 +148,17 @@ bootstrap 完成后，目标仓库至少具备：
 │   │       └── ai-delivery-any-repo-onboarding.md
 │   ├── requirements/
 │   ├── figma-cache/
-│   ├── logs/
-│   │   ├── events.ndjson
-│   │   ├── sessions/
-│   │   └── subagents/
 │   ├── meta/
 │   │   ├── project-binding.json
 │   │   ├── workflow-policy.json
 │   │   └── naming-rules.json
 │   ├── scripts/
 │   │   └── validate-project-ai-delivery-skills.sh
-│   ├── tests/
-│   │   └── ai-delivery-skills/
-│   │       ├── validate-sources.test.sh
-│   │       ├── api-nonblocking-policy.test.sh
-│   │       └── ui-composition-guardrails.test.sh
-│   └── runtime/
-│       ├── main-branch.json
-│       ├── worktrees.json
-│       ├── merge-queue.json
-│       ├── dependency-graph.json
-│       ├── blockers.json
-│       ├── task-board.json
-│       ├── slice-closures.json
-│       └── agent-sessions.json
+│   └── tests/
+│       └── ai-delivery-skills/
+│           ├── validate-sources.test.sh
+│           ├── api-nonblocking-policy.test.sh
+│           └── ui-composition-guardrails.test.sh
 ```
 
 `.specify/` 则由 `Spec Kit` 负责初始化。
@@ -214,7 +181,7 @@ bootstrap 完成后，目标仓库至少具备：
 ```text
 使用 $speckit-constitution 为当前仓库建立开发原则：
 1. Requirement 是功能真相，Figma 是视觉真相，冲突必须阻塞；
-2. Spec Kit 只负责 spec、plan、tasks，不负责运行态和日志态；
+2. Spec Kit 只负责 spec、plan、tasks，不负责运行态；
 3. 实现执行必须走独立 worktree、TDD、review、verification；
 4. 所有需求都要保留从 .ai-delivery 到 Spec Kit 产物的反向追踪；
 5. Requirement 与 Figma 冲突时，agent 不允许私自补需求或补 UI。
@@ -303,7 +270,6 @@ bootstrap 完成后，目标仓库至少具备：
 执行约束：
 - 基于主开发分支创建独立 worktree
 - 严格按 Spec Kit tasks 和上游 .ai-delivery 产物实现
-- 如果 ai-delivery-admin 可用，使用 $ai-delivery-admin-support 记录开始、阻塞、恢复和完成日志
 - 不允许跳过测试、review 和完成前验证
 ```
 
@@ -321,7 +287,7 @@ API 文档直接传递给实现阶段作为参考，不做独立的 API contract
 
 ```bash
 cd <reference-repo-root>
-zsh scripts/bootstrap-ai-delivery-project.sh --target-repo <target-repo-root> --project-id <project-id> --main-branch main-dev
+zsh scripts/bootstrap-ai-delivery-project.sh <target-repo-root>
 cd <target-repo-root>
 specify init --here --ai codex --ai-skills --script sh
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh

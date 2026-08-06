@@ -105,13 +105,12 @@ func (a *App) runInit(args []string) int {
 		}
 
 		runner = initflow.Service{
-			Prompt:           prompt.Terminal{Reader: a.stdin, Writer: a.stdout},
-			Runner:           command.OSRunner{},
-			Bootstrapper:     bootstrap.Engine{},
-			Discover:         repo.Discover,
-			DetectMainBranch: repo.DetectDefaultBranch,
-			HomeDir:          homeDir,
-			GOOS:             a.goos,
+			Prompt:       prompt.Terminal{Reader: a.stdin, Writer: a.stdout},
+			Runner:       command.OSRunner{},
+			Bootstrapper: bootstrap.Engine{},
+			Discover:     repo.Discover,
+			HomeDir:      homeDir,
+			GOOS:         a.goos,
 		}
 	}
 

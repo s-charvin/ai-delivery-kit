@@ -396,7 +396,7 @@ func TestRunUsesPsScriptModeOnWindows(t *testing.T) {
 	}
 }
 
-func TestRunDerivesProjectAndMainBranchWhenInputDoesNotProvideThem(t *testing.T) {
+func TestRunDerivesProjectIDWhenInputDoesNotProvideIt(t *testing.T) {
 	bootstrapper := &fakeBootstrapper{}
 	runner := &fakeRunner{paths: map[string]string{
 		"git": "git",
@@ -407,9 +407,6 @@ func TestRunDerivesProjectAndMainBranchWhenInputDoesNotProvideThem(t *testing.T)
 		Bootstrapper: bootstrapper,
 		Discover: func(string) (repo.Info, error) {
 			return repo.Info{Root: "/tmp/demo-repo", HasSpecify: true}, nil
-		},
-		DetectMainBranch: func(context.Context, string) (string, error) {
-			return "release/main", nil
 		},
 		HomeDir: "/tmp/home",
 		GOOS:    "linux",
@@ -431,9 +428,6 @@ func TestRunDerivesProjectAndMainBranchWhenInputDoesNotProvideThem(t *testing.T)
 
 	if bootstrapper.config.ProjectID != "demo-repo" {
 		t.Fatalf("expected derived project id, got %#v", bootstrapper.config)
-	}
-	if bootstrapper.config.MainBranch != "release/main" {
-		t.Fatalf("expected derived branch, got %#v", bootstrapper.config)
 	}
 }
 

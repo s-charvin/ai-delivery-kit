@@ -41,7 +41,7 @@ Or do both in one step:
 curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash -s -- --upgrade-init /path/to/repo
 ```
 
-`init --upgrade` refreshes the managed `ai-delivery` assets in the target repository while preserving requirement and runtime data.
+`init --upgrade` refreshes the managed `ai-delivery` assets in the target repository while preserving requirement data.
 
 ## What `ai-delivery init` Does
 
@@ -49,13 +49,12 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 - discovers the git root
 - derives `project_id` from the repository name
-- detects the main branch and writes `.ai-delivery/runtime/main-branch.json`
 - checks for `specify-cli` and `superpowers`
 - prompts before installing missing prerequisites through their official paths
 - runs `specify init` only when `specify-cli` is already available or was installed during onboarding
 - seeds the governed `.ai-delivery` contract, project-local skills, validators, and support files
 
-The normal public path no longer asks the user to provide `project_id` or `main-branch`.
+The normal public path no longer asks the user to provide `project_id`.
 
 ## Default Requirement Entry
 

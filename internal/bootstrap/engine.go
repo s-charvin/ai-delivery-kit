@@ -17,7 +17,6 @@ const updatedBy = "bootstrap-ai-delivery-project"
 type Config struct {
 	RepoRoot           string
 	ProjectID          string
-	MainBranch         string
 	AllowManagedUpdate bool
 	// Report 若非 nil，Run 会填入本次 IDE gate amend/备份结果。
 	Report *AmendReport
@@ -133,11 +132,6 @@ func (e Engine) Run(cfg Config) error {
 			"require_isolated_worktree":           true,
 			"allow_precreate_before_dependencies": false,
 		},
-		"logging_policy": map[string]any{
-			"require_logs_for_main_session": true,
-			"require_logs_for_subagent":     true,
-			"require_logs_for_state_change": true,
-		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,
 	}); err != nil {
@@ -155,33 +149,6 @@ func (e Engine) Run(cfg Config) error {
 		return err
 	}
 
-	if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, ".ai-delivery/runtime/main-branch.json"), map[string]any{
-		"version":     1,
-		"branch_name": cfg.MainBranch,
-		"status":      "configured",
-		"updated_at":  timestamp,
-		"updated_by":  updatedBy,
-	}); err != nil {
-		return err
-	}
-
-	for _, runtimeFile := range []struct {
-		path string
-		body map[string]any
-	}{
-		{path: ".ai-delivery/runtime/worktrees.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/merge-queue.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/dependency-graph.json", body: map[string]any{"version": 1, "requirements": []any{}, "edges": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/blockers.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/task-board.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/slice-closures.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-		{path: ".ai-delivery/runtime/agent-sessions.json", body: map[string]any{"version": 1, "items": []any{}, "updated_at": timestamp, "updated_by": updatedBy}},
-	} {
-		if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, filepath.FromSlash(runtimeFile.path)), runtimeFile.body); err != nil {
-			return err
-		}
-	}
-
 	return nil
 }
 
@@ -192,10 +159,7 @@ func managedDirectories() []string {
 		".ai-delivery/figma-cache",
 		".ai-delivery/scripts",
 		".ai-delivery/tests/ai-delivery-skills",
-		".ai-delivery/logs/sessions",
-		".ai-delivery/logs/subagents",
 		".ai-delivery/meta",
-		".ai-delivery/runtime",
 	}
 }
 

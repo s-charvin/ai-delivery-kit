@@ -43,7 +43,6 @@ type Service struct {
 	Runner            command.Runner
 	Bootstrapper      Bootstrapper
 	Discover          func(string) (repo.Info, error)
-	DetectMainBranch  func(context.Context, string) (string, error)
 	HomeDir           string
 	GOOS              string
 	StatPath          func(string) error
@@ -69,12 +68,6 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	}
 
 	projectID := slugify(filepath.Base(info.Root))
-	mainBranch := "main"
-	if s.DetectMainBranch != nil {
-		if branch, err := s.DetectMainBranch(ctx, info.Root); err == nil && strings.TrimSpace(branch) != "" {
-			mainBranch = branch
-		}
-	}
 
 	hasSpecify := s.hasCommand("specify")
 	hasUV := s.hasCommand("uv")
@@ -143,7 +136,6 @@ func (s Service) Run(ctx context.Context, input Input) (Result, error) {
 	if err := bootstrapper.Run(bootstrap.Config{
 		RepoRoot:           info.Root,
 		ProjectID:          projectID,
-		MainBranch:         mainBranch,
 		AllowManagedUpdate: input.Upgrade,
 		Report:             &amendReport,
 	}); err != nil {

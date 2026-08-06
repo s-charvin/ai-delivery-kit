@@ -76,9 +76,8 @@ printf 'n\n' | PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_RE
 [[ -d "$TARGET_REPO/.agents/skills/ui-truth-mapping" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/meta/project-binding.json" ]]
-[[ -f "$TARGET_REPO/.ai-delivery/runtime/main-branch.json" ]]
-[[ -f "$TARGET_REPO/.ai-delivery/runtime/slice-closures.json" ]]
-[[ -f "$TARGET_REPO/.ai-delivery/runtime/agent-sessions.json" ]]
+[[ ! -e "$TARGET_REPO/.ai-delivery/logs" ]]
+[[ ! -e "$TARGET_REPO/.ai-delivery/runtime" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh" ]]
@@ -119,7 +118,6 @@ grep -Fq 'CLAUDE_PROJECT_DIR' "$TARGET_REPO/.claude/settings.json"
 [[ ! -e "$TARGET_REPO/.agents/AGENTS.md" ]]
 [[ -d "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
-grep -Fq '"branch_name": "main-dev"' "$TARGET_REPO/.ai-delivery/runtime/main-branch.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 

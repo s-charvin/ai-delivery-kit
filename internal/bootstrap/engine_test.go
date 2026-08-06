@@ -15,9 +15,8 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 
 	engine := Engine{}
 	if err := engine.Run(Config{
-		RepoRoot:   target,
-		ProjectID:  "demo-project",
-		MainBranch: "main",
+		RepoRoot:  target,
+		ProjectID: "demo-project",
 	}); err != nil {
 		t.Fatalf("run failed: %v", err)
 	}
@@ -33,14 +32,18 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-bad.html"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
 		filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"),
-		filepath.Join(target, ".ai-delivery/runtime/main-branch.json"),
-		filepath.Join(target, ".ai-delivery/runtime/slice-closures.json"),
-		filepath.Join(target, ".ai-delivery/logs/events.ndjson"),
 	}
 
 	for _, path := range required {
 		if _, err := os.Stat(path); err != nil {
 			t.Fatalf("expected %s: %v", path, err)
+		}
+	}
+
+	// admin 后台弃用后，日志/运行时看板脚手架不再播种。
+	for _, rel := range []string{".ai-delivery/logs", ".ai-delivery/runtime"} {
+		if _, err := os.Stat(filepath.Join(target, rel)); !os.IsNotExist(err) {
+			t.Fatalf("expected %s to be absent, got %v", rel, err)
 		}
 	}
 
@@ -54,14 +57,6 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	}
 	if !strings.Contains(string(binding), `"project_id": "demo-project"`) {
 		t.Fatalf("expected project id in binding json, got %s", string(binding))
-	}
-
-	branch, err := os.ReadFile(filepath.Join(target, ".ai-delivery/runtime/main-branch.json"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(branch), `"branch_name": "main"`) {
-		t.Fatalf("expected main branch in runtime json, got %s", string(branch))
 	}
 
 	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
@@ -80,9 +75,8 @@ func TestRunFailsOnManagedConflictWithoutMutatingRepo(t *testing.T) {
 
 	engine := Engine{}
 	err := engine.Run(Config{
-		RepoRoot:   target,
-		ProjectID:  "demo-project",
-		MainBranch: "main",
+		RepoRoot:  target,
+		ProjectID: "demo-project",
 	})
 	if err == nil {
 		t.Fatal("expected conflict error, got nil")
@@ -108,9 +102,8 @@ func TestRunFailsOnSeededManagedFileConflictWithoutMutatingRepo(t *testing.T) {
 
 	engine := Engine{}
 	err := engine.Run(Config{
-		RepoRoot:   target,
-		ProjectID:  "demo-project",
-		MainBranch: "main",
+		RepoRoot:  target,
+		ProjectID: "demo-project",
 	})
 	if err == nil {
 		t.Fatal("expected conflict error, got nil")
@@ -121,7 +114,7 @@ func TestRunFailsOnSeededManagedFileConflictWithoutMutatingRepo(t *testing.T) {
 	}
 }
 
-func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRuntimeData(t *testing.T) {
+func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRequirementData(t *testing.T) {
 	target := t.TempDir()
 	if err := os.Mkdir(filepath.Join(target, ".git"), 0o755); err != nil {
 		t.Fatal(err)
@@ -135,11 +128,12 @@ func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRuntimeData(t *test
 		t.Fatal(err)
 	}
 
-	runtimePath := filepath.Join(target, ".ai-delivery/runtime/task-board.json")
-	if err := os.MkdirAll(filepath.Dir(runtimePath), 0o755); err != nil {
+	// 需求产物属于交付真值，升级绝不能覆盖。
+	requirementPath := filepath.Join(target, ".ai-delivery/requirements/req-demo/status.json")
+	if err := os.MkdirAll(filepath.Dir(requirementPath), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(runtimePath, []byte("{\"version\":99}\n"), 0o644); err != nil {
+	if err := os.WriteFile(requirementPath, []byte("{\"status\":\"in_dev\"}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -147,7 +141,6 @@ func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRuntimeData(t *test
 	if err := engine.Run(Config{
 		RepoRoot:           target,
 		ProjectID:          "demo-project",
-		MainBranch:         "main",
 		AllowManagedUpdate: true,
 	}); err != nil {
 		t.Fatalf("upgrade run failed: %v", err)
@@ -161,11 +154,11 @@ func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRuntimeData(t *test
 		t.Fatalf("expected upgrade mode to refresh managed skills, got %s", string(skillBody))
 	}
 
-	runtimeBody, err := os.ReadFile(runtimePath)
+	requirementBody, err := os.ReadFile(requirementPath)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.TrimSpace(string(runtimeBody)) != "{\"version\":99}" {
-		t.Fatalf("expected runtime data to be preserved, got %s", string(runtimeBody))
+	if strings.TrimSpace(string(requirementBody)) != "{\"status\":\"in_dev\"}" {
+		t.Fatalf("expected requirement data to be preserved, got %s", string(requirementBody))
 	}
 }
