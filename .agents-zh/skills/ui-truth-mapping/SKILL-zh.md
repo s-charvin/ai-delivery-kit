@@ -193,7 +193,7 @@ templates/
 
 ### 5. 填充或修补单元 HTML
 
-- `#ui-contract-meta` — 填充 `schema_version: 2`、`contract_id`、`source`（`requirement`/`design_file`/`root_node`/`cache`）、`unit`（`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`）、`states`（每帧一条，恰好一条 `default: true`）、`revision`、`delivery.status`。`unit.type` 为 `page` | `modal` | `shared-component` | `component`。`unit.source_node` 为 §1 的范围 root。**State id 必须是 kebab-case 小写 ASCII**（`^[a-z][a-z0-9-]*$`，如 `loading`、`empty-state`）— 预览脚本用 state id 拼接 CSS 选择器，遇到空格、引号或方括号会失效。**默认态** = 评审首次打开页面时看到的状态（通常是 `loaded`/`success`，而非瞬态 `loading`/`error`），这样 hydrate 后的预览匹配屏幕的主视觉，而非一闪而过的帧。
+- `#ui-contract-meta` — 填充 `schema_version: 2`、`contract_id`、`source`（`requirement`/`design_file`/`root_node`）、`unit`（`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`）、`states`（每帧一条，恰好一条 `default: true`）、`revision`、`delivery.status`。`unit.type` 为 `page` | `modal` | `shared-component` | `component`。`unit.source_node` 为 §1 的范围 root。**State id 必须是 kebab-case 小写 ASCII**（`^[a-z][a-z0-9-]*$`，如 `loading`、`empty-state`）— 预览脚本用 state id 拼接 CSS 选择器，遇到空格、引号或方括号会失效。**默认态** = 评审首次打开页面时看到的状态（通常是 `loaded`/`success`，而非瞬态 `loading`/`error`），这样 hydrate 后的预览匹配屏幕的主视觉，而非一闪而过的帧。
 - `<style>` — 从 `get_code` **机械转移**有证据的 CSS（含几何：宽高、定位、inset、gap、padding、margin、display、flex/grid、z-index、排版、颜色）。TemPad 返回规范 token 绑定时优先 `var(--token)`；否则保留字面值。禁止用重写的语义化样式表替代 get_code 布局。
 - `<main data-ui-contract>` —
   - 保留 `[data-ui-state-switcher]` 与空的 `[data-ui-state-host]`。

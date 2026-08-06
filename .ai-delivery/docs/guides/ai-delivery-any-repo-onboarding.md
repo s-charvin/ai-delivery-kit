@@ -147,7 +147,6 @@ bootstrap 完成后，目标仓库至少具备：
 │   │   └── guides/
 │   │       └── ai-delivery-any-repo-onboarding.md
 │   ├── requirements/
-│   ├── figma-cache/
 │   ├── meta/
 │   │   ├── project-binding.json
 │   │   ├── workflow-policy.json

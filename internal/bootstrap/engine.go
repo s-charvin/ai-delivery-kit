@@ -156,7 +156,6 @@ func managedDirectories() []string {
 	return []string{
 		".agents/skills",
 		".ai-delivery/requirements",
-		".ai-delivery/figma-cache",
 		".ai-delivery/scripts",
 		".ai-delivery/tests/ai-delivery-skills",
 		".ai-delivery/meta",

@@ -64,7 +64,6 @@ func SeededPlaceholderFiles() []string {
 	return []string{
 		".ai-delivery/.gitkeep",
 		".ai-delivery/requirements/.gitkeep",
-		".ai-delivery/figma-cache/.gitkeep",
 		".ai-delivery/meta/.gitkeep",
 	}
 }
