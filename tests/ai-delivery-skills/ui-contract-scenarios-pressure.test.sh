@@ -8,11 +8,11 @@ set -euo pipefail
 #
 # Scenarios covered:
 #   A. Whole-page new route (page unit, 2 states)          — large feature
-#   B. Red-dot badge on a shared tab bar (shared-component) — tiny change
+#   B. Red-dot badge as scoped component (component)        — tiny change
 #   C. Disconnected artifact split — reject-tip component   — local subtree
 #   D. Disconnected artifact split — appeal-cta component   — local subtree
 #   E. Multi-state component (loading/empty/loaded)         — state switching
-#   F. Modal bottom sheet (modal unit)                      — overlay lifecycle
+#   F. Multi-state modal bottom sheet (3 states)            — overlay + switcher
 #   G. INVALID — invisible default state (empty template)   — hydration gap
 #   H. INVALID — whole-page dump with truth-annotated context — scope creep
 
@@ -140,62 +140,54 @@ python3 "$VALIDATOR" "$TMP_DIR/settings-page.html" >"$TMP_DIR/settings-page.out"
 grep -q '^OK:' "$TMP_DIR/settings-page.out" || fail "Scenario A must print OK"
 
 # ---------------------------------------------------------------------------
-# Scenario B — Red-dot badge on a shared tab bar (shared-component, 1 state)
-# A tiny change: only the unread badge is the new acceptance truth. The tab
-# bar shell is the physical container, so the badge patches in here — not in
-# whichever page route "owns" the notification feature.
+# Scenario B — Red-dot badge as a scoped component (component, 1 state)
+# Tiny change: only the unread badge is In Scope. No matching tab-bar contract
+# is assumed here, so create a `component` rooted at the badge subtree — not a
+# brand-new shared-component dump of the whole tab bar, and not a messages-page.
 # ---------------------------------------------------------------------------
-cat > "$TMP_DIR/tab-bar.html" <<HTML
+cat > "$TMP_DIR/unread-badge.html" <<HTML
 <!doctype html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>UI Contract: tab-bar</title>
+<title>UI Contract: unread-badge</title>
 <script type="application/json" id="ui-contract-meta">
 {
   "schema_version": 2,
-  "contract_id": "tab-bar",
-  "source": { "requirement": "req-unread-badge.md", "design_file": "figma-key-b", "root_node": "20:1" },
+  "contract_id": "unread-badge",
+  "source": { "requirement": "req-unread-badge.md", "design_file": "figma-key-b", "root_node": "20:5" },
   "unit": {
-    "id": "tab-bar", "type": "shared-component", "title": "Tab Bar",
-    "route_or_trigger": "persistent shell", "requirements": ["subreq-badge-1"],
-    "source_node": "20:1", "dependencies": []
+    "id": "unread-badge", "type": "component", "title": "Unread Badge",
+    "route_or_trigger": "on notifications tab icon", "requirements": ["subreq-badge-1"],
+    "source_node": "20:5", "dependencies": []
   },
   "states": [
-    { "id": "default", "source_node": "20:1", "default": true }
+    { "id": "default", "source_node": "20:5", "default": true }
   ],
-  "revision": 2,
+  "revision": 1,
   "delivery": { "status": "frozen", "implemented": null }
 }
 </script>
 <style>
   [data-ui-contract] { min-height: 100vh; }
   [data-ui-state-switcher] { display: flex; gap: 8px; padding: 8px 12px; }
-  [data-ui-id="tab-bar-root"] { display: flex; justify-content: space-around; padding: 8px 0; }
-  [data-ui-id="tab-notifications"] { position: relative; }
-  [data-ui-id="unread-badge"] { position: absolute; top: -4px; right: -4px; min-width: 16px; height: 16px; border-radius: 8px; background: #FF3B30; color: #FFF; font-size: 10px; line-height: 16px; text-align: center; }
+  [data-ui-id="unread-badge"] { min-width: 16px; height: 16px; border-radius: 8px; background: #FF3B30; color: #FFF; font-size: 10px; line-height: 16px; text-align: center; }
 </style>
 </head>
 <body>
-<main data-ui-contract data-ui-unit-id="tab-bar" data-ui-unit-type="shared-component" data-ui-state-default="default">
+<main data-ui-contract data-ui-unit-id="unread-badge" data-ui-unit-type="component" data-ui-state-default="default">
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="default">
-    <nav data-ui-id="tab-bar-root" data-ui-kind="navigation" data-figma-node="20:2" data-evidence="code">
-      <button data-ui-id="tab-home" data-ui-kind="tab" data-figma-node="20:3" data-evidence="code">Home</button>
-      <button data-ui-id="tab-notifications" data-ui-kind="tab" data-figma-node="20:4" data-evidence="code">
-        Notifications
-        <span data-ui-id="unread-badge" data-ui-kind="badge" data-figma-node="20:5" data-evidence="code">3</span>
-      </button>
-    </nav>
+    <span data-ui-id="unread-badge" data-ui-kind="badge" data-figma-node="20:5" data-evidence="code">3</span>
   </template>
   <details data-ui-review-panel>
     <summary>Contract evidence</summary>
     <dl>
       <dt data-ui-scope="in_scope">In scope</dt>
-      <dd>20:5 unread badge (the only new artifact). Existing tabs 20:2-20:4 retained as physical container context.</dd>
+      <dd>20:5 unread badge only.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
-      <dd>20:2-20:4 tab bar shell retained to position the badge; not re-accepted.</dd>
+      <dd>Messages page chrome and the rest of the tab bar — not frozen here.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -206,9 +198,9 @@ $PREVIEW_SCRIPT
 </html>
 HTML
 
-python3 "$VALIDATOR" "$TMP_DIR/tab-bar.html" >"$TMP_DIR/tab-bar.out" 2>&1 \
-  || { cat "$TMP_DIR/tab-bar.out" >&2; fail "Scenario B (red-dot badge) should validate"; }
-grep -q '^OK:' "$TMP_DIR/tab-bar.out" || fail "Scenario B must print OK"
+python3 "$VALIDATOR" "$TMP_DIR/unread-badge.html" >"$TMP_DIR/unread-badge.out" 2>&1 \
+  || { cat "$TMP_DIR/unread-badge.out" >&2; fail "Scenario B (red-dot badge component) should validate"; }
+grep -q '^OK:' "$TMP_DIR/unread-badge.out" || fail "Scenario B must print OK"
 
 # ---------------------------------------------------------------------------
 # Scenario C — Disconnected artifact: reject-tip component (component unit)
@@ -417,9 +409,10 @@ python3 "$VALIDATOR" "$TMP_DIR/inbox-list.html" >"$TMP_DIR/inbox-list.out" 2>&1 
 grep -q '^OK:' "$TMP_DIR/inbox-list.out" || fail "Scenario E must print OK"
 
 # ---------------------------------------------------------------------------
-# Scenario F — Modal bottom sheet (modal unit, 1 state)
-# The sheet is its own unit. Its trigger button is NOT in this contract — it
-# would be patched into the physical container where the button lives.
+# Scenario F — Multi-state modal bottom sheet (modal unit, 3 states)
+# The sheet is its own unit with default/submitting/success. Trigger button is
+# NOT in this contract — it would be patched into the message-row container.
+# Preview infra + non-empty templates for EVERY state are mandatory.
 # ---------------------------------------------------------------------------
 cat > "$TMP_DIR/report-sheet.html" <<HTML
 <!doctype html>
@@ -439,7 +432,9 @@ cat > "$TMP_DIR/report-sheet.html" <<HTML
     "source_node": "50:1", "dependencies": []
   },
   "states": [
-    { "id": "default", "source_node": "50:1", "default": true }
+    { "id": "default", "source_node": "50:1", "default": true },
+    { "id": "submitting", "source_node": "50:20", "default": false },
+    { "id": "success", "source_node": "50:30", "default": false }
   ],
   "revision": 1,
   "delivery": { "status": "frozen", "implemented": null }
@@ -462,13 +457,23 @@ cat > "$TMP_DIR/report-sheet.html" <<HTML
       <button data-ui-id="report-option-cancel" data-ui-kind="button" data-figma-node="50:4" data-evidence="code">Cancel</button>
     </div>
   </template>
+  <template data-ui-state="submitting">
+    <div data-ui-id="report-sheet-submitting" data-ui-kind="sheet" data-figma-node="50:21" data-evidence="code">
+      <p data-ui-id="report-submitting-text" data-ui-kind="text" data-figma-node="50:22" data-evidence="code">Submitting…</p>
+    </div>
+  </template>
+  <template data-ui-state="success">
+    <div data-ui-id="report-sheet-success" data-ui-kind="sheet" data-figma-node="50:31" data-evidence="code">
+      <p data-ui-id="report-success-text" data-ui-kind="text" data-figma-node="50:32" data-evidence="code">Report submitted</p>
+    </div>
+  </template>
   <details data-ui-review-panel>
     <summary>Contract evidence</summary>
     <dl>
       <dt data-ui-scope="in_scope">In scope</dt>
-      <dd>50:2 sheet panel; 50:3 spam option; 50:4 cancel option. Trigger button lives in the message-row contract, not here.</dd>
+      <dd>50:2-50:4 default options; 50:21-50:22 submitting; 50:31-50:32 success. Trigger button lives in the message-row contract, not here.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
-      <dd>none</dd>
+      <dd>Messages page chrome — not frozen here.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -480,7 +485,7 @@ $PREVIEW_SCRIPT
 HTML
 
 python3 "$VALIDATOR" "$TMP_DIR/report-sheet.html" >"$TMP_DIR/report-sheet.out" 2>&1 \
-  || { cat "$TMP_DIR/report-sheet.out" >&2; fail "Scenario F (modal sheet) should validate"; }
+  || { cat "$TMP_DIR/report-sheet.out" >&2; fail "Scenario F (multi-state modal sheet) should validate"; }
 grep -q '^OK:' "$TMP_DIR/report-sheet.out" || fail "Scenario F must print OK"
 
 # ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Pressure scenario: agent under delivery time pressure must not be able to
@@ -21,7 +21,7 @@ else
 fi
 
 fail() {
-  print -u2 -- "[ui-contract-gate-pressure] $1"
+  echo "[ui-contract-gate-pressure] $1" >&2
   exit 1
 }
 
@@ -91,4 +91,4 @@ for needle in \
   [[ "$OUTPUT" == *"$needle"* ]] || fail "Expected pressure fixture rejection to mention: $needle"
 done
 
-print -- 'PASS: pressure fixture (delivered status + unbacked inferred evidence) is mechanically rejected.'
+echo 'PASS: pressure fixture (delivered status + unbacked inferred evidence) is mechanically rejected.'

@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: Use when a design source (Figma) needs to be extracted into a single canonical HTML UI contract (schema v2) for 1:1 implementation. Auto-detects and splits multiple units (pages, modals, shared components) from a single design source.
+description: Use when a Figma design must become frozen HTML UI contract(s) (schema v2) before 1:1 implementation — especially when evidence is a whole page but the requirement only hits a subtree (badge, tip, sheet), when multiple states need browser-switchable preview, or when prior contracts dumped full screens / looked unlike Figma / failed hydrated preview.
 ---
 
 # UI Truth Mapping
@@ -42,9 +42,25 @@ templates/
 └── ui-contract-template.html   # HTML contract v2 template — meta, tokens, DOM, preview, review panel
 ```
 
+## Quick Reference — Scenario → Unit split
+
+Do not map the entire Figma evidence by default. Match the **requirement size** first:
+
+| Real scenario | Unit(s) to freeze | `source_node` / root | States | Do NOT |
+|---|---|---|---|---|
+| New full route (page itself In Scope) | `page` (+ `shared-component` only if shell is also newly accepted) | Page content frame (exclude already-owned shell) | Page-level variants in this file | Dump persistent tab/nav shell that already has its own contract |
+| Tiny badge / red-dot / one control on existing shell | **Patch** existing `shared-component` / page if its `source_node` contains the artifact; else **create** `component` rooted at the badge/control subtree | Minimal ancestor of the badge/control only | Usually none (element patch); unit states only if the whole unit visually flips | Create a new `messages-page` / whole-shell contract just to carry the badge |
+| Disconnected In Scope artifacts (tip in list + CTA in composer) | One `component` / `modal` **per cluster** | Each cluster's local minimal ancestor | Per-unit as needed | One `page` whose root is the full screen "to cover both" |
+| Bottom sheet / dialog / popover | `modal` alone; trigger button patched into the button's physical container contract | Sheet/dialog frame | All sheet frames as `<template data-ui-state>` in the modal file | Nest sheet as a page state; omit preview script; put trigger inside the modal contract |
+| Multi-state list/form/module | One `component` (or `page` if the route itself is the scope) | Scoped module root | Every visual frame → one template; hydrate + switcher mandatory | Separate contracts per state; empty default template |
+| Element property only (`disabled` / `selected`) | Patch that node in its existing unit | Unchanged | Do **not** add a unit-level state template | Spawn `disabled` as a full-unit `<template data-ui-state>` |
+
 ## Hard Boundary
 
 - **Requirement-scoped extract:** read the requirement-slice **In Scope** first. List the visual artifacts that must appear (e.g. reject tip, appeal CTA, report sheet). The contract root is the **smallest ancestor subtree covering the in-scope artifacts that belong to one unit** — not the full-screen frame by default. **When in-scope artifacts are disconnected in the Figma tree** (their smallest common ancestor is the full page — e.g. a tip in the message list *and* a CTA in the composer), **split them into multiple `component` / `modal` units, one per artifact cluster**, each with its own local minimal-ancestor root. Never collapse disconnected artifacts into a single whole-page contract just to satisfy "one root covers everything" — that is the whole-page-dump anti-pattern. Full-page chrome that is not in scope is context only (`data-ui-scope="context"` / `ignore`), never acceptance truth.
+- **Unit Split Plan before evidence:** fill the §1b plan (artifact → unit → scoped `source_node` → `get_code` target) before any TemPad call or template copy. Skipping the plan and authoring from a whole-page selection is a process failure.
+- **Scoped `get_code` only:** call `get_code` on each planned unit's `source_node` (and its state frames). Do **not** `get_code` the full-screen page and prune, and do not paste a whole-page dump then mark leftovers `context`.
+- **Tiny-change create vs patch:** if a matching contract already owns the physical container → **incremental patch** (add/adjust only the in-scope nodes; update `unit.requirements` + review-panel `in_scope`; do not expand `in_scope` to the whole shell). If no matching contract exists → **create `component`** rooted at the artifact's minimal ancestor — do **not** invent a brand-new full `shared-component` / `page` dump of the surrounding chrome solely to host a badge.
 - Do not invent visual truth — no adding units, states, components, or fields beyond what Figma evidence supports.
 - Do not invent layout — DOM structure, dimensions, positioning, spacing, and stacking come from TemPad `get_code` by **mechanical transfer**. Only add `data-ui-*` / `data-figma-node` / `data-evidence` annotations. Hand-authored semantic flex/grid rewrites that drop get_code geometry are process failures.
 - Do not treat screenshots or node names alone as sufficient evidence. Structured `get_code`/`get_structure` payloads are required.
@@ -67,7 +83,7 @@ templates/
 Before deciding to create or patch, run an implementation lookup: check whether a matching `ui-contract.html` already exists for this unit.
 
 - Prefer an explicit path the user or the requirement-slice already names.
-- **Route by the in-scope artifact's physical Figma container, not by the requirement's owning route.** A tiny change (red dot, badge, single control) often physically lives inside another unit's `source_node` subtree — e.g. an unread badge on a shared tab bar, a disabled state on a button inside an existing page. In that case patch the contract whose `unit.source_node` contains the artifact, even if the requirement nominally belongs to a different route. Routing by requirement-route here would fork the artifact into the wrong contract and fragment the shared component's truth.
+- **Route by the in-scope artifact's physical Figma container, not by the requirement's owning route.** A tiny change (red dot, badge, single control) often physically lives inside another unit's `source_node` subtree — e.g. an unread badge on a shared tab bar, a disabled state on a button inside an existing page. In that case **patch** the contract whose `unit.source_node` contains the artifact, even if the requirement nominally belongs to a different route. Routing by requirement-route here would fork the artifact into the wrong contract and fragment the shared component's truth. If no such contract exists yet, create a `component` for the artifact subtree only (see Quick Reference) — never a whole-page stand-in.
 - Otherwise search by requirement id (`unit.requirements` contains this sub-requirement), component/route semantics (`unit.route_or_trigger`, `unit.title`), or a known shared-component dependency.
 - The Figma node id is a **patch anchor once a file is located** — not a discovery key across the whole repository. Do not search by node id alone across every contract file.
 - Exactly one match → proceed to Decide. Zero matches → create new. More than one plausible match → STOP, report the candidates, and ask the user to pick one.
@@ -93,11 +109,25 @@ Read the requirement-slice **In Scope** / **Out of Scope** (or equivalent) and b
 
 Then run the Locate step above. Record the decision (create / incremental patch / rebuild) before querying TemPad.
 
-Contract `unit.source_node` / `source.root_node` must be the **minimal ancestor covering the must-freeze artifacts that belong to this one unit** — never default to the full-screen page frame when the slice only hits a subtree. **If the must-freeze artifacts are disconnected** (smallest common ancestor is the whole page), do not enlarge one unit's root to swallow them all: split into multiple `component` / `modal` units and give each its own local minimal-ancestor root. The "smallest ancestor" rule is per-unit, never per-requirement-global.
+Contract `unit.source_node` / `source.root_node` must be the **minimal ancestor covering the must-freeze artifacts that belong to this one unit** — never default to the full-screen page frame when the slice only hits a subtree. **If the must-freeze artifacts are disconnected** (smallest common ancestor is the whole page), do not enlarge one unit's root to swallow them all: split into multiple `component` / `modal` units and give each its own local minimal-ancestor root. The "smallest ancestor" rule is per-unit, never per-requirement-global. Artifacts that share one local subtree (e.g. red-bang + tip under the same message-row cluster) stay **one** unit — split only when clusters are disconnected.
 
-### 2. Enumerate frames and classify units
+### 1b. Unit Split Plan (REQUIRED before any `get_code` or HTML)
 
-**Enumerate ALL frames first:** query the design source at the parent/selection level (not a specific node) to list every top-level sibling frame — id, name, type, position. Skipping this step causes state variants to be missed.
+Publish this plan in the session (chat is enough — do **not** create a companion mapping file) and do not copy the template until every must-freeze artifact has a row:
+
+```
+| artifact (node id + label) | unit id | type (page\|component\|modal\|shared-component) | action (create\|patch\|rebuild) | source_node (scoped root) | states (or "element-patch") | get_code target (= source_node) |
+```
+
+Rules for filling the plan:
+- Match the Quick Reference row for the requirement size first.
+- `get_code target` **must equal** that unit's `source_node`. Never list the full-screen page as `get_code target` "for context" when the unit is a subtree.
+- Connected artifacts under one local ancestor → one row / one unit. Disconnected artifacts → multiple rows.
+- Tiny badge with no container contract → `type=component`, `source_node`=badge minimal ancestor — not a new shell `page`/`shared-component`.
+
+### 2. Enumerate frames to classify — not to freeze
+
+**Enumerate frames to discover states and overlays**, not to decide contract scope. Query the parent/selection only long enough to list sibling frames (id, name, type, position) that might be states/modals of the units already planned in §1b. Skipping discovery still causes missed states — but **enumeration never expands freeze scope beyond the Unit Split Plan**. Frames that are not states of a planned unit are `context` or `ignore`, not new acceptance units.
 
 Classify each frame:
 
@@ -129,11 +159,12 @@ Classify each frame:
 
 ### 3. Gather minimal TemPad evidence *(runs inside per-unit subagent when dispatched)*
 
-For each frame in the unit, one at a time:
+For each **planned unit** (and each of its state frames), one at a time:
 
-1. Call `get_code(frame_source_node)` first — it returns markup, **layout styles**, tokens, and asset references. This is the primary evidence source for structure, positioning, spacing, and content. Prefer the **scoped root** from §1, not the entire page, when In Scope is local.
-2. Call `get_structure(frame_source_node)` only when hierarchy, geometry, or overlap remains ambiguous after `get_code`. Do not call it by default — it is a disambiguation tool, not a first-pass query.
-3. Record every `data-figma-node` you intend to cite before writing DOM — no node id may be invented.
+1. Call `get_code` on that unit's **scoped** `source_node` / state `source_node` from the Unit Split Plan — never on the full-screen page "to prune later". Full-page `get_code` then carve-down is a process failure even if you mark leftovers `context`.
+2. Transfer only the markup returned for that scoped node into the unit's `<template>`. Do not paste a whole-page DOM dump and delete/hide siblings.
+3. Call `get_structure` on the same scoped node only when hierarchy, geometry, or overlap remains ambiguous after `get_code`. Do not call it by default.
+4. Record every `data-figma-node` you intend to cite before writing DOM — no node id may be invented.
 
 ### 4. Copy the template verbatim (create) or open the matched file (patch)
 
@@ -170,17 +201,20 @@ Process one frame at a time — never batch every frame into a single query or a
 Open the contract HTML in a browser (or the IDE's rendered preview). The preview script must hydrate the default state into `[data-ui-state-host]` without opening the review panel:
 
 - Confirm the **hydrated default** layout matches the Figma scoped root (geometry + content), not an empty host or a hand-rewritten approximation.
+- If the host looks blank: check (1) preview script present, (2) default template non-empty, (3) `--color-text` / `--color-surface` are real CSS colors (never the invalid token `#PLACEHOLDER`), and (4) `html, body` keep the template's light preview base — IDE dark canvases otherwise show black text on a transparent page. Overwrite tokens with evidence colors, not placeholder strings.
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame.
 - Expand `[data-ui-review-panel]` and confirm scope inventory, every cited `data-figma-node`, and inference notes are legible and accurate.
 - Never assume "validator OK ⇒ looks like Figma."
 
 ### 7. Run the validator
 
+From the delivery project / kit root (the directory that contains `scripts/validate-ui-contract-html.py`):
+
 ```bash
 python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
 
-Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `acceptance_frozen` on a failing contract. Validator `OK` is necessary but not sufficient: browser-hydrated default preview and requirement-scope alignment from §1/§6 are still required before freezing.
+Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `acceptance_frozen` on a failing contract. Validator `OK` is necessary but not sufficient: browser-hydrated default preview and requirement-scope alignment from §1/§1b/§6 are still required before freezing.
 
 **What the validator checks automatically:** schema/DOM structure, single unit root, `data-ui-id` uniqueness + `data-figma-node`/`data-ui-kind` presence (placeholder figma nodes rejected), preview infrastructure present, **every** state template non-empty with visible text/media, `in_scope`/`out_of_scope` inventory present, **in_scope node ids cross-checked against `data-figma-node` values frozen in the DOM**, context chrome not truth-annotated, inference notes back every `data-evidence="inferred"`, delivery fields.
 
@@ -203,9 +237,12 @@ Re-run the validator — it enforces that `delivery.implemented` is complete whe
 
 - Writing a companion YAML, JSON, or markdown file to hold UI truth alongside `ui-contract.html`.
 - **Whole-page dump** of a Figma screen when the slice In Scope only hits a local subtree (reject tip, sheet, badge…).
+- **Full-page `get_code` then prune** (or "transfer all, mark leftovers context") instead of calling `get_code` on each planned unit's scoped `source_node`.
+- **Skipping the §1b Unit Split Plan** and jumping straight from a whole-page Figma selection into template authoring.
 - **Collapsing disconnected in-scope artifacts into one whole-page contract** (root = full screen) instead of splitting them into per-cluster `component` / `modal` units with local minimal-ancestor roots.
-- Skipping the §1 scope inventory and freezing unrelated nav / list / composer chrome as acceptance truth.
+- Skipping the §1 scope inventory / §1b plan and freezing unrelated nav / list / composer chrome as acceptance truth.
 - **Routing a tiny change (red dot, badge, disabled state) by the requirement's owning route** instead of by the artifact's physical Figma container, forking the artifact into the wrong contract.
+- **Inventing a brand-new full `shared-component` / `page` dump** of surrounding chrome solely to host a tiny in-scope artifact when no matching container contract exists — create a scoped `component` instead (or patch an existing container contract).
 - **Truth-annotating context chrome** (`data-ui-scope="context"` with `data-ui-id` / `data-ui-kind` / `data-figma-node`) — context is positioning only.
 - **Spawning a unit-level state template for a single element's property variant** (button `disabled`, input `readonly`) instead of patching that element's attributes.
 - **Putting the modal's trigger button inside the modal contract** instead of patching it into the button's physical container contract.

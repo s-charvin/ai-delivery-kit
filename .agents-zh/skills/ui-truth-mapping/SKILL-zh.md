@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: 当需要从设计源（Figma）提取结构化 UI 真值并冻结为单一规范化 HTML UI 契约（schema v2）以实现 1:1 映射时使用。自动检测并拆分单个设计源中的多个单元（页面、弹窗、共享组件）。
+description: 当 Figma 设计需要在 1:1 实现前冻结为 HTML UI 契约（schema v2）时使用 — 尤其证据是整页但需求只命中子树（红点、tip、sheet）、需要多状态可切换预览、或既有合同整页 dump / 不像 Figma / 未 hydrate 预览时。
 ---
 
 # UI 真值映射
@@ -42,9 +42,25 @@ templates/
 └── ui-contract-template.html   # HTML 契约 v2 模板 — 元数据、token、DOM、预览、审查面板
 ```
 
+## 快速参考 — 场景 → 单元拆分
+
+禁止默认把整份 Figma 证据一股脑映射。先按**需求体量**选型：
+
+| 真实场景 | 应冻结的单元 | `source_node` / root | 状态 | 禁止 |
+|---|---|---|---|---|
+| 新建完整路由（页面本身在 In Scope） | `page`（仅当 shell 也是新验收时才另建 `shared-component`） | 页面内容 frame（排除已有独立契约的 shell） | 页面级变体放进本文件 | 把已有 tab/nav shell dump 进验收真值 |
+| 既有 shell 上的小红点 / badge / 单控件 | 若已有契约的 `source_node` 盖住该产物 → **patch**；否则 **create** 以 badge/控件子树为 root 的 `component` | 仅 badge/控件的最小祖先 | 通常无单元态（元素级 patch）；仅当整单元视觉翻转才建状态模板 | 仅为红点新建 `messages-page` / 整根 shell 契约 |
+| In Scope 产物断连（列表 tip + composer CTA） | **每个簇**一个 `component` / `modal` | 各簇局部最小祖先 | 按单元需要 | 用整页 root 的单个 `page`「一把抓」 |
+| Bottom sheet / dialog / popover | 单独 `modal`；触发按钮 patch 进按钮所在物理容器契约 | sheet/dialog frame | 所有 sheet frame → `<template data-ui-state>`；必须 hydrate + switcher | 把 sheet 嵌成 page 状态；省略 preview 脚本；把触发按钮放进 modal 契约 |
+| 多状态列表/表单/模块 | 一个 `component`（若路由本身即范围则用 `page`） | 作用域模块 root | 每个视觉 frame → 一个 template；hydrate + switcher 强制 | 一态一份契约；空默认 template |
+| 仅元素属性（`disabled` / `selected`） | 在既有单元上 patch 该节点 | 不变 | **不要**加单元级状态模板 | 把 `disabled` 做成整单元 `<template data-ui-state>` |
+
 ## 硬边界
 
 - **按需求局部抽取：** 先读需求切片的 **In Scope**。列出必须出现的视觉产物（如拒信 tip、Appeal CTA、举报 sheet）。契约 root 取**覆盖属于本单元的 in-scope 产物的最小祖先子树** — 禁止默认整屏拷贝。**当 in-scope 产物在 Figma 树中断连**（最小公共祖先是整页 — 如消息列表里的 tip *加* composer 里的 CTA），**拆成多个 `component` / `modal` 单元，每个产物簇一份**，各自取局部最小祖先 root。绝不要为了「一个 root 覆盖全部」把断连产物压成单份整页契约 — 那是整页 dump 反模式的变体。未进范围的整页 chrome 仅作定位上下文（`data-ui-scope="context"` / `ignore`），不得当作验收真值。
+- **取证前必须有单元拆分计划：** 填完 §1b 计划（产物 → 单元 → 作用域 `source_node` → `get_code` 目标）之前，禁止调用 TemPad 或拷贝模板。跳过计划、直接从整页选区开写，是流程失败。
+- **只对作用域调 `get_code`：** 对每个计划单元的 `source_node`（及其状态帧）调用。**禁止**对整屏 page `get_code` 再裁剪，也禁止整页 dump 后把多余部分标成 `context`。
+- **微小变更的 create vs patch：** 若已有契约拥有该物理容器 → **增量修补**（只增改 in-scope 节点；更新 `unit.requirements` + review-panel `in_scope`；不要把整个 shell 扩进 `in_scope`）。若不存在匹配契约 → **新建 `component`**，root 取产物最小祖先 — **不要**仅为挂一个 badge 而发明整根新的 `shared-component` / `page` dump。
 - 不要发明视觉真值 — 不添加超出 Figma 证据支持范围的单元、状态、组件或字段。
 - 不要发明布局 — DOM 结构、尺寸、定位、间距、层级必须从 TemPad `get_code` **机械转移**。只允许添加 `data-ui-*` / `data-figma-node` / `data-evidence` 标注。用手写语义化 flex/grid 重写并丢掉 get_code 几何是流程失败。
 - 不要仅将截图或节点名称视为充分证据。需要结构化的 `get_code`/`get_structure` 载荷。
@@ -67,7 +83,7 @@ templates/
 在决定新建还是增量修补之前，先执行实现反查：检查该单元是否已存在匹配的 `ui-contract.html`。
 
 - 优先使用用户或需求切片已明确给出的路径。
-- **按 in-scope 产物的物理 Figma 容器路由，而非按需求所属路由。** 微小变更（红点、badge、单个控件）往往物理上落在另一个单元的 `source_node` 子树内 — 例如共享 tab bar 上的未读红点、既有页面内某按钮的 disabled 态。此时应 patch 其 `unit.source_node` 包含该产物的契约，即使需求名义上属于另一个路由。按需求路由在这里会把产物 fork 到错误的契约，分裂共享组件的真值。
+- **按 in-scope 产物的物理 Figma 容器路由，而非按需求所属路由。** 微小变更（红点、badge、单个控件）往往物理上落在另一个单元的 `source_node` 子树内 — 例如共享 tab bar 上的未读红点、既有页面内某按钮的 disabled 态。此时应 **patch** 其 `unit.source_node` 包含该产物的契约，即使需求名义上属于另一个路由。按需求路由在这里会把产物 fork 到错误的契约，分裂共享组件的真值。若尚无此类契约，则为产物子树 **新建 `component`**（见快速参考）— 绝不用整页顶替。
 - 否则按需求 ID（`unit.requirements` 包含此子需求）、组件/路由语义（`unit.route_or_trigger`、`unit.title`），或已知的共享组件依赖关系进行搜索。
 - Figma 节点 ID 是**定位到文件之后的 patch 锚点** — 而不是跨全仓库的发现主键。不要仅凭节点 ID 在所有契约文件间搜索。
 - 恰好一个匹配 → 进入"决策"环节。零匹配 → 新建。多个可能匹配 → STOP，报告候选项，请用户选择。
@@ -93,11 +109,25 @@ templates/
 
 然后执行上方的"定位"步骤。在查询 TemPad 之前记录决策（新建 / 增量修补 / 重建）。
 
-契约的 `unit.source_node` / `source.root_node` 必须是覆盖属于本单元的 must-freeze 产物的**最小祖先** — 当切片只命中子树时，禁止默认取整屏 page frame。**若 must-freeze 产物断连**（最小公共祖先是整页），不要扩大一个单元的 root 把它们全部吞下：拆成多个 `component` / `modal` 单元，各自取局部最小祖先 root。「最小祖先」规则是逐单元的，绝不是逐需求全局的。
+契约的 `unit.source_node` / `source.root_node` 必须是覆盖属于本单元的 must-freeze 产物的**最小祖先** — 当切片只命中子树时，禁止默认取整屏 page frame。**若 must-freeze 产物断连**（最小公共祖先是整页），不要扩大一个单元的 root 把它们全部吞下：拆成多个 `component` / `modal` 单元，各自取局部最小祖先 root。「最小祖先」规则是逐单元的，绝不是逐需求全局的。落在同一局部子树下的产物（如同一消息行簇下的红叹号 + tip）保持**一个**单元 — 仅当簇断连时才拆分。
 
-### 2. 枚举帧并对单元分类
+### 1b. 单元拆分计划（在任何 `get_code` 或 HTML 之前强制）
 
-**先枚举所有帧：** 在父级/选区层级（而非特定节点）查询设计源，列出顶层同级帧的完整清单 — id、名称、类型、位置。跳过此步骤会导致状态变体被遗漏。
+在会话中公开此计划即可（聊天即可 — **不要**另建伴生映射文件）。每个 must-freeze 产物都有行之后，才能拷贝模板：
+
+```
+| 产物 (node id + 标签) | 单元 id | 类型 (page\|component\|modal\|shared-component) | 动作 (create\|patch\|rebuild) | source_node (作用域 root) | 状态 (或 "element-patch") | get_code 目标 (= source_node) |
+```
+
+填表规则：
+- 先按快速参考匹配需求体量。
+- `get_code` 目标**必须等于**该单元的 `source_node`。单元是子树时，绝不要把整屏 page 列为「上下文取证」目标。
+- 同一局部祖先下的相连产物 → 一行 / 一单元。断连产物 → 多行。
+- 小红点且无容器契约 → `type=component`，`source_node`= badge 最小祖先 — 不是新的 shell `page`/`shared-component`。
+
+### 2. 枚举帧是为了分类 — 不是为了冻结
+
+**枚举帧是为了发现状态与 overlay**，不是为了决定契约范围。只在父级/选区查询足够列出同级帧（id、名称、类型、位置），用于发现 §1b 已计划单元的状态/modal。跳过发现仍会导致漏状态 — 但**枚举绝不把冻结范围扩大到单元拆分计划之外**。不是已计划单元之状态的帧，归为 `context` 或 `ignore`，不是新的验收单元。
 
 对每个帧分类：
 
@@ -129,11 +159,12 @@ templates/
 
 ### 3. 收集最小 TemPad 证据 *（派发时在逐单元子代理内运行）*
 
-对于该单元中的每一帧，一次处理一个：
+对每个**已计划单元**（及其每个状态帧），一次处理一个：
 
-1. 先调用 `get_code(frame_source_node)` — 它返回 markup、**布局样式**、token 和资源引用。这是结构、定位、间距和内容的主要证据来源。当 In Scope 是局部时，优先使用 §1 的**范围 root**，而非整页。
-2. 仅当 `get_code` 之后层级、几何或重叠仍存在歧义时，才调用 `get_structure(frame_source_node)`。不要默认调用它 — 它是消歧工具，不是首选查询。
-3. 在编写 DOM 之前，记录你打算引用的每个 `data-figma-node` — 不得凭空捏造节点 ID。
+1. 对单元拆分计划中的**作用域** `source_node` / 状态 `source_node` 调用 `get_code` — 绝不要对整屏 page「先取再剪」。整页 `get_code` 再裁剪是流程失败，即便把多余部分标成 `context`。
+2. 只把该作用域节点返回的 markup 转入该单元的 `<template>`。不要粘贴整页 DOM dump 再删除/隐藏兄弟。
+3. 仅当同一作用域节点在 `get_code` 后仍有层级/几何/重叠歧义时，才调用 `get_structure`。默认不要调用。
+4. 在编写 DOM 之前，记录你打算引用的每个 `data-figma-node` — 不得凭空捏造节点 ID。
 
 ### 4. 逐字复制模板（新建）或打开已匹配文件（修补）
 
@@ -170,17 +201,20 @@ templates/
 在浏览器（或 IDE 渲染预览）中打开契约 HTML。预览脚本必须在不展开审查面板的情况下，将默认态 hydrate 进 `[data-ui-state-host]`：
 
 - 确认 **hydrate 后的默认态**布局匹配 Figma 范围 root（几何 + 内容），而不是空 host 或手写近似。
+- 若 host 看起来空白：检查（1）预览脚本在场，（2）默认 template 非空，（3）`--color-text` / `--color-surface` 是合法 CSS 颜色（绝不能残留无效 token `#PLACEHOLDER` — IDE 暗色画布会把黑字藏掉）。模板因此为 `html, body` 强制浅色底 + `color-scheme: light`；用证据色覆盖，不要写占位字符串。
 - 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。
 - 展开 `[data-ui-review-panel]`，确认范围清单、每个 `data-figma-node` 与推断说明清晰准确。
 - 绝不假设「校验器 OK ⇒ 看起来像 Figma」。
 
 ### 7. 运行校验器
 
+在交付项目 / kit 根目录（包含 `scripts/validate-ui-contract-html.py` 的目录）执行：
+
 ```bash
 python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 ```
 
-仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `acceptance_frozen`。校验器 `OK` 是必要非充分条件：冻结前仍需 §1/§6 的 hydrate 预览与需求范围对齐。
+仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `acceptance_frozen`。校验器 `OK` 是必要非充分条件：冻结前仍需 §1/§1b/§6 的 hydrate 预览与需求范围对齐。
 
 **校验器自动检查的内容：** schema/DOM 结构、单一单元 root、`data-ui-id` 唯一性 + `data-figma-node`/`data-ui-kind` 存在性（拒绝 placeholder figma 节点）、预览基础设施存在、**每个**状态模板非空且含可见文字/媒体、`in_scope`/`out_of_scope` 清单存在、**in_scope 节点 id 与 DOM 中冻结的 `data-figma-node` 值交叉校验**、context chrome 未携带真值标注、推断说明覆盖每个 `data-evidence="inferred"`、交付字段。
 
@@ -203,9 +237,12 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 - 在 `ui-contract.html` 之外再写一份 YAML、JSON 或 markdown 文件来承载 UI 真值。
 - 切片 In Scope 只命中局部子树时，仍做 Figma **整页 dump**（拒信 tip、sheet、badge…）。
+- **整页 `get_code` 再裁剪**（或「先全转，再把多余标成 context」），而不是对每个计划单元的作用域 `source_node` 调 `get_code`。
+- **跳过 §1b 单元拆分计划**，直接从整页 Figma 选区开写模板。
 - **把断连的 in-scope 产物压成一份整页契约**（root = 整屏），而不是拆成各带局部最小祖先 root 的逐簇 `component` / `modal` 单元。
-- 跳过 §1 范围清单，把无关的导航 / 列表 / composer chrome 冻成验收真值。
+- 跳过 §1 范围清单 / §1b 计划，把无关的导航 / 列表 / composer chrome 冻成验收真值。
 - **按需求所属路由路由微小变更**（红点、badge、disabled 态），而不是按产物的物理 Figma 容器路由，把产物 fork 进错误契约。
+- **仅为挂一个微小 in-scope 产物而发明整根新的 `shared-component` / `page` dump**（且尚无匹配容器契约时）— 应新建作用域 `component`，或 patch 既有容器契约。
 - **给上下文 chrome 加真值标注**（`data-ui-scope="context"` 同时带 `data-ui-id` / `data-ui-kind` / `data-figma-node`）— context 仅为定位。
 - **为单个元素的属性变体衍生单元级状态模板**（按钮 `disabled`、输入框 `readonly`），而不是 patch 该元素的属性。
 - **把 modal 的触发按钮放进 modal 契约**，而不是 patch 进按钮物理容器所在的契约。

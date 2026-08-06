@@ -81,9 +81,21 @@
     Do not rewrite into a hand-authored semantic flex page.
   */
   :root {
-    --color-surface: #PLACEHOLDER;
-    --color-text: #PLACEHOLDER;
+    /* Replace with evidence-backed values from get_code. Keep real CSS colors
+       so browser preview stays readable — never use the invalid token
+       "#PLACEHOLDER" as a CSS color (IDE dark canvases will hide black text). */
+    --color-surface: #FFFFFF;
+    --color-text: #111111;
     --space-unit-x: 0px;
+    color-scheme: light;
+  }
+  /* Preview-safe page chrome (not product truth). Forces readability when the
+     IDE browser canvas is dark; get_code layout still lives on truth nodes. */
+  html, body {
+    margin: 0;
+    background: #FFFFFF;
+    color: #111111;
+    color-scheme: light;
   }
   [data-ui-contract] {
     background: var(--color-surface);
@@ -99,6 +111,7 @@
     margin: 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.12);
     background: #f6f6f6;
+    color: #111111;
     font: 12px/1.4 ui-sans-serif, system-ui, sans-serif;
   }
   [data-ui-state-switcher] button {
