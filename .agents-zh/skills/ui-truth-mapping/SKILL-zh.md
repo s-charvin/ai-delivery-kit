@@ -63,6 +63,10 @@ templates/
 - **微小变更的 create vs patch：** 若已有契约拥有该物理容器 → **增量修补**（只增改 in-scope 节点；更新 `unit.requirements` + review-panel `in_scope`；不要把整个 shell 扩进 `in_scope`）。若不存在匹配契约 → **新建 `component`**，root 取产物最小祖先 — **不要**仅为挂一个 badge 而发明整根新的 `shared-component` / `page` dump。
 - 不要发明视觉真值 — 不添加超出 Figma 证据支持范围的单元、状态、组件或字段。
 - 不要发明布局 — DOM 结构、尺寸、定位、间距、层级必须从 TemPad `get_code` **机械转移**。只允许添加 `data-ui-*` / `data-figma-node` / `data-evidence` 标注。用手写语义化 flex/grid 重写并丢掉 get_code 几何是流程失败。
+- 不要发明或重绘 icon/图片图形。每个 icon 或图片必须来自设计资产本身（机械转移资产字节），或逐字**复用项目已有资产**。当 `get_code` 返回资产空壳（`<svg data-src="...">` 或资产 URL）时，必须取得资产字节并持久化（内联 SVG 字节或保存为项目资产文件，并标注资产 hash）— 不允许留下空壳，更不允许手画一个「看起来差不多」的近似图形。仅仅「像」设计稿的 icon 是伪造真值。
+- `get_structure` 只是**几何证据** — 从不证明绘制属性。颜色、透明度、渐变、描边必须来自 `get_code` token 或资产字节；仅由 structure 引用的元素不得携带凭记忆补上的绘制值（把 20% 透明度的拖拽条重建成纯黑就是伪造真值）。
+- 不要把 Figma 中的每张图都当静态设计资产。区分**静态设计 icon**（冻结资产真值）与**动态/服务端提供的内容**（头像、用户上传、服务端徽章 — Figma 图只是举例）。依据需求上下文判断；动态内容只冻结几何 + 占位语义并在 review panel 注明，绝不把示例内容下载为冻结资产。
+- 未经**逐份契约的用户显式确认**不得宣布冻结。每份生成或修补的 `ui-contract.html` 都必须提交用户人工复审；仅当用户明确豁免复审时才可跳过此门禁。
 - 不要仅将截图或节点名称视为充分证据。需要结构化的 `get_code`/`get_structure` 载荷。
 - 不要在 `ui-contract.html` 之外创建第二个 UI 真值源 — 不允许有并存的 YAML、JSON 或 markdown 映射/笔记文件。
 - 不要将系统 UI 建模为契约内容：状态栏、系统导航、软键盘和设备外壳绝不能作为 `data-ui-kind` 值出现。改用受影响单元上的 CSS 安全区处理。
@@ -165,6 +169,14 @@ templates/
 2. 只把该作用域节点返回的 markup 转入该单元的 `<template>`。不要粘贴整页 DOM dump 再删除/隐藏兄弟。
 3. 仅当同一作用域节点在 `get_code` 后仍有层级/几何/重叠歧义时，才调用 `get_structure`。默认不要调用。
 4. 在编写 DOM 之前，记录你打算引用的每个 `data-figma-node` — 不得凭空捏造节点 ID。
+5. **解析 `get_code` 返回的每一个资产引用**（`<svg data-src="...">`、图片填充、资产 URL），在写 DOM 之前逐一处理：
+   1. **先分类：** 静态设计 icon，还是动态/服务端内容（头像、用户上传、服务端渲染徽章）？由需求上下文决定 — Figma 图可能只是举例。动态内容 → 冻结容器几何 + 占位符，并在 review panel 注明「服务端提供」；不下载示例图。
+   2. **复用检查：** 在目标项目现有资产目录中查找同款 icon（目录结构以目标项目实际为准，不做预设）。已存在 → 引用它，并把现有资产路径记录进 review panel，不重复搬运字节。
+   3. **简单矢量** → 取得资产字节，把 SVG 逐字内联进契约，并标注资产 hash。把所有资产 URL 视为**易失效**（部分 TemPad 环境由会话结束即失效的临时本地服务器提供资产）— 必须现在持久化字节，事后绝不引用 URL。
+   4. **复杂/位图资产** → 下载原图并持久化到项目资产目录；契约引用持久化后的路径（相对项目根的路径，绝不引用资产 URL）。
+   5. **无法获取**（MCP 无字节返回、下载失败、格式不支持）→ 在 review panel 记为待办项并提交用户决策（提供资产、替代方案或暂缓）；若阻塞冻结，记录 `blocked_missing_visual_truth`（关键资产）。**不要**兜底重绘 — 猜画 icon 是流程失败。若暂缓资产必须以 `data-src` 空壳留在契约中，该元素必须携带 `data-ui-asset` 元数据 — 校验器会拒绝任何没有它的 `data-src` 元素。
+
+   注意：`get_code` 可能把整个子树作为**一个**矢量资产返回（如 sheet 拖拽条）。资产字节才是唯一完整真值 — 不要用 `get_structure` 重建子元素：structure 只携带几何，会静默丢掉绘制属性（fill-opacity、渐变、描边）。
 
 ### 4. 逐字复制模板（新建）或打开已匹配文件（修补）
 
@@ -191,6 +203,7 @@ templates/
 - `[data-ui-review-panel]` — 必须包含：
   - `dt[data-ui-scope="in_scope"]` / `dd` 列出 must-freeze 产物（节点 id + 标签）；此处列出的每个节点 id 必须出现在 DOM 中某个非 context 的 `data-figma-node` 上（校验器会交叉校验）。
   - `dt[data-ui-scope="out_of_scope"]` / `dd` 列出上下文 chrome 或 `"none"`；
+  - 资产说明：每个 icon/图片 — 其处置方式（内联资产字节 + 资产 hash、复用的项目资产路径、服务端占位，或**待办：等待用户决策**）。不允许有来历不明的 icon。
   - 推断说明：每个 `data-evidence="inferred"` 都要有匹配的 `dt[data-ui-evidence-for]`/`dd`。
 - 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关 `data-ui-id` 子树、无关状态及其它单元的 `unit.dependencies`。
 
@@ -203,8 +216,11 @@ templates/
 - 确认 **hydrate 后的默认态**布局匹配 Figma 范围 root（几何 + 内容），而不是空 host 或手写近似。
 - 若 host 看起来空白：检查（1）预览脚本在场，（2）默认 template 非空，（3）`--color-text` / `--color-surface` 是合法 CSS 颜色（绝不能残留无效 token `#PLACEHOLDER` — IDE 暗色画布会把黑字藏掉）。模板因此为 `html, body` 强制浅色底 + `color-scheme: light`；用证据色覆盖，不要写占位字符串。
 - 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。
-- 展开 `[data-ui-review-panel]`，确认范围清单、每个 `data-figma-node` 与推断说明清晰准确。
+- 逐一比对**每个 icon/图片**与其证据：内联字节必须与取得的资产载荷一致；复用资产必须与项目文件一致；服务端占位必须可见地是占位。即便几何完全正确，「看起来是对的 icon」的重绘图也不通过本项检查。
+- 展开 `[data-ui-review-panel]`，确认范围清单、资产说明、每个 `data-figma-node` 与推断说明清晰准确。
+- hydrate 后的 HTML **就是**复审媒介。不要生成或保存预览截图产物（如 `contract-preview-*.png`）— 人直接审核 HTML，截图会与契约漂移。
 - 绝不假设「校验器 OK ⇒ 看起来像 Figma」。
+- **用户确认门禁：** 把每份契约提交用户人工确认（路径 + 打开方式 + review panel 摘要）。在用户显式确认前不得宣布冻结 — 除非用户已明确豁免本轮复审。
 
 ### 7. 运行校验器
 
@@ -216,9 +232,9 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 仅当输出 `OK` 时才继续。失败则修复契约并重新运行 — 绝不在失败的契约上声称 `acceptance_frozen`。校验器 `OK` 是必要非充分条件：冻结前仍需 §1/§1b/§6 的 hydrate 预览与需求范围对齐。
 
-**校验器自动检查的内容：** schema/DOM 结构、单一单元 root、`data-ui-id` 唯一性 + `data-figma-node`/`data-ui-kind` 存在性（拒绝 placeholder figma 节点）、预览基础设施存在、**每个**状态模板非空且含可见文字/媒体、`in_scope`/`out_of_scope` 清单存在、**in_scope 节点 id 与 DOM 中冻结的 `data-figma-node` 值交叉校验**、context chrome 未携带真值标注、推断说明覆盖每个 `data-evidence="inferred"`、交付字段。
+**校验器自动检查的内容：** schema/DOM 结构、单一单元 root、`data-ui-id` 唯一性 + `data-figma-node`/`data-ui-kind` 存在性（拒绝 placeholder figma 节点）、预览基础设施存在、**每个**状态模板非空且含可见文字/媒体、`in_scope`/`out_of_scope` 清单存在、**in_scope 节点 id 与 DOM 中冻结的 `data-figma-node` 值交叉校验**、context chrome 未携带真值标注、推断说明覆盖每个 `data-evidence="inferred"`、`data-src` 资产空壳携带 `data-ui-asset` 元数据、交付字段。
 
-**校验器无法检查的内容（仍是 §6 流程检查）：** `unit.source_node` 的最小性（无法访问 Figma 树 — 你必须确认范围 root 是局部最小祖先，而非整页）、布局对 Figma 的保真度（机械转移 vs 手写重写）、浏览器 hydrate 的保真度（打开看）、state/default 选择的语义正确性。`OK` ≠ 「看起来像 Figma」且 ≠ 「scope 匹配切片」— 那些是人工/§6 门禁。
+**校验器无法检查的内容（仍是 §6 流程检查）：** `unit.source_node` 的最小性（无法访问 Figma 树 — 你必须确认范围 root 是局部最小祖先，而非整页）、布局对 Figma 的保真度（机械转移 vs 手写重写）、**icon 资产保真**（SVG path vs 取得的资产字节 — 校验器看不到 Figma 资产）、浏览器 hydrate 的保真度（打开看）、state/default 选择的语义正确性。`OK` ≠ 「看起来像 Figma」且 ≠ 「scope 匹配切片」— 那些是人工/§6 门禁。
 
 ### 8. 开发完成后 — 回填交付信息并重新校验
 
@@ -247,6 +263,13 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - **为单个元素的属性变体衍生单元级状态模板**（按钮 `disabled`、输入框 `readonly`），而不是 patch 该元素的属性。
 - **把 modal 的触发按钮放进 modal 契约**，而不是 patch 进按钮物理容器所在的契约。
 - 用手写语义化 flex/grid 布局替代 `get_code` 几何的机械转移。
+- **手写 icon 或图片图形**（重绘一个「差不多」的 SVG），而非机械转移设计资产字节或复用项目已有资产。
+- 在冻结契约里留下未解析的 `get_code` 资产空壳（`data-src` / 资产 URL）— 资产字节必须内联或持久化进项目，并标注资产 hash。
+- 用 `get_structure` 几何重建资产空壳子树（`get_code` 把整个子树导出为一个 SVG 资产时，如拖拽条），静默丢掉绘制属性（fill-opacity、渐变、描边）— structure 只是几何证据。
+- 需求上下文表明内容是服务端提供（头像、用户上传、动态徽章）时，仍把 Figma **示例图**下载为冻结资产。
+- 无法获取的资产静默重绘，而不是记为待办项交由用户决策。
+- 把预览截图（`contract-preview-*.png` 等）当作交付产物保存 — hydrate 后的 HTML 才是复审媒介。
+- 未经逐份契约的用户显式确认即宣布冻结（除非用户明确豁免复审）。
 - 把默认态（或任意状态）只放进 `<template>` 并删除/省略 `script[data-ui-state-preview]`，导致浏览器显示空 host。
 - 在 hydrate / switcher 未工作时声称已完成浏览器默认态审查，或未逐一切换**每个**已声明状态。
 - 将状态栏、导航栏、键盘或设备外壳建模为 `data-ui-kind` 内容，而不是使用 CSS 安全区处理。

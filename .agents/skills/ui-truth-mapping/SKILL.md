@@ -63,6 +63,10 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 - **Tiny-change create vs patch:** if a matching contract already owns the physical container → **incremental patch** (add/adjust only the in-scope nodes; update `unit.requirements` + review-panel `in_scope`; do not expand `in_scope` to the whole shell). If no matching contract exists → **create `component`** rooted at the artifact's minimal ancestor — do **not** invent a brand-new full `shared-component` / `page` dump of the surrounding chrome solely to host a badge.
 - Do not invent visual truth — no adding units, states, components, or fields beyond what Figma evidence supports.
 - Do not invent layout — DOM structure, dimensions, positioning, spacing, and stacking come from TemPad `get_code` by **mechanical transfer**. Only add `data-ui-*` / `data-figma-node` / `data-evidence` annotations. Hand-authored semantic flex/grid rewrites that drop get_code geometry are process failures.
+- Do not invent or redraw icon/image glyphs. Every icon or image must come from the design asset itself (mechanical transfer of asset bytes) or from an **existing project asset** reused verbatim. When `get_code` returns an asset shell (`<svg data-src="...">` or an asset URL), the asset bytes must be fetched and persisted (inline SVG bytes or a saved project asset file, annotated with the asset hash) — never an empty shell left in place, and never a hand-drawn "looks close enough" approximation. An icon that merely resembles the design is a forged truth.
+- `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
+- Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
+- Do not declare a contract frozen without **explicit per-contract user confirmation**. Every generated or patched `ui-contract.html` must be presented to the user for manual review; skip this gate only when the user explicitly waives re-review.
 - Do not treat screenshots or node names alone as sufficient evidence. Structured `get_code`/`get_structure` payloads are required.
 - Do not create a second UI truth source beside `ui-contract.html` — no companion YAML, JSON, or markdown mapping/notes file.
 - Do not model system UI as contract content: status bars, system navigation, soft keyboards, and device chrome must never appear as `data-ui-kind` values. Use CSS safe-area handling on the affected unit instead.
@@ -165,6 +169,14 @@ For each **planned unit** (and each of its state frames), one at a time:
 2. Transfer only the markup returned for that scoped node into the unit's `<template>`. Do not paste a whole-page DOM dump and delete/hide siblings.
 3. Call `get_structure` on the same scoped node only when hierarchy, geometry, or overlap remains ambiguous after `get_code`. Do not call it by default.
 4. Record every `data-figma-node` you intend to cite before writing DOM — no node id may be invented.
+5. **Resolve every asset reference** returned by `get_code` (`<svg data-src="...">`, image fills, asset URLs) before writing DOM. For each one:
+   1. **Classify first:** static design icon, or dynamic/server-provided content (avatars, user uploads, server-rendered badges)? Requirement context decides — the Figma picture may be only an example. Dynamic content → freeze the container's geometry with a placeholder and note "server-provided" in the review panel; do not download the example image.
+   2. **Reuse check:** search the target project's existing asset directories (whatever layout that project uses) for the same icon. If it exists → reference it and record the existing asset path in the review panel instead of duplicating bytes.
+   3. **Simple vector** → fetch the asset bytes and inline the SVG verbatim into the contract, annotated with the asset hash. Treat every asset URL as **ephemeral** (some TemPad environments serve assets from a temporary local server that dies after the session) — persist the bytes now, never reference the URL later.
+   4. **Complex/raster asset** → download the original image and persist it into the project asset directory; reference the persisted path in the contract (a project-root-relative path, never an asset URL).
+   5. **Cannot fetch** (MCP returns no bytes, fetch fails, format unsupported) → record it as a pending item in the review panel and raise it to the user for a decision (provide the asset, substitute, or defer); if it blocks freezing, record `blocked_missing_visual_truth` (key asset). Do **not** redraw it as a fallback — guess-drawing an icon is a process failure. If a `data-src` shell must stay in the contract for a deferred asset, it must carry `data-ui-asset` metadata — the validator rejects any `data-src` element without it.
+
+   Note: `get_code` may return an entire subtree as **one** vector asset (e.g. a sheet drag handle). The asset bytes are the only complete truth — do not reconstruct child elements from `get_structure`, which carries geometry but silently loses paint attributes (fill-opacity, gradients, strokes).
 
 ### 4. Copy the template verbatim (create) or open the matched file (patch)
 
@@ -191,6 +203,7 @@ For each **planned unit** (and each of its state frames), one at a time:
 - `[data-ui-review-panel]` — include:
   - `dt[data-ui-scope="in_scope"]` / `dd` listing must-freeze artifacts (node ids + labels); every node id listed here must appear on a non-context `data-figma-node` in the DOM (the validator cross-checks this).
   - `dt[data-ui-scope="out_of_scope"]` / `dd` listing context chrome or `"none"`;
+  - asset notes: for every icon/image — its resolution (inlined asset bytes + asset hash, reused project asset path, server-provided placeholder, or **pending: awaiting user decision**). No icon may be unaccounted for.
   - inference notes: every `data-evidence="inferred"` needs a matching `dt[data-ui-evidence-for]`/`dd`.
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched.
 
@@ -203,8 +216,11 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - Confirm the **hydrated default** layout matches the Figma scoped root (geometry + content), not an empty host or a hand-rewritten approximation.
 - If the host looks blank: check (1) preview script present, (2) default template non-empty, (3) `--color-text` / `--color-surface` are real CSS colors (never the invalid token `#PLACEHOLDER`), and (4) `html, body` keep the template's light preview base — IDE dark canvases otherwise show black text on a transparent page. Overwrite tokens with evidence colors, not placeholder strings.
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame.
-- Expand `[data-ui-review-panel]` and confirm scope inventory, every cited `data-figma-node`, and inference notes are legible and accurate.
+- Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
+- Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
+- The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
 - Never assume "validator OK ⇒ looks like Figma."
+- **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run.
 
 ### 7. Run the validator
 
@@ -216,9 +232,9 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `acceptance_frozen` on a failing contract. Validator `OK` is necessary but not sufficient: browser-hydrated default preview and requirement-scope alignment from §1/§1b/§6 are still required before freezing.
 
-**What the validator checks automatically:** schema/DOM structure, single unit root, `data-ui-id` uniqueness + `data-figma-node`/`data-ui-kind` presence (placeholder figma nodes rejected), preview infrastructure present, **every** state template non-empty with visible text/media, `in_scope`/`out_of_scope` inventory present, **in_scope node ids cross-checked against `data-figma-node` values frozen in the DOM**, context chrome not truth-annotated, inference notes back every `data-evidence="inferred"`, delivery fields.
+**What the validator checks automatically:** schema/DOM structure, single unit root, `data-ui-id` uniqueness + `data-figma-node`/`data-ui-kind` presence (placeholder figma nodes rejected), preview infrastructure present, **every** state template non-empty with visible text/media, `in_scope`/`out_of_scope` inventory present, **in_scope node ids cross-checked against `data-figma-node` values frozen in the DOM**, context chrome not truth-annotated, inference notes back every `data-evidence="inferred"`, `data-src` asset shells carry `data-ui-asset` metadata, delivery fields.
 
-**What the validator cannot check (remain §6 process checks):** `unit.source_node` minimality (no Figma tree access — you must verify the scoped root is the local minimal ancestor, not the full page), layout fidelity to Figma (mechanical transfer vs hand-authored rewrite), browser hydration fidelity (open it and look), and semantic correctness of state/default choices. `OK` ≠ "looks like Figma" and ≠ "scope matches the slice" — those are human/§6 gates.
+**What the validator cannot check (remain §6 process checks):** `unit.source_node` minimality (no Figma tree access — you must verify the scoped root is the local minimal ancestor, not the full page), layout fidelity to Figma (mechanical transfer vs hand-authored rewrite), **icon asset fidelity** (SVG paths vs fetched asset bytes — the validator cannot see Figma assets), browser hydration fidelity (open it and look), and semantic correctness of state/default choices. `OK` ≠ "looks like Figma" and ≠ "scope matches the slice" — those are human/§6 gates.
 
 ### 8. After implementation — backfill delivery and revalidate
 
@@ -247,6 +263,13 @@ Re-run the validator — it enforces that `delivery.implemented` is complete whe
 - **Spawning a unit-level state template for a single element's property variant** (button `disabled`, input `readonly`) instead of patching that element's attributes.
 - **Putting the modal's trigger button inside the modal contract** instead of patching it into the button's physical container contract.
 - Hand-authoring a semantic flex/grid layout instead of mechanically transferring `get_code` geometry.
+- **Hand-authoring an icon or image glyph** (redrawing a "close enough" SVG) instead of transferring the design asset bytes or reusing an existing project asset.
+- Leaving a `get_code` asset shell (`data-src` / asset URL) unresolved in the frozen contract — asset bytes must be inlined or persisted into the project, with the asset hash noted.
+- Reconstructing an asset-shell subtree (a subtree `get_code` exports as one SVG asset, e.g. a drag handle) from `get_structure` geometry and silently dropping paint attributes (fill-opacity, gradient, stroke) — structure is geometry-only evidence.
+- Downloading a Figma **example** image as a frozen asset when the requirement context shows the content is server-provided (avatar, user upload, dynamic badge).
+- Silently redrawing an unfetchable asset instead of recording a pending item and letting the user decide.
+- Saving preview screenshots (`contract-preview-*.png` etc.) as delivery artifacts — the hydrated HTML is the review medium.
+- Declaring a contract frozen without explicit per-contract user confirmation (unless the user explicitly waived re-review).
 - Putting default (or any) state only in `<template>` and deleting/omitting `script[data-ui-state-preview]` so the browser shows an empty host.
 - Claiming browser default-state review without hydration / switcher working, or without stepping through **every** declared state.
 - Modeling status bars, navigation bars, keyboards, or device chrome as `data-ui-kind` content instead of using CSS safe-area handling.

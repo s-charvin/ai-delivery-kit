@@ -24,6 +24,8 @@ Feed requirement-slice and design source. Produces one `ui-contract.html` (schem
 2. Browser open shows **hydrated default state** in `[data-ui-state-host]` (preview script present); empty host = not frozen.
 3. `[data-ui-state-switcher]` can flip every declared state to a matching preview.
 4. Contract root matches requirement-slice **In Scope** (minimal ancestor; not an unrelated whole-page dump).
+5. Every icon/image/vectorized subtree is evidence-backed: inlined asset bytes (with asset hash), a reused project asset, or a review-panel-noted server-provided placeholder / pending item. Hand-drawn glyphs, `get_structure`-only reconstructions (structure cannot prove paint: opacity/gradient/stroke), and unresolved `data-src` shells fail the bar.
+6. The user has manually confirmed each `ui-contract.html` (skip only when the user explicitly waived re-review). The hydrated HTML is the review medium — do not save preview screenshot artifacts.
 
 ## After completion
 
@@ -33,7 +35,7 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 Run once per unit's `ui-contract.html`.
 
-- Set `acceptance_frozen` only when every validator run prints `OK` **and** the freeze bar above is satisfied (hydrated preview + scope alignment).
+- Set `acceptance_frozen` only when every validator run prints `OK` **and** the freeze bar above is satisfied (hydrated preview + scope alignment + icon asset fidelity + per-contract user confirmation).
 - On failure → `blocked_verification_failure` with validator output; do not advance status.
 - Update `status.json`.
 

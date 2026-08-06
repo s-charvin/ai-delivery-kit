@@ -189,10 +189,11 @@
 
     <!--
       Review panel: collapsed-by-default detail layer for source nodes,
-      scope inventory, state notes, and inference reasoning. Every
-      data-evidence="inferred" element above MUST have a matching
-      dt[data-ui-evidence-for]/dd pair here — silent inference is a
-      process failure, not a shortcut.
+      scope inventory, asset resolution, state notes, and inference
+      reasoning. Every data-evidence="inferred" element above MUST have a
+      matching dt[data-ui-evidence-for]/dd pair here — silent inference is
+      a process failure, not a shortcut. Every icon/image must be accounted
+      for in the Assets entry — no unaccounted glyphs.
     -->
     <details data-ui-review-panel>
       <summary>Contract evidence</summary>
@@ -201,6 +202,8 @@
         <dd>PLACEHOLDER: list the visual artifacts this requirement must freeze (node ids + short labels).</dd>
         <dt data-ui-scope="out_of_scope">Out of scope context</dt>
         <dd>PLACEHOLDER: list chrome kept only for positioning, or write "none".</dd>
+        <dt data-ui-asset-inventory>Assets</dt>
+        <dd>PLACEHOLDER: for every icon/image — its resolution (inlined asset bytes + asset hash, reused project asset path, server-provided placeholder, or pending: awaiting user decision). Write "none" if this unit has no icons/images.</dd>
         <dt data-ui-evidence-for="PLACEHOLDER-region-id">Inference</dt>
         <dd>PLACEHOLDER explanation of which Figma nodes this was derived from and why normalization was needed.</dd>
       </dl>
