@@ -55,17 +55,7 @@ func IDEGateAssets() []ManagedAsset {
 }
 
 func SeededManagedFiles() []string {
-	paths := append([]string{}, SeededPlaceholderFiles()...)
-	paths = append(paths, SeededJSONFiles()...)
-	return paths
-}
-
-func SeededPlaceholderFiles() []string {
-	return []string{
-		".ai-delivery/.gitkeep",
-		".ai-delivery/requirements/.gitkeep",
-		".ai-delivery/meta/.gitkeep",
-	}
+	return SeededJSONFiles()
 }
 
 func SeededJSONFiles() []string {

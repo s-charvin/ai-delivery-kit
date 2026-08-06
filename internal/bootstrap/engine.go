@@ -61,12 +61,6 @@ func (e Engine) Run(cfg Config) error {
 		}
 	}
 
-	for _, rel := range SeededPlaceholderFiles() {
-		if err := seedFileIfMissing(filepath.Join(cfg.RepoRoot, filepath.FromSlash(rel)), nil, 0o644); err != nil {
-			return err
-		}
-	}
-
 	now := time.Now().UTC()
 	if e.Now != nil {
 		now = e.Now().UTC()
