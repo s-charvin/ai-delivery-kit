@@ -164,4 +164,45 @@ if python3 "$STATUS_VALIDATOR" "$TMP_DIR/missing/status.json" --req-root "$TMP_D
   fail "Status validator should fail when acceptance_frozen has no ui-contract.html"
 fi
 
-echo 'PASS: ui contract validators enforce good/bad HTML fixtures and status gates.'
+# Scenario 4: dangling ui-contract.html pointers in the requirement directory.
+# Active pointers must resolve to an existing contract; a historical
+# "superseded" note line is exempt.
+mkdir -p "$TMP_DIR/pointers/sub-requirements/sr-login/profile-page"
+cp "$GOOD" "$TMP_DIR/pointers/sub-requirements/sr-login/profile-page/ui-contract.html"
+cat >"$TMP_DIR/pointers/status.json" <<'EOF'
+{
+  "requirement_id": "req-fixture",
+  "updated_at": "2026-07-10T00:00:00Z",
+  "sub_requirements": {
+    "sr-login": {
+      "status": "acceptance_frozen",
+      "detail": null,
+      "blocked_from_status": null,
+      "blocker_scope": null,
+      "resume_target_status": null,
+      "notes": null
+    }
+  }
+}
+EOF
+
+# 4a: valid pointer + historical note about a removed contract -> PASS.
+cat >"$TMP_DIR/pointers/sub-requirements/sr-login/visual-acceptance.md" <<'EOF'
+# visual acceptance evidence
+Contract: sub-requirements/sr-login/profile-page/ui-contract.html
+History: sub-requirements/sr-login/old-states/ui-contract.html superseded by profile-page
+EOF
+
+python3 "$STATUS_VALIDATOR" "$TMP_DIR/pointers/status.json" --req-root "$TMP_DIR/pointers" >/dev/null \
+  || fail "Status validator should pass when pointers resolve and removed paths are marked superseded"
+
+# 4b: an ACTIVE pointer to a removed contract must FAIL.
+cat >>"$TMP_DIR/pointers/sub-requirements/sr-login/visual-acceptance.md" <<'EOF'
+Contract: sub-requirements/sr-login/removed-unit/ui-contract.html
+EOF
+
+if python3 "$STATUS_VALIDATOR" "$TMP_DIR/pointers/status.json" --req-root "$TMP_DIR/pointers" >/dev/null 2>&1; then
+  fail "Status validator should fail on a dangling active ui-contract.html pointer"
+fi
+
+echo 'PASS: ui contract validators enforce good/bad HTML fixtures, status gates, and dangling-pointer sweeps.'

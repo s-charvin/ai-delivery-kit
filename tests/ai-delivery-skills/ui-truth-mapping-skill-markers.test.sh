@@ -31,6 +31,12 @@ require "$EN" "data-ui-state-switcher" "EN state switcher"
 require "$EN" "Quick Reference — Scenario → Unit split" "EN scenario table"
 require "$EN" "create** \`component\` rooted at the badge" "EN red-dot create component"
 
+# EN — rebuild-lifecycle gates (delivery target verification + pointer sweep)
+require "$EN" "Do not write an unverified \`delivery.implemented.target\`" "EN unverified target ban"
+require "$EN" "Reference check:** run a reference/usage search" "EN two-step target verification"
+require "$EN" "### 9. Replace or deprecate — sweep stale pointers in the same change" "EN §9 pointer sweep"
+require "$EN" "**Rebuild/split metadata rule:**" "EN rebuild inherited-delivery re-verification"
+
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
   fail "EN description summarizes workflow (Auto-detects) — SDO violation"
@@ -43,6 +49,12 @@ require "$ZH" "整页 \`get_code\` 再裁剪" "ZH anti prune"
 require "$ZH" "跳过 §1b 单元拆分计划" "ZH anti skip plan"
 require "$ZH" "只对作用域调 \`get_code\`" "ZH hard boundary scoped get_code"
 require "$ZH" "快速参考 — 场景 → 单元拆分" "ZH scenario table"
+
+# ZH parity for the rebuild-lifecycle gates
+require "$ZH" "不要写入未经核实的 \`delivery.implemented.target\`" "ZH unverified target ban"
+require "$ZH" "引用核实：** 运行引用/使用搜索" "ZH two-step target verification"
+require "$ZH" "### 9. 替换或废弃 — 同一次变更内清扫陈旧指针" "ZH §9 pointer sweep"
+require "$ZH" "**重建/拆分的元数据规则：**" "ZH rebuild inherited-delivery re-verification"
 
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"

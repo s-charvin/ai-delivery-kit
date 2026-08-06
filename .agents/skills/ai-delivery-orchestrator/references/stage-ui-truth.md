@@ -26,6 +26,7 @@ Feed requirement-slice and design source. Produces one `ui-contract.html` (schem
 4. Contract root matches requirement-slice **In Scope** (minimal ancestor; not an unrelated whole-page dump).
 5. Every icon/image/vectorized subtree is evidence-backed: inlined asset bytes (with asset hash), a reused project asset, or a review-panel-noted server-provided placeholder / pending item. Hand-drawn glyphs, `get_structure`-only reconstructions (structure cannot prove paint: opacity/gradient/stroke), and unresolved `data-src` shells fail the bar.
 6. The user has manually confirmed each `ui-contract.html` (skip only when the user explicitly waived re-review). The hydrated HTML is the review medium — do not save preview screenshot artifacts.
+7. If the contract set changed in this run (contracts added, deleted, replaced, or unit ids changed), the stale-pointer sweep (`ui-truth-mapping` §9) is done: no **active** pointer in `status.json` notes, `visual-acceptance.md`, progress/todo, or breakdown summaries targets a removed/renamed contract. One historical "superseded by …" note line is allowed.
 
 ## After completion
 
@@ -35,7 +36,7 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 Run once per unit's `ui-contract.html`.
 
-- Set `acceptance_frozen` only when every validator run prints `OK` **and** the freeze bar above is satisfied (hydrated preview + scope alignment + icon asset fidelity + per-contract user confirmation).
+- Set `acceptance_frozen` only when every validator run prints `OK` **and** the freeze bar above is satisfied (hydrated preview + scope alignment + icon asset fidelity + per-contract user confirmation + stale-pointer sweep when the contract set changed).
 - On failure → `blocked_verification_failure` with validator output; do not advance status.
 - Update `status.json`.
 
@@ -45,6 +46,8 @@ Optional batch check:
 python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
+
+Besides the status gates, this check rejects **dangling `ui-contract.html` pointers** in the requirement directory (referenced contract path does not exist, and the line is not marked as a historical "deleted / superseded" note). Run it whenever the contract set changed, before setting `acceptance_frozen`.
 
 ## If no Figma link
 

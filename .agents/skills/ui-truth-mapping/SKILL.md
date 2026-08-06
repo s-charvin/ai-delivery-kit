@@ -80,6 +80,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 - Do not scan or diff every historical `ui-contract.html` in the repo to find a match. Locate the candidate contract via requirement id, component/route semantics, an already-known unit relationship, or an explicit user-specified path — never a blind repo-wide scan.
 - Do not patch a matched contract when the match is ambiguous (more than one plausible candidate) — stop and ask the user to disambiguate before touching any file.
 - Do not claim `delivery.status: "implemented"` or `"merged"` without a complete `delivery.implemented` object (`type`, `target`, `requirement`, `version`, `status`).
+- Do not write an unverified `delivery.implemented.target`. A target is a claim about the code and needs **two code checks**: ① the implementing symbol is defined; ② a reference/usage search (findReferences or call-site grep) confirms where the unit is **actually mounted/instantiated**. Declaring `implemented` with an unverified target is a forged truth, on the same level as a hand-drawn icon — including targets copied from memory or inherited from an older contract.
 - Do not claim `frozen` / 1:1 fidelity from validator `OK` alone — `OK` means schema passed; browser-hydrated default preview and scope alignment are also required before calling the contract frozen.
 
 ## Locate: requirement lookup and implementation lookup
@@ -100,6 +101,8 @@ Before deciding to create or patch, run an implementation lookup: check whether 
 | Exactly one contract matches and this requirement's change fits inside it (new state, content edit, minor layout adjustment) | **Incremental patch.** Edit only the affected subtree, states, and metadata fields in place. Leave unrelated units and unrelated subtrees untouched. |
 | The unit's boundary, route, or shared dependency changes fundamentally | **Rebuild** that unit's contract, keeping its `contract_id`/`unit.id` stable if the unit is conceptually the same. |
 | Match is ambiguous | **Block.** Do not guess; ask the user to disambiguate before touching any file. |
+
+**Rebuild/split metadata rule:** mechanical transfer governs DOM, never metadata assertions. When rebuilding or splitting an existing contract, a `delivery` object inherited from the old contract must be **re-verified against the current code** (§8 two-step target check) before it is carried over; otherwise reset `delivery.status` to the pre-implementation value (e.g. `"frozen"`) and drop `implemented` — re-fill it after the new implementation is located.
 
 ## Workflow
 
@@ -243,7 +246,23 @@ Once the unit is implemented, edit the same file's `#ui-contract-meta`:
 - set `delivery.status` to `"implemented"` (or `"merged"` once merged);
 - fill `delivery.implemented`: `type`, `target` (code location), `requirement`, `version`, `status`.
 
+**Verify `target` before writing it** — two mandatory code checks, run against the current codebase:
+
+1. **Definition check:** confirm the implementing symbol(s) exist (class/widget/component definition).
+2. **Reference check:** run a reference/usage search (findReferences, or grep for instantiations/call sites) to locate where the unit is **actually mounted or instantiated**. The mount site is the target — even when it differs from the definition file. A definition-only check is not sufficient (a symbol can be defined in one file and mounted in another).
+
+Write the verified location(s) into `target` (both definition and mount file when they differ). Never fill a target from memory, and never carry one over from a superseded contract without re-running both checks; if the implementation cannot be located yet, keep `delivery.status` at the pre-implementation value instead of guessing a target to complete the object.
+
 Re-run the validator — it enforces that `delivery.implemented` is complete whenever `delivery.status` is `"implemented"` or `"merged"`. Do not create a separate implementation-tracking file; this backfill inside the same HTML is the only implementation record.
+
+### 9. Replace or deprecate — sweep stale pointers in the same change
+
+There is no aggregate index file, so pointers to a contract live scattered across the requirement directory (`status.json` notes, `visual-acceptance.md`, progress/todo records, breakdown summaries). When a contract is **deleted, replaced, or rebuilt under a changed unit id**, the change is not complete until the references are swept:
+
+1. Scan the requirement directory (`.ai-delivery/requirements/<req-id>/`) for every reference to the old unit id / old contract path.
+2. Redirect every **active** pointer (`status.json` notes, `visual-acceptance.md` Contract entries, progress/todo, breakdown summaries) to the new contract path / unit id.
+3. One historical note line is allowed ("deleted / superseded by `<new unit id>`") — but no active pointer may keep targeting a contract file that no longer exists.
+4. Where available, run the requirement status validator (`scripts/validate-delivery-status.py <status.json> --req-root <req-dir>`); it rejects dangling `ui-contract.html` pointers mechanically.
 
 ## Component Type Vocabulary
 
@@ -270,6 +289,9 @@ Re-run the validator — it enforces that `delivery.implemented` is complete whe
 - Silently redrawing an unfetchable asset instead of recording a pending item and letting the user decide.
 - Saving preview screenshots (`contract-preview-*.png` etc.) as delivery artifacts — the hydrated HTML is the review medium.
 - Declaring a contract frozen without explicit per-contract user confirmation (unless the user explicitly waived re-review).
+- Writing `delivery.implemented.target` from memory or inheriting it from a superseded contract without re-verifying it against the current code.
+- Backfilling `target` after a definition-only check — a reference/usage search must first confirm the actual mount/instantiation file, and both locations belong in `target` when they differ.
+- Deleting or rebuilding a contract (unit id change) without sweeping the requirement directory for stale pointers — active references in `status.json` notes, `visual-acceptance.md`, progress/todo, or breakdown summaries must be redirected in the same change.
 - Putting default (or any) state only in `<template>` and deleting/omitting `script[data-ui-state-preview]` so the browser shows an empty host.
 - Claiming browser default-state review without hydration / switcher working, or without stepping through **every** declared state.
 - Modeling status bars, navigation bars, keyboards, or device chrome as `data-ui-kind` content instead of using CSS safe-area handling.

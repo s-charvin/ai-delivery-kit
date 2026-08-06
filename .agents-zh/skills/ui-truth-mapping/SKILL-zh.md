@@ -80,6 +80,7 @@ templates/
 - 不要为了寻找匹配项而扫描或比对仓库中每一份历史 `ui-contract.html`。通过需求 ID、组件/路由语义、已知的单元关系，或用户显式指定的路径来定位候选契约 — 绝不做全仓库盲扫。
 - 匹配存在歧义（存在多个可能候选）时，不要修补匹配到的契约 — 先停止并要求用户澄清，再触碰任何文件。
 - 不要在缺少完整 `delivery.implemented` 对象（`type`、`target`、`requirement`、`version`、`status`）的情况下声称 `delivery.status: "implemented"` 或 `"merged"`。
+- 不要写入未经核实的 `delivery.implemented.target`。target 是对代码的断言，需要**两步代码核实**：① 实现符号已定义；② 用引用/使用搜索（findReferences 或调用点 grep）确认该单元**实际挂载/实例化的位置**。带着未经核实的 target 声明 `implemented` 是伪造真值，与手绘 icon 同级 — 包括凭记忆填写或从旧契约继承的 target。
 - 不要仅凭校验器打印 `OK` 就声称 `frozen` / 1:1 保真 — `OK` 只代表 schema 通过；冻结前还需浏览器 hydrate 后的默认态预览与 scope 对齐。
 
 ## 定位：需求查找与实现反查
@@ -100,6 +101,8 @@ templates/
 | 恰好一个契约匹配，且此次需求变更能容纳其中（新增状态、内容修改、微调布局） | **增量修补。** 仅原地编辑受影响的子树、状态和元数据字段。不触碰无关单元和无关子树。 |
 | 单元边界、路由或共享依赖发生根本性变化 | **重建**该单元的契约；若单元在概念上仍是同一个，保持其 `contract_id`/`unit.id` 不变。 |
 | 匹配存在歧义 | **阻塞。** 不要猜测；先请用户澄清，再触碰任何文件。 |
+
+**重建/拆分的元数据规则：** 机械转移只约束 DOM，不约束元数据断言。重建或拆分既有契约时，从旧契约继承的 `delivery` 对象必须**对照当前代码重新核实**（§8 两步 target 核实）后才能携带；否则把 `delivery.status` 回退为实现前的值（如 `"frozen"`）并丢弃 `implemented` — 等新实现定位后再回填。
 
 ## 工作流
 
@@ -243,7 +246,23 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - 将 `delivery.status` 设为 `"implemented"`（合并后设为 `"merged"`）；
 - 填充 `delivery.implemented`：`type`、`target`（代码位置）、`requirement`、`version`、`status`。
 
+**写入 `target` 前必须核实** — 针对当前代码库的两步强制核实：
+
+1. **定义核实：** 确认实现符号存在（类/组件/部件的定义）。
+2. **引用核实：** 运行引用/使用搜索（findReferences，或 grep 实例化/调用点），定位该单元**实际挂载或实例化的位置**。挂载点才是 target — 即使它与定义文件不同。只做定义核实不充分（符号完全可能定义在一个文件、挂载在另一个文件）。
+
+把核实到的位置写入 `target`（两者不同时，定义文件与挂载文件都写上）。绝不凭记忆填写 target，也绝不在未重新运行两步核实的情况下从被取代的旧契约携带 target；若暂时定位不到实现，保持 `delivery.status` 为实现前的值，而不是猜一个 target 凑齐对象。
+
 重新运行校验器 — 它会强制要求当 `delivery.status` 为 `"implemented"` 或 `"merged"` 时，`delivery.implemented` 必须完整。不要创建单独的实现追踪文件；同一份 HTML 内的这次回填就是唯一的实现记录。
+
+### 9. 替换或废弃 — 同一次变更内清扫陈旧指针
+
+不存在聚合索引文件，契约的指针散落在需求目录各处（`status.json` notes、`visual-acceptance.md`、progress/todo 记录、拆分摘要）。当契约被**删除、替换或以变更后的 unit id 重建**时，引用清扫完成前该变更不算完成：
+
+1. 扫描需求目录（`.ai-delivery/requirements/<req-id>/`）中对旧 unit id / 旧契约路径的每一处引用。
+2. 把每个**活跃**指针（`status.json` notes、`visual-acceptance.md` 的 Contract 条目、progress/todo、拆分摘要）改指新契约路径 / unit id。
+3. 允许保留一行历史注记（「已删除 / 被 `<new unit id>` 取代」）— 但活跃指针不得继续指向已不存在的契约文件。
+4. 条件允许时运行需求状态校验器（`scripts/validate-delivery-status.py <status.json> --req-root <req-dir>`）；它会机械化地拒绝悬空的 `ui-contract.html` 指针。
 
 ## 组件类型词汇
 
@@ -270,6 +289,9 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - 无法获取的资产静默重绘，而不是记为待办项交由用户决策。
 - 把预览截图（`contract-preview-*.png` 等）当作交付产物保存 — hydrate 后的 HTML 才是复审媒介。
 - 未经逐份契约的用户显式确认即宣布冻结（除非用户明确豁免复审）。
+- 凭记忆写入 `delivery.implemented.target`，或在未对照当前代码重新核实的情况下从被取代的旧契约继承 target。
+- 只做定义核实就回填 `target` — 必须先通过引用/使用搜索确认实际挂载/实例化文件；两者不同时，两个位置都属于 `target`。
+- 删除或重建契约（unit id 变化）时不清扫需求目录中的陈旧指针 — `status.json` notes、`visual-acceptance.md`、progress/todo、拆分摘要中的活跃引用必须在同一次变更内改指新契约。
 - 把默认态（或任意状态）只放进 `<template>` 并删除/省略 `script[data-ui-state-preview]`，导致浏览器显示空 host。
 - 在 hydrate / switcher 未工作时声称已完成浏览器默认态审查，或未逐一切换**每个**已声明状态。
 - 将状态栏、导航栏、键盘或设备外壳建模为 `data-ui-kind` 内容，而不是使用 CSS 安全区处理。

@@ -41,6 +41,15 @@ CONTRACT_META_PATTERN = re.compile(
     re.DOTALL,
 )
 
+# A pointer must carry at least one directory segment; bare "ui-contract.html"
+# mentions in prose are not pointers.
+CONTRACT_POINTER_PATTERN = re.compile(r"[A-Za-z0-9_\-./]+/ui-contract\.html")
+# Lines marked as historical notes are exempt from the dangling-pointer check.
+POINTER_HISTORY_PATTERN = re.compile(
+    r"superseded|replaced by|deleted|已删除|取代", re.IGNORECASE
+)
+POINTER_SCAN_SUFFIXES = (".md", ".json")
+
 
 def find_contracts(subreq_dir: Path) -> list[Path]:
     """Find every ui-contract.html under a sub-requirement (one per unit)."""
@@ -105,6 +114,66 @@ def has_visual_acceptance_evidence(subreq_dir: Path) -> bool:
     if evidence_dir.is_dir():
         return any(evidence_dir.glob("*.png"))
     return False
+
+
+def pointer_resolves(
+    token: str, file_dir: Path, req_root: Path, existing: list[Path]
+) -> bool:
+    normalized = token
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    if not normalized:
+        return False
+    candidate = Path(normalized)
+    if candidate.is_absolute() and candidate.is_file():
+        return True
+    for base in (file_dir, req_root):
+        if (base / normalized).is_file():
+            return True
+    # Tolerate different anchor points: the pointer may be written relative to
+    # another directory than the one we can reconstruct.
+    token_posix = candidate.as_posix()
+    return any(path.as_posix().endswith(token_posix) for path in existing)
+
+
+def find_dangling_contract_pointers(req_root: Path) -> list[str]:
+    """Reject references to ui-contract.html files that no longer exist.
+
+    Contracts have no aggregate index, so pointers live scattered across the
+    requirement directory (status.json notes, visual-acceptance.md,
+    progress/todo records). When a contract is deleted or rebuilt under a new
+    unit id, active pointers must be redirected in the same change; a line
+    carrying a history marker ("superseded" / "deleted" / 已删除 / 取代) is an
+    allowed historical note and is skipped.
+    """
+    if not req_root.is_dir():
+        return []
+    existing = sorted(req_root.rglob("ui-contract.html"))
+    errors: list[str] = []
+    for path in sorted(req_root.rglob("*")):
+        if not path.is_file() or path.suffix not in POINTER_SCAN_SUFFIXES:
+            continue
+        try:
+            raw = path.read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError):
+            continue
+        for lineno, line in enumerate(raw.splitlines(), start=1):
+            if POINTER_HISTORY_PATTERN.search(line):
+                continue
+            for match in CONTRACT_POINTER_PATTERN.finditer(line):
+                # Skip placeholder-style tokens such as "<unit-id>/ui-contract.html".
+                if match.start() > 0 and line[match.start() - 1] in "<>":
+                    continue
+                token = match.group(0)
+                if pointer_resolves(token, path.parent, req_root, existing):
+                    continue
+                rel = path.relative_to(req_root)
+                errors.append(
+                    f"[POINTER] {rel}:{lineno} references missing ui-contract.html: "
+                    f"{token} — redirect the pointer to the current contract or "
+                    "mark the line as a historical note (superseded/deleted)"
+                )
+    return errors
 
 
 def run_contract_validator(contract: Path, validator_script: Path) -> tuple[bool, str]:
@@ -214,6 +283,8 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
                     errors.append(
                         f"[GATE] {subreq_id} status={status} but contract invalid: {contract}\n{output}"
                     )
+
+    errors.extend(find_dangling_contract_pointers(req_root))
 
     return errors
 
