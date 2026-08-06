@@ -70,7 +70,7 @@ exit 0
 EOF
 chmod +x "$TEMP_BIN/specify"
 
-PATH="$TEMP_BIN:$PATH" printf 'n\n' | zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
+printf 'n\n' | PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-truth-mapping" ]]
