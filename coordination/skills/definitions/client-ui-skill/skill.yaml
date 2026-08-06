@@ -1,0 +1,52 @@
+id: client-ui-skill
+name: Client UI Implementation Skill
+version: 1.0.0
+description: Validates client UI implementation artifacts with conditional deps
+for_node_types:
+  - client_ui_impl
+required_fields:
+  - title
+  - component_name
+  - target_platform
+optional_fields:
+  - storybook_url
+  - design_tokens
+deps:
+  - upstream: api_contract
+    presence: required
+    strictness: strict
+    coupling: hard
+  - upstream: design_asset
+    presence: if_present
+    strictness: strict
+    coupling: soft
+format:
+  spec: ClientUICode
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 52428800
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.7
+  requires_human: false
+  lint_required: true
+  test_required: true
+  security_scan: true
+metadata:
+  allowed_extensions:
+    - tsx
+    - ts
+    - jsx
+    - js
+    - css
+    - scss
+    - html
+    - md
+    - yaml
+    - json

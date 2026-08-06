@@ -1,0 +1,83 @@
+instances:
+  team_a_server:
+    role: server_impl
+    llm_config:
+      model: "gpt-4o-mini"
+      temperature: 0.2
+    allowed_node_types:
+      - server_impl
+      - server_test
+      - server_delivery
+    allowed_external_repos:
+      - "github.com/myorg/*"
+    approvers:
+      - "bot-coord"
+      - "human-lead"
+    clearance: internal
+
+  team_b_server:
+    role: server_impl
+    llm_config:
+      model: "gpt-4o-mini"
+      temperature: 0.3
+    allowed_node_types:
+      - server_impl
+      - server_test
+    allowed_external_repos:
+      - "github.com/myorg/team-b*"
+    approvers:
+      - "bot-coord"
+      - "human-lead-b"
+    clearance: 1
+
+  team_product:
+    role: product
+    llm_config:
+      model: "gpt-4o"
+      temperature: 0.1
+    allowed_node_types:
+      - product_spec
+      - api_contract
+    allowed_external_repos: []
+    approvers:
+      - "human-pm"
+    clearance: internal
+
+  team_design:
+    role: design
+    llm_config:
+      model: "gpt-4o"
+      temperature: 0.4
+    allowed_node_types:
+      - design_asset
+    allowed_external_repos: []
+    approvers:
+      - "human-designer-lead"
+    clearance: internal
+
+  team_client_ui:
+    role: client_ui
+    llm_config:
+      model: "gpt-4o-mini"
+      temperature: 0.2
+    allowed_node_types:
+      - client_ui_impl
+      - client_test
+    allowed_external_repos:
+      - "github.com/myorg/frontend*"
+    approvers:
+      - "bot-coord"
+      - "human-fe-lead"
+    clearance: internal
+
+  team_ops:
+    role: ops
+    llm_config:
+      model: "gpt-4o-mini"
+      temperature: 0.0
+    allowed_node_types:
+      - delivery_gate
+    allowed_external_repos: []
+    approvers:
+      - "human-ops"
+    clearance: 2

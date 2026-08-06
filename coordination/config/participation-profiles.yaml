@@ -1,0 +1,181 @@
+# 参与方 Profile 定义 (6 profiles)
+# 每种 profile 描述团队/交付模式的角色组成、补全契约、核心节点类型
+
+profiles:
+  # Profile 1: 全栈团队，全部角色齐全
+  fullstack:
+    description: "标准全栈交付团队，包含产品/设计/前端/后端/QA 全部角色"
+    roles_present:
+      - product_owner
+      - product_designer
+      - ui_ux_designer
+      - frontend_engineer
+      - backend_engineer
+      - qa_engineer
+      - devops_engineer
+      - tech_lead
+    roles_absent: []
+    # 允许非产品角色作为根节点发起需求
+    allow_non_product_root: false
+    completion:
+      # strict: 所有 mandatory 节点必须 done
+      # relaxed: 关键路径 done 即可
+      # custom: 按 completion_contract 表达式
+      mode: "strict"
+    core_node_types:
+      - product_requirement
+      - ui_design
+      - api_contract
+      - frontend_impl
+      - backend_impl
+      - qa_testing
+      - devops_deploy
+      - closure_review
+    optional_node_types:
+      - tech_debt_cleanup
+      - performance_optimization
+      - security_review
+      - documentation
+      - user_training
+
+  # Profile 2: Server Only - 无前端/设计，纯后端 API 团队
+  server_only:
+    description: "纯后端/API 团队，仅负责服务端与数据层"
+    roles_present:
+      - product_owner
+      - backend_engineer
+      - qa_engineer
+      - devops_engineer
+      - tech_lead
+    roles_absent:
+      - ui_ux_designer
+      - frontend_engineer
+    allow_non_product_root: false
+    completion:
+      mode: "strict"
+    core_node_types:
+      - product_requirement
+      - api_contract
+      - backend_impl
+      - qa_testing
+      - devops_deploy
+      - closure_review
+    optional_node_types:
+      - tech_debt_cleanup
+      - performance_optimization
+      - security_review
+      - documentation
+
+  # Profile 3: No Design Client - 没有设计和客户对接，按现有 PRD 开发
+  no_design_client:
+    description: "无设计资源、无直接客户对接，仅按输入 PRD 实施的团队"
+    roles_present:
+      - product_owner
+      - frontend_engineer
+      - backend_engineer
+      - qa_engineer
+      - devops_engineer
+      - tech_lead
+    roles_absent:
+      - ui_ux_designer
+      - product_designer
+    allow_non_product_root: false
+    completion:
+      mode: "relaxed"
+    core_node_types:
+      - product_requirement
+      - api_contract
+      - frontend_impl
+      - backend_impl
+      - qa_testing
+      - devops_deploy
+      - closure_review
+    optional_node_types:
+      - tech_debt_cleanup
+      - documentation
+
+  # Profile 4: Design Only - 仅做设计/原型，不负责实现
+  design_only:
+    description: "仅负责产品设计与 UI 原型交付的团队"
+    roles_present:
+      - product_owner
+      - product_designer
+      - ui_ux_designer
+      - tech_lead
+    roles_absent:
+      - frontend_engineer
+      - backend_engineer
+      - qa_engineer
+      - devops_engineer
+    allow_non_product_root: false
+    completion:
+      mode: "strict"
+    core_node_types:
+      - product_requirement
+      - ui_design
+      - prototype_review
+      - handoff_spec
+      - closure_review
+    optional_node_types:
+      - user_research
+      - usability_testing
+      - design_system_update
+      - documentation
+
+  # Profile 5: Tech Debt - 技术债专项团队，允许以技术节点为根
+  tech_debt:
+    description: "技术债/重构专项团队，允许技术节点作为根节点，不要求产品根"
+    roles_present:
+      - tech_lead
+      - frontend_engineer
+      - backend_engineer
+      - qa_engineer
+      - devops_engineer
+    roles_absent:
+      - product_owner
+      - product_designer
+      - ui_ux_designer
+    allow_non_product_root: true
+    completion:
+      mode: "relaxed"
+    core_node_types:
+      - tech_debt_item
+      - refactoring_plan
+      - frontend_impl
+      - backend_impl
+      - qa_testing
+      - performance_verification
+      - closure_review
+    optional_node_types:
+      - security_review
+      - documentation
+      - migration_script
+
+  # Profile 6: Custom - 自定义模板，按项目调整
+  custom:
+    description: "自定义参与模式，由项目管理员按需要配置角色与节点"
+    roles_present:
+      - tech_lead
+    roles_absent: []
+    allow_non_product_root: true
+    completion:
+      mode: "custom"
+      completion_contract: |
+        $[?(@.node_type in ["closure_review", "deploy_signoff"]
+        && @.status == "done")] empty == false
+    core_node_types:
+      - custom_root
+      - closure_review
+    optional_node_types:
+      - product_requirement
+      - ui_design
+      - api_contract
+      - frontend_impl
+      - backend_impl
+      - qa_testing
+      - devops_deploy
+      - tech_debt_cleanup
+      - performance_optimization
+      - security_review
+      - documentation
+      - custom_node

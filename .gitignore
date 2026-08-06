@@ -4,3 +4,18 @@
 dist/
 bin/
 .gocache/
+/coordination/.venv/
+
+# Python build artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.eggs/
+
+# Test/dev databases
+*.db
+
+# Coverage
+.coverage
+htmlcov/

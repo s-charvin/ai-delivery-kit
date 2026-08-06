@@ -1,0 +1,44 @@
+id: api-contract-skill
+name: API Contract Skill
+version: 1.0.0
+description: Validates API contract definitions with completeness checks
+for_node_types:
+  - api_contract
+required_fields:
+  - title
+  - version
+  - base_url
+optional_fields:
+  - auth
+  - rate_limit
+deps:
+  - upstream: product_spec
+    presence: if_present
+    strictness: strict
+    coupling: hard
+completeness_contract:
+  json_paths:
+    - $.endpoints
+    - $.errors
+  mode: and
+  threshold: 1.0
+format:
+  spec: OpenAPI3
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 10485760
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.0
+  requires_human: true
+  lint_required: true
+  test_required: true
+  security_scan: true
+metadata:
+  first_version_requires_human: true

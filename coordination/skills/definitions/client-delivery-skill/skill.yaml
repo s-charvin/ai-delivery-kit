@@ -1,0 +1,46 @@
+id: client-delivery-skill
+name: Client Delivery Skill
+version: 1.0.0
+description: Validates client delivery gate artifacts with wildcard support
+for_node_types:
+  - client_delivery
+  - "client.*"
+required_fields:
+  - title
+  - deploy_environment
+  - build_target
+optional_fields:
+  - rollback_plan
+  - app_store_links
+deps:
+  - upstream: client_ui_impl
+    presence: if_present
+    strictness: strict
+    coupling: soft
+  - upstream: client_logic
+    presence: if_present
+    strictness: strict
+    coupling: soft
+  - upstream: server_impl
+    presence: if_present
+    strictness: strict
+    coupling: informational
+format:
+  spec: DeliveryManifest
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 10485760
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.0
+  requires_human: true
+  lint_required: true
+  test_required: true
+  security_scan: true
+metadata: {}

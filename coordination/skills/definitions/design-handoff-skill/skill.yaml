@@ -1,0 +1,38 @@
+id: design-handoff-skill
+name: Design Handoff Skill
+version: 1.0.0
+description: Validates design asset and prototype handoffs
+for_node_types:
+  - design_asset
+  - design_proto
+required_fields:
+  - title
+  - designer
+optional_fields:
+  - figma_url
+  - design_tokens
+deps:
+  - upstream: product_spec
+    presence: if_present
+    strictness: accepts_draft
+    coupling: soft
+format:
+  spec: FigmaExport
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 52428800
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.0
+  requires_human: true
+  lint_required: false
+  test_required: false
+  security_scan: true
+metadata:
+  completeness: figma_url required if node_type==design_asset

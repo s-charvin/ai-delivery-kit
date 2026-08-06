@@ -1,0 +1,95 @@
+# HubRepo 配置模板 (FR1.4 HubRepoConfig)
+# 复制为 hub-repo.yaml 并填入真实值后使用
+
+# 仓库访问 URL（HTTPS 或 SSH）
+url: "https://github.com/your-org/your-repo.git"
+
+# Provider 类型: github | gitlab | bitbucket | gitea | azure-devops
+provider: "github"
+
+# 凭证引用（对应 Vault 或 env var 中的 key）
+# 格式: vault://secret/data/repo/token 或 env://GITHUB_TOKEN
+credential_ref: "env://GITHUB_TOKEN"
+
+# Webhook 密钥引用（用于校验入站 webhook 签名）
+webhook_secret_ref: "env://GITHUB_WEBHOOK_SECRET"
+
+# 分支命名策略
+branch_naming:
+  # 分支前缀模板，可用占位符: {node_id}, {slice_code}, {author}, {date}
+  prefix_template: "feat/{slice_code}-{node_id}"
+  # 最大分支名长度
+  max_length: 80
+  # 非法字符替换为
+  sanitize_char: "-"
+
+# 克隆策略
+clone_strategy:
+  # 何时执行完整克隆: always | on-demand | never
+  full_clone: "on-demand"
+  # 浅克隆深度
+  shallow_depth: 50
+  # 工作树模式 (每个 PR/任务一个 worktree)
+  worktree_enabled: true
+  # 并发 worktree 上限
+  max_worktrees: 20
+  # 清理未使用 worktree 的 TTL (小时)
+  worktree_ttl_hours: 72
+
+# Git LFS 配置
+lfs:
+  # 是否启用 LFS
+  enabled: false
+  # 超过此大小 (MB) 的文件建议走 LFS
+  threshold_mb: 10
+  # LFS 远程端点 (可选, 留空用默认)
+  endpoint: ""
+
+# 容量与限流
+capacity:
+  # 每小时最大 PR 数（全局限流）
+  max_prs_per_hour: 120
+  # 并发活跃 PR 上限
+  max_active_prs: 30
+  # 单节点单次 PR 变更行数上限
+  max_lines_per_pr: 2000
+  # 单节点最大文件变更数
+  max_files_per_pr: 50
+
+# 分支保护规则
+branch_protection:
+  # 主干分支
+  main:
+    name: "main"
+    # 是否需要 PR review 数
+    required_approving_review_count: 1
+    # 是否需要状态检查通过
+    required_status_checks: ["ci/build", "ci/test", "contract/gate"]
+    # 是否要求线性历史
+    require_linear_history: true
+    # 是否禁止 force push
+    allow_force_pushes: false
+    # 是否禁止删除
+    allow_deletions: false
+    # 是否允许机器人绕过
+    allow_bot_bypass: true
+    # 合入策略: squash | merge | rebase
+    merge_strategy: "squash"
+  # 开发分支（可选）
+  develop:
+    name: "develop"
+    required_approving_review_count: 0
+    required_status_checks: ["ci/build"]
+    require_linear_history: false
+    allow_force_pushes: true
+    allow_deletions: false
+    allow_bot_bypass: true
+    merge_strategy: "merge"
+
+# Webhook 订阅事件（对应 provider 的事件名）
+webhook_events:
+  - "pull_request"
+  - "pull_request_review"
+  - "push"
+  - "check_run"
+  - "check_suite"

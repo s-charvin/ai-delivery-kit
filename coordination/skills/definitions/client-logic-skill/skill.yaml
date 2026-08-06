@@ -1,0 +1,46 @@
+id: client-logic-skill
+name: Client Logic Implementation Skill
+version: 1.0.0
+description: Validates client logic layer artifacts
+for_node_types:
+  - client_logic
+required_fields:
+  - title
+  - module_name
+  - target_platform
+optional_fields:
+  - state_management
+  - store_config
+deps:
+  - upstream: api_contract
+    presence: if_present
+    strictness: strict
+    coupling: soft
+format:
+  spec: ClientLogicCode
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 52428800
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.75
+  requires_human: false
+  lint_required: true
+  test_required: true
+  security_scan: true
+metadata:
+  allowed_extensions:
+    - ts
+    - tsx
+    - js
+    - jsx
+    - py
+    - yaml
+    - json
+    - md

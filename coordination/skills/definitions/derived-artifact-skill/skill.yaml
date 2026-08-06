@@ -1,0 +1,38 @@
+id: derived-artifact-skill
+name: Derived Artifact Skill
+version: 1.0.0
+description: Validates derived artifacts generated from upstream outputs
+for_node_types:
+  - derived_artifact
+required_fields:
+  - title
+  - derived_from
+  - generation_method
+optional_fields:
+  - transformation_rules
+  - hash_verification
+deps:
+  - upstream: derived_from
+    presence: required
+    strictness: strict
+    coupling: hard
+format:
+  spec: DerivedOutput
+  content_schema_url: null
+modification_rules:
+  allowed_change_class:
+    - compatible
+    - addendum
+    - breaking
+  enforce_addendum_only: false
+output_guides:
+  max_len_bytes: 52428800
+  forbidden_tokens: []
+review_gates:
+  coverage_min: 0.0
+  requires_human: false
+  lint_required: true
+  test_required: false
+  security_scan: true
+metadata:
+  derived_from: "<upstream>"
