@@ -28,10 +28,18 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 |------|-----------|
 | `completed` | All executable subreqs are `merged` |
 | `bootstrap` | Missing/incomplete `status.json` or no sub_requirements |
-| `confirm_design` | Runnable subreq needs design and `design_approved=false` → `CHECKPOINT=CP-DESIGN` |
+| `confirm_design` | Runnable subreq needs design approval and nothing else is runnable → `CHECKPOINT=CP-DESIGN` |
 | `confirm_to_dev` | All executable subreqs at `tasks_ready` → `CHECKPOINT=CP-001` |
 | `blocker_recovery` | `current_checkpoint=CP-002` or only blocked items remain |
-| `resume` | At least one runnable item; no blocking checkpoint |
+| `resume` | At least one runnable item; no blocking checkpoint. A pending design approval still surfaces `CHECKPOINT=CP-DESIGN` as a reminder while other runnable work proceeds |
+
+## Checkpoint validity
+
+Checkpoints are credentials, not history. A recorded checkpoint is only valid while its guards still hold:
+
+- `confirm_to_dev` requires all executable subreqs at `tasks_ready` right now. A stale `current_checkpoint=CP-001` left behind after a regression (e.g. a subreq back at `spec_ready`) does not authorize `implement`.
+- `NEXT_ACTION=implement` additionally requires the user confirmation to be recorded in `status.json` (`current_checkpoint=CP-001` on top of all-`tasks_ready`). First arrival at all-`tasks_ready` emits `NEXT_ACTION=none` until the user confirms.
+- Never treat a recorded checkpoint as a shortcut past a failed guard; re-derive it from current governed truth.
 
 ## Truth hierarchy
 

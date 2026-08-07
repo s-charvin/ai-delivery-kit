@@ -73,6 +73,7 @@ main() {
   run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
   run_step "ui contract validator" zsh tests/ai-delivery-skills/ui-contract-validator.test.sh
   run_step "ui contract pressure gate" zsh tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh
+  run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh
   run_step "legacy bootstrap contract" env GOCACHE="$GOCACHE_DIR" zsh tests/ai-delivery-skills/bootstrap-project.test.sh
   run_step "bootstrap smoke" bash tests/ai-delivery-cli/bootstrap-script.test.sh
   run_step "install smoke" bash tests/ai-delivery-cli/install-script.test.sh

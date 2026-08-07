@@ -18,12 +18,32 @@ UI 切片必须对照已冻结、浏览器可预览（hydrate 默认态 + 状态
 
 1. **隔离** — 每切片一个 worktree/分支。
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
-3. **每任务评审** — 首次失败进入自动修复 loop，再升级给用户。
-4. **视觉验收**（仅 UI）— 将实现与经评审的 `ui-contract.html` 各状态对照；首次失败自动修复。
+3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
+4. **视觉验收**（仅 UI）— 将实现与经评审的 `ui-contract.html` 各状态对照；失败进入同一评审循环。
 5. **验证** — 合并前集成检查。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
 
 每一步如何执行取决于档位（superpowers 技能、ECC 代理或原生纪律）：见 [frameworks/superpowers.md](frameworks/superpowers.md)、[frameworks/ecc.md](frameworks/ecc.md)、[frameworks/native.md](frameworks/native.md)。
+
+## 评审循环（任务级闭环）
+
+无论哪个框架档位，每个任务与每次视觉验收失败都通过这个循环收口：
+
+```
+实现者完成任务
+  → 评审者（新鲜上下文）对照任务简报 + spec + 契约评审
+  → 干净 → 记录评审结论 → 下一任务
+  → 有 finding → finding 清单作为修复简报交回实现者 → 修复 → 复审
+  → 经过 review_loop.max_rounds 轮仍不干净 → 停下并升级给用户
+```
+
+规则：
+
+- 评审者始终在新鲜上下文中运行（档位支持时用子代理），绝不允许实现者自评。
+- 每轮的 finding 与修复摘要记入 `progress.md` 以便追溯。
+- 迭代预算 `review_loop.max_rounds` 默认 3。解析优先级：子需求 `decisions.md` 覆盖 → `.ai-delivery/meta/workflow-policy.json` 的 `review_loop.max_rounds` → 默认 3。
+- 预算耗尽：暂停，把未解决的 finding 报告给用户，走 `blocked_verification_failure` 或按用户指示处理。**最新一轮评审不干净的工作绝不自动合并。**
+- 循环所有者是主编排会话；干净与否以评审者报告为准，而非实现者的声称。
 
 ## 子代理策略
 

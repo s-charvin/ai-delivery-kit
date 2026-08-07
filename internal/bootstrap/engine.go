@@ -125,6 +125,9 @@ func (e Engine) Run(cfg Config) error {
 			"require_isolated_worktree":           true,
 			"allow_precreate_before_dependencies": false,
 		},
+		"review_loop": map[string]any{
+			"max_rounds": 3,
+		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,
 	}); err != nil {

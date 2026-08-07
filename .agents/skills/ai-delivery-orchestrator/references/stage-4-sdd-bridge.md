@@ -33,7 +33,9 @@ Append to `.ai-delivery/requirements/<req-id>/progress.md`:
 
 ## Dual-stage review
 
-1. **Per-task review** — after each task; auto-fix once before user escalation.
+Both stages run through the [Review loop](stage-implementation.md#review-loop-task-level-closed-loop): implement → fresh-context review → findings become a fix brief → re-review, until clean or the `review_loop.max_rounds` budget is exhausted (then escalate to the user; never auto-merge).
+
+1. **Per-task review** — after each task; append every round's findings and fix summary to `progress.md`.
 2. **Pre-merge review** — full slice review after all tasks; then visual acceptance (UI) and the verification step.
 
 ## Visual acceptance evidence (UI)

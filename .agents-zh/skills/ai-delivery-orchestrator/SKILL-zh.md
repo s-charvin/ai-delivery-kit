@@ -79,11 +79,12 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 | 全部 `tasks_ready` + CP-001 | Stage 4 `implement` |
 | 切片完成 | `finish` |
 
-## 暂停点（3 个）
+## 暂停点（4 个）
 
 1. 拆分/跳过决策后 — 与用户确认
 2. 设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
 3. `tasks_ready` 后 — CP-001，进入开发前确认
+4. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
 
 ## 硬边界
 
@@ -96,6 +97,7 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 - 编排器设计模式不要把设计文档写进框架自有目录；设计摘要存入子需求 `notes`。
 - 所有 unit 的 `ui-contract.html` 未经 `scripts/validate-ui-contract-html.py` 退出 0，且浏览器 hydrate 默认态预览与需求 scope 对齐 + icon 资产保真 + 逐份契约用户显式确认（除非明确豁免）通过之前，不得设置 `acceptance_frozen`（见 Stage 2 冻结门槛）。Stage 2 仅通过 `ui-truth-mapping` 写契约 — 绝不经由 `figma-design-to-code`。
 - UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且契约仍通过时，不得 `merged`。
+- 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
 
 ## 状态转换门禁

@@ -79,11 +79,12 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 | All `tasks_ready` + CP-001 | Stage 4 `implement` |
 | Slice done | `finish` |
 
-## Pause points (3)
+## Pause points (4)
 
 1. After split/skip decision — confirm with user
 2. After the design session — CP-DESIGN, explicit approval before `spec`
 3. After `tasks_ready` — CP-001, confirm before development
+4. Review-loop budget exhausted — the task-level review loop (implement → review → fix → re-review) stopped without a clean round; report outstanding findings and wait for the user
 
 ## Hard boundary
 
@@ -96,6 +97,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
 - Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment + icon asset fidelity + explicit per-contract user confirmation (unless explicitly waived) pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
+- Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
 
 ## Status transition gates

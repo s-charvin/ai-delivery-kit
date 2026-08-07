@@ -28,8 +28,8 @@
 
 1. `using-git-worktrees` —— 一个切片一个 worktree。
 2. `subagent-driven-development`（默认）—— 每任务一个实现者子代理，串行执行；每个子代理内部经 `test-driven-development` 走 TDD。仅对相互独立、文件不重叠的测试/缺陷域并行派发；绝不允许两个实现者同时改同一批切片文件。
-3. `requesting-code-review` —— 首次失败先自动修复，再升级到用户。
-4. 视觉验收（仅 UI）—— 对照已评审的 `ui-contract.html` 各状态；首次失败自动修复。
+3. `requesting-code-review` 驱动[评审循环](../stage-implementation.md#评审循环任务级闭环)：评审者始终是新鲜上下文的子代理；finding 作为修复简报交回实现者并重复评审，直到干净或 `review_loop.max_rounds` 预算耗尽，然后升级给用户。
+4. 视觉验收（仅 UI）—— 对照已评审的 `ui-contract.html` 各状态；失败重新进入同一评审循环。
 5. `verification-before-completion` —— 合并前做集成检查。
 6. 进入 `finish` 前，完整静态分析 + 完整测试必须干净通过。
 

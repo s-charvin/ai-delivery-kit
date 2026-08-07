@@ -99,6 +99,8 @@ grep -Fq 'CLAUDE_PROJECT_DIR' "$TARGET_REPO/.claude/settings.json"
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"review_loop"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"max_rounds"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 
 zsh "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
 zsh "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"

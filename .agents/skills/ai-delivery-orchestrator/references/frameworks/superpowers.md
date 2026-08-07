@@ -28,8 +28,8 @@ Never clone or symlink superpowers yourself.
 
 1. `using-git-worktrees` — one worktree per slice.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
-3. `requesting-code-review` — first failure → auto-fix loop before user escalation.
-4. Visual acceptance (UI only) — compare against the reviewed `ui-contract.html` states; auto-fix on first failure.
+3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
+4. Visual acceptance (UI only) — compare against the reviewed `ui-contract.html` states; failures re-enter the same review loop.
 5. `verification-before-completion` — integration checks before merge.
 6. Full analyze + full test must pass clean before `finish`.
 

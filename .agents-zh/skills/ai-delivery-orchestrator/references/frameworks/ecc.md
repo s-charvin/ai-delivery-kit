@@ -20,8 +20,8 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 ## 使用意见
 
 - 保持编排器 loop 完整：每个 ECC 命令只服务一个抽象动作；状态推进、门禁、阻塞器留在主会话。
-- 每任务评审 loop 优先用 ECC 评审代理（首次失败先自动修复，再升级到用户），与原生纪律要求的是同一个 loop。
-- ECC hooks 强制格式/lint 规则时就让它跑；hook 失败即验证失败（自动修复后仍失败则 `blocked_verification_failure`），不是绕过 hook 的理由。
+- 每任务[评审循环](../stage-implementation.md#评审循环任务级闭环)优先用 ECC 评审代理：实现 → ECC 评审代理 → finding 交回实现者 → 复审，直到干净或 `review_loop.max_rounds` 预算耗尽（然后升级给用户；绝不自动合并）。
+- ECC hooks 强制格式/lint 规则时就让它跑；hook 失败即验证失败（经评审循环修复一轮后仍失败则 `blocked_verification_failure`），不是绕过 hook 的理由。
 - ECC 与另一个框架同时安装时，ECC 通常与规格类档位（spec-kit/OpenSpec）搭配良好：ECC 负责 design/implement/finish，规格档位负责 `spec`/`plan`/`tasks`。
 
 ## 可追溯性记录

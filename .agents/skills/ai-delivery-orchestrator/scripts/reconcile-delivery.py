@@ -237,11 +237,13 @@ def reconcile(
     errors.extend(validation_errors)
 
     deps = load_dependency_graph(req_root)
+    recorded_checkpoint = status_data.get("current_checkpoint")
     runnable: list[str] = []
     blocked: list[str] = []
     blocker_scopes: list[str] = []
     actionable: list[tuple[str, str]] = []
     design_pending: list[tuple[str, str]] = []
+    dev_waiting: list[str] = []
 
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
@@ -272,8 +274,13 @@ def reconcile(
 
         action = next_action_for_entry(entry, ui_bearing)
         if action:
-            runnable.append(f"{subreq_id}:{status}->{action}")
-            actionable.append((subreq_id, action))
+            if status == "tasks_ready":
+                # 进入开发必须经过 CP-001 门禁：tasks_ready 子需求先等待，
+                # 待 all_tasks_ready 与已记录的 CP-001 确认后再放行。
+                dev_waiting.append(subreq_id)
+            else:
+                runnable.append(f"{subreq_id}:{status}->{action}")
+                actionable.append((subreq_id, action))
 
     executable = [
         sid
@@ -294,18 +301,25 @@ def reconcile(
         for sid in executable
     )
 
-    checkpoint = status_data.get("current_checkpoint")
+    # CP-001 凭证仅在“全部 tasks_ready 且用户确认已记录”时有效；
+    # 回退后残留的旧确认不得再次授权 implement。
+    dev_authorized = recorded_checkpoint == "CP-001" and all_tasks_ready
+    for subreq_id in dev_waiting:
+        if dev_authorized:
+            runnable.append(f"{subreq_id}:tasks_ready->implement")
+            actionable.append((subreq_id, "implement"))
+
+    checkpoint = recorded_checkpoint
 
     if all_merged and executable:
         runtime_mode = "completed"
         checkpoint = None
     elif checkpoint == "CP-002":
         runtime_mode = "blocker_recovery"
-    elif checkpoint == "CP-001" or all_tasks_ready:
+    elif all_tasks_ready:
         runtime_mode = "confirm_to_dev"
-        if checkpoint != "CP-001":
-            checkpoint = "CP-001"
-    elif design_pending:
+        checkpoint = "CP-001"
+    elif design_pending and not actionable:
         runtime_mode = "confirm_design"
         checkpoint = "CP-DESIGN"
     elif not runnable and blocked:
@@ -313,6 +327,10 @@ def reconcile(
         checkpoint = checkpoint or "CP-002"
     else:
         runtime_mode = "resume"
+        # 检查点只是守卫满足时的凭证：门禁回退后残留的 CP-001 不再
+        # 授权 implement；设计待批则继续以 CP-DESIGN 提示，不阻塞其他
+        # 无依赖的可运行项。
+        checkpoint = "CP-DESIGN" if design_pending else None
 
     if runtime_mode == "completed":
         next_action = "none"
@@ -321,7 +339,8 @@ def reconcile(
         next_subreq, next_action = design_pending[0]
     elif runtime_mode == "confirm_to_dev":
         next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
-        next_action = "implement" if checkpoint == "CP-001" else "none"
+        # 仅当用户确认已记录在 status.json（CP-001）时才放行 implement。
+        next_action = "implement" if recorded_checkpoint == "CP-001" else "none"
     elif runtime_mode == "blocker_recovery":
         next_action = "none"
         next_subreq = blocked[0].split(":", 1)[0] if blocked else None

@@ -28,10 +28,18 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 |------|------|
 | `completed` | 所有可执行子需求均为 `merged` |
 | `bootstrap` | `status.json` 缺失/不完整或无 `sub_requirements` |
-| `confirm_design` | 可运行子需求需设计且 `design_approved=false` → `CHECKPOINT=CP-DESIGN` |
+| `confirm_design` | 可运行子需求需设计批准且无其他可运行项 → `CHECKPOINT=CP-DESIGN` |
 | `confirm_to_dev` | 所有可执行子需求均为 `tasks_ready` → `CHECKPOINT=CP-001` |
 | `blocker_recovery` | `current_checkpoint=CP-002` 或仅剩阻塞项 |
-| `resume` | 至少一个可运行项；无检查点阻止 |
+| `resume` | 至少一个可运行项；无检查点阻止。设计待批时仍以 `CHECKPOINT=CP-DESIGN` 提示，其他可运行工作继续推进 |
+
+## 检查点有效性
+
+检查点是凭证，不是历史记录。已记录的检查点只在其守卫仍成立时有效：
+
+- `confirm_to_dev` 要求当前所有可执行子需求都处于 `tasks_ready`。回退（如某子需求回到 `spec_ready`）后残留的旧 `current_checkpoint=CP-001` 不授权 `implement`。
+- `NEXT_ACTION=implement` 额外要求用户确认已记录在 `status.json`（全部 `tasks_ready` 之上叠加 `current_checkpoint=CP-001`）。首次到达全部 `tasks_ready` 时输出 `NEXT_ACTION=none`，直到用户确认。
+- 不得把已记录的检查点当作绕过失败守卫的捷径；一律从当前治理真值重新推导。
 
 ## 真相层级
 
