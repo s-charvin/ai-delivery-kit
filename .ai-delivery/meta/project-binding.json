@@ -2,7 +2,6 @@
   "version": 1,
   "project_id": "ai-delivery-kit",
   "project_root": ".",
-  "specify_path": ".specify",
   "ai_delivery_path": ".ai-delivery",
   "updated_at": "2026-07-10T00:00:00Z",
   "updated_by": "kit-cleanup"

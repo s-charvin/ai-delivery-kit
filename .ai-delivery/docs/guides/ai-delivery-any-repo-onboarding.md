@@ -4,7 +4,7 @@
 
 只要你的目标仓库满足下面两点，就可以接入这套架构：
 
-1. 该仓库是实际业务仓库，后续会承载 `.ai-delivery/`、`.specify/` 和 project-local skills。
+1. 该仓库是实际业务仓库，后续会承载 `.ai-delivery/` 和 project-local skills。
 2. 你手里有一个"参考仓库"，里面已经维护好这套 project AI delivery skill 源码与 helper script。
 
 当前参考仓库就是本仓库，它提供：
@@ -27,13 +27,15 @@
 
 - `Requirement` 是功能真相
 - `Figma` 是视觉真相
-- `Spec Kit` 只负责 `constitution / spec / plan / tasks`
-- `Superpowers` 只负责 agent 执行纪律
+- 规格类产物（spec / plan / tasks）由已安装的 spec 框架产出；未安装时走内置原生档
+- 执行纪律（worktree / TDD / review / verification）由已安装的执行框架承担；未安装时用内置纪律
 - `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、依赖和追踪等重要产物存放
+
+编排器本身**框架无关**：它只输出抽象阶段动作（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并在运行时适配你已安装的框架。绝不要求你安装任何东西。
 
 推荐主链路：
 
-`Requirement Intake → Requirement Breakdown → UI Truth Mapping → Spec Kit → Implementation → Merge`
+`Requirement Intake → Requirement Breakdown → UI Truth Mapping → Design → Spec 管道 → Implementation → Merge`
 
 说明：
 
@@ -63,7 +65,7 @@ zsh scripts/bootstrap-ai-delivery-project.sh /Users/xxx/Projects/my-app
 
 - `.agents/skills/requirement-breakdown/`
 - `.agents/skills/ui-truth-mapping/`
-- `.agents/skills/ai-delivery-orchestrator/`
+- `.agents/skills/ai-delivery-orchestrator/`（含 `references/framework-adaptation.md` 与 `references/frameworks/` 框架指南）
 - `.ai-delivery/scripts/validate-project-ai-delivery-skills.sh`
 - `.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh`
 - `.ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh`
@@ -74,50 +76,31 @@ zsh scripts/bootstrap-ai-delivery-project.sh /Users/xxx/Projects/my-app
 
 它不会做这些事情：
 
-- 不会安装全局 `Spec Kit` CLI
-- 不会自动执行 `specify init`
+- 不会安装任何第三方框架（spec-kit / OpenSpec / superpowers / ECC）
+- 不会自动执行任何框架的 init 命令
 - 不会创建真实 requirement package
 - 不会绑定 Figma
 
-### Step 2: 在目标仓库里安装 Spec Kit
+### Step 2: 框架自查与适配（可选安装，装了更好，不装也行）
 
-先确保机器具备：
+bootstrap 之后**不需要安装任何东西**即可跑完整条链路 —— 未安装任何框架时，编排器使用内置原生档（子需求目录内的轻量 `spec.md` / `tasks.md` + 内置纪律指引）。
 
-```bash
-uv --version
-python3 --version
-git --version
-```
+如果你已经安装了以下主流 AI 开发框架，编排器会在每次 run 开始时自查环境并自动适配（自查与选档规则见 `.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md`）：
 
-`Python` 需要 `3.11+`。
+| 框架 | 主要承担 | 安装识别标志 |
+|------|----------|--------------|
+| [spec-kit](https://github.com/github/spec-kit) | `spec` / `plan` / `tasks`（constitution 治理最完整） | 仓库根 `.specify/` 或 `specify` CLI |
+| [OpenSpec](https://github.com/Fission-AI/OpenSpec) | `spec` / `plan` / `tasks`（轻量 delta-spec，棕地友好） | 仓库根 `openspec/` 或 `openspec` CLI |
+| [superpowers](https://github.com/obra/superpowers) | `design` / `implement` / `finish`（执行纪律技能包） | 用户技能目录含 superpowers 技能 |
+| [ECC (Everything Claude Code)](https://github.com/everythingcc/everything-claude-code) | `design` / `implement` / `finish`（完整 harness 套件） | IDE 中注册 `/ecc:*` 命令 |
 
-安装：
+每个框架的具体使用意见、命令细节与产物落位见对应指南：`.agents/skills/ai-delivery-orchestrator/references/frameworks/<name>.md`。
 
-```bash
-uv tool install specify-cli --from git+https://github.com/github/spec-kit.git
-specify check
-```
+原则：
 
-再进入目标仓库初始化 `Spec Kit`：
-
-```bash
-cd <target-repo-root>
-specify init --here --ai codex --ai-skills --script sh
-```
-
-如果仓库已经有旧的 `Spec Kit` 模板，需要升级：
-
-```bash
-cd <target-repo-root>
-cp .specify/memory/constitution.md .specify/memory/constitution.backup.md 2>/dev/null || true
-specify init --here --force --ai codex --ai-skills --script sh
-```
-
-说明：
-
-- 在 `Codex` 里，`Spec Kit` 的调用方式是 `$speckit-*`
-- 例如 `$speckit-constitution`、`$speckit-specify`、`$speckit-plan`
-- 升级时先备份 `.specify/memory/constitution.md`
+- 编排器**只检测、不安装**；需要安装时由用户自行决定。
+- 多框架并存时各取所长：规格类动作优先 spec-kit / OpenSpec，执行纪律类动作优先 superpowers / ECC。
+- 同一子需求不混用两个规格类框架；选定档位记录在该子需求 `decisions.md`。
 
 bootstrap 完成后，当前仓库内应该已经具备并可识别：
 
@@ -160,7 +143,7 @@ bootstrap 完成后，目标仓库至少具备：
 │           └── ui-composition-guardrails.test.sh
 ```
 
-`.specify/` 则由 `Spec Kit` 负责初始化。
+框架自有目录（如 `.specify/`、`openspec/`）由框架自身初始化，不属于本架构的目录契约。
 
 ## 新需求怎么走完整条链路
 
@@ -169,22 +152,10 @@ bootstrap 完成后，目标仓库至少具备：
 - 总需求文档：`docs/requirements/project-rename.md`
 - `requirement_id`: `req-project-rename`
 - `subreq_id`: `SR-001`
-- `Spec Kit feature id`: `001-project-rename`
 - Figma file: `https://www.figma.com/file/abc123/Project-Settings`
 - Figma node: `120:88`
 
-### 第 0 步：初始化仓库级 Spec Kit constitution
-
-直接对 Codex 说：
-
-```text
-使用 $speckit-constitution 为当前仓库建立开发原则：
-1. Requirement 是功能真相，Figma 是视觉真相，冲突必须阻塞；
-2. Spec Kit 只负责 spec、plan、tasks，不负责运行态；
-3. 实现执行必须走独立 worktree、TDD、review、verification；
-4. 所有需求都要保留从 .ai-delivery 到 Spec Kit 产物的反向追踪；
-5. Requirement 与 Figma 冲突时，agent 不允许私自补需求或补 UI。
-```
+最佳实践是直接调用编排器：告诉它需求文档位置，它会自查框架环境、运行 reconcile 并按 handoff 表逐步推进。以下是各阶段的手工说明。
 
 ### 第 1 步：Requirement Breakdown
 
@@ -196,7 +167,7 @@ bootstrap 完成后，目标仓库至少具备：
 - 如果 .ai-delivery/requirements/req-project-rename 不存在，就按当前 governed contract bootstrap
 - 生成 breakdown-summary.md、global-rules.md、dependency-graph.json 和 sub-requirements
 - 初始化 traceability.json 和 source_index
-- 只做需求拆分，不做 Figma 映射，不做 Spec Kit spec/plan/tasks
+- 只做需求拆分，不做 Figma 映射，不做 spec/plan/tasks
 - 不允许脑补缺失业务规则
 ```
 
@@ -221,56 +192,45 @@ bootstrap 完成后，目标仓库至少具备：
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
 ```
 
-如果当前没有 Figma 设计，或需求不含 UI，可以跳过这一步。非 UI 子需求直接进入 Spec Kit。
+如果当前没有 Figma 设计，或需求不含 UI，可以跳过这一步。非 UI 子需求直接进入设计阶段。
 
-### 第 3 步：Spec Kit Phase
+### 第 3 步：Design + Spec 管道（框架无关）
 
-先生成 spec：
+设计阶段（`design` 动作）：基于 `requirement-slice.md`、冻结的 `ui-contract.html`（如有）与 API 文档做设计探索，产出架构、组件分解、数据模型与关键取舍，摘要记入子需求 `notes`，**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
 
-```text
-使用 $speckit-specify 为 feature 001-project-rename 生成 Spec Kit spec。
+spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
+
+- 已装 spec-kit：`$speckit-specify` → `$speckit-plan` → `$speckit-tasks`（详见 frameworks/spec-kit.md）
+- 已装 OpenSpec：一个子需求对应一个 change，产出 proposal.md / design.md / tasks.md（详见 frameworks/openspec.md）
+- 都没装：走原生档，在子需求目录写轻量 `spec.md`（问题/目标/范围/验收四段式）与 `tasks.md`（详见 frameworks/native.md）
 
 上游输入必须以这些文件为准：
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/<unit-id>/ui-contract.html（如有 UI，每个 unit 一份）
-- .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json
+
+- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md`
+- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/<unit-id>/ui-contract.html`（如有 UI，每个 unit 一份）
+- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json`
 
 要求：
+
 - 不要重新发明需求
-- spec 要保留 requirement_id=req-project-rename 和 subreq_id=SR-001 的反向追踪信息
-- 这一阶段只生成 spec，不直接开始实现
-```
-
-如果有歧义，再跑 clarify：
-
-```text
-使用 $speckit-clarify，只澄清会影响方案与验收的未定点，不要重新设计产品。
-```
-
-然后生成 plan 和 tasks：
-
-```text
-使用 $speckit-plan 为 feature 001-project-rename 生成实现计划。
-```
-
-```text
-使用 $speckit-tasks 为 feature 001-project-rename 生成可执行任务列表。
-```
+- 产物要保留 requirement_id=req-project-rename 和 subreq_id=SR-001 的反向追踪信息
+- 产物路径记入 `traceability.json` 的 `spec_refs`
+- 这一阶段只产出规格，不直接开始实现
 
 ### 第 4 步：Implementation
 
-这套架构里，执行层默认交给 `Superpowers`，不是 `Spec Kit`。
+所有可执行子需求达到 `tasks_ready` 后，经 CP-001 用户确认进入实现（`implement` 动作）。执行方式按已安装框架：
 
-直接对 Codex 说：
+- 已装 superpowers：worktree 隔离 + 子代理驱动 + TDD + 评审（详见 frameworks/superpowers.md）
+- 已装 ECC：ECC 任务执行代理 + 其 rules/hooks（详见 frameworks/ecc.md）
+- 都没装：原生纪律 — 分支隔离、TDD 先行、小步提交、完成前自验（详见 frameworks/native.md）
 
-```text
-请按顺序使用 $using-git-worktrees、$test-driven-development、$requesting-code-review、$verification-before-completion 来执行 feature 001-project-rename 的任务。
+执行约束（与框架无关）：
 
-执行约束：
-- 基于主开发分支创建独立 worktree
-- 严格按 Spec Kit tasks 和上游 .ai-delivery 产物实现
+- 基于主开发分支创建独立 worktree/分支
+- 严格按 tasks 与上游 .ai-delivery 产物实现
 - 不允许跳过测试、review 和完成前验证
-```
+- 切片完成并验收后走 `finish` 动作：rebase 合并（无 merge commit），设置 `merged`
 
 ## API Policy
 
@@ -288,7 +248,6 @@ API 文档直接传递给实现阶段作为参考，不做独立的 API contract
 cd <reference-repo-root>
 zsh scripts/bootstrap-ai-delivery-project.sh <target-repo-root>
 cd <target-repo-root>
-specify init --here --ai codex --ai-skills --script sh
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 ```
 
@@ -301,11 +260,12 @@ cd <target-repo-root>
 zsh .ai-delivery/scripts/validate-project-ai-delivery-skills.sh
 zsh .ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh
 zsh .ai-delivery/tests/ai-delivery-skills/api-nonblocking-policy.test.sh
-specify check
 ```
 
 ## 参考资料
 
-- 官方安装文档：[https://github.github.com/spec-kit/installation.html](https://github.github.com/spec-kit/installation.html)
-- 官方升级文档：[https://github.github.com/spec-kit/upgrade.html](https://github.github.com/spec-kit/upgrade.html)
-- 官方仓库 README：[https://github.com/github/spec-kit](https://github.com/github/spec-kit)
+- spec-kit：[https://github.com/github/spec-kit](https://github.com/github/spec-kit)
+- OpenSpec：[https://github.com/Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec)
+- superpowers：[https://github.com/obra/superpowers](https://github.com/obra/superpowers)
+- Everything Claude Code (ECC)：[https://github.com/everythingcc/everything-claude-code](https://github.com/everythingcc/everything-claude-code)
+- 框架适配总表：`.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md`

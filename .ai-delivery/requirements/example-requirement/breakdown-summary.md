@@ -4,4 +4,4 @@
 
 - Requirement package seeded from zero.
 - Governed requirement and sub-requirement artifacts are present.
-- Traceability points at a seeded Spec Kit fixture under `.specify/fixtures/`.
+- Traceability points at seeded native-tier spec artifacts under `sub-requirements/SR-001/`.

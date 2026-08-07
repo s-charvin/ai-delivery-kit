@@ -7,13 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 
 	"github.com/s-charvin/ai-delivery-kit/internal/bootstrap"
-	"github.com/s-charvin/ai-delivery-kit/internal/command"
 	"github.com/s-charvin/ai-delivery-kit/internal/initflow"
-	"github.com/s-charvin/ai-delivery-kit/internal/prompt"
 	"github.com/s-charvin/ai-delivery-kit/internal/repo"
 	"github.com/s-charvin/ai-delivery-kit/internal/version"
 )
@@ -27,9 +24,7 @@ type initRunner interface {
 type App struct {
 	stdout     io.Writer
 	stderr     io.Writer
-	stdin      io.Reader
 	homeDir    func() (string, error)
-	goos       string
 	initRunner initRunner
 }
 
@@ -37,9 +32,7 @@ func New(stdout, stderr io.Writer) *App {
 	return &App{
 		stdout:  stdout,
 		stderr:  stderr,
-		stdin:   os.Stdin,
 		homeDir: os.UserHomeDir,
-		goos:    runtime.GOOS,
 	}
 }
 
@@ -98,26 +91,15 @@ func (a *App) runInit(args []string) int {
 
 	runner := a.initRunner
 	if runner == nil {
-		homeDir, err := a.homeDir()
-		if err != nil {
-			_, _ = fmt.Fprintln(a.stderr, err)
-			return 1
-		}
-
 		runner = initflow.Service{
-			Prompt:       prompt.Terminal{Reader: a.stdin, Writer: a.stdout},
-			Runner:       command.OSRunner{},
 			Bootstrapper: bootstrap.Engine{},
 			Discover:     repo.Discover,
-			HomeDir:      homeDir,
-			GOOS:         a.goos,
 		}
 	}
 
 	result, err := runner.Run(context.Background(), initflow.Input{
-		TargetPath:  targetPath,
-		Interactive: true,
-		Upgrade:     upgrade,
+		TargetPath: targetPath,
+		Upgrade:    upgrade,
 	})
 	if err != nil {
 		_, _ = fmt.Fprintln(a.stderr, err)
@@ -130,9 +112,6 @@ func (a *App) runInit(args []string) int {
 		_, _ = fmt.Fprintf(a.stdout, "Initialized ai-delivery in %s\n", result.RepoRoot)
 	}
 	a.printIDEGateAmendHint(result.IDEGateAmend)
-	for _, link := range result.DocsLinks {
-		_, _ = fmt.Fprintln(a.stdout, link)
-	}
 	return 0
 }
 

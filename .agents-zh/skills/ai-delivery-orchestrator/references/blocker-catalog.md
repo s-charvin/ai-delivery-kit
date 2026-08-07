@@ -21,7 +21,7 @@
 | `blocked_missing_visual_truth` | 缺少默认状态、行组合、父外壳或关键资源 |
 | `blocked_verification_failure` | 契约校验失败或证据无法验证 |
 
-## Spec Kit 与实现
+## Spec 管道与实现
 
 | 阻塞 | 触发条件 |
 |------|----------|

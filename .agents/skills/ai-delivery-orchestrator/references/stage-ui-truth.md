@@ -56,4 +56,4 @@ Besides the status gates, this check rejects **dangling `ui-contract.html` point
 
 ## Next handoff
 
-`acceptance_frozen` → `superpowers:brainstorming` (design mode). See [handoff-table.md](handoff-table.md).
+`acceptance_frozen` → `design` action. See [handoff-table.md](handoff-table.md).

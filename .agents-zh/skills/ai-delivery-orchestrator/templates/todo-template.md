@@ -9,7 +9,7 @@
 - runtime_mode: `bootstrap`
 - current_checkpoint: `none`
 - last_reconciled_at: `<ISO8601>`
-- next_skill: `requirement-breakdown`
+- next_action: `requirement-breakdown`
 - next_subreq: `<subreq-id>`
 
 ## 对账命令
@@ -28,7 +28,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 
 ## 检查点
 
-- [ ] CP-DESIGN | checkpoint=design_approval | condition=各子需求 brainstorming 设计已批准 | action=暂停等待用户批准
+- [ ] CP-DESIGN | checkpoint=design_approval | condition=各子需求设计会话已批准 | action=暂停等待用户批准
 - [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=所有可执行子需求已达 tasks_ready | action=开发前暂停
 - [ ] CP-002 | checkpoint=hard_blocker_pause | condition=无安全可运行队列项剩余 | action=暂停并呈现阻塞
 

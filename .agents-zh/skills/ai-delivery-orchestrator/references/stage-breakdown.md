@@ -20,7 +20,7 @@
 - 初始化 `status.json`：逐字复制 `templates/status-template.json`，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键。
 - 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。
 
-## 轻量审计清单（inline — 不要 invoke brainstorming）
+## 轻量审计清单（inline — 不要执行 `design` 动作）
 
 对每个 `split_ready` 子需求，主会话输出四项检查：
 

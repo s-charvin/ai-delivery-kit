@@ -43,7 +43,7 @@
 
 ## Orchestrator Checkpoints
 
-- `CP-DESIGN design_approval` — brainstorming design approved before `speckit-*`
+- `CP-DESIGN design_approval` — design approved before the `spec` → `plan` → `tasks` pipeline
 - `CP-001 tasks_ready_user_confirmation`
 - `CP-002 hard_blocker_pause`
 

@@ -36,13 +36,13 @@
   "_checkpoints": {
     "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
     "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
-    "CP-DESIGN": "design_approval — 方案设计已通过 brainstorming 并获得用户批准，方可进入 speckit-*"
+    "CP-DESIGN": "design_approval — 方案设计已通过设计评审并获得用户批准，方可进入 spec 阶段"
   },
 
   "_runtime_modes": {
     "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
     "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
-    "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需 brainstorming 设计批准后方可进入 speckit-*",
+    "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需设计批准后方可进入 spec 阶段",
     "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
     "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
     "completed": "所有可执行 sub_requirements 均已 merged"

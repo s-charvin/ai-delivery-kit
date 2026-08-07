@@ -28,7 +28,6 @@ SOURCE_BOOTSTRAP_SCRIPT=$(resolve_project_asset_path "scripts/bootstrap-ai-deliv
 
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-bootstrap.XXXXXX")
 TARGET_REPO="$TEMP_DIR/target-repo"
-TEMP_BIN="$TEMP_DIR/bin"
 
 cleanup() {
   rm -rf "$TEMP_DIR"
@@ -36,7 +35,7 @@ cleanup() {
 
 trap cleanup EXIT
 
-mkdir -p "$TARGET_REPO" "$TEMP_BIN"
+mkdir -p "$TARGET_REPO"
 git -C "$TARGET_REPO" init -q
 git -C "$TARGET_REPO" checkout -q -b main-dev
 mkdir -p "$TARGET_REPO/docs/guides"
@@ -46,31 +45,7 @@ cat > "$TARGET_REPO/docs/guides/ai-delivery-any-repo-onboarding.md" <<'EOF'
 This file intentionally does not describe the bootstrapped flattened skill layout.
 EOF
 
-cat > "$TEMP_BIN/specify" <<'EOF'
-#!/usr/bin/env bash
-set -euo pipefail
-
-if [[ "${1:-}" == "init" && "${2:-}" == "--help" ]]; then
-  cat <<'HELP'
-Usage: specify init [OPTIONS] [PROJECT_NAME]
-  --ai TEXT
-  --script [sh|ps]
-  --force
-HELP
-  exit 0
-fi
-
-if [[ "${1:-}" == "init" ]]; then
-  mkdir -p .specify
-  : > .specify/.gitkeep
-  exit 0
-fi
-
-exit 0
-EOF
-chmod +x "$TEMP_BIN/specify"
-
-printf 'n\n' | PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
+zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 
 [[ -d "$TARGET_REPO/.agents/skills/requirement-breakdown" ]]
 [[ -d "$TARGET_REPO/.agents/skills/ui-truth-mapping" ]]
@@ -88,6 +63,10 @@ printf 'n\n' | PATH="$TEMP_BIN:$PATH" zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_RE
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
+for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
+  [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/frameworks/$guide" ]]
+done
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/hooks/validate-ui-contract.sh" ]]
 [[ -f "$TARGET_REPO/.ai-delivery/scripts/hooks/extract-hook-path.py" ]]
 [[ -f "$TARGET_REPO/.cursor/hooks.json" ]]
@@ -116,7 +95,7 @@ grep -Fq 'CLAUDE_PROJECT_DIR' "$TARGET_REPO/.claude/settings.json"
 [[ ! -e "$TARGET_REPO/scripts/validate-project-ai-delivery-skills.sh" ]]
 [[ ! -e "$TARGET_REPO/tests/ai-delivery-skills/validate-sources.test.sh" ]]
 [[ ! -e "$TARGET_REPO/.agents/AGENTS.md" ]]
-[[ -d "$TARGET_REPO/.specify" ]]
+[[ ! -e "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"

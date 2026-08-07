@@ -21,7 +21,7 @@ When a blocker occurs, record the narrowest matching blocker, continue other run
 | `blocked_missing_visual_truth` | Missing default state, row composition, parent shell, or key asset |
 | `blocked_verification_failure` | Contract validator failed or evidence cannot be validated |
 
-## Spec Kit and implementation
+## Spec pipeline and implementation
 
 | Blocker | Trigger |
 |---------|---------|

@@ -1,40 +1,40 @@
-# 阶段 4：SDD 衔接
+# 阶段 4：实现衔接
 
-将编排器阶段 4 映射到 Superpowers SDD 套件与 `.ai-delivery` 进度产物。
+将编排器阶段 4（`implement` 动作）映射到任务级执行与 `.ai-delivery` 进度产物。具体执行方式跟随所选档位 —— [frameworks/superpowers.md](frameworks/superpowers.md)（子代理驱动）、[frameworks/ecc.md](frameworks/ecc.md)（代理驱动）或 [frameworks/native.md](frameworks/native.md)（内联纪律）。
 
 ## 何时运行
 
-CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT_SKILL=using-git-worktrees` 时。
+CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT_ACTION=implement` 时。
 
-**CP-001 确认前禁止 dispatch 实现子代理。**
+**CP-001 确认前禁止 dispatch 实现工作。**
 
-## tasks.md → SDD 任务简报
+## tasks.md → 任务简报
 
 对 `tasks.md` 中每个任务行：
 
-| tasks.md 字段 | SDD 映射 |
+| tasks.md 字段 | 执行映射 |
 |---------------|----------|
-| 任务标题 / ID | 子代理 prompt 标题 |
+| 任务标题 / ID | 实现者 prompt 标题 |
 | 范围 / 文件 | 单文件编辑规则的允许编辑面 |
-| 依赖 | `subagent-driven-development` 内顺序 |
-| 验收说明 | 经 `test-driven-development` 的 TDD 成功标准 |
+| 依赖 | 任务间顺序 |
+| 验收说明 | TDD 成功标准 |
 
-每个任务一轮 SDD：新子代理 → 实现 → 双阶段评审（`requesting-code-review`）→ 在台账中标记完成。
+每个任务一轮执行：新上下文（档位支持时用子代理）→ 实现 → 评审 → 在台账中标记完成。
 
-## progress.md ↔ SDD 台账
+## progress.md ↔ 台账
 
 追加到 `.ai-delivery/requirements/<req-id>/progress.md`：
 
 - `tasks.md` 中已完成任务 ID
-- 子代理会话备注（阻塞、延期集成）
+- 实现者会话备注（阻塞、延期集成）
 - 评审结果
 
 `progress.md` 仅为抗压缩辅助。恢复时对账仍以 `status.json` 与磁盘产物为准——不得仅凭 progress 提升门禁。
 
 ## 双阶段评审
 
-1. **每任务评审** — 每个 SDD 任务后 `requesting-code-review`；首次失败自动修复一次再升级给用户。
-2. **合并前评审** — 全部任务后做切片级评审；再视觉验收（UI）与 `verification-before-completion`。
+1. **每任务评审** — 每个任务完成后；首次失败自动修复一次再升级给用户。
+2. **合并前评审** — 全部任务后做切片级评审；再视觉验收（UI）与验证步骤。
 
 ## 视觉验收证据（UI）
 

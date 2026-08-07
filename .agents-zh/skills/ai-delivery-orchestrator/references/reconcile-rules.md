@@ -20,7 +20,7 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 4. 守卫已满足则不重跑该阶段。
 5. 产物存在但守卫失败 → 重跑或开最窄阻塞。
 6. 阻塞项留在队列；不依赖它的后续项继续。
-7. 输出 `RUNTIME_MODE`、`CHECKPOINT`、`RUNNABLE`、`BLOCKED`、`BLOCKER_SCOPES`、`NEXT_SKILL`、`NEXT_SUBREQ`。
+7. 输出 `RUNTIME_MODE`、`CHECKPOINT`、`RUNNABLE`、`BLOCKED`、`BLOCKER_SCOPES`、`NEXT_ACTION`、`NEXT_SUBREQ`。动作是抽象的（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`，另含 kit 自有技能）；按 [framework-adaptation.md](framework-adaptation.md) 映射到所选框架档位。
 
 ## 运行时模式判定
 

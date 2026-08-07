@@ -56,4 +56,4 @@ python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/s
 
 ## 下一 handoff
 
-`acceptance_frozen` → `superpowers:brainstorming`（设计模式）。见 [handoff-table.md](handoff-table.md)。
+`acceptance_frozen` → `design` 动作。见 [handoff-table.md](handoff-table.md)。

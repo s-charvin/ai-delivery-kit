@@ -2,7 +2,7 @@
 
 ## When to run
 
-Each sub-requirement at `tasks_ready` after CP-001 user confirmation. See [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md) for SDD mapping and progress ledger rules.
+Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile emits `implement`). See [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md) for task-brief mapping and progress ledger rules.
 
 **Do not dispatch before CP-001 is confirmed.**
 
@@ -12,26 +12,29 @@ Derived from each unit's embedded `meta.unit.type` and `meta.unit.dependencies`:
 
 For UI-bearing slices, implement against an already-frozen `ui-contract.html` that is browser-previewable (hydrated default + state switcher) and requirement-scope aligned. Run `figma-design-to-code` only in this stage (or later visual fix loops), never as a Stage 2 contract author — the frozen contract is the visual source of truth.
 
+## Execution discipline (abstract chain)
+
+The `implement` action always follows this chain, regardless of framework tier:
+
+1. **Isolate** — one worktree/branch per slice.
+2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
+3. **Per-task review** — first failure → auto-fix loop before user escalation.
+4. **Visual acceptance** (UI only) — compare implementation against the reviewed `ui-contract.html` states; auto-fix on first failure.
+5. **Verification** — integration checks before merge.
+6. **Full analyze + full test** — project static analysis and test suite must pass clean.
+
+How each step is executed depends on the tier (superpowers skills, ECC agents, or native discipline): see [frameworks/superpowers.md](frameworks/superpowers.md), [frameworks/ecc.md](frameworks/ecc.md), [frameworks/native.md](frameworks/native.md).
+
 ## Subagent policy
 
 ```
 Slice tasks independent AND non-overlapping files?
-  → NO (default): subagent-driven-development — one implementer per task, sequential, dual review
-  → YES (rare): dispatching-parallel-agents only for independent test/bug domains
+  → NO (default): one implementer per task, sequential, dual review
+  → YES (rare): parallel dispatch only for independent test/bug domains
 Never: two implementers parallel-editing the same slice file set
 ```
 
 Gate / blocker / status / merge decisions stay in the main session always.
-
-## Implementation chain (per slice)
-
-1. **`using-git-worktrees`** — one worktree per slice.
-2. **`subagent-driven-development`** (default) — each task in a fresh subagent; TDD via `test-driven-development` inside each subagent.
-3. **`requesting-code-review`** — first failure → auto-fix loop before user escalation.
-4. **Visual acceptance** (UI only) — compare implementation against the reviewed `ui-contract.html` states, plus any optional visual-regression report; auto-fix on first failure.
-5. **`verification-before-completion`** — integration checks before merge.
-6. **Full analyze + full test** — project static analysis and test suite must pass clean.
-7. **`finishing-a-development-branch`** — structured merge options; rebase onto development branch (no merge commits).
 
 ## Status updates
 
@@ -53,11 +56,11 @@ Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to su
 
 ## Next handoff
 
-Slice complete → `finishing-a-development-branch` → `merged`. See [handoff-table.md](handoff-table.md).
+Slice complete → `finish` action → `merged`. See [handoff-table.md](handoff-table.md).
 
 ## Finishing / PR
 
-After `finishing-a-development-branch`:
+After the `finish` action (rebase-merge):
 
 | Environment | Recommended next step |
 |-------------|----------------------|

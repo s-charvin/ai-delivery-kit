@@ -1,6 +1,6 @@
 ---
 name: ai-delivery-orchestrator
-description: 当需求文档需要经 Figma UI 契约、Spec Kit 与合并门禁治理的端到端交付时使用。存在 `.ai-delivery` 状态或用户提供新需求文档时，作为唯一入口。
+description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门禁治理的端到端交付时使用。存在 `.ai-delivery` 状态或用户提供新需求文档时，作为唯一入口。
 ---
 
 # AI 交付编排器
@@ -8,20 +8,33 @@ description: 当需求文档需要经 Figma UI 契约、Spec Kit 与合并门禁
 需求 → 实现的唯一入口。Leaf 技能（`requirement-breakdown`、`ui-truth-mapping`）为纯工具，不感知管道。本技能拥有状态、门禁、阻塞与 handoff。
 
 ```
-需求 → [拆分？] → UI 真值 → 设计 → Spec Kit → SDD 实现 → 合并
+需求 → [拆分？] → UI 真值 → 设计 → Spec → Plan → Tasks → 实现 → 合并
 ```
+
+编排器是**框架无关**的：它输出抽象阶段动作，并适配用户已安装的任何 AI 开发框架。绝不要求用户安装任何东西。
+
+## 框架适配（每会话执行一次）
+
+执行任何阶段动作之前：
+
+1. 按 [references/framework-adaptation.md](references/framework-adaptation.md) 自查环境（已安装框架：spec-kit / OpenSpec / superpowers / ECC；都没装 → 原生档）。
+2. 为当前动作选择档位（规格类动作 vs 执行纪律类动作）。
+3. 在子需求 `decisions.md` 记录一次选择。
+
+动作 → 指南分发表与 loop 模型：[references/framework-adaptation.md](references/framework-adaptation.md)。各框架使用指南：`references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
 
 ## 管道
 
-| 阶段 | 技能 | 门禁 |
-|------|------|------|
+| 阶段 | 抽象动作 | 门禁 |
+|------|----------|------|
 | 1 | `requirement-breakdown` + 轻量审计 | `split_ready` |
 | 2 | `ui-truth-mapping`（仅 UI） | `acceptance_frozen` |
-| 3a | `superpowers:brainstorming`（设计） | `design_approved` |
-| 3b | `speckit-specify` → `plan` → `tasks` | `spec/plan/tasks_ready` |
-| 4 | Superpowers SDD 套件 | `visual_acceptance_passed` → `merged` |
+| 3a | `design` | `design_approved` |
+| 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
+| 4 | `implement` | `visual_acceptance_passed` → `merged` |
+| 5 | `finish` | `merged` |
 
-阶段细节：[references/stage-breakdown.md](references/stage-breakdown.md)、[stage-ui-truth.md](references/stage-ui-truth.md)、[stage-design-and-speckit.md](references/stage-design-and-speckit.md)、[stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md)、[stage-implementation.md](references/stage-implementation.md)。
+阶段细节：[references/stage-breakdown.md](references/stage-breakdown.md)、[stage-ui-truth.md](references/stage-ui-truth.md)、[stage-design-and-spec.md](references/stage-design-and-spec.md)、[stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md)、[stage-implementation.md](references/stage-implementation.md)。
 
 ## 状态模型
 
@@ -37,7 +50,7 @@ draft → split_ready → acceptance_frozen → spec_ready → plan_ready → ta
 |------|------|
 | `status` | 当前状态或 `blocked_*` |
 | `ui_bearing` | `true` / `false` / `null` — 切片是否拥有 UI 表面 |
-| `design_approved` | 用户已批准 brainstorming 设计 |
+| `design_approved` | 用户已批准设计会话的产出 |
 | `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
 | `resume_target_status` | 阻塞清除后的恢复目标 |
 
@@ -51,37 +64,36 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
+reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`，另含 kit 自有技能）— 绝不输出第三方技能名。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
 
 ## Handoff 表
 
-每个阶段仅有一个合法下一站。完整表：[references/handoff-table.md](references/handoff-table.md)。
+每个阶段仅有一个合法下一站动作。完整表：[references/handoff-table.md](references/handoff-table.md)。
 
 | 完成态 | 下一站 |
 |--------|--------|
 | `split_ready` + 审计（UI） | `ui-truth-mapping` |
-| `split_ready` + 审计（非 UI） | `superpowers:brainstorming` |
-| `acceptance_frozen` | `superpowers:brainstorming` |
-| `design_approved` | `speckit-specify` |
-| 全部 `tasks_ready` + CP-001 | Stage 4 SDD |
-| 切片完成 | `finishing-a-development-branch` |
+| `split_ready` + 审计（非 UI） | `design` |
+| `acceptance_frozen` | `design` |
+| `design_approved` | `spec` |
+| 全部 `tasks_ready` + CP-001 | Stage 4 `implement` |
+| 切片完成 | `finish` |
 
 ## 暂停点（3 个）
 
 1. 拆分/跳过决策后 — 与用户确认
-2. brainstorming 设计后 — CP-DESIGN，进入 `speckit-*` 前须明确批准
+2. 设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
 3. `tasks_ready` 后 — CP-001，进入开发前确认
 
 ## 硬边界
 
 - 不要把工作流真相移出 `.ai-delivery`。
-- 正常路径不要求用户手动选择底层技能。
-- UI 子需求未 `acceptance_frozen` 不得进入 `speckit-*`。
+- 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
+- UI 子需求未 `acceptance_frozen` 不得进入 `spec`。
 - UI 切片未 `visual_acceptance_passed` 不得声称 `merged`。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
-- 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按 SDD）。
-- 编排器设计模式不要 invoke `writing-plans`，不要在 `docs/superpowers/` 写设计文档；设计摘要存入子需求 `notes`。
-- 不要 fork 官方 `speckit-*` 技能。
+- 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
+- 编排器设计模式不要把设计文档写进框架自有目录；设计摘要存入子需求 `notes`。
 - 所有 unit 的 `ui-contract.html` 未经 `scripts/validate-ui-contract-html.py` 退出 0，且浏览器 hydrate 默认态预览与需求 scope 对齐 + icon 资产保真 + 逐份契约用户显式确认（除非明确豁免）通过之前，不得设置 `acceptance_frozen`（见 Stage 2 冻结门槛）。Stage 2 仅通过 `ui-truth-mapping` 写契约 — 绝不经由 `figma-design-to-code`。
 - UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且契约仍通过时，不得 `merged`。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
@@ -102,15 +114,15 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 
 说明理由后执行。细节：[references/stage-breakdown.md](references/stage-breakdown.md)。
 
-## 轻量审计（非 brainstorming）
+## 轻量审计（非设计探索）
 
-`split_ready` 后，主会话对每个子需求 inline 执行 4 项检查（缺口、冲突、状态、权限）。严重问题 → 阻塞；否则写入 `notes`。此处不要 invoke `superpowers:brainstorming`。
+`split_ready` 后，主会话对每个子需求 inline 执行 4 项检查（缺口、冲突、状态、权限）。严重问题 → 阻塞；否则写入 `notes`。此处不要执行 `design` 动作。
 
 ## Stage 4（摘要）
 
-默认：`subagent-driven-development` — 顺序任务，每任务新子代理，内部 TDD。`dispatching-parallel-agents` 仅用于独立且不重叠文件的 test/bug 域。禁止同一切片文件并行 implementer。
+`implement` 动作按所选档位执行（见 `references/frameworks/`）：有 superpowers 时子代理驱动，有 ECC 时代理驱动，原生档走内联纪律。无论哪个档位，默认纪律一致：顺序任务、内部 TDD、声称完成前先评审。禁止同一切片文件并行实现者。
 
-链路：`using-git-worktrees` → SDD → `requesting-code-review` → 视觉验收（UI）→ `verification-before-completion` → 全量测试 → `finishing-a-development-branch`。
+链路：隔离工作区 → 任务执行（TDD）→ 代码评审 → 视觉验收（UI）→ 完成前验证 → 全量测试 → 合并。
 
 完整 runbook：[references/stage-implementation.md](references/stage-implementation.md)。
 
@@ -120,7 +132,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 
 ## API 策略
 
-API 文档直接传给 Spec Kit 与实现。缺口写入 `notes` 的 `integration_deferred`；不阻塞 UI 映射或外壳工作。
+API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integration_deferred`；不阻塞 UI 映射或外壳工作。
 
 ## 用户入口
 

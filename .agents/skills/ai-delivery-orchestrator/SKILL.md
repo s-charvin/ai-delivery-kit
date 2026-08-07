@@ -1,6 +1,6 @@
 ---
 name: ai-delivery-orchestrator
-description: Use when a requirement document needs governed end-to-end delivery through Figma UI contracts, Spec Kit, and merge gates. Use as the single entry when `.ai-delivery` state exists or the user provides a new requirement doc.
+description: Use when a requirement document needs governed end-to-end delivery through Figma UI contracts, a spec pipeline, and merge gates. Use as the single entry when `.ai-delivery` state exists or the user provides a new requirement doc.
 ---
 
 # AI Delivery Orchestrator
@@ -8,20 +8,33 @@ description: Use when a requirement document needs governed end-to-end delivery 
 Single entry for requirement → implementation. Leaf skills (`requirement-breakdown`, `ui-truth-mapping`) are pure tools — no pipeline awareness. This skill owns state, gates, blockers, and handoffs.
 
 ```
-Requirement → [Breakdown?] → UI Truth → Design → Spec Kit → SDD Implementation → Merge
+Requirement → [Breakdown?] → UI Truth → Design → Spec → Plan → Tasks → Implement → Merge
 ```
+
+The orchestrator is **framework-agnostic**: it emits abstract stage actions and adapts them to whatever AI development framework the user has installed. It never requires installing anything.
+
+## Framework adaptation (run once per session)
+
+Before executing any stage action:
+
+1. Self-check the environment per [references/framework-adaptation.md](references/framework-adaptation.md) (installed frameworks: spec-kit / OpenSpec / superpowers / ECC; none installed → native tier).
+2. Select the tier for the current action (spec-type vs execution-type actions).
+3. Record the selection once in the subreq `decisions.md`.
+
+Action → guide dispatch table and loop model: [references/framework-adaptation.md](references/framework-adaptation.md). Per-framework usage guides: `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
 ## Pipeline
 
-| Stage | Skill | Gate |
-|-------|-------|------|
+| Stage | Abstract action | Gate |
+|-------|-----------------|------|
 | 1 | `requirement-breakdown` + light audit | `split_ready` |
 | 2 | `ui-truth-mapping` (UI only) | `acceptance_frozen` |
-| 3a | `superpowers:brainstorming` (design) | `design_approved` |
-| 3b | `speckit-specify` → `plan` → `tasks` | `spec/plan/tasks_ready` |
-| 4 | Superpowers SDD suite | `visual_acceptance_passed` → `merged` |
+| 3a | `design` | `design_approved` |
+| 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
+| 4 | `implement` | `visual_acceptance_passed` → `merged` |
+| 5 | `finish` | `merged` |
 
-Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-speckit.md](references/stage-design-and-speckit.md), [stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md), [stage-implementation.md](references/stage-implementation.md).
+Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-spec.md](references/stage-design-and-spec.md), [stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md), [stage-implementation.md](references/stage-implementation.md).
 
 ## State model
 
@@ -37,7 +50,7 @@ Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy [templates
 |-------|---------|
 | `status` | Current state or `blocked_*` |
 | `ui_bearing` | `true` / `false` / `null` — whether slice owns UI surfaces |
-| `design_approved` | User approved brainstorming design |
+| `design_approved` | User approved the design session output |
 | `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
 | `resume_target_status` | Resume target after blocker cleared |
 
@@ -51,37 +64,36 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
+reconcile emits abstract actions (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`, plus kit-owned skills) — never third-party skill names. Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
 
 ## Handoff table
 
-Each stage has one legal next skill. Full table: [references/handoff-table.md](references/handoff-table.md).
+Each stage has one legal next action. Full table: [references/handoff-table.md](references/handoff-table.md).
 
 | Done | Next |
 |------|------|
 | `split_ready` + audit (UI) | `ui-truth-mapping` |
-| `split_ready` + audit (non-UI) | `superpowers:brainstorming` |
-| `acceptance_frozen` | `superpowers:brainstorming` |
-| `design_approved` | `speckit-specify` |
-| All `tasks_ready` + CP-001 | Stage 4 SDD |
-| Slice done | `finishing-a-development-branch` |
+| `split_ready` + audit (non-UI) | `design` |
+| `acceptance_frozen` | `design` |
+| `design_approved` | `spec` |
+| All `tasks_ready` + CP-001 | Stage 4 `implement` |
+| Slice done | `finish` |
 
 ## Pause points (3)
 
 1. After split/skip decision — confirm with user
-2. After brainstorming design — CP-DESIGN, explicit approval before `speckit-*`
+2. After the design session — CP-DESIGN, explicit approval before `spec`
 3. After `tasks_ready` — CP-001, confirm before development
 
 ## Hard boundary
 
 - Do not move workflow truth out of `.ai-delivery`.
-- Do not require the user to pick low-level skills on the normal path.
-- Do not let UI subreqs enter `speckit-*` before `acceptance_frozen`.
+- Do not require the user to install or pick frameworks/skills on the normal path; adapt to what is already installed.
+- Do not let UI subreqs enter `spec` before `acceptance_frozen`.
 - Do not let UI slices claim `merged` before `visual_acceptance_passed`.
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
-- Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per SDD).
-- Do not invoke `writing-plans` or write design docs under `docs/superpowers/` during orchestrator design mode; store design summary in subreq `notes`.
-- Do not fork official `speckit-*` skills.
+- Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
+- Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
 - Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment + icon asset fidelity + explicit per-contract user confirmation (unless explicitly waived) pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
@@ -102,15 +114,15 @@ Each stage has one legal next skill. Full table: [references/handoff-table.md](r
 
 State decision with reasoning, then proceed. Details: [references/stage-breakdown.md](references/stage-breakdown.md).
 
-## Light audit (not brainstorming)
+## Light audit (not design exploration)
 
-After `split_ready`, main session runs inline 4-check audit per subreq (gaps, conflicts, states, permissions). Critical issues → blockers; otherwise append to `notes`. Do not invoke `superpowers:brainstorming` here.
+After `split_ready`, main session runs inline 4-check audit per subreq (gaps, conflicts, states, permissions). Critical issues → blockers; otherwise append to `notes`. Do not run the `design` action here.
 
 ## Stage 4 (summary)
 
-Default: `subagent-driven-development` — sequential tasks, fresh subagent each, TDD inside. `dispatching-parallel-agents` only for independent non-overlapping test/bug domains. Never parallel implementers on the same slice files.
+The `implement` action executes per the selected tier (see `references/frameworks/`): subagent-driven when superpowers is present, agent-driven with ECC, inline disciplined on the native tier. Default discipline regardless of tier: sequential tasks, TDD inside, code review before completion claims. Never parallel implementers on the same slice files.
 
-Chain: `using-git-worktrees` → SDD → `requesting-code-review` → visual acceptance (UI) → `verification-before-completion` → full test → `finishing-a-development-branch`.
+Chain: isolated workspace → task execution (TDD) → code review → visual acceptance (UI) → verification before completion → full test → merge.
 
 Full runbook: [references/stage-implementation.md](references/stage-implementation.md).
 
@@ -120,7 +132,7 @@ Narrowest blocker wins; continue safest runnable work first. On validator failur
 
 ## API policy
 
-API docs pass directly to Spec Kit and implementation. Gaps → `integration_deferred` in notes; they do not block UI mapping or shell work.
+API docs pass directly to the spec pipeline and implementation. Gaps → `integration_deferred` in notes; they do not block UI mapping or shell work.
 
 ## User entry
 

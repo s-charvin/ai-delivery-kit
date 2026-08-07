@@ -47,7 +47,7 @@ require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
 
 # Orchestrator reference parity (same filenames, zh tree translated)
-for ref in handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-speckit.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
+for ref in handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
   require_file "$SRC/ai-delivery-orchestrator/references/$ref"
   require_file "$DST/ai-delivery-orchestrator/references/$ref"
   grep -q '[\u4e00-\u9fff]' "$DST/ai-delivery-orchestrator/references/$ref" \

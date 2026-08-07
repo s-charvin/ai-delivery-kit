@@ -1,40 +1,40 @@
-# Stage 4: SDD Bridge
+# Stage 4: Implementation Bridge
 
-Maps orchestrator Stage 4 to the Superpowers SDD suite and `.ai-delivery` progress artifacts.
+Maps orchestrator Stage 4 (`implement` action) to task-level execution and `.ai-delivery` progress artifacts. Concrete execution style follows the selected tier — [frameworks/superpowers.md](frameworks/superpowers.md) (subagent-driven), [frameworks/ecc.md](frameworks/ecc.md) (agent-driven), or [frameworks/native.md](frameworks/native.md) (inline discipline).
 
 ## When to run
 
-After CP-001 user confirmation, when reconcile emits `RUNTIME_MODE=confirm_to_dev` and `NEXT_SKILL=using-git-worktrees`.
+After CP-001 user confirmation, when reconcile emits `RUNTIME_MODE=confirm_to_dev` and `NEXT_ACTION=implement`.
 
-**Do not dispatch implementation subagents before CP-001 is confirmed.**
+**Do not dispatch implementation work before CP-001 is confirmed.**
 
-## tasks.md → SDD task brief
+## tasks.md → task brief
 
 For each task row in `tasks.md`:
 
-| tasks.md field | SDD mapping |
-|----------------|-------------|
-| Task title / ID | Subagent prompt headline |
+| tasks.md field | Execution mapping |
+|----------------|-------------------|
+| Task title / ID | Implementer prompt headline |
 | Scope / files | Allowed edit surface for one-file-at-a-time rule |
-| Dependencies | Sequential order inside `subagent-driven-development` |
-| Acceptance notes | TDD success criteria via `test-driven-development` |
+| Dependencies | Sequential order across tasks |
+| Acceptance notes | TDD success criteria |
 
-One SDD cycle per task: fresh subagent → implement → dual review (`requesting-code-review`) → mark task done in ledger.
+One execution cycle per task: fresh context (subagent when the tier supports it) → implement → review → mark task done in ledger.
 
-## progress.md ↔ SDD ledger
+## progress.md ↔ ledger
 
 Append to `.ai-delivery/requirements/<req-id>/progress.md`:
 
 - completed task IDs from `tasks.md`
-- subagent session notes (blockers, deferred integration)
+- implementer session notes (blockers, deferred integration)
 - review outcomes
 
 `progress.md` is a compaction aid only. On resume, reconcile from `status.json` and on-disk artifacts — never promote gates from progress alone.
 
 ## Dual-stage review
 
-1. **Per-task review** — `requesting-code-review` after each SDD task; auto-fix once before user escalation.
-2. **Pre-merge review** — full slice review after all tasks; then visual acceptance (UI) and `verification-before-completion`.
+1. **Per-task review** — after each task; auto-fix once before user escalation.
+2. **Pre-merge review** — full slice review after all tasks; then visual acceptance (UI) and the verification step.
 
 ## Visual acceptance evidence (UI)
 

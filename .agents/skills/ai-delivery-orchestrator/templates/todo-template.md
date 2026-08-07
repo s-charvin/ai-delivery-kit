@@ -9,7 +9,7 @@
 - runtime_mode: `bootstrap`
 - current_checkpoint: `none`
 - last_reconciled_at: `<ISO8601>`
-- next_skill: `requirement-breakdown`
+- next_action: `requirement-breakdown`
 - next_subreq: `<subreq-id>`
 
 ## Reconcile Command
@@ -28,7 +28,7 @@ Run reconcile before trusting this panel on every resume or continue.
 
 ## Checkpoints
 
-- [ ] CP-DESIGN | checkpoint=design_approval | condition=brainstorming design approved per subreq | action=pause for user approval
+- [ ] CP-DESIGN | checkpoint=design_approval | condition=design session approved per subreq | action=pause for user approval
 - [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=all executable subreqs at tasks_ready | action=pause before development
 - [ ] CP-002 | checkpoint=hard_blocker_pause | condition=no safe runnable queue item remains | action=pause and surface blocker
 

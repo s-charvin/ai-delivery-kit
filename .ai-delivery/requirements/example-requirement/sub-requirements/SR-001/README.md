@@ -4,4 +4,4 @@
 
 Type: `Feature Module`
 
-Summary: Demonstrates a single governed sub-requirement package with a Spec Kit bridge stub.
+Summary: Demonstrates a single governed sub-requirement package with native-tier spec artifacts.

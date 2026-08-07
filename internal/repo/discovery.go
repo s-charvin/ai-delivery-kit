@@ -10,7 +10,6 @@ import (
 
 type Info struct {
 	Root             string
-	HasSpecify       bool
 	ManagedConflicts []string
 }
 
@@ -34,8 +33,7 @@ func Discover(start string) (Info, error) {
 	}
 
 	info := Info{
-		Root:       root,
-		HasSpecify: pathExists(filepath.Join(root, ".specify")),
+		Root: root,
 	}
 
 	for _, relPath := range bootstrap.ManagedConflictPaths() {

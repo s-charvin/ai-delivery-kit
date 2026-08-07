@@ -8,7 +8,7 @@
   "workflow_gates": [
     "requirement_breakdown",
     "ui_truth_mapping",
-    "spec_kit_pipeline",
+    "spec_pipeline",
     "implementation"
   ],
   "status_sequence": [
@@ -27,7 +27,7 @@
       "requirement",
       "figma",
       "api",
-      "spec_kit",
+      "spec",
       "pr",
       "ci",
       "visual",

@@ -71,7 +71,6 @@ func (e Engine) Run(cfg Config) error {
 		"version":          1,
 		"project_id":       cfg.ProjectID,
 		"project_root":     cfg.RepoRoot,
-		"specify_path":     ".specify",
 		"ai_delivery_path": ".ai-delivery",
 		"updated_at":       timestamp,
 		"updated_by":       updatedBy,
@@ -89,7 +88,7 @@ func (e Engine) Run(cfg Config) error {
 		"workflow_gates": []string{
 			"requirement_breakdown",
 			"ui_truth_mapping",
-			"spec_kit_pipeline",
+			"spec_pipeline",
 			"implementation",
 		},
 		"status_sequence": []string{
@@ -108,7 +107,7 @@ func (e Engine) Run(cfg Config) error {
 				"requirement",
 				"figma",
 				"api",
-				"spec_kit",
+				"spec",
 				"pr",
 				"ci",
 				"visual",
@@ -209,48 +208,6 @@ func copyEmbeddedFile(source, target string, session *amendSession) error {
 		return fmt.Errorf("write %s: %w", target, err)
 	}
 	return nil
-}
-
-// ReapplyIDEGates 在 specify init 等可能覆盖 IDE 配置后，重新下发门禁资产。
-// amendable JSON 走合并+备份；自有 scripts/rules 直接覆盖。
-// repoRoot 不存在时 no-op，避免合成路径污染工作区。
-func ReapplyIDEGates(repoRoot string, now func() time.Time) (AmendReport, error) {
-	report := AmendReport{}
-	if repoRoot == "" {
-		return report, fmt.Errorf("reapply IDE gates requires a repo root")
-	}
-	root := filepath.Clean(repoRoot)
-	if !filepath.IsAbs(root) {
-		abs, err := filepath.Abs(root)
-		if err != nil {
-			return report, err
-		}
-		root = abs
-	}
-	st, err := os.Stat(root)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return report, nil
-		}
-		return report, fmt.Errorf("stat repo root %s: %w", root, err)
-	}
-	if !st.IsDir() {
-		return report, fmt.Errorf("reapply IDE gates: %s is not a directory", root)
-	}
-	session := newAmendSession(root, now, &report)
-	for _, asset := range IDEGateAssets() {
-		target := filepath.Join(root, filepath.FromSlash(asset.Target))
-		if asset.Kind == "dir" {
-			if err := copyEmbeddedDir(asset.Source, target); err != nil {
-				return report, err
-			}
-			continue
-		}
-		if err := copyEmbeddedFile(asset.Source, target, session); err != nil {
-			return report, err
-		}
-	}
-	return report, nil
 }
 
 func seedFileIfMissing(target string, body []byte, mode os.FileMode) error {

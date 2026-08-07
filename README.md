@@ -49,10 +49,9 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 - discovers the git root
 - derives `project_id` from the repository name
-- checks for `specify-cli` and `superpowers`
-- prompts before installing missing prerequisites through their official paths
-- runs `specify init` only when `specify-cli` is already available or was installed during onboarding
 - seeds the governed `.ai-delivery` contract, project-local skills, validators, and support files
+
+It never installs third-party frameworks. The workflow is framework-agnostic: it adapts at runtime to whatever AI development frameworks are already present, and falls back to built-in native artifacts when none are installed.
 
 The normal public path no longer asks the user to provide `project_id`.
 
@@ -84,13 +83,22 @@ Lower-level skills such as `requirement-breakdown` and `ui-truth-mapping` can st
 
 That path is for surgical recovery or expert use. It is not the normal entry for new requirements.
 
-## Prerequisites
+## Framework Adaptation
 
-During `ai-delivery init`, the CLI checks for `specify-cli` and `superpowers`.
+The orchestrator emits abstract stage actions (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`) and adapts them to the frameworks already installed in your environment. Nothing is installed or required.
 
-- If they are already present, the CLI skips reinstallation.
-- If they are missing, the CLI prompts before using the official installation path.
-- If you decline installation, the CLI still initializes the governed `ai-delivery` assets and prints the official install links for manual follow-up.
+Recommended frameworks (detected, never installed):
+
+| Framework | Primary actions | Detection marker |
+|-----------|-----------------|------------------|
+| spec-kit | `spec` / `plan` / `tasks` | `.specify/` or `specify` CLI |
+| OpenSpec | `spec` / `plan` / `tasks` | `openspec/` or `openspec` CLI |
+| superpowers | `design` / `implement` / `finish` | superpowers skills in user skill dirs |
+| ECC | `design` / `implement` / `finish` | `/ecc:*` commands registered |
+
+No framework installed? The pipeline still runs end-to-end using built-in native artifacts (lightweight `spec.md` / `tasks.md` inside each sub-requirement plus inline discipline guidance).
+
+Per-framework usage guidance ships with the orchestrator skill: `references/framework-adaptation.md` and `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
 ## IDE UI Contract Gates
 

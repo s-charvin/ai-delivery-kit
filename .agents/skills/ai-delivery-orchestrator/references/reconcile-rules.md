@@ -20,7 +20,7 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 4. If a guard is already satisfied, do not re-run the stage.
 5. If outputs exist but guard fails, re-run or open narrowest blocker.
 6. Keep blocked items in queue; continue later items that do not depend on them.
-7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_SKILL`, `NEXT_SUBREQ`.
+7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_ACTION`, `NEXT_SUBREQ`. Actions are abstract (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`, plus kit-owned skills); map them to the selected framework tier via [framework-adaptation.md](framework-adaptation.md).
 
 ## Runtime mode resolution
 

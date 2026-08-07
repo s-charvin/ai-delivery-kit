@@ -1,7 +1,5 @@
 package bootstrap
 
-import "strings"
-
 type ManagedAsset struct {
 	Source string
 	Target string
@@ -35,23 +33,6 @@ func Manifest() []ManagedAsset {
 		{Source: "tests/ai-delivery-skills/fixtures/ui-contract-good.html", Target: ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-good.html", Kind: "file"},
 		{Source: "tests/ai-delivery-skills/fixtures/ui-contract-bad.html", Target: ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-bad.html", Kind: "file"},
 	}
-}
-
-// IDEGateAssets are project-local Cursor/Claude/Codex gate files that may be
-// overwritten by specify init and must be re-applied afterward.
-func IDEGateAssets() []ManagedAsset {
-	assets := make([]ManagedAsset, 0, 12)
-	for _, asset := range Manifest() {
-		switch {
-		case strings.HasPrefix(asset.Target, ".cursor/"),
-			strings.HasPrefix(asset.Target, ".claude/"),
-			strings.HasPrefix(asset.Target, ".codex/"),
-			strings.HasPrefix(asset.Target, ".ai-delivery/scripts/hooks/"),
-			asset.Target == "AGENTS.md":
-			assets = append(assets, asset)
-		}
-	}
-	return assets
 }
 
 func SeededManagedFiles() []string {

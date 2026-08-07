@@ -74,6 +74,12 @@ require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-contract-template.html"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"
 
+# Framework adaptation model: dispatch table + one usage guide per tier
+require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/framework-adaptation.md"
+for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
+  require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/frameworks/$guide"
+done
+
 require_not_contains "$SKILL_ROOT/requirement-breakdown/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ui-truth-mapping/SKILL.md" '../common/'
 require_not_contains "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" '../common/'

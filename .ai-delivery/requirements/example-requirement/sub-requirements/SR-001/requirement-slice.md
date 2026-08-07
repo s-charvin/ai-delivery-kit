@@ -5,7 +5,7 @@
 - `subreq_id`: `SR-001`
 - `title`: Example Bridgeable Flow
 - `type`: `Feature Module`
-- `summary`: Seed a minimal governed package that can bridge to Spec Kit artifacts.
+- `summary`: Seed a minimal governed package that carries framework-agnostic spec artifacts.
 - `in_scope`: Zero-based bootstrap artifact coverage and traceability bridge seeding.
 - `out_of_scope`: Rich Figma evidence and runtime merge orchestration.
 - `depends_on`: none

@@ -20,7 +20,7 @@ Feed the requirement document path. It produces sub-requirements with `requireme
 - Initialize `status.json`: copy `templates/status-template.json` verbatim, then fill `requirement_id`, sub-requirement entries, and statuses. Preserve all `_`-prefixed metadata keys.
 - Record dependency graph at `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
 
-## Light audit checklist (inline — do not invoke brainstorming)
+## Light audit checklist (inline — do not run the `design` action)
 
 For each `split_ready` sub-requirement, main session outputs four checks:
 

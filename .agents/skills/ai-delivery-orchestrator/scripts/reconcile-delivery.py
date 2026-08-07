@@ -13,18 +13,21 @@ TERMINAL_STATUSES = frozenset({"merged"})
 BLOCKED_PREFIX = "blocked_"
 DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
 
-SKILL_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
+# Abstract stage actions only. Framework-specific tooling is resolved at
+# runtime via references/framework-adaptation.md — reconcile stays a pure
+# state machine and never hard-codes third-party skill names.
+ACTION_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
     ("draft", None, False): "requirement-breakdown",
     ("split_ready", True, False): "ui-truth-mapping",
-    ("split_ready", False, False): "superpowers:brainstorming",
-    ("split_ready", False, True): "speckit-specify",
-    ("acceptance_frozen", True, False): "superpowers:brainstorming",
-    ("acceptance_frozen", True, True): "speckit-specify",
-    ("spec_ready", None, True): "speckit-plan",
-    ("plan_ready", None, True): "speckit-tasks",
-    ("tasks_ready", None, True): "using-git-worktrees",
-    ("in_dev", None, True): "subagent-driven-development",
-    ("visual_acceptance_passed", None, True): "finishing-a-development-branch",
+    ("split_ready", False, False): "design",
+    ("split_ready", False, True): "spec",
+    ("acceptance_frozen", True, False): "design",
+    ("acceptance_frozen", True, True): "spec",
+    ("spec_ready", None, True): "plan",
+    ("plan_ready", None, True): "tasks",
+    ("tasks_ready", None, True): "implement",
+    ("in_dev", None, True): "implement",
+    ("visual_acceptance_passed", None, True): "finish",
 }
 
 
@@ -130,7 +133,7 @@ def dependencies_satisfied(
     return True
 
 
-def next_skill_for_entry(entry: dict, ui_bearing: bool) -> str | None:
+def next_action_for_entry(entry: dict, ui_bearing: bool) -> str | None:
     status = entry.get("status")
     if not isinstance(status, str) or is_blocked(status) or status in TERMINAL_STATUSES:
         return None
@@ -138,20 +141,20 @@ def next_skill_for_entry(entry: dict, ui_bearing: bool) -> str | None:
     design_approved = bool(entry.get("design_approved"))
 
     if status == "draft":
-        return SKILL_BY_STATUS[("draft", None, False)]
+        return ACTION_BY_STATUS[("draft", None, False)]
 
     if status == "split_ready":
         if ui_bearing:
-            return SKILL_BY_STATUS[("split_ready", True, False)]
-        return SKILL_BY_STATUS[("split_ready", False, design_approved)]
+            return ACTION_BY_STATUS[("split_ready", True, False)]
+        return ACTION_BY_STATUS[("split_ready", False, design_approved)]
 
     if status == "acceptance_frozen":
-        return SKILL_BY_STATUS[("acceptance_frozen", True, design_approved)]
+        return ACTION_BY_STATUS[("acceptance_frozen", True, design_approved)]
 
     if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed"}:
         if not design_approved and status not in {"in_dev", "visual_acceptance_passed"}:
-            return "superpowers:brainstorming"
-        return SKILL_BY_STATUS.get((status, None, True))
+            return "design"
+        return ACTION_BY_STATUS.get((status, None, True))
 
     return None
 
@@ -198,7 +201,7 @@ def reconcile(
             "runnable": [],
             "blocked": [],
             "blocker_scopes": [],
-            "next_skill": "requirement-breakdown",
+            "next_action": "requirement-breakdown",
             "next_subreq": None,
             "errors": ["status.json missing"],
         }
@@ -212,7 +215,7 @@ def reconcile(
             "runnable": [],
             "blocked": [],
             "blocker_scopes": [],
-            "next_skill": "requirement-breakdown",
+            "next_action": "requirement-breakdown",
             "next_subreq": None,
             "errors": [f"cannot read status.json: {exc}"],
         }
@@ -225,7 +228,7 @@ def reconcile(
             "runnable": [],
             "blocked": [],
             "blocker_scopes": [],
-            "next_skill": "requirement-breakdown",
+            "next_action": "requirement-breakdown",
             "next_subreq": None,
             "errors": [],
         }
@@ -264,13 +267,13 @@ def reconcile(
         ui_bearing = infer_ui_bearing(entry, subreq_dir)
 
         if needs_design_approval(entry, ui_bearing):
-            design_pending.append((subreq_id, "superpowers:brainstorming"))
+            design_pending.append((subreq_id, "design"))
             continue
 
-        skill = next_skill_for_entry(entry, ui_bearing)
-        if skill:
-            runnable.append(f"{subreq_id}:{status}->{skill}")
-            actionable.append((subreq_id, skill))
+        action = next_action_for_entry(entry, ui_bearing)
+        if action:
+            runnable.append(f"{subreq_id}:{status}->{action}")
+            actionable.append((subreq_id, action))
 
     executable = [
         sid
@@ -312,20 +315,20 @@ def reconcile(
         runtime_mode = "resume"
 
     if runtime_mode == "completed":
-        next_skill = "none"
+        next_action = "none"
         next_subreq = None
     elif runtime_mode == "confirm_design" and design_pending:
-        next_subreq, next_skill = design_pending[0]
+        next_subreq, next_action = design_pending[0]
     elif runtime_mode == "confirm_to_dev":
         next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
-        next_skill = "using-git-worktrees" if checkpoint == "CP-001" else "none"
+        next_action = "implement" if checkpoint == "CP-001" else "none"
     elif runtime_mode == "blocker_recovery":
-        next_skill = "none"
+        next_action = "none"
         next_subreq = blocked[0].split(":", 1)[0] if blocked else None
     elif actionable:
-        next_subreq, next_skill = actionable[0]
+        next_subreq, next_action = actionable[0]
     else:
-        next_skill = "requirement-breakdown"
+        next_action = "requirement-breakdown"
         next_subreq = next(iter(sub_requirements.keys()), None)
 
     return {
@@ -334,7 +337,7 @@ def reconcile(
         "runnable": runnable,
         "blocked": blocked,
         "blocker_scopes": blocker_scopes,
-        "next_skill": next_skill,
+        "next_action": next_action,
         "next_subreq": next_subreq,
         "errors": errors,
     }
@@ -347,7 +350,7 @@ def format_output(result: dict) -> str:
         f"RUNNABLE={','.join(result['runnable']) if result['runnable'] else 'none'}",
         f"BLOCKED={','.join(result['blocked']) if result['blocked'] else 'none'}",
         f"BLOCKER_SCOPES={','.join(result['blocker_scopes']) if result['blocker_scopes'] else 'none'}",
-        f"NEXT_SKILL={result['next_skill']}",
+        f"NEXT_ACTION={result['next_action']}",
         f"NEXT_SUBREQ={result['next_subreq']}",
     ]
     if result["errors"]:

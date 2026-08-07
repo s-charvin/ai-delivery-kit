@@ -49,10 +49,9 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 - 发现 git 根目录
 - 从仓库名推导 `project_id`
-- 检查 `specify-cli` 与 `superpowers`
-- 在通过官方路径安装缺失前置条件前征求确认
-- 仅当 `specify-cli` 已可用或在入驻过程中已安装时，才运行 `specify init`
 - 写入受治理的 `.ai-delivery` 契约、项目本地技能、校验器与配套文件
+
+它绝不安装任何第三方框架。工作流是框架无关的：运行时适配环境中已安装的 AI 开发框架，未安装任何框架时使用内置原生档兜底。
 
 公开路径不再要求用户提供 `project_id`。
 
@@ -84,13 +83,22 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 该路径用于定点恢复或专家操作，不是新需求的常规入口。
 
-## 前置条件
+## 框架适配
 
-`ai-delivery init` 期间，CLI 会检查 `specify-cli` 与 `superpowers`。
+编排器输出抽象阶段动作（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并适配你环境中已安装的框架。不要求安装任何东西。
 
-- 若已存在，跳过重装。
-- 若缺失，会在走官方安装路径前征求确认。
-- 若拒绝安装，CLI 仍会初始化受治理的 `ai-delivery` 资产，并打印官方安装链接供手工跟进。
+推荐框架（只检测、不安装）：
+
+| 框架 | 主要承担 | 识别标志 |
+|------|----------|----------|
+| spec-kit | `spec` / `plan` / `tasks` | 仓库根 `.specify/` 或 `specify` CLI |
+| OpenSpec | `spec` / `plan` / `tasks` | 仓库根 `openspec/` 或 `openspec` CLI |
+| superpowers | `design` / `implement` / `finish` | 用户技能目录含 superpowers 技能 |
+| ECC | `design` / `implement` / `finish` | IDE 中注册 `/ecc:*` 命令 |
+
+未安装任何框架？整条链路仍可端到端运行：使用内置原生档（子需求目录内的轻量 `spec.md` / `tasks.md` + 内置纪律指引）。
+
+各框架的具体使用意见随编排器技能分发：`references/framework-adaptation.md` 与 `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
 
 ## IDE UI 契约门禁
 
