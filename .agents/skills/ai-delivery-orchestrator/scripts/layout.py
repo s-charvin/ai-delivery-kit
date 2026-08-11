@@ -58,6 +58,19 @@ DEFAULT_LAYOUT: dict = {
 DEFAULT_AI_DELIVERY_PATH = ".ai-delivery"
 
 
+def find_ai_delivery_dir(start: Path | str) -> Path | None:
+    """Walk up from `start` to locate the `.ai-delivery` directory.
+
+    Used by callers that only have a requirement/sub-requirement path and need
+    the governed root (which holds meta/project-binding.json).
+    """
+    p = Path(start)
+    for cand in [p, *p.parents]:
+        if (cand / "meta" / "project-binding.json").exists():
+            return cand
+    return None
+
+
 def _find_binding(repo_root: Path) -> Path | None:
     """Locate project-binding.json.
 

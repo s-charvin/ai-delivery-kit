@@ -9,6 +9,7 @@ func ManagedSourcePaths() []string {
 		"scripts/validate-project-ai-delivery-skills.sh",
 		"scripts/validate-ui-contract-html.py",
 		"scripts/validate-delivery-status.py",
+		"scripts/validate-artifact-layout.py",
 		"tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
 		"tests/ai-delivery-skills/validate-sources.test.sh",
 		"tests/ai-delivery-skills/ui-contract-validator.test.sh",

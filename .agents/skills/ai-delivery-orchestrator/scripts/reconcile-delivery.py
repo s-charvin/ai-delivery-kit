@@ -9,6 +9,10 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Resolve the sibling layout resolver (single source of truth for artifact paths).
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from layout import find_ai_delivery_dir  # noqa: E402
+
 TERMINAL_STATUSES = frozenset({"merged"})
 BLOCKED_PREFIX = "blocked_"
 DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
@@ -36,9 +40,35 @@ def is_blocked(status: str) -> bool:
 
 
 def find_contracts(subreq_dir: Path) -> list[Path]:
-    """Find every ui-contract.html under a sub-requirement (one per unit)."""
+    """Find every ui-contract.html under a sub-requirement (one per unit).
+
+    Index-first: if ``contracts/ui-contract-index.json`` exists it is the
+    authoritative list (and missing entries are reported as orphans/warnings by
+    the layout validator). Otherwise fall back to a recursive scan so old-layout
+    repos keep working unchanged.
+    """
     if not subreq_dir.is_dir():
         return []
+    index = subreq_dir / "contracts" / "ui-contract-index.json"
+    if index.is_file():
+        try:
+            data = json.loads(index.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            data = None
+        if isinstance(data, dict):
+            entries = data.get("contracts") or []
+            found: list[Path] = []
+            for entry in entries:
+                if not isinstance(entry, dict):
+                    continue
+                rel = entry.get("path")
+                if not isinstance(rel, str):
+                    continue
+                cand = (subreq_dir / rel).resolve()
+                if cand.is_file():
+                    found.append(cand)
+            if found:
+                return sorted(found)
     return sorted(subreq_dir.rglob("ui-contract.html"))
 
 
@@ -164,14 +194,18 @@ def run_status_validator(
     req_root: Path,
     validator_script: Path | None,
 ) -> list[str]:
+    # Single-source resolution backed by layout.py (unified artifact contract).
+    # 1) explicit arg, 2) canonical seeded location under .ai-delivery/scripts,
+    # 3) kit-relative fallback (so the kit repo's own tests resolve it).
+    candidates: list[Path] = []
+    if validator_script is not None:
+        candidates.append(Path(validator_script))
+    ad_dir = find_ai_delivery_dir(req_root)
+    if ad_dir is not None:
+        candidates.append(ad_dir / "scripts" / "validate-delivery-status.py")
     kit_root = Path(__file__).resolve().parents[4]
-    candidates = [
-        validator_script,
-        kit_root / "scripts" / "validate-delivery-status.py",
-        Path("scripts/validate-delivery-status.py"),
-        Path(".ai-delivery/scripts/validate-delivery-status.py"),
-    ]
-    chosen = next((p.resolve() for p in candidates if p is not None and p.exists()), None)
+    candidates.append(kit_root / "scripts" / "validate-delivery-status.py")
+    chosen = next((p.resolve() for p in candidates if p.exists()), None)
     if chosen is None:
         return []
 

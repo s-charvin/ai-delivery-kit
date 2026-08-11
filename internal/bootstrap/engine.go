@@ -72,8 +72,35 @@ func (e Engine) Run(cfg Config) error {
 		"project_id":       cfg.ProjectID,
 		"project_root":     cfg.RepoRoot,
 		"ai_delivery_path": ".ai-delivery",
-		"updated_at":       timestamp,
-		"updated_by":       updatedBy,
+		"layout": map[string]any{
+			"requirement_root": "requirements/{req_id}",
+			"sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
+			"requirement_artifacts": map[string]any{
+				"status":             "requirements/{req_id}/status.json",
+				"requirement":        "requirements/{req_id}/requirement.md",
+				"breakdown_summary":  "requirements/{req_id}/breakdown-summary.md",
+				"global_rules":       "requirements/{req_id}/global-rules.md",
+				"dependency_graph":    "requirements/{req_id}/dependency-graph.json",
+				"progress":           "requirements/{req_id}/progress.md",
+				"todo":               "requirements/{req_id}/todo.md",
+				"delivery_report":    "requirements/{req_id}/delivery-report.md",
+			},
+			"sub_requirement_artifacts": map[string]any{
+				"requirement_slice":  "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",
+				"decisions":          "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
+				"readme":             "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
+				"traceability":       "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
+				"design":             "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
+				"verification":       "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
+				"spec":               "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
+				"plan":               "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
+				"tasks":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
+				"ui_contract_index":  "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-contract-index.json",
+				"manifest":           "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
+			},
+		},
+		"updated_at": timestamp,
+		"updated_by": updatedBy,
 	}); err != nil {
 		return err
 	}

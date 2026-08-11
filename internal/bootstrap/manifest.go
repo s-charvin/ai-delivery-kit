@@ -14,6 +14,7 @@ func Manifest() []ManagedAsset {
 		{Source: "scripts/validate-project-ai-delivery-skills.sh", Target: ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh", Kind: "file"},
 		{Source: "scripts/validate-ui-contract-html.py", Target: ".ai-delivery/scripts/validate-ui-contract-html.py", Kind: "file"},
 		{Source: "scripts/validate-delivery-status.py", Target: ".ai-delivery/scripts/validate-delivery-status.py", Kind: "file"},
+		{Source: "scripts/validate-artifact-layout.py", Target: ".ai-delivery/scripts/validate-artifact-layout.py", Kind: "file"},
 		{Source: "scripts/hooks/validate-ui-contract.sh", Target: ".ai-delivery/scripts/hooks/validate-ui-contract.sh", Kind: "file"},
 		{Source: "scripts/hooks/extract-hook-path.py", Target: ".ai-delivery/scripts/hooks/extract-hook-path.py", Kind: "file"},
 		{Source: ".cursor/hooks.json", Target: ".cursor/hooks.json", Kind: "file"},
