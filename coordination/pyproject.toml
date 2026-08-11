@@ -20,7 +20,6 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Application Frameworks",
 ]
 dependencies = [
-    "langgraph>=0.2.0,<0.3",
     "crewai>=0.40,<0.45",
     "mcp>=1.0.0,<1.1",
     "langfuse>=3.0.0,<4",
@@ -33,7 +32,6 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn[standard]>=0.27",
     "python-multipart>=0.0.9",
-    "APScheduler>=3.10",
 ]
 
 [project.optional-dependencies]
@@ -54,14 +52,11 @@ db = [
 vault = [
     "hvac>=2.1",
 ]
-hotreload = [
-    "watchdog>=4.0",
-]
+hotreload = []
 all = [
     "asyncpg>=0.29",
     "sqlalchemy>=2.0",
     "hvac>=2.1",
-    "watchdog>=4.0",
 ]
 
 [project.scripts]
@@ -147,7 +142,6 @@ strict_equality = true
 
 [[tool.mypy.overrides]]
 module = [
-    "langgraph.*",
     "crewai.*",
     "mcp.*",
     "langfuse.*",

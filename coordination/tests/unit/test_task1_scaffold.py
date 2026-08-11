@@ -46,7 +46,6 @@ REQUIRED_MODULES = [
 ]
 
 REQUIRED_IMPORTS = [
-    "langgraph",
     "crewai",
     "mcp",
     "langfuse",
@@ -57,7 +56,6 @@ REQUIRED_IMPORTS = [
     "yaml",
     "jsonpath_ng",
     "fastapi",
-    "apscheduler",
 ]
 
 
