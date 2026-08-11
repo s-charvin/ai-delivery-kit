@@ -150,3 +150,19 @@ class CostAggregator:
             self._conn.close()
         except Exception:
             pass
+
+    def task_cost_stats(self, task_id: str) -> dict[str, float]:
+        """Mean / std / count of recorded cost_usd for a task (ledger-backed)."""
+        cur = self._conn.cursor()
+        cur.execute("SELECT cost_usd FROM cost_events WHERE task_id = ?", (task_id,))
+        costs = [float(r["cost_usd"]) for r in cur.fetchall()]
+        if not costs:
+            return {"mean": 0.0, "std": 0.0, "count": 0}
+        n = len(costs)
+        mean = sum(costs) / n
+        var = sum((c - mean) ** 2 for c in costs) / n
+        return {
+            "mean": round(mean, 6),
+            "std": round(var**0.5, 6),
+            "count": n,
+        }

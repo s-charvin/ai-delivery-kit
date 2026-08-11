@@ -353,26 +353,45 @@ def test_tr10_2_role_instance_mapping():
 # ---------- TR-10.3 成本计数阈值 ----------
 
 def test_tr10_3_cost_thresholds():
-    """TR-10.3 成本阈值三级检查."""
+    """TR-10.3 成本阈值三级检查 (stateless policy evaluator)."""
     cc = CostController()
 
-    # Task 级: delta累加 20_001 → needs_human=True
-    r_task = cc.on_task_token_count("t1", 10_000, accum=None)
+    # Task 级: 直接传入累计 token，>= 20000 → needs_human=True
+    r_task = cc.evaluate_task_tokens(10_000)
     assert r_task["needs_human"] is False
-    r_task2 = cc.on_task_token_count("t1", 10_001, accum=None)
+    r_task2 = cc.evaluate_task_tokens(20_001)
     assert r_task2["needs_human"] is True, f"task threshold expected needs_human: {r_task2}"
 
     # Pipeline 级: accum_usd=101 → action=pause_pipeline
-    r_pipe = cc.on_pipeline_usd("p1", 99.0)
+    r_pipe = cc.evaluate_pipeline_usd(99.0)
     assert r_pipe["action"] is None
-    r_pipe2 = cc.on_pipeline_usd("p1", 101.0)
+    r_pipe2 = cc.evaluate_pipeline_usd(101.0)
     assert r_pipe2["action"] == "pause_pipeline", f"pipe threshold expected pause: {r_pipe2}"
 
     # Platform 级: $4001 → action=switch_cheap_model
-    r_plat = cc.on_platform_usd_daily(3999.0)
+    r_plat = cc.evaluate_platform_usd_daily(3999.0)
     assert r_plat["action"] is None
-    r_plat2 = cc.on_platform_usd_daily(4001.0)
+    r_plat2 = cc.evaluate_platform_usd_daily(4001.0)
     assert r_plat2["action"] == "switch_cheap_model", f"platform threshold expected switch: {r_plat2}"
+
+
+def test_tr10_3b_cost_controller_is_stateless():
+    """CostController must not keep internal running totals (ledger owns those)."""
+    cc = CostController()
+    # Repeated evaluation with the same input yields identical results; there is no
+    # hidden accumulation across calls.
+    a = cc.evaluate_task_tokens(5000)
+    b = cc.evaluate_task_tokens(5000)
+    assert a == b
+    assert a["accum_tokens"] == 5000
+    assert a["needs_human"] is False
+
+    # Two independent calls with different inputs do not leak state into each other.
+    assert cc.evaluate_task_tokens(50_000)["needs_human"] is True
+    assert cc.evaluate_task_tokens(1)["needs_human"] is False
+
+    # Where there is no ledger wired, stats are reported empty rather than erroring.
+    assert cc.get_task_cost_stats("any-task") == {"mean": 0.0, "std": 0.0, "count": 0}
 
 
 # ---------- TR-10.4 越权阻断 ----------
