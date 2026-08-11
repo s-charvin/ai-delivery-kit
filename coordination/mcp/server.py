@@ -738,7 +738,11 @@ def get_dependencies(
 
 @mcp.tool(
     name="review_artifact_pr",
-    description="Review artifact PR (stub - returns needs_human)",
+    description=(
+        "Review an artifact PR: run minimal real checks (required fields, schema, "
+        "sha256 ref_hash, secret scan) on the target node's artifacts. Always "
+        "routes to a human reviewer (needs_human=true)."
+    ),
     input_schema={
         "type": "object",
         "properties": {
@@ -750,16 +754,59 @@ def get_dependencies(
 )
 @langfuse_trace(name="review_artifact_pr", span_type="tool")
 def review_artifact_pr(pipeline_id: str, pr_id: str) -> dict:
-    return {
-        "verdict": "needs_human",
-        "checks": {
-            "required_fields": "pass",
-            "schema": "pass",
-            "secret_scan": "pass",
-        },
-        "needs_human": True,
-        "summary": "stub review ok",
-    }
+    from .review_validation import review_artifact_pr_result
+
+    try:
+        defn = STORE.get_def(pipeline_id)
+        state = STORE.get_state(pipeline_id)
+    except KeyError as exc:
+        return {
+            "verdict": "needs_human",
+            "checks": {
+                "required_fields": "fail:pipeline_not_found",
+                "schema": "fail",
+                "sha256": "fail",
+                "secret_scan": "pass",
+            },
+            "needs_human": True,
+            "summary": f"pipeline not found: {exc}",
+        }
+
+    target_node_id = None
+    for nid, pr in STORE.pending_prs.items():
+        if pr == pr_id:
+            target_node_id = nid
+            break
+    if not target_node_id:
+        target_node_id = _get_first_ready_node(state, defn)
+    if not target_node_id:
+        return {
+            "verdict": "needs_human",
+            "checks": {
+                "required_fields": "fail:no_target_node",
+                "schema": "fail",
+                "sha256": "fail",
+                "secret_scan": "pass",
+            },
+            "needs_human": True,
+            "summary": "could not resolve target node for PR",
+        }
+
+    ns = state.node_states.get(target_node_id)
+    if ns is None:
+        return {
+            "verdict": "needs_human",
+            "checks": {
+                "required_fields": "fail:node_state_missing",
+                "schema": "fail",
+                "sha256": "fail",
+                "secret_scan": "pass",
+            },
+            "needs_human": True,
+            "summary": f"node state missing: {target_node_id}",
+        }
+
+    return review_artifact_pr_result(ns, defn, pipeline_id, pr_id)
 
 
 @mcp.tool(
