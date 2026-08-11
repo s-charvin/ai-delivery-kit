@@ -77,7 +77,6 @@ include = [
     "skills*",
     "audit*",
     "monitoring*",
-    "visual*",
     "docker*",
     "tests*",
     "config*",
