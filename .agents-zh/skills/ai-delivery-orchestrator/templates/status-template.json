@@ -12,6 +12,7 @@
     "in_dev": "实现进行中 — 工作树已创建，TDD 循环活跃",
     "visual_acceptance_passed": "截图匹配 HTML UI 契约的屏幕状态（仅 UI 切片；非 UI 切片直接跳过此状态）",
     "merged": "代码已变基合并到开发分支（无合并提交）",
+    "archived": "冻结归档 — 产物已快照至 archive/ 区并写入 MANIFEST.json，不可变；需求变更须开新 <req-id>",
 
     "blocked_missing_requirement": "源中缺少关键业务事实",
     "blocked_requirement_conflict": "两个已批准的来源互相矛盾",
@@ -36,7 +37,8 @@
   "_checkpoints": {
     "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
     "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
-    "CP-DESIGN": "design_approval — 方案设计已通过设计评审并获得用户批准，方可进入 spec 阶段"
+    "CP-DESIGN": "design_approval — 方案设计已通过设计评审并获得用户批准，方可进入 spec 阶段",
+    "CP-ARCHIVE": "archive_confirmation — 所有切片均已 merged，等待用户确认冻结归档（archive/ 不可变快照）"
   },
 
   "_runtime_modes": {
@@ -45,7 +47,8 @@
     "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需设计批准后方可进入 spec 阶段",
     "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
     "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
-    "completed": "所有可执行 sub_requirements 均已 merged"
+    "closing": "current_checkpoint=CP-ARCHIVE，所有可执行切片均已 merged，等待用户确认冻结归档",
+    "completed": "所有可执行 sub_requirements 均已 archived"
   },
 
   "requirement_id": "<req-id>",

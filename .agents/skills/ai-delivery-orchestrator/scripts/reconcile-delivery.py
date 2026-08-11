@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from layout import find_ai_delivery_dir, spec_drift  # noqa: E402
 
-TERMINAL_STATUSES = frozenset({"merged"})
+TERMINAL_STATUSES = frozenset({"archived"})
 BLOCKED_PREFIX = "blocked_"
 DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
 
@@ -42,6 +42,7 @@ ACTION_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
     ("tasks_ready", None, True): "implement",
     ("in_dev", None, True): "implement",
     ("visual_acceptance_passed", None, True): "finish",
+    ("merged", None, True): "archive",
 }
 
 
@@ -168,7 +169,7 @@ def dependencies_satisfied(
         dep_entry = sub_requirements.get(dep_id)
         if not isinstance(dep_entry, dict):
             return False
-        if dep_entry.get("status") != "merged":
+        if dep_entry.get("status") not in {"merged", "archived"}:
             return False
     return True
 
@@ -191,8 +192,8 @@ def next_action_for_entry(entry: dict, ui_bearing: bool) -> str | None:
     if status == "acceptance_frozen":
         return ACTION_BY_STATUS[("acceptance_frozen", True, design_approved)]
 
-    if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed"}:
-        if not design_approved and status not in {"in_dev", "visual_acceptance_passed"}:
+    if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed", "merged"}:
+        if not design_approved and status not in {"in_dev", "visual_acceptance_passed", "merged"}:
             return "design"
         return ACTION_BY_STATUS.get((status, None, True))
 
@@ -288,6 +289,7 @@ def reconcile(
     actionable: list[tuple[str, str]] = []
     design_pending: list[tuple[str, str]] = []
     dev_waiting: list[str] = []
+    archive_pending: list[str] = []
     downgraded: set[str] = set()
 
     for subreq_id, entry in sub_requirements.items():
@@ -339,7 +341,13 @@ def reconcile(
 
         action = next_action_for_entry(entry, ui_bearing)
         if action:
-            if status == "tasks_ready":
+            if action == "archive":
+                # merged -> archive is a pure housekeeping action; it must not
+                # count as a "runnable" development task (so the runtime mode
+                # resolves to `closing` rather than `resume`).
+                archive_pending.append(subreq_id)
+                runnable.append(f"{subreq_id}:{status}->{action}")
+            elif status == "tasks_ready":
                 # 进入开发必须经过 CP-001 门禁：tasks_ready 子需求先等待，
                 # 待 all_tasks_ready 与已记录的 CP-001 确认后再放行。
                 dev_waiting.append(subreq_id)
@@ -354,9 +362,9 @@ def reconcile(
         and isinstance(entry.get("status"), str)
         and not is_blocked(entry["status"])
     ]
-    all_merged = all(
+    all_archived = all(
         isinstance(sub_requirements.get(sid), dict)
-        and sub_requirements[sid].get("status") == "merged"
+        and sub_requirements[sid].get("status") == "archived"
         for sid in executable
     ) if executable else False
 
@@ -383,9 +391,12 @@ def reconcile(
 
     checkpoint = recorded_checkpoint
 
-    if all_merged and executable:
+    if all_archived and executable:
         runtime_mode = "completed"
         checkpoint = None
+    elif archive_pending and not actionable:
+        runtime_mode = "closing"
+        checkpoint = "CP-ARCHIVE"
     elif checkpoint == "CP-002":
         runtime_mode = "blocker_recovery"
     elif all_tasks_ready:
@@ -407,6 +418,8 @@ def reconcile(
     if runtime_mode == "completed":
         next_action = "none"
         next_subreq = None
+    elif runtime_mode == "closing" and archive_pending:
+        next_subreq, next_action = archive_pending[0], "archive"
     elif runtime_mode == "confirm_design" and design_pending:
         next_subreq, next_action = design_pending[0]
     elif runtime_mode == "confirm_to_dev":

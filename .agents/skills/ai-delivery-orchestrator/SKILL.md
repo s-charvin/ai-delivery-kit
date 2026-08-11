@@ -8,7 +8,7 @@ description: Use when a requirement document needs governed end-to-end delivery 
 Single entry for requirement → implementation. Leaf skills (`requirement-breakdown`, `ui-truth-mapping`) are pure tools — no pipeline awareness. This skill owns state, gates, blockers, and handoffs.
 
 ```
-Requirement → [Breakdown?] → UI Truth → Design → Spec → Plan → Tasks → Implement → Merge
+Requirement → [Breakdown?] → UI Truth → Design → Spec → Plan → Tasks → Implement → Merge → Archive
 ```
 
 The orchestrator is **framework-agnostic**: it emits abstract stage actions and adapts them to whatever AI development framework the user has installed. It never requires installing anything.
@@ -33,13 +33,14 @@ Action → guide dispatch table and loop model: [references/framework-adaptation
 | 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
 | 4 | `implement` | `visual_acceptance_passed` → `merged` |
 | 5 | `finish` | `merged` |
+| 6 | `archive` | `archived` (all subreqs) |
 
 Stage details: [references/stage-breakdown.md](references/stage-breakdown.md), [stage-ui-truth.md](references/stage-ui-truth.md), [stage-design-and-spec.md](references/stage-design-and-spec.md), [stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md), [stage-implementation.md](references/stage-implementation.md).
 
 ## State model
 
 ```
-draft → split_ready → acceptance_frozen → spec_ready → plan_ready → tasks_ready → in_dev → visual_acceptance_passed → merged
+draft → split_ready → acceptance_frozen → spec_ready → plan_ready → tasks_ready → in_dev → visual_acceptance_passed → merged → archived
 ```
 
 Non-UI subreqs skip `acceptance_frozen` and `visual_acceptance_passed`.
@@ -64,7 +65,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-reconcile emits abstract actions (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`, plus kit-owned skills) — never third-party skill names. Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
+reconcile emits abstract actions (`design` / `spec` / `plan` / `tasks` / `implement` / `finish` / `archive`, plus kit-owned skills) — never third-party skill names. Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
 
 ## Handoff table
 
@@ -79,12 +80,13 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 | All `tasks_ready` + CP-001 | Stage 4 `implement` |
 | Slice done | `finish` |
 
-## Pause points (4)
+## Pause points (5)
 
 1. After split/skip decision — confirm with user
 2. After the design session — CP-DESIGN, explicit approval before `spec`
 3. After `tasks_ready` — CP-001, confirm before development
 4. Review-loop budget exhausted — the task-level review loop (implement → review → fix → re-review) stopped without a clean round; report outstanding findings and wait for the user
+5. After all subreqs `merged` — CP-ARCHIVE, confirm freezing the immutable archive before marking `archived`
 
 ## Hard boundary
 
@@ -97,6 +99,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
 - Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment + icon asset fidelity + explicit per-contract user confirmation (unless explicitly waived) pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
+- Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
 
@@ -107,6 +110,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 | `acceptance_frozen` | All contracts pass `validate-ui-contract-html.py`; hydrated default + state switcher preview OK; scope matches slice In Scope; icons evidence-backed (no hand-drawn glyphs); user confirmed each contract (unless waived) |
 | `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; contracts still pass |
 | `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + contracts pass |
+| `archived` | Frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256; immutable (verified by `--verify-archive`) |
 
 ## Split decision
 
@@ -152,10 +156,10 @@ API docs pass directly to the spec pipeline and implementation. Gaps → `integr
 
 ## Runtime modes
 
-`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `completed`
+`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
 
-Checkpoints: CP-DESIGN (design approval), CP-001 (pre-dev), CP-002 (hard blocker, only when no runnable items remain).
+Checkpoints: CP-DESIGN (design approval), CP-001 (pre-dev), CP-002 (hard blocker, only when no runnable items remain), CP-ARCHIVE (pre-freeze, all subreqs merged).
 
 ## Completion
 
-All executable subreqs `merged` → requirement complete. No closing ceremony.
+All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json`, advance status to `archived`, and generate `delivery-report.md`. When every subreq is `archived`, the requirement is `completed` and the archive is immutable — any change requires a new `<req-id>/` directory.

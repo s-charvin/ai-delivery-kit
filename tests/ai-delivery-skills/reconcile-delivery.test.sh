@@ -16,7 +16,11 @@ require_runtime_mode() {
   local expected_mode=$2
   local output
 
-  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")")
+  # reconcile may exit non-zero when a fixture legitimately carries GATE errors
+  # (e.g. a merged ui-bearing subreq missing visual-acceptance artifacts). Those
+  # errors never affect RUNTIME_MODE derivation, which is what we assert here, so
+  # tolerate the non-zero exit via `|| true`.
+  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")") || true
   echo "$output" | grep -q "RUNTIME_MODE=$expected_mode" \
     || fail "Expected RUNTIME_MODE=$expected_mode for $status_file, got:\n$output"
 }
@@ -26,7 +30,11 @@ require_next_action() {
   local expected_action=$2
   local output
 
-  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")")
+  # reconcile may exit non-zero when a fixture legitimately carries GATE errors
+  # (e.g. a merged ui-bearing subreq missing visual-acceptance artifacts). Those
+  # errors never affect RUNTIME_MODE derivation, which is what we assert here, so
+  # tolerate the non-zero exit via `|| true`.
+  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")") || true
   echo "$output" | grep -q "NEXT_ACTION=$expected_action" \
     || fail "Expected NEXT_ACTION=$expected_action for $status_file, got:\n$output"
 }
@@ -36,7 +44,11 @@ require_output_contains() {
   local expected_line=$2
   local output
 
-  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")")
+  # reconcile may exit non-zero when a fixture legitimately carries GATE errors
+  # (e.g. a merged ui-bearing subreq missing visual-acceptance artifacts). Those
+  # errors never affect RUNTIME_MODE derivation, which is what we assert here, so
+  # tolerate the non-zero exit via `|| true`.
+  output=$(python3 "$RECONCILE" "$status_file" --req-root "$(dirname "$status_file")") || true
   echo "$output" | grep -q "$expected_line" \
     || fail "Expected output to contain '$expected_line' for $status_file, got:\n$output"
 }
@@ -45,7 +57,22 @@ require_output_contains() {
 [[ -d "$FIXTURE_ROOT" ]] || fail "Missing fixtures: $FIXTURE_ROOT"
 
 require_runtime_mode "$FIXTURE_ROOT/bootstrap-missing/status.json" "bootstrap"
-require_runtime_mode "$FIXTURE_ROOT/all-merged/status.json" "completed"
+
+# all-merged: every subreq is `merged` but none archived yet -> the requirement
+# is "pending archive": runtime_mode resolves to closing (not completed).
+require_runtime_mode "$FIXTURE_ROOT/all-merged/status.json" "closing"
+require_output_contains "$FIXTURE_ROOT/all-merged/status.json" "CHECKPOINT=CP-ARCHIVE"
+require_next_action "$FIXTURE_ROOT/all-merged/status.json" "archive"
+
+# merged-pending-archive: same merged-but-not-archived shape, explicit fixture.
+require_runtime_mode "$FIXTURE_ROOT/merged-pending-archive/status.json" "closing"
+require_output_contains "$FIXTURE_ROOT/merged-pending-archive/status.json" "CHECKPOINT=CP-ARCHIVE"
+require_next_action "$FIXTURE_ROOT/merged-pending-archive/status.json" "archive"
+
+# all-archived: every subreq is `archived` -> terminal completion.
+require_runtime_mode "$FIXTURE_ROOT/all-archived/status.json" "completed"
+require_next_action "$FIXTURE_ROOT/all-archived/status.json" "none"
+
 require_next_action "$FIXTURE_ROOT/split-ready-ui/status.json" "ui-truth-mapping"
 
 require_runtime_mode "$FIXTURE_ROOT/cp-design-pending/status.json" "confirm_design"

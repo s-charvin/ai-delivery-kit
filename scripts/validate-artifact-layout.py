@@ -134,10 +134,17 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
     return errors, warnings
 
 
-def verify_archive(subreq_dir: Path) -> list[str]:
+def verify_archive(subreq_dir: Path, status: str | None = None) -> list[str]:
     """Validate archive immutability via MANIFEST.json sha256 (Phase 3 hook)."""
     errors: list[str] = []
     manifests = sorted(subreq_dir.glob("archive/*/MANIFEST.json"))
+    # An archived sub-requirement MUST carry at least one immutable snapshot;
+    # without it the flow-forward guarantee (docs/artifact-layout.md §3) is void.
+    if status == "archived" and not manifests:
+        errors.append(
+            f"[ARCHIVE] {subreq_dir}: archived sub-requirement has no archive snapshot "
+            f"(expected archive/<ISO-ts>/MANIFEST.json)"
+        )
     for manifest in manifests:
         try:
             data = json.loads(manifest.read_text(encoding="utf-8"))
@@ -184,7 +191,7 @@ def validate_requirement(req_root: Path, check_archive: bool = False) -> list[st
         sub_errors, _warnings = validate_subreq(subreq_id, entry, subreq_dir)
         errors.extend(sub_errors)
         if check_archive:
-            errors.extend(verify_archive(subreq_dir))
+            errors.extend(verify_archive(subreq_dir, entry.get("status")))
     return errors
 
 

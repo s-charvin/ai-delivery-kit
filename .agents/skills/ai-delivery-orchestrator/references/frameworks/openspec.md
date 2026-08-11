@@ -28,6 +28,7 @@ One OpenSpec change per sub-requirement: `openspec/changes/<subreq-id-slug>/`.
   - `design.md` audited → `plan_ready`
   - `tasks.md` audited (granularity, dependency order, file scope) → `tasks_ready`
 - After the slice is merged, run the archive step (`openspec archive <name>`) so the delta lands in `openspec/specs/`. Archive only after `merged`; record the archived spec paths in `traceability.json` at that point.
+- The orchestrator's `archive` action additionally freezes the canonical three-piece spec set + `design.md` + `verification.md` into `.ai-delivery/requirements/<req>/sub-requirements/<SR>/archive/<ISO-ts>/` with a `MANIFEST.json` (sha256), independent of the OpenSpec-derived view. Run `openspec archive <name>` for the derived spec and the orchestrator archive for the canonical snapshot.
 - If the change conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch` instead of editing the delta until it "passes".
 
 ## Traceability recording

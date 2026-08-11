@@ -128,6 +128,7 @@ func (e Engine) Run(cfg Config) error {
 			"in_dev",
 			"visual_acceptance_passed",
 			"merged",
+			"archived",
 		},
 		"source_index_policy": map[string]any{
 			"required_traceability_keys": []string{
@@ -175,6 +176,11 @@ func (e Engine) Run(cfg Config) error {
 			"required_at":        []string{"merged", "archived"},
 			"artifact":           "verification.md",
 			"required_sections":  []string{"评审轮次记录", "验证命令与结果", "签署"},
+		},
+		"archive": map[string]any{
+			"_doc":                "flow-forward 冻结：merged -> archived 经 CP-ARCHIVE 确认，archive/ 区不可变（MANIFEST.json sha256 校验）",
+			"require_checkpoint":  "CP-ARCHIVE",
+			"immutable":           true,
 		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,

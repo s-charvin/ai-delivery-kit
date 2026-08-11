@@ -20,13 +20,14 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 4. If a guard is already satisfied, do not re-run the stage.
 5. If outputs exist but guard fails, re-run or open narrowest blocker.
 6. Keep blocked items in queue; continue later items that do not depend on them.
-7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_ACTION`, `NEXT_SUBREQ`. Actions are abstract (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`, plus kit-owned skills); map them to the selected framework tier via [framework-adaptation.md](framework-adaptation.md).
+7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_ACTION`, `NEXT_SUBREQ`. Actions are abstract (`design` / `spec` / `plan` / `tasks` / `implement` / `finish` / `archive`, plus kit-owned skills); map them to the selected framework tier via [framework-adaptation.md](framework-adaptation.md).
 
 ## Runtime mode resolution
 
 | Mode | Condition |
 |------|-----------|
-| `completed` | All executable subreqs are `merged` |
+| `completed` | All executable subreqs are `archived` |
+| `closing` | All executable subreqs are `merged` and none are `archived` → `CHECKPOINT=CP-ARCHIVE`, `NEXT_ACTION=archive` |
 | `bootstrap` | Missing/incomplete `status.json` or no sub_requirements |
 | `confirm_design` | Runnable subreq needs design approval and nothing else is runnable → `CHECKPOINT=CP-DESIGN` |
 | `confirm_to_dev` | All executable subreqs at `tasks_ready` → `CHECKPOINT=CP-001` |

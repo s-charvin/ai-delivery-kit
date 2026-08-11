@@ -20,7 +20,8 @@
     "tasks_ready",
     "in_dev",
     "visual_acceptance_passed",
-    "merged"
+    "merged",
+    "archived"
   ],
   "source_index_policy": {
     "required_traceability_keys": [
@@ -68,6 +69,11 @@
     "required_at": ["merged", "archived"],
     "artifact": "verification.md",
     "required_sections": ["评审轮次记录", "验证命令与结果", "签署"]
+  },
+  "archive": {
+    "_doc": "flow-forward 冻结：merged -> archived 经 CP-ARCHIVE 确认，archive/ 区不可变（MANIFEST.json sha256 校验）",
+    "require_checkpoint": "CP-ARCHIVE",
+    "immutable": true
   },
   "updated_at": "2026-05-06T00:00:00Z",
   "updated_by": "skill-flatten-v0.0.3"

@@ -48,6 +48,7 @@ POST_FREEZE_STATUSES = frozenset(
         "in_dev",
         "visual_acceptance_passed",
         "merged",
+        "archived",
     }
 )
 UI_IMPLIES_UI_STATUSES = frozenset(
@@ -55,18 +56,19 @@ UI_IMPLIES_UI_STATUSES = frozenset(
         "acceptance_frozen",
         "visual_acceptance_passed",
         "merged",
+        "archived",
     }
 )
-VISUAL_ACCEPTANCE_STATUSES = frozenset({"visual_acceptance_passed", "merged"})
+VISUAL_ACCEPTANCE_STATUSES = frozenset({"visual_acceptance_passed", "merged", "archived"})
 # Delivered end-state in status.json: force implementation lookup even if
 # HTML meta.delivery.status is still "frozen" (blocks raise-status-only shortcut).
-STATUSES_REQUIRING_IMPLEMENTED_LOOKUP = frozenset({"merged"})
+STATUSES_REQUIRING_IMPLEMENTED_LOOKUP = frozenset({"merged", "archived"})
 DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
 
-# superpowers verification discipline: `merged` is only credible with hard
-# evidence on disk. Enforced on new-layout sub-requirements only, so repos
+# superpowers verification discipline: `merged`/`archived` are only credible with
+# hard evidence on disk. Enforced on new-layout sub-requirements only, so repos
 # bootstrapped before the unified layout keep validating cleanly.
-VERIFICATION_REQUIRED_STATUSES = frozenset({"merged"})
+VERIFICATION_REQUIRED_STATUSES = frozenset({"merged", "archived"})
 VERIFICATION_ARTIFACT = "verification.md"
 DEFAULT_VERIFICATION_SECTIONS = ("评审轮次记录", "验证命令与结果", "签署")
 
