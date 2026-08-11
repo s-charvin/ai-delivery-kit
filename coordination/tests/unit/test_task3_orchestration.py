@@ -601,3 +601,28 @@ def test_tr3_7_cascade_addendum_must():
 
     has_must_ack = any(e.type == "ADDENDUM_MUST_ACK" for e in evts)
     assert has_must_ack, "期望 ADDENDUM_MUST_ACK 事件"
+
+
+def test_tr3_role_map_consistency():
+    """ROLE_MAP is the single source of truth shared by materialize + deps."""
+    from config.constants import ROLE_MAP
+    from orchestration.materialize import node_type_role_mapping
+    from orchestration.deps import _node_type_to_roles
+
+    expected = {
+        "product_spec": ["product"],
+        "design_asset": ["design"],
+        "client_ui_impl": ["client_ui"],
+        "server_impl": ["server_impl"],
+        "server_test": ["server_test"],
+        "client_test": ["client_test"],
+        "delivery_gate": ["ops"],
+        "api_contract": ["product", "server_impl"],
+    }
+    assert ROLE_MAP == expected, "ROLE_MAP in config.constants drifted from canonical set"
+    for node_type, roles in ROLE_MAP.items():
+        assert node_type_role_mapping(node_type) == roles
+        assert _node_type_to_roles(node_type) == roles
+    # unknown node type falls back to empty list in both consumers
+    assert node_type_role_mapping("nope") == []
+    assert _node_type_to_roles("nope") == []

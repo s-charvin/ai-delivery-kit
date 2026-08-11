@@ -9,22 +9,11 @@ from orchestration.models import (
     PipelineDefinition,
     PipelineState,
 )
-
-
-_ROLE_MAP: dict[str, list[str]] = {
-    "product_spec": ["product"],
-    "design_asset": ["design"],
-    "client_ui_impl": ["client_ui"],
-    "server_impl": ["server_impl"],
-    "server_test": ["server_test"],
-    "client_test": ["client_test"],
-    "delivery_gate": ["ops"],
-    "api_contract": ["product", "server_impl"],
-}
+from config.constants import ROLE_MAP
 
 
 def node_type_role_mapping(node_type: str) -> list[str]:
-    return _ROLE_MAP.get(node_type, [])
+    return ROLE_MAP.get(node_type, [])
 
 
 def materialize_pipeline(

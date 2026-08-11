@@ -258,6 +258,20 @@ INTERNAL = ClassificationLevel.INTERNAL
 CONFIDENTIAL = ClassificationLevel.CONFIDENTIAL
 RESTRICTED = ClassificationLevel.RESTRICTED
 
+# Maps a node type to the participation roles it requires. Previously duplicated in
+# orchestration/materialize.py (_ROLE_MAP) and orchestration/deps.py (_ROLE_MAP_FOR_DEPS);
+# consolidated here as the single source of truth.
+ROLE_MAP: dict[str, list[str]] = {
+    "product_spec": ["product"],
+    "design_asset": ["design"],
+    "client_ui_impl": ["client_ui"],
+    "server_impl": ["server_impl"],
+    "server_test": ["server_test"],
+    "client_test": ["client_test"],
+    "delivery_gate": ["ops"],
+    "api_contract": ["product", "server_impl"],
+}
+
 PARTICIPATION_PROFILES: dict[str, ParticipationProfile] = {
     "fullstack": ParticipationProfile(
         id="fullstack",
