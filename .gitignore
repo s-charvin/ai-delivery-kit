@@ -15,6 +15,7 @@ __pycache__/
 
 # Test/dev databases
 *.db
+/coordination/data/
 
 # Coverage
 .coverage

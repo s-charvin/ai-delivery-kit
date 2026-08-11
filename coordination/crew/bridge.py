@@ -27,6 +27,7 @@ def _deepcopy_state(state: PipelineState) -> PipelineState:
 
 EVENT_CREWAI_DISPATCHED = "CREWAI_DISPATCHED"
 EVENT_NODE_DONE_VIA_CREW = "NODE_DONE_VIA_CREW"
+EVENT_STUB_WARN = "CREW_STUB_WARN"
 
 
 class CrewGraphBridge:
@@ -59,13 +60,25 @@ class CrewGraphBridge:
             mcp_tools_wrapper=mcp_tools_wrapper,
         )
 
-        result = None
+        events: list[Event] = []
         try:
             result = crew.kickoff()
-        except Exception:
-            from tests.fixtures.llm_mock import _STUB_OUT
-
-            result = type("StubResult", (), {"raw": _STUB_OUT})()
+        except Exception as exc:
+            # No production fallback to a test stub: a failed crew run is surfaced as a
+            # warning event and the node statuses are left unchanged so the failure is
+            # explicit rather than silently masked.
+            events.append(
+                Event(
+                    type=EVENT_STUB_WARN,
+                    payload={"pipeline_id": pipeline_id, "error": str(exc)},
+                )
+            )
+            return {
+                "pipeline_state": pipeline_state,
+                "events": events,
+                "crew_result": None,
+                "crew": crew,
+            }
 
         self.last_crew_result = result
         self.dispatched.append(
@@ -77,10 +90,7 @@ class CrewGraphBridge:
         )
 
         new_state = _deepcopy_state(pipeline_state)
-        events: list[Event] = []
-
-        result_str = getattr(result, "raw", str(result)) if result is not None else ""
-        submit_done = "submit_artifact" in result_str or "approve_pr" in result_str or "完成" in result_str
+        events = []
 
         now = datetime.now(timezone.utc).isoformat()
         new_state.updated_at = now
@@ -98,15 +108,17 @@ class CrewGraphBridge:
                     },
                 )
             )
-            if submit_done:
-                ns = new_state.node_states.get(nid)
-                if ns is not None:
-                    if ns.status in (
-                        NodeStatus.READY,
-                        NodeStatus.IN_PROGRESS,
-                        NodeStatus.PENDING_REVIEW,
-                        NodeStatus.REVIEW,
-                    ):
+            ns = new_state.node_states.get(nid)
+            if ns is not None:
+                if ns.status in (
+                    NodeStatus.READY,
+                    NodeStatus.IN_PROGRESS,
+                    NodeStatus.PENDING_REVIEW,
+                    NodeStatus.REVIEW,
+                ):
+                    # DONE is recognized by the artifacts the crew actually produced
+                    # (artifact_refs), not by parsing the crew result string.
+                    if ns.artifact_refs:
                         ns.status = NodeStatus.DONE
                         events.append(
                             Event(
