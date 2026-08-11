@@ -12,7 +12,7 @@ Stage 3 runs two abstract actions: `design` (approval-gated) and `spec` → `pla
 <HARD-GATE>
 Orchestrator design-mode: after the design session, do NOT write plan/spec artifacts of your own before the user approves the design.
 Do NOT write design docs into framework-owned directories.
-Store the summary in subreq `notes`; set `design_approved=true` only after user approval; then proceed to the `spec` action.
+Write the design summary to `design.md` (template: `templates/design-template.md`); keep `notes` to a one-line pointer only. Set `design_approved=true` only after user approval; then proceed to the `spec` action.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -35,7 +35,7 @@ Design session should produce:
 - Error/empty/loading handling plan
 - Key technical decisions and trade-offs
 
-Store summary in `notes`. On user approval, set `design_approved: true`.
+Write the design summary to `design.md` (one-line pointer in `notes`). On user approval, set `design_approved: true`.
 
 If design conflicts with the HTML contract or requirement → `blocked_spec_mismatch`.
 
@@ -55,7 +55,19 @@ After each step:
 - `plan.md` → `plan_ready`
 - `tasks.md` → `tasks_ready`
 
-Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
+Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Each entry of the three-piece set (`spec/spec.md`, `spec/plan.md`, `spec/tasks.md`) MUST record its `content_sha256` so the artifact-layout validator can detect drift. Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
+
+## Spec persistence (living ↔ flow-forward)
+
+While the sub-requirement is not yet `archived`, the spec is **living**:
+
+- `spec/spec.md` is the single source of truth; `spec/plan.md` and `spec/tasks.md` are derived artifacts that may be regenerated as the spec evolves.
+- Before regenerating any derived artifact, move the key decisions being overturned into `decisions.md` first (prevents rationale loss).
+
+Once the sub-requirement reaches `archived`, the spec is **flow-forward**:
+
+- The `archive/<ISO-ts>/` snapshot is frozen and immutable, verified by `MANIFEST.json` sha256 (see [artifact-layout.md](../../../../docs/artifact-layout.md)).
+- Any requirement change starts a new `<req-id>/` directory; the old directory is a read-only reference.
 
 ## Pause
 

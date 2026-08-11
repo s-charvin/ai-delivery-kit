@@ -48,6 +48,27 @@
   "review_loop": {
     "max_rounds": 3
   },
+  "spec_persistence": {
+    "_doc": "spec-kit 持久化约定：活跃期 living（spec.md 唯一事实源，plan/tasks 原地再生），完结后 flow_forward（archive/ 冻结不可变，变更开新需求目录）",
+    "active": "living",
+    "complete": "flow_forward",
+    "living": {
+      "source_of_truth": "spec/spec.md",
+      "derived": ["spec/plan.md", "spec/tasks.md"],
+      "on_drift": "downgrade_to_spec_ready",
+      "before_regenerate": "旧关键决策先落 decisions.md"
+    },
+    "flow_forward": {
+      "immutable_root": "archive",
+      "change_requires": "new_requirement_dir"
+    }
+  },
+  "verification_policy": {
+    "_doc": "superpowers 验证纪律：merged/archived 必须有 verification.md 硬证据；验证器只查存在性与必备小节标题，不做语义判断",
+    "required_at": ["merged", "archived"],
+    "artifact": "verification.md",
+    "required_sections": ["评审轮次记录", "验证命令与结果", "签署"]
+  },
   "updated_at": "2026-05-06T00:00:00Z",
   "updated_by": "skill-flatten-v0.0.3"
 }

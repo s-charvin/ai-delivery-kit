@@ -20,7 +20,7 @@ The `implement` action always follows this chain, regardless of framework tier:
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
 4. **Visual acceptance** (UI only) — compare implementation against the reviewed `ui-contract.html` states; failures enter the same review loop.
-5. **Verification** — integration checks before merge.
+5. **Verification** — integration checks before merge; record the evidence in `verification.md` (template `templates/verification-template.md`).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
 How each step is executed depends on the tier (superpowers skills, ECC agents, or native discipline): see [frameworks/superpowers.md](frameworks/superpowers.md), [frameworks/ecc.md](frameworks/ecc.md), [frameworks/native.md](frameworks/native.md).
@@ -40,7 +40,7 @@ implementer finishes the task
 Rules:
 
 - The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself.
-- Each round's findings and fix summary are appended to `progress.md` for traceability.
+- Each round's findings and fix summary are appended to `progress.md` for traceability and to the `评审轮次记录` section of `verification.md` (the verification artifact).
 - Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3.
 - Budget exhausted: pause, report the outstanding findings to the user, and either open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest review round is not clean.**
 - The loop owner is the main orchestrator session; it decides clean/not-clean from the reviewer report, not from the implementer's claim.
@@ -60,7 +60,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 
 - `in_dev` when implementation starts.
 - `visual_acceptance_passed` after the screenshot matches the reviewed `ui-contract.html` (UI only). Write `visual-acceptance.md` or `visual-acceptance/*.png` before promoting this status.
-- `merged` after successful rebase.
+- `merged` after successful rebase, and only when `verification.md` is signed (the validate-delivery-status gate rejects `merged` without it).
 
 ## Progress ledger (optional)
 

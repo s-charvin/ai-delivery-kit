@@ -9,13 +9,23 @@ import subprocess
 import sys
 from pathlib import Path
 
-# Resolve the sibling layout resolver (single source of truth for artifact paths).
+# Resolve the sibling layout resolver (single source of truth for artifact paths
+# and for the one normalize/hash implementation behind drift detection).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from layout import find_ai_delivery_dir  # noqa: E402
+from layout import find_ai_delivery_dir, spec_drift  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"merged"})
 BLOCKED_PREFIX = "blocked_"
 DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
+
+# spec-kit living-spec persistence: once derived artifacts exist, a changed
+# spec.md makes plan/tasks stale. Report from plan_ready onwards; only send the
+# pipeline back where nothing has been implemented yet (downgrade set) —
+# forcing a downgrade mid-development would discard real work instead.
+DRIFT_CHECK_STATUSES = frozenset(
+    {"plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed"}
+)
+DRIFT_DOWNGRADE_STATUSES = frozenset({"plan_ready", "tasks_ready"})
 
 # Abstract stage actions only. Framework-specific tooling is resolved at
 # runtime via references/framework-adaptation.md — reconcile stays a pure
@@ -278,6 +288,7 @@ def reconcile(
     actionable: list[tuple[str, str]] = []
     design_pending: list[tuple[str, str]] = []
     dev_waiting: list[str] = []
+    downgraded: set[str] = set()
 
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
@@ -301,6 +312,26 @@ def reconcile(
 
         subreq_dir = req_root / "sub-requirements" / subreq_id
         ui_bearing = infer_ui_bearing(entry, subreq_dir)
+
+        if status in DRIFT_CHECK_STATUSES:
+            for message in spec_drift(subreq_dir):
+                if status in DRIFT_DOWNGRADE_STATUSES:
+                    errors.append(
+                        f"[DRIFT] {subreq_id}: {message} — living spec changed; "
+                        f"downgraded to spec_ready, regenerate plan/tasks "
+                        f"(record superseded decisions in decisions.md first)"
+                    )
+                    downgraded.add(subreq_id)
+                else:
+                    errors.append(
+                        f"[DRIFT] {subreq_id}: {message} — living spec changed "
+                        f"after {status}; re-align the derived artifacts before merge"
+                    )
+            if subreq_id in downgraded:
+                # Re-derive the action from spec_ready without touching status.json:
+                # reconcile is a pure deriver, writing status is a skill-layer action.
+                status = "spec_ready"
+                entry = {**entry, "status": status}
 
         if needs_design_approval(entry, ui_bearing):
             design_pending.append((subreq_id, "design"))
@@ -329,10 +360,17 @@ def reconcile(
         for sid in executable
     ) if executable else False
 
-    all_tasks_ready = bool(executable) and all(
-        isinstance(sub_requirements.get(sid), dict)
-        and sub_requirements[sid].get("status") == "tasks_ready"
-        for sid in executable
+    # A drift-downgraded slice is no longer tasks_ready even though status.json
+    # still says so — otherwise CP-001 would authorize development against a
+    # stale plan/tasks pair.
+    all_tasks_ready = (
+        bool(executable)
+        and not (downgraded & set(executable))
+        and all(
+            isinstance(sub_requirements.get(sid), dict)
+            and sub_requirements[sid].get("status") == "tasks_ready"
+            for sid in executable
+        )
     )
 
     # CP-001 凭证仅在“全部 tasks_ready 且用户确认已记录”时有效；

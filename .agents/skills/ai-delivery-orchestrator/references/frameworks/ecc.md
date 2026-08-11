@@ -23,6 +23,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 - Prefer ECC's review agents for the per-task [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): implement → ECC review agent → findings back to the implementer → re-review, until clean or the `review_loop.max_rounds` budget is exhausted (then escalate to the user; never auto-merge).
 - If ECC hooks enforce formatting/lint rules, let them run; a hook failure is a verification failure (`blocked_verification_failure` after a review-loop fix round), not a reason to bypass the hook.
 - When ECC and another framework are both installed, ECC typically pairs well with a spec-producing tier (spec-kit/OpenSpec): ECC for design/implement/finish, the spec tier for `spec`/`plan`/`tasks`.
+- Before `merged`, write `verification.md` (sections: 评审轮次记录 / 验证命令与结果 / 签署). The status validator rejects `merged` without it.
 
 ## Traceability recording
 

@@ -11,6 +11,34 @@ import sys
 from pathlib import Path
 from typing import Any
 
+LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
+
+
+def _locate_layout_dir() -> Path | None:
+    """Find the orchestrator scripts dir by walking up from this file.
+
+    Handles both layouts this validator lives in: the kit repo
+    (``<kit>/scripts/``) and a bootstrapped repo (``<repo>/.ai-delivery/scripts/``,
+    where ``.agents/`` is a *sibling* of ``.ai-delivery/``, not a parent).
+    Returns None when unavailable so the pre-existing UI-contract gates keep
+    working even without the layout contract.
+    """
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        cand = base / LAYOUT_REL
+        if (cand / "layout.py").is_file():
+            return cand
+    return None
+
+
+_layout_dir = _locate_layout_dir()
+if _layout_dir is not None:
+    sys.path.insert(0, str(_layout_dir))
+    from layout import is_new_layout, load_workflow_policy  # noqa: E402
+else:  # pragma: no cover - only when the skill layer is absent
+    is_new_layout = None  # type: ignore[assignment]
+    load_workflow_policy = None  # type: ignore[assignment]
+
 POST_FREEZE_STATUSES = frozenset(
     {
         "acceptance_frozen",
@@ -34,6 +62,13 @@ VISUAL_ACCEPTANCE_STATUSES = frozenset({"visual_acceptance_passed", "merged"})
 # HTML meta.delivery.status is still "frozen" (blocks raise-status-only shortcut).
 STATUSES_REQUIRING_IMPLEMENTED_LOOKUP = frozenset({"merged"})
 DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
+
+# superpowers verification discipline: `merged` is only credible with hard
+# evidence on disk. Enforced on new-layout sub-requirements only, so repos
+# bootstrapped before the unified layout keep validating cleanly.
+VERIFICATION_REQUIRED_STATUSES = frozenset({"merged"})
+VERIFICATION_ARTIFACT = "verification.md"
+DEFAULT_VERIFICATION_SECTIONS = ("评审轮次记录", "验证命令与结果", "签署")
 
 
 CONTRACT_META_PATTERN = re.compile(
@@ -114,6 +149,46 @@ def has_visual_acceptance_evidence(subreq_dir: Path) -> bool:
     if evidence_dir.is_dir():
         return any(evidence_dir.glob("*.png"))
     return False
+
+
+def verification_required_sections(req_root: Path) -> tuple[str, ...]:
+    """Section titles that must appear in verification.md, from workflow policy."""
+    if load_workflow_policy is None:
+        return DEFAULT_VERIFICATION_SECTIONS
+    policy = load_workflow_policy(req_root)
+    sections = policy.get("verification_policy", {}).get("required_sections")
+    if isinstance(sections, list) and sections:
+        return tuple(s for s in sections if isinstance(s, str) and s)
+    return DEFAULT_VERIFICATION_SECTIONS
+
+
+def check_verification_evidence(
+    subreq_id: str, subreq_dir: Path, status: str, sections: tuple[str, ...]
+) -> list[str]:
+    """Require verification.md with its mandatory section titles.
+
+    Existence + section titles only — never a semantic judgement about the
+    contents. Skipped for legacy-layout sub-requirements.
+    """
+    if is_new_layout is None or not is_new_layout(subreq_dir):
+        return []
+    evidence = subreq_dir / VERIFICATION_ARTIFACT
+    if not evidence.is_file():
+        return [
+            f"[GATE] {subreq_id} status={status} requires {VERIFICATION_ARTIFACT} "
+            f"(final review clean + full analyze/test results + sign-off)"
+        ]
+    try:
+        raw = evidence.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return [f"[GATE] {subreq_id} cannot read {VERIFICATION_ARTIFACT}: {exc}"]
+    missing = [section for section in sections if section not in raw]
+    if missing:
+        return [
+            f"[GATE] {subreq_id} status={status} {VERIFICATION_ARTIFACT} is missing "
+            f"required section(s): {', '.join(missing)}"
+        ]
+    return []
 
 
 def pointer_resolves(
@@ -233,6 +308,8 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
     if not isinstance(sub_requirements, dict):
         return ["[STATUS] sub_requirements must be a mapping"]
 
+    verification_sections = verification_required_sections(req_root)
+
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
             errors.append(f"[STATUS] sub_requirements.{subreq_id} must be a mapping")
@@ -258,7 +335,12 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
                 )
 
         if status in POST_FREEZE_STATUSES:
-            if status in UI_IMPLIES_UI_STATUSES and not contracts:
+            # `ui_bearing` still *infers* True for these statuses when the field
+            # is absent, so UI slices remain gated. An explicit ui_bearing:false
+            # (a pure backend/infra slice) must not be forced to produce a UI
+            # contract — otherwise non-UI slices can never legitimately reach
+            # merged.
+            if status in UI_IMPLIES_UI_STATUSES and ui_bearing and not contracts:
                 errors.append(
                     f"[GATE] {subreq_id} status={status} requires ui-contract.html"
                 )
@@ -267,6 +349,13 @@ def validate_status_file(status_path: Path, req_root: Path, validator_script: Pa
             for contract in contracts:
                 meta = load_contract_meta(contract)
                 errors.extend(require_implemented_lookup(subreq_id, contract, meta))
+
+        if status in VERIFICATION_REQUIRED_STATUSES:
+            errors.extend(
+                check_verification_evidence(
+                    subreq_id, subreq_dir, status, verification_sections
+                )
+            )
 
         if status == "merged" and contracts:
             for contract in contracts:

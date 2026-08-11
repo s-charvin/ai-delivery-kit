@@ -71,6 +71,10 @@ main() {
   need_cmd zsh
   run_step "go test ./..." env GOCACHE="$GOCACHE_DIR" go test ./...
   run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
+  run_step "layout contract" bash tests/ai-delivery-skills/layout.test.sh
+  run_step "artifact layout + drift" bash tests/ai-delivery-skills/artifact-layout.test.sh
+  run_step "verification gate" bash tests/ai-delivery-skills/verification-gate.test.sh
+  run_step "reconcile delivery" zsh tests/ai-delivery-skills/reconcile-delivery.test.sh
   run_step "ui contract validator" zsh tests/ai-delivery-skills/ui-contract-validator.test.sh
   run_step "ui contract pressure gate" zsh tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh
   run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh

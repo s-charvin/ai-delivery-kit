@@ -71,3 +71,19 @@
 - **hooks 收敛**：`.cursor/.claude/.codex` 下同名脚本由 bootstrap 生成 2 行 wrapper 指向 canonical 实现。
 - **测试夹具迁出治理区**：`.ai-delivery/requirements/example-requirement/**` → `tests/ai-delivery-contracts/fixtures/example-requirement/**`。
 - **native tier 拆 plan/tasks**：统一规则下 `spec/plan.md` 必须真实存在（归档要三件套）；不再允许 `plan_path→tasks.md` 特例。
+
+## 6. 验证纪律（verification_policy）
+
+`merged`（以及 Phase 3 后的 `archived`）状态必须有 `verification.md` 硬证据，否则 `validate-delivery-status.py` 拒绝该状态：
+
+- 策略声明于 `.ai-delivery/meta/workflow-policy.json` 的 `verification_policy` 段（新布局仓库由 Go bootstrap 播种，见 `internal/bootstrap/engine.go`）。
+- `verification.md` 必备三小节（仅查存在性与标题，不做语义判断）：`评审轮次记录`、`验证命令与结果`、`签署`。
+- 向后兼容：仅当子需求目录是新布局（存在 `spec/` 目录）时才强制；旧布局 `merged` 不受影响。
+
+## 7. spec 持久化策略（spec_persistence）
+
+执行语义由 `workflow-policy.json` 的 `spec_persistence` 段声明（声明式，超前写入无害）：
+
+- `active: "living"` — 未 `archived` 前，`spec/spec.md` 唯一事实源，plan/tasks 可派生重生成（重生成前关键决策先入 `decisions.md`）。
+- `complete: "flow_forward"` — `archived` 后 `archive/<ISO-ts>/` 冻结只读；变更需求须开新 `<req-id>/`，旧目录仅作引用。
+- drift 检测：当 `spec/spec.md` 内容 sha256 与 `traceability.json.spec_refs` 记录不一致时，活跃期派生状态（`plan_ready`/`tasks_ready`）降级为 `spec_ready`（`reconcile` 纯推导、不写 status.json；`validate-artifact-layout.py --verify-archive` 报告 `[DRIFT]`），由 skill 层重生成派生物。

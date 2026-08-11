@@ -83,7 +83,7 @@ No subagent framework is required, but the discipline is non-negotiable:
 1. Full analyze + full test pass clean.
 2. Visual acceptance evidence written (UI only): `visual-acceptance.md` or `visual-acceptance/*.png`.
 3. Rebase onto the development branch (no merge commits); resolve conflicts, re-run tests.
-4. Open/merge the PR, then set `merged`.
+4. Open/merge the PR, then set `merged` only after `verification.md` is written and signed (sections: 评审轮次记录 / 验证命令与结果 / 签署). The status validator rejects `merged` without it.
 
 ## Traceability recording
 

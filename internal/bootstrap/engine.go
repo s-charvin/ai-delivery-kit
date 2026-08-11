@@ -155,6 +155,27 @@ func (e Engine) Run(cfg Config) error {
 		"review_loop": map[string]any{
 			"max_rounds": 3,
 		},
+		"spec_persistence": map[string]any{
+			"_doc":     "spec-kit 持久化约定：活跃期 living（spec.md 唯一事实源，plan/tasks 原地再生），完结后 flow_forward（archive/ 冻结不可变，变更开新需求目录）",
+			"active":   "living",
+			"complete": "flow_forward",
+			"living": map[string]any{
+				"source_of_truth":   "spec/spec.md",
+				"derived":           []string{"spec/plan.md", "spec/tasks.md"},
+				"on_drift":          "downgrade_to_spec_ready",
+				"before_regenerate": "旧关键决策先落 decisions.md",
+			},
+			"flow_forward": map[string]any{
+				"immutable_root":  "archive",
+				"change_requires": "new_requirement_dir",
+			},
+		},
+		"verification_policy": map[string]any{
+			"_doc":               "superpowers 验证纪律：merged/archived 必须有 verification.md 硬证据；验证器只查存在性与必备小节标题，不做语义判断",
+			"required_at":        []string{"merged", "archived"},
+			"artifact":           "verification.md",
+			"required_sections":  []string{"评审轮次记录", "验证命令与结果", "签署"},
+		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,
 	}); err != nil {

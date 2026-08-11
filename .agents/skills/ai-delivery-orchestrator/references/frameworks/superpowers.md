@@ -39,6 +39,7 @@ Edit one file at a time during implementation.
 
 - `finishing-a-development-branch` — structured merge options; rebase onto the development branch (no merge commits).
 - Set `merged` only after the rebase succeeds and all gates hold.
+- Before `merged`, write `verification.md` (sections: 评审轮次记录 / 验证命令与结果 / 签署). The status validator rejects `merged` without it.
 
 ## Traceability recording
 

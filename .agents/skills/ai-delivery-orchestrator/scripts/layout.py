@@ -178,6 +178,159 @@ def canonical_sha256(text: str) -> str:
     return hashlib.sha256(normalize_text(text).encode("utf-8")).hexdigest()
 
 
+def file_sha256(path: Path) -> str | None:
+    """canonical_sha256 of a file's contents, or None if unreadable."""
+    try:
+        return canonical_sha256(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError):
+        return None
+
+
+# --------------------------------------------------------------------------
+# Layout detection + spec persistence (spec-kit living/flow-forward support)
+# --------------------------------------------------------------------------
+
+SPEC_KINDS = ("spec", "plan", "tasks")
+
+DEFAULT_WORKFLOW_POLICY: dict = {
+    "review_loop": {"max_rounds": 3},
+    "spec_persistence": {
+        "active": "living",
+        "complete": "flow_forward",
+        "living": {
+            "source_of_truth": "spec/spec.md",
+            "derived": ["spec/plan.md", "spec/tasks.md"],
+            "on_drift": "downgrade_to_spec_ready",
+        },
+        "flow_forward": {"immutable_root": "archive", "change_requires": "new_requirement_dir"},
+    },
+    "verification_policy": {
+        "required_at": ["merged", "archived"],
+        "artifact": "verification.md",
+        "required_sections": ["评审轮次记录", "验证命令与结果", "签署"],
+    },
+}
+
+
+def is_new_layout(subreq_dir: Path | str) -> bool:
+    """True when a sub-requirement has adopted the unified canonical layout.
+
+    Shared by every validator so "new layout" is decided in exactly one place.
+    Marker files: ``spec/spec.md``, ``design.md``, ``verification.md``.
+    """
+    d = Path(subreq_dir)
+    return (
+        (d / "spec" / "spec.md").is_file()
+        or (d / "design.md").is_file()
+        or (d / "verification.md").is_file()
+    )
+
+
+def load_workflow_policy(start: Path | str) -> dict:
+    """Read workflow-policy.json by walking up to `.ai-delivery`, else defaults."""
+    ad_dir = find_ai_delivery_dir(start)
+    if ad_dir is not None:
+        policy_path = ad_dir / "meta" / "workflow-policy.json"
+        try:
+            data = json.loads(policy_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            data = None
+        if isinstance(data, dict):
+            return data
+    return dict(DEFAULT_WORKFLOW_POLICY)
+
+
+def load_traceability(subreq_dir: Path | str) -> dict | None:
+    try:
+        data = json.loads((Path(subreq_dir) / "traceability.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def iter_spec_artifacts(traceability: dict | None) -> list[dict]:
+    """Normalize the three accepted `spec_refs` shapes into artifact entries.
+
+    Canonical shape (preferred)::
+
+        "spec_refs": {"tier": "...", "artifacts": [{kind, canonical_path,
+                       derived_paths, content_sha256, sync_state}, ...]}
+
+    Also accepted: a bare list of those entries, and the legacy
+    ``{spec_path, plan_path, tasks_path}`` form (which carries no hash, so it
+    simply yields entries without ``content_sha256`` and is skipped by the
+    drift check).
+    """
+    if not isinstance(traceability, dict):
+        return []
+    refs = traceability.get("spec_refs")
+    if isinstance(refs, list):
+        return [e for e in refs if isinstance(e, dict)]
+    if not isinstance(refs, dict):
+        return []
+    artifacts = refs.get("artifacts")
+    if isinstance(artifacts, list):
+        return [e for e in artifacts if isinstance(e, dict)]
+    legacy: list[dict] = []
+    for kind in SPEC_KINDS:
+        rel = refs.get(f"{kind}_path")
+        if isinstance(rel, str) and rel:
+            legacy.append({"kind": kind, "canonical_path": rel})
+    return legacy
+
+
+def _resolve_canonical(subreq_dir: Path, rel: str) -> Path:
+    """Resolve a recorded canonical_path against the sub-requirement dir.
+
+    Recorded paths may be written relative to the sub-requirement itself
+    (``spec/spec.md``) or include the ``sub-requirements/<SR>/`` prefix; both
+    resolve to the same file.
+    """
+    p = Path(rel)
+    direct = subreq_dir / p
+    if direct.is_file():
+        return direct
+    marker = "sub-requirements/"
+    posix = p.as_posix()
+    if marker in posix:
+        tail = posix.split(marker, 1)[1]
+        parts = tail.split("/", 1)
+        if len(parts) == 2:
+            cand = subreq_dir / parts[1]
+            if cand.is_file():
+                return cand
+    return direct
+
+
+def spec_drift(subreq_dir: Path | str) -> list[str]:
+    """Detect living-spec drift: recorded content_sha256 != on-disk hash.
+
+    Returns human-readable messages (empty when in sync). Entries without a
+    recorded hash are skipped — nothing recorded means nothing to drift from.
+    """
+    d = Path(subreq_dir)
+    entries = iter_spec_artifacts(load_traceability(d))
+    messages: list[str] = []
+    for entry in entries:
+        kind = entry.get("kind")
+        if kind not in SPEC_KINDS:
+            continue
+        recorded = entry.get("content_sha256")
+        rel = entry.get("canonical_path")
+        if not isinstance(recorded, str) or not recorded or not isinstance(rel, str):
+            continue
+        target = _resolve_canonical(d, rel)
+        if not target.is_file():
+            messages.append(f"{kind}: recorded artifact missing on disk ({rel})")
+            continue
+        actual = file_sha256(target)
+        if actual is None:
+            continue
+        if actual != recorded:
+            messages.append(f"{kind}: {rel} recorded {recorded[:8]} != current {actual[:8]}")
+    return messages
+
+
 def _selftest() -> int:
     import tempfile
 
@@ -222,6 +375,73 @@ def _selftest() -> int:
     b = canonical_sha256("line1\nline2\n")
     assert a == b, (a, b)
     assert len(a) == 64
+
+    # 4) is_new_layout markers
+    with tempfile.TemporaryDirectory() as td:
+        sr = Path(td) / "SR-001"
+        (sr / "spec").mkdir(parents=True)
+        assert not is_new_layout(sr)
+        (sr / "spec" / "spec.md").write_text("# spec\n", encoding="utf-8")
+        assert is_new_layout(sr)
+
+    # 5) spec_drift: in-sync clean, cosmetic edit clean, real edit detected
+    with tempfile.TemporaryDirectory() as td:
+        sr = Path(td) / "SR-001"
+        (sr / "spec").mkdir(parents=True)
+        spec_file = sr / "spec" / "spec.md"
+        spec_file.write_text("# spec\nbody\n", encoding="utf-8")
+        plan_file = sr / "spec" / "plan.md"
+        plan_file.write_text("# plan\n", encoding="utf-8")
+        (sr / "traceability.json").write_text(
+            json.dumps(
+                {
+                    "spec_refs": {
+                        "tier": "native",
+                        "artifacts": [
+                            {
+                                "kind": "spec",
+                                "canonical_path": "spec/spec.md",
+                                "content_sha256": canonical_sha256("# spec\nbody\n"),
+                                "sync_state": "synced",
+                            },
+                            {
+                                "kind": "plan",
+                                "canonical_path": "sub-requirements/SR-001/spec/plan.md",
+                                "content_sha256": canonical_sha256("# plan\n"),
+                                "sync_state": "synced",
+                            },
+                        ],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert spec_drift(sr) == [], spec_drift(sr)
+        # cosmetic trailing whitespace must NOT be reported as drift
+        spec_file.write_text("# spec\nbody   \n\n", encoding="utf-8")
+        assert spec_drift(sr) == [], spec_drift(sr)
+        # a real content change must be reported
+        spec_file.write_text("# spec\nbody changed\n", encoding="utf-8")
+        drift = spec_drift(sr)
+        assert len(drift) == 1 and drift[0].startswith("spec:"), drift
+
+    # 6) legacy spec_refs shape carries no hash -> no drift, no crash
+    with tempfile.TemporaryDirectory() as td:
+        sr = Path(td) / "SR-001"
+        sr.mkdir(parents=True)
+        (sr / "spec.md").write_text("# spec\n", encoding="utf-8")
+        (sr / "traceability.json").write_text(
+            json.dumps({"spec_refs": {"tier": "native", "spec_path": "spec.md"}}),
+            encoding="utf-8",
+        )
+        assert spec_drift(sr) == []
+        assert iter_spec_artifacts(load_traceability(sr))[0]["kind"] == "spec"
+
+    # 7) workflow policy falls back to defaults outside a governed repo
+    with tempfile.TemporaryDirectory() as td:
+        policy = load_workflow_policy(Path(td))
+        assert policy["review_loop"]["max_rounds"] == 3
+        assert policy["spec_persistence"]["active"] == "living"
 
     print("layout.py selftest OK")
     return 0

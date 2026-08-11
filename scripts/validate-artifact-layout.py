@@ -22,9 +22,37 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Reuse the same layout contract the orchestrator uses.
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / ".agents" / "skills" / "ai-delivery-orchestrator" / "scripts"))
-from layout import artifact_path, canonical_sha256  # noqa: E402
+LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
+
+
+def _locate_layout_dir() -> Path:
+    """Find the orchestrator scripts dir by walking up from this file.
+
+    Handles both layouts this validator lives in: the kit repo
+    (``<kit>/scripts/``) and a bootstrapped repo (``<repo>/.ai-delivery/scripts/``,
+    where ``.agents/`` is a *sibling* of ``.ai-delivery/``, not a parent).
+    """
+    here = Path(__file__).resolve()
+    for base in here.parents:
+        cand = base / LAYOUT_REL
+        if (cand / "layout.py").is_file():
+            return cand
+    raise SystemExit(
+        "ERROR: cannot locate .agents/skills/ai-delivery-orchestrator/scripts/layout.py "
+        "— the artifact-layout contract is unavailable"
+    )
+
+
+# Reuse the same layout contract the orchestrator uses. `is_new_layout`,
+# `canonical_sha256` and `spec_drift` live there so hashing/detection logic
+# exists in exactly one place (see docs/artifact-layout.md).
+sys.path.insert(0, str(_locate_layout_dir()))
+from layout import (  # noqa: E402
+    canonical_sha256,
+    is_new_layout,
+    load_workflow_policy,
+    spec_drift,
+)
 
 STATUS_ORDER = [
     "draft",
@@ -47,16 +75,6 @@ def _at_least(status: str, target: str) -> bool:
         return False
 
 
-def _detect_new_layout(subreq_dir: Path) -> bool:
-    if (subreq_dir / "spec" / "spec.md").is_file():
-        return True
-    if (subreq_dir / "design.md").is_file():
-        return True
-    if (subreq_dir / "verification.md").is_file():
-        return True
-    return False
-
-
 def _has_contracts(subreq_dir: Path) -> bool:
     return bool(list(subreq_dir.rglob("ui-contract.html")))
 
@@ -69,7 +87,7 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
     if not isinstance(status, str):
         return errors, warnings
 
-    new_layout = _detect_new_layout(subreq_dir)
+    new_layout = is_new_layout(subreq_dir)
     ui_bearing = bool(entry.get("ui_bearing")) or _has_contracts(subreq_dir)
 
     if new_layout:
@@ -88,6 +106,14 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
             warnings.append(f"[LAYOUT] {subreq_id}: legacy spec.md at root; move to spec/spec.md")
         if (subreq_dir / "tasks.md").is_file():
             warnings.append(f"[LAYOUT] {subreq_id}: legacy tasks.md at root; move to spec/tasks.md")
+        # living-spec drift: derived plan/tasks are stale relative to spec.md.
+        if _at_least(status, "plan_ready"):
+            for message in spec_drift(subreq_dir):
+                errors.append(
+                    f"[DRIFT] {subreq_id}: {message} — regenerate the derived "
+                    f"artifacts (living spec downgrades to spec_ready; record key "
+                    f"decisions in decisions.md first)"
+                )
     else:
         # Legacy layout: only enforce what the legacy contract required.
         if _at_least(status, "spec_ready") and not (subreq_dir / "spec.md").is_file():
@@ -134,7 +160,7 @@ def verify_archive(subreq_dir: Path) -> list[str]:
     return errors
 
 
-def validate_requirement(req_root: Path, verify_archive: bool = False) -> list[str]:
+def validate_requirement(req_root: Path, check_archive: bool = False) -> list[str]:
     status_path = req_root / "status.json"
     if not status_path.is_file():
         return [f"[LAYOUT] status.json not found at {status_path}"]
@@ -157,7 +183,7 @@ def validate_requirement(req_root: Path, verify_archive: bool = False) -> list[s
         subreq_dir = req_root / "sub-requirements" / subreq_id
         sub_errors, _warnings = validate_subreq(subreq_id, entry, subreq_dir)
         errors.extend(sub_errors)
-        if verify_archive:
+        if check_archive:
             errors.extend(verify_archive(subreq_dir))
     return errors
 
@@ -218,6 +244,58 @@ def _selftest() -> int:
         archived.write_text("# tampered\n", encoding="utf-8")
         assert verify_archive(new), "tampered archive must be detected"
 
+        # check_archive=True must reach verify_archive through validate_requirement
+        # (regression guard: the parameter used to shadow the function name).
+        (new / "verification.md").write_text("# verification\n", encoding="utf-8")
+        errs = validate_requirement(root, check_archive=True)
+        assert any(e.startswith("[ARCHIVE]") for e in errs), errs
+
+    # living-spec drift: recorded hash != on-disk content -> [DRIFT] at plan_ready
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        sr = root / "sub-requirements" / "SR-D"
+        (sr / "spec").mkdir(parents=True)
+        (sr / "spec" / "spec.md").write_text("# spec\nv1\n", encoding="utf-8")
+        (sr / "spec" / "plan.md").write_text("# plan\n", encoding="utf-8")
+        (sr / "design.md").write_text("# design\n", encoding="utf-8")
+        (sr / "traceability.json").write_text(
+            json.dumps(
+                {
+                    "spec_refs": {
+                        "tier": "native",
+                        "artifacts": [
+                            {
+                                "kind": "spec",
+                                "canonical_path": "spec/spec.md",
+                                "content_sha256": canonical_sha256("# spec\nv1\n"),
+                                "sync_state": "synced",
+                            }
+                        ],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        (root / "status.json").write_text(
+            json.dumps({"sub_requirements": {"SR-D": {"status": "plan_ready"}}}),
+            encoding="utf-8",
+        )
+        assert validate_requirement(root) == [], validate_requirement(root)
+        # rewrite spec.md -> derived plan.md is now stale
+        (sr / "spec" / "spec.md").write_text("# spec\nv2\n", encoding="utf-8")
+        errs = validate_requirement(root)
+        assert any(e.startswith("[DRIFT]") for e in errs), errs
+        # drift is not enforced before plan_ready (nothing derived yet)
+        (root / "status.json").write_text(
+            json.dumps({"sub_requirements": {"SR-D": {"status": "spec_ready"}}}),
+            encoding="utf-8",
+        )
+        assert not any(e.startswith("[DRIFT]") for e in validate_requirement(root))
+
+    # policy is readable and carries the spec_persistence contract
+    policy = load_workflow_policy(Path(__file__).resolve().parents[1])
+    assert policy.get("spec_persistence", {}).get("active") == "living", policy.get("spec_persistence")
+
     print("validate-artifact-layout.py selftest OK")
     return 0
 
@@ -235,7 +313,7 @@ def main() -> int:
     if args.req_root is None:
         parser.error("req_root is required (or use --selftest)")
     req_root = args.req_root.resolve()
-    errors = validate_requirement(req_root, verify_archive=args.verify_archive)
+    errors = validate_requirement(req_root, check_archive=args.verify_archive)
     if not errors:
         print(f"OK: {req_root}")
         return 0
