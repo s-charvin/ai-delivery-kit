@@ -16,18 +16,19 @@ class CascadeIntegrator:
         pipeline_def: Any,
         state: Any,
     ) -> tuple[Any, list]:
+        # Compute the cascade exactly once; capture the resulting state in the
+        # closure so the returned state and the emitted events come from the same
+        # derivation (previously cascade_done was called a second time here, which
+        # both wasted work and risked divergence if cascade ever became stateful).
+        captured: dict[str, Any] = {}
+
         def _do() -> list:
             new_state, events = cascade_done(node_id, pipeline_def, state)
+            captured["state"] = new_state
             return events
 
-        deduped_events = self.resolver.cascade_serialize(
-            pipeline_id, _do
-        )
-        ns_map = {}
-        for nid, ns in state.node_states.items():
-            ns_map[nid] = ns
-        result_state, _ = cascade_done(node_id, pipeline_def, state)
-        return result_state, deduped_events
+        deduped_events = self.resolver.cascade_serialize(pipeline_id, _do)
+        return captured["state"], deduped_events
 
     def serial_changed(
         self,
@@ -38,16 +39,14 @@ class CascadeIntegrator:
         pipeline_def: Any,
         state: Any,
     ) -> tuple[Any, list]:
+        captured: dict[str, Any] = {}
+
         def _do() -> list:
             new_state, events = cascade_changed(
                 node_id, change_class, coupling_default, pipeline_def, state
             )
+            captured["state"] = new_state
             return events
 
-        deduped_events = self.resolver.cascade_serialize(
-            pipeline_id, _do
-        )
-        result_state, _ = cascade_changed(
-            node_id, change_class, coupling_default, pipeline_def, state
-        )
-        return result_state, deduped_events
+        deduped_events = self.resolver.cascade_serialize(pipeline_id, _do)
+        return captured["state"], deduped_events

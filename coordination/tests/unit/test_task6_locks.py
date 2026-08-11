@@ -141,3 +141,46 @@ def test_TR63_cascade_done_3_downstream_idempotent_no_duplicate_events(tmp_sqlit
     )
     for result in results_per_call:
         assert len(result) == 3, f"Each call should dedupe to 3 events, got {len(result)}"
+
+
+def test_TR64_cascade_integrator_single_computation(monkeypatch):
+    """serial_done / serial_changed derive state+events from ONE cascade call.
+
+    Guards against the old double-computation bug where cascade_done /
+    cascade_changed were invoked twice (events from one call, state from another).
+    """
+    import orchestration.cascade_integration as ci
+
+    calls = {"done": 0, "changed": 0}
+    dummy_state = object()
+    dummy_events = [{"event_id": "e1", "type": "X", "payload": {}}]
+
+    def fake_done(node_id, pipeline_def, state):
+        calls["done"] += 1
+        return dummy_state, dummy_events
+
+    def fake_changed(node_id, change_class, coupling_default, pipeline_def, state):
+        calls["changed"] += 1
+        return dummy_state, dummy_events
+
+    monkeypatch.setattr(ci, "cascade_done", fake_done)
+    monkeypatch.setattr(ci, "cascade_changed", fake_changed)
+
+    class _FakeResolver:
+        def cascade_serialize(self, pipeline_id, fn, *args, **kwargs):
+            return fn(*args, **kwargs)
+
+    integrator = CascadeIntegrator(resolver=_FakeResolver())
+
+    out_state, out_events = integrator.serial_done("p", "n", "def", "st")
+    assert calls["done"] == 1, f"cascade_done called {calls['done']} times (expected 1)"
+    assert out_state is dummy_state
+    assert out_events == dummy_events
+
+    out_state2, out_events2 = integrator.serial_changed(
+        "p", "n", "c", "cd", "def", "st"
+    )
+    assert calls["changed"] == 1, (
+        f"cascade_changed called {calls['changed']} times (expected 1)"
+    )
+    assert out_state2 is dummy_state
