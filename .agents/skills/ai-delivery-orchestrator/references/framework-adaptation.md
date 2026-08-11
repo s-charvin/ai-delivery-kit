@@ -67,10 +67,26 @@ reconcile is the evaluate step: it re-reads governed truth, checks guards, and e
 
 ## Traceability
 
-Regardless of tier, every produced artifact must be recorded in the sub-requirement `traceability.json`:
+Regardless of tier, every produced artifact must be recorded in the sub-requirement `traceability.json`. The **canonical artifact always lives under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/`** (see `docs/artifact-layout.md` for the full contract). Framework directories (`.specify/`, `openspec/`) are **derived/synced views only** — framework tooling writes there first, then the action copies the result back to the canonical path and records its hash.
+
+Extended `spec_refs` schema (one entry per produced artifact):
+
+```json
+{
+  "kind": "spec",
+  "tier": "spec-kit",
+  "canonical_path": "sub-requirements/<SR-xxx>/spec/spec.md",
+  "derived_paths": ["<framework-dir>/.../spec.md"],
+  "content_sha256": "<sha256 of canonical content>",
+  "sync_state": "synced"
+}
+```
+
+Canonical path fields:
 
 - `spec_refs.tier`: `spec-kit` | `openspec` | `superpowers` | `ecc` | `native`
-- `spec_refs.spec_path` / `plan_path` / `tasks_path`: concrete artifact paths
+- `spec_refs.spec_path` / `plan_path` / `tasks_path`: canonical paths under `spec/` (`spec/spec.md`, `spec/plan.md`, `spec/tasks.md`)
+- `spec_refs.derived_paths`: framework-dir copies (empty for native)
 - `source_index.spec`: one entry per artifact with `ref_type` `spec` / `plan` / `tasks`
 
-Governed truth (status, gates, contracts) always stays in `.ai-delivery`; framework artifacts are referenced, never moved.
+Governed truth (status, gates, contracts) always stays in `.ai-delivery`; framework artifacts are referenced, never moved, and never treated as the source of truth.

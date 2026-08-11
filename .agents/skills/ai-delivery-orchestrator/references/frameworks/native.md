@@ -10,12 +10,12 @@ Inline in the main session (no separate tool):
 
 1. Read `requirement-slice.md`, frozen `ui-contract.html` (UI-bearing), API docs, dependency graph.
 2. Produce: architecture sketch, component decomposition, data model, error/empty/loading plan, key trade-offs.
-3. Append a compact summary to the subreq `notes` field and present it to the user.
+3. Write the design to `design.md` (canonical design file — see `docs/artifact-layout.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
 4. CP-DESIGN: set `design_approved: true` only after explicit user approval.
 
-## `spec` action — `spec.md`
+## `spec` action — `spec/spec.md`
 
-Create `sub-requirements/<subreq-id>/spec.md` with exactly four sections:
+Create `spec/spec.md` with exactly four sections:
 
 ```markdown
 # <subreq-id> Spec
@@ -37,15 +37,23 @@ Create `sub-requirements/<subreq-id>/spec.md` with exactly four sections:
 
 Audit against the frozen `ui-contract.html` states for UI-bearing slices, then set `spec_ready`.
 
-## `plan` + `tasks` actions — `tasks.md`
+## `plan` action — `spec/plan.md`
 
-The native tier folds plan and tasks into one file to stay lightweight. Create `sub-requirements/<subreq-id>/tasks.md`:
+Create `spec/plan.md` with a `## Plan` section:
 
 ```markdown
-# <subreq-id> Tasks
+# <subreq-id> Plan
 
 ## Plan
 <2-5 sentences: approach, key files/components, sequencing rationale>
+```
+
+## `tasks` action — `spec/tasks.md`
+
+Create `spec/tasks.md` with a `## Tasks` section:
+
+```markdown
+# <subreq-id> Tasks
 
 ## Tasks
 - [ ] T1 <task> — files: <edit surface> — test: <test pointer or how to verify>
@@ -58,7 +66,7 @@ Rules:
 - Order tasks by dependency; shared components before consumers.
 - Audit granularity and file scope before setting `tasks_ready`.
 
-For the native tier, `spec_refs.plan_path` in `traceability.json` points at `tasks.md` as well (the Plan section is the plan artifact).
+The native tier keeps plan and tasks as separate canonical files (`spec/plan.md`, `spec/tasks.md`) so the archive's three-piece set (spec/plan/tasks) stays consistent across all tiers.
 
 ## `implement` action — built-in discipline
 
@@ -82,9 +90,10 @@ No subagent framework is required, but the discipline is non-negotiable:
 In the sub-requirement `traceability.json`:
 
 - `spec_refs.tier`: `"native"`
-- `spec_refs.spec_path`: `sub-requirements/<subreq-id>/spec.md` (repo-root-relative path in practice)
-- `spec_refs.plan_path` / `tasks_path`: `sub-requirements/<subreq-id>/tasks.md`
-- `source_index.spec`: entries with `ref_type` `spec` / `tasks`
+- `spec_refs.spec_path`: `sub-requirements/<subreq-id>/spec/spec.md`
+- `spec_refs.plan_path`: `sub-requirements/<subreq-id>/spec/plan.md`
+- `spec_refs.tasks_path`: `sub-requirements/<subreq-id>/spec/tasks.md`
+- `source_index.spec`: entries with `ref_type` `spec` / `plan` / `tasks`
 
 ## Boundaries
 
