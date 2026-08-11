@@ -197,57 +197,6 @@ def _get_actor(ctx: ToolContext | None) -> str:
     return "unknown-actor"
 
 
-def _clean_skeleton_tools() -> None:
-    existing_names = {t.name for t in mcp._tools}
-    skeleton_names = [
-        "merge_pipelines",
-        "split_pipeline",
-        "transfer_owner",
-        "add_addendum",
-        "reack_addendum",
-        "list_addenda",
-        "emergency_local_commit",
-        "emergency_restore_hub",
-        "handle_security_incident",
-        "submit_draft",
-        "resubmit_draft",
-        "publish_draft",
-        "report_node_status",
-        "report_pipeline_cost",
-        "request_approval",
-        "approve_approval_node",
-        "reject_approval_node",
-        "set_gate_policy",
-        "list_pending_prs",
-        "get_pr_detail_tool",
-        "get_audit_log",
-        "export_compliance_report",
-        "skip_node",
-        "revoke_human_token",
-        "materialize_pipeline_tool",
-        "report_consumption_status",
-        "report_generation_status",
-        "emergency_approve",
-        "sync_pending_artifacts",
-        "subscribe_draft",
-        "unsubscribe_draft",
-        "approve_node",
-        "reject_node",
-        "get_pending_prs",
-    ]
-    new_tools = []
-    for t in mcp._tools:
-        if t.name in skeleton_names:
-            if t.name in mcp._tool_handlers:
-                pass
-            continue
-        new_tools.append(t)
-    mcp._tools = new_tools
-
-
-_clean_skeleton_tools()
-
-
 # ============ A 组 addendum (3 工具) ============
 
 

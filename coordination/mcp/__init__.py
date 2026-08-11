@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from . import tools_phase2  # noqa: F401 - import to register tools and override skeletons
+from . import tools_phase2  # noqa: F401 - import to register phase-2 tools
 from .server import mcp, set_hub_repo, get_hub_repo  # noqa: F401
 from .state_store import STORE  # noqa: F401
 from .auth import ToolContext  # noqa: F401
