@@ -1,0 +1,15 @@
+{
+  "requirement_id": "no-design-client-ui-exempt",
+  "updated_at": "2026-08-12T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-UI": {
+      "status": "split_ready",
+      "ui_bearing": true,
+      "design_approved": true,
+      "ui_contract_exempt": true,
+      "notes": "component-library UI; explicit ui_contract_exempt"
+    }
+  }
+}

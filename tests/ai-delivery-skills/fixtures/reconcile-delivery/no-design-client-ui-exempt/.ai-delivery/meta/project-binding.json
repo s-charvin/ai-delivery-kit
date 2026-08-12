@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "project_id": "fixture-no-design-client-exempt",
+  "coordination": {
+    "participation": "no_design_client"
+  }
+}

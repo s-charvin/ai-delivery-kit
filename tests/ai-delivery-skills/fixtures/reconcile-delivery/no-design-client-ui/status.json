@@ -1,0 +1,14 @@
+{
+  "requirement_id": "no-design-client-ui",
+  "updated_at": "2026-08-12T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-UI": {
+      "status": "split_ready",
+      "ui_bearing": true,
+      "design_approved": false,
+      "notes": "no Figma; component-library UI"
+    }
+  }
+}

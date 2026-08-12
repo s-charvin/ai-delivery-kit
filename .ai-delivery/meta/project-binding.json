@@ -30,6 +30,12 @@
       "manifest": "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json"
     }
   },
+  "coordination": {
+    "participation": "fullstack",
+    "mcp_url": null,
+    "pipeline_id": null,
+    "party_id": null
+  },
   "updated_at": "2026-08-11T00:00:00Z",
   "updated_by": "refactor-phase0-layout"
 }

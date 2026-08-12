@@ -75,6 +75,10 @@ require_next_action "$FIXTURE_ROOT/all-archived/status.json" "none"
 
 require_next_action "$FIXTURE_ROOT/split-ready-ui/status.json" "ui-truth-mapping"
 
+require_next_action "$FIXTURE_ROOT/no-design-client-ui/status.json" "design"
+require_next_action "$FIXTURE_ROOT/no-design-client-ui-exempt/status.json" "spec"
+require_next_action "$FIXTURE_ROOT/no-design-client-non-ui/status.json" "spec"
+
 require_runtime_mode "$FIXTURE_ROOT/cp-design-pending/status.json" "confirm_design"
 require_output_contains "$FIXTURE_ROOT/cp-design-pending/status.json" "CHECKPOINT=CP-DESIGN"
 require_next_action "$FIXTURE_ROOT/cp-design-pending/status.json" "design"

@@ -126,6 +126,23 @@ def _read_binding(repo_root: Path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
+def load_participation_profile(start: Path | str) -> str:
+    """Read coordination.participation from project-binding.json (default: fullstack)."""
+    for cand in [Path(start), *Path(start).parents]:
+        data = _read_binding(cand)
+        if not isinstance(data, dict):
+            continue
+        coord = data.get("coordination")
+        if isinstance(coord, dict):
+            part = coord.get("participation")
+            if isinstance(part, str) and part.strip():
+                return part.strip()
+        part = data.get("participation")
+        if isinstance(part, str) and part.strip():
+            return part.strip()
+    return "fullstack"
+
+
 def load_layout(repo_root: Path) -> dict:
     """Read the `layout` section from project-binding.json, else fallback."""
     data = _read_binding(repo_root)

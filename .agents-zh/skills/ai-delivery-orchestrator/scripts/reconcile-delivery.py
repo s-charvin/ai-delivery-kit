@@ -12,7 +12,7 @@ from pathlib import Path
 # Resolve the sibling layout resolver (single source of truth for artifact paths
 # and for the one normalize/hash implementation behind drift detection).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from layout import resolve_validator_script, spec_drift  # noqa: E402
+from layout import resolve_validator_script, spec_drift, load_participation_profile  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"archived"})
 BLOCKED_PREFIX = "blocked_"
@@ -26,6 +26,10 @@ DRIFT_CHECK_STATUSES = frozenset(
     {"plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed"}
 )
 DRIFT_DOWNGRADE_STATUSES = frozenset({"plan_ready", "tasks_ready"})
+
+# Participation profiles without a standing design/Figma resource (coordination
+# participation-profiles.yaml: no_design_client).
+PROFILES_WITHOUT_DESIGN = frozenset({"no_design_client"})
 
 # Abstract stage actions only. Framework-specific tooling is resolved at
 # runtime via references/framework-adaptation.md — reconcile stays a pure
@@ -101,12 +105,17 @@ def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:
     return False
 
 
-def needs_design_approval(entry: dict, ui_bearing: bool) -> bool:
+def needs_design_approval(entry: dict, ui_bearing: bool, participation: str) -> bool:
     if bool(entry.get("design_approved")):
         return False
     status = entry.get("status")
     if not isinstance(status, str) or is_blocked(status):
         return False
+    if participation in PROFILES_WITHOUT_DESIGN:
+        if status == "split_ready" and not ui_bearing:
+            return False
+        if status == "acceptance_frozen" and ui_bearing:
+            return False
     if status == "split_ready" and not ui_bearing:
         return True
     if status == "acceptance_frozen" and ui_bearing:
@@ -195,7 +204,7 @@ def dependencies_satisfied(
     return True
 
 
-def next_action_for_entry(entry: dict, ui_bearing: bool) -> str | None:
+def next_action_for_entry(entry: dict, ui_bearing: bool, participation: str) -> str | None:
     status = entry.get("status")
     if not isinstance(status, str) or is_blocked(status) or status in TERMINAL_STATUSES:
         return None
@@ -207,14 +216,24 @@ def next_action_for_entry(entry: dict, ui_bearing: bool) -> str | None:
 
     if status == "split_ready":
         if ui_bearing:
+            if participation in PROFILES_WITHOUT_DESIGN:
+                if entry.get("ui_contract_exempt"):
+                    return ACTION_BY_STATUS[("split_ready", False, design_approved)]
+                return "design"
             return ACTION_BY_STATUS[("split_ready", True, False)]
+        if participation in PROFILES_WITHOUT_DESIGN:
+            return "spec"
         return ACTION_BY_STATUS[("split_ready", False, design_approved)]
 
     if status == "acceptance_frozen":
         return ACTION_BY_STATUS[("acceptance_frozen", True, design_approved)]
 
     if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed", "merged"}:
-        if not design_approved and status not in {"in_dev", "visual_acceptance_passed", "merged"}:
+        if (
+            not design_approved
+            and status not in {"in_dev", "visual_acceptance_passed", "merged"}
+            and not (participation in PROFILES_WITHOUT_DESIGN and not ui_bearing)
+        ):
             return "design"
         return ACTION_BY_STATUS.get((status, None, True))
 
@@ -291,6 +310,7 @@ def reconcile(
     validation_errors = run_status_validator(status_path, req_root, validator_script)
     errors.extend(validation_errors)
 
+    participation = load_participation_profile(req_root)
     deps, dep_warnings = load_dependency_graph(req_root)
     errors.extend(dep_warnings)
     recorded_checkpoint = status_data.get("current_checkpoint")
@@ -346,11 +366,11 @@ def reconcile(
                 status = "spec_ready"
                 entry = {**entry, "status": status}
 
-        if needs_design_approval(entry, ui_bearing):
+        if needs_design_approval(entry, ui_bearing, participation):
             design_pending.append((subreq_id, "design"))
             continue
 
-        action = next_action_for_entry(entry, ui_bearing)
+        action = next_action_for_entry(entry, ui_bearing, participation)
         if action:
             if action == "archive":
                 # merged -> archive is a pure housekeeping action; it must not
