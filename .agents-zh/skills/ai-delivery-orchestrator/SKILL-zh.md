@@ -169,5 +169,6 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 3. **Subagent 仅叶子、深度 ≤ 1** — 实现与评审可按 tier 规则委派 subagent；编排器不得嵌套编排 persona。
 4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
 5. **评审永不自动合并** — 循环执行器可跑 `implement` 步骤，但 `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
+6. **跨仓执行仅经 MCP** — 认领、状态与 `hub://` 指针一律走 coordination MCP；不得本地伪造 hub 状态，也不得 import coordination Python。
 
-需要自主执行时，使用**外部** coordination MCP 服务（`start_loop`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md) 与 [docs/coordination-repo.md](../../../docs/coordination-repo.md)。
+需要自主执行时，使用**外部** coordination MCP 服务（`start_loop`、`claim_node`、`register_artifact_ref`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md) 与 [docs/coordination-repo.md](../../../docs/coordination-repo.md)。

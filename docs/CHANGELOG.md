@@ -29,3 +29,4 @@ Moved to the ai-delivery-coordination repository (submodule). See `docs/coordina
 - Moved `.ai-delivery/requirements/example-requirement/` → `tests/ai-delivery-contracts/fixtures/example-requirement/`; `zero-based-flow.test.sh` copies the fixture into a temp dir before asserting.
 - IDE hooks 4× → 1 canonical + bootstrap-generated 2-line wrappers (`.cursor` / `.claude` / `.codex`)
 - Reconcile dependency-graph-only path + `layout.resolve_validator_script` single entry
+- Coordination MCP: lightweight `hub://` artifact pointers + claim/status tools (`register_artifact_ref`, `claim_node`, `report_node_status`, …); parties self-manage storage
