@@ -33,6 +33,7 @@ from mcp.tools_phase2 import (
     process_addendum_timeouts,
     list_cross_refs,
     get_aux_conn,
+    reset_test_singletons,
 )
 from mcp.tracing import LANGFUSE_WAL_DIR, LANGFUSE_CLIENT
 
@@ -163,9 +164,9 @@ def _make_all_done(pipeline_id: str) -> None:
 
 @pytest.fixture(autouse=True)
 def _setup(monkeypatch, tmp_path):
+    reset_test_singletons()
     STORE.clear_all()
     _ensure_dev_secret(monkeypatch)
-
     old_cwd = os.getcwd()
     proj_root = Path(__file__).resolve().parents[2]
     os.chdir(proj_root)

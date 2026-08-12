@@ -137,6 +137,12 @@ class PipelineStateStore:
         self.states.clear()
         self.pending_prs.clear()
         self.pending_sync.clear()
+        try:
+            self._conn.execute("DELETE FROM pipeline_def")
+            self._conn.execute("DELETE FROM pipeline_state")
+            self._conn.commit()
+        except Exception:
+            pass
 
 
 STORE = PipelineStateStore()

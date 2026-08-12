@@ -141,3 +141,34 @@ bash scripts/rehearse-release.sh
 
 By default, the script runs the Go test suite, validators, bootstrap/install smoke tests, and `git diff --check`.
 If `goreleaser` or `pwsh` are available locally, it includes those checks too.
+
+## Unified artifact layout (new repos only)
+
+Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
+
+- `design.md`, `verification.md`, `spec/{spec,plan,tasks}.md`, `contracts/ui-contract-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
+- Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
+- Framework dirs (`.specify/`, `openspec/changes/`) are derived views synced back to canonical artifacts
+
+**No automatic migration** for older repos — only new `ai-delivery init` seeds the layout.
+
+### Lifecycle semantics (`merged` → `archived`)
+
+- `merged` = code integrated on the dev branch
+- `archived` = immutable freeze (`archive/` + `MANIFEST.json`); requirement completes when all executable subreqs are `archived`
+- Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`
+
+### Coordination bridge (MCP)
+
+The `coordination/` Python engine is a separate deployable component. Skill-layer truth remains `status.json`; bridge via MCP:
+
+| Tool | Purpose |
+|------|---------|
+| `start_loop` | Load requirement → autonomous `LoopRunner` |
+| `stop_loop` / `loop_status` | Control / inspect |
+| `stall_report` | ALR stall visibility |
+| `intervene_loop` | Human-only pause/resume/cancel/retry/skip/approve_overbudget |
+
+Implementation: `coordination/orchestration/skill_bridge.py` + `coordination/mcp/loop_registry.py`.
+
+See also [docs/CHANGELOG.md](docs/CHANGELOG.md) for the full refactor notes.

@@ -150,6 +150,20 @@ def get_aux_conn() -> sqlite3.Connection:
     return _AUX_CONN_VAR["conn"]
 
 
+def reset_test_singletons() -> None:
+    """Close cached SQLite handles so per-test tmp/data cleanup can recreate files."""
+    conn = _AUX_CONN_VAR.get("conn")
+    if conn is not None:
+        try:
+            conn.close()
+        except Exception:
+            pass
+    _AUX_CONN_VAR["conn"] = None
+    _AUX_DB_PATH_VAR["path"] = None
+    _WORM_STORE_VAR["instance"] = None
+    _PENDING_SYNC_DIR_VAR["path"] = None
+
+
 _WORM_STORE_VAR: dict[str, WormStorage] = {"instance": None}
 
 

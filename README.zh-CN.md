@@ -141,3 +141,34 @@ bash scripts/rehearse-release.sh
 
 默认会跑 Go 测试套件、校验器、bootstrap/install 冒烟测试，以及 `git diff --check`。
 若本机有 `goreleaser` 或 `pwsh`，也会一并纳入。
+
+## 统一产物布局（仅新仓库）
+
+本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
+
+- `design.md`、`verification.md`、`spec/{spec,plan,tasks}.md`、`contracts/ui-contract-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
+- 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
+- 框架目录（`.specify/`、`openspec/changes/`）为派生视图，产物须同步回 canonical
+
+**不做旧布局自动迁移** — 仅新 `ai-delivery init` 播种新布局。
+
+### 生命周期语义（`merged` → `archived`）
+
+- `merged` = 代码已集成到开发分支
+- `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
+- CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
+
+### Coordination 桥接（MCP）
+
+`coordination/` Python 引擎为可独立部署组件。skill 层真值仍在 `status.json`；通过 MCP 桥接：
+
+| 工具 | 用途 |
+|------|------|
+| `start_loop` | 加载需求 → 自主 `LoopRunner` |
+| `stop_loop` / `loop_status` | 控制 / 检视 |
+| `stall_report` | ALR 停滞可见性 |
+| `intervene_loop` | 人工介入：pause/resume/cancel/retry/skip/approve_overbudget |
+
+实现：`coordination/orchestration/skill_bridge.py` + `coordination/mcp/loop_registry.py`。
+
+详见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
