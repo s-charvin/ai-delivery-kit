@@ -152,6 +152,10 @@ class NodeState(BaseModel):
     change_state: ChangeState = ChangeState.UNCHANGED
     pending_pr_count: int = 0
     locked_by: Optional[str] = None
+    # Loop-runner heartbeat / lease. Optional so older checkpoints (serialized
+    # before these fields existed) still deserialize via the pydantic default.
+    heartbeat_at: Optional[str] = None
+    lease_expires_at: Optional[str] = None
 
 
 class ParticipationProfile(BaseModel):

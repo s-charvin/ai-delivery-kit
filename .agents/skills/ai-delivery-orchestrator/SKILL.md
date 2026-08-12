@@ -163,3 +163,15 @@ Checkpoints: CP-DESIGN (design approval), CP-001 (pre-dev), CP-002 (hard blocker
 ## Completion
 
 All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json`, advance status to `archived`, and generate `delivery-report.md`. When every subreq is `archived`, the requirement is `completed` and the archive is immutable — any change requires a new `<req-id>/` directory.
+
+## Orchestration shape (invariants)
+
+These rules prevent orchestration regressions. They apply to the main session, reconcile dispatch, and any `coordination/` loop runner:
+
+1. **Main session is the orchestrator** — one human-facing session drives the sequential pipeline (Pattern 4). No router persona sits between stages.
+2. **Dispatch table is data, not a router** — `ACTION_BY_STATUS` / reconcile output names abstract actions; do not introduce a persona that re-derives or re-explains the table.
+3. **Subagents are leaf-only, depth ≤ 1** — implementation and review may delegate to subagents per tier rules; the orchestrator never nests orchestrator personas.
+4. **Forbidden patterns** — persona-calls-persona chains, “sequential orchestrator” layers that only paraphrase the previous stage, and deep persona trees.
+5. **Review never auto-merges** — a loop runner may execute `implement` steps, but `merged` / `archived` require clean review evidence (`verification.md`) and human gates; budget exhaustion always pauses for the user.
+
+When autonomous execution is needed, use the `coordination/` MCP tools (`start_loop`, `intervene_loop`, …) via the bridge in `coordination/orchestration/skill_bridge.py`. The skill layer keeps spec-segment truth in `status.json`; the engine only writes back execution-segment statuses and immediately re-runs reconcile. **Never import coordination Python from the skill layer** — see [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md). Full operator guide: [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md). **Never import coordination Python from the skill layer** — coordination may run in a separate environment.

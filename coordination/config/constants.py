@@ -272,6 +272,26 @@ ROLE_MAP: dict[str, list[str]] = {
     "api_contract": ["product", "server_impl"],
 }
 
+# Loop runner tuning (Phase 5). Seconds unless noted.
+LOOP_HEARTBEAT_INTERVAL_S: int = 30
+LOOP_LEASE_TTL_S: int = 300
+LOOP_SUPERVISION_INTERVAL_S: int = 15
+LOOP_MAX_STEPS: int = 1000
+
+# Cost budget for an autonomous loop. Pulled from crew/cost_control.CostController
+# THRESHOLDS["pipeline"]["usd"] so the ledger and the loop share one source of truth.
+LOOP_COST_BUDGET_USD: float = 100.0
+
+# Per-window cost thresholds consolidated from crew/cost_control.CostController.THRESHOLDS.
+LOOP_TASK_TOKEN_BUDGET: int = 20_000
+LOOP_AGENT_USD_PER_DAY: float = 10.0
+LOOP_PLATFORM_USD_PER_DAY: float = 4000.0
+
+# Stall SLOs (mirror monitoring/alerting.ALERTS so the loop can raise them explicitly).
+LOOP_SLO_TOTAL_DURATION_S: int = 3600  # ALR-1
+LOOP_SLO_NODE_DURATION_S: int = 3600  # ALR-2
+LOOP_SLO_UPSTREAM_WAIT_S: int = 2700  # ALR-4
+
 PARTICIPATION_PROFILES: dict[str, ParticipationProfile] = {
     "fullstack": ParticipationProfile(
         id="fullstack",

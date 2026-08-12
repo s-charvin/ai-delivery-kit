@@ -152,10 +152,22 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 ## 运行时模式
 
-`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `completed`
+`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
 
-检查点：CP-DESIGN（设计批准）、CP-001（开发前）、CP-002（硬阻塞，仅当无可运行项）。
+检查点：CP-DESIGN（设计批准）、CP-001（开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（冻结前，所有子需求均已 merged）。
 
 ## 完成
 
-所有可执行子需求 `merged` → 需求完成。无收尾仪式。
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json`，将状态推进至 `archived`，并生成 `delivery-report.md`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
+
+## 编排形态（不变量）
+
+以下规则防止编排退化，适用于主会话、对账 dispatch 及任何 `coordination/` 循环执行器：
+
+1. **主会话即编排者** — 单个人工会话驱动顺序管线（Pattern 4），阶段之间不得插入 router persona。
+2. **Dispatch 表是数据，不是 router** — `ACTION_BY_STATUS` / 对账输出的是抽象动作名；不得引入重新推导或转述该表的 persona。
+3. **Subagent 仅叶子、深度 ≤ 1** — 实现与评审可按 tier 规则委派 subagent；编排器不得嵌套编排 persona。
+4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
+5. **评审永不自动合并** — 循环执行器可跑 `implement` 步骤，但 `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
+
+需要自主执行时，通过 `coordination/orchestration/skill_bridge.py` 桥接，使用 `coordination/` MCP 工具（`start_loop`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md)。操作指南：[references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md)。**禁止在 skill 层 import coordination Python** — coordination 可部署在独立环境。

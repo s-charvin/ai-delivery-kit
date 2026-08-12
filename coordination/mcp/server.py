@@ -1130,5 +1130,118 @@ def cancel_pipeline_tool(pipeline_id: str, reason: str = "") -> dict:
     return {"pipeline_status_new": val}
 
 
+from .loop_registry import get_loop_registry
+
+
+@mcp.tool(
+    name="start_loop",
+    description="Start an autonomous ECC loop for a requirement (skill_bridge → LoopRunner)",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "req_root": {"type": "string", "description": "Path to .ai-delivery/requirements/<req-id>/"},
+            "repo_root": {"type": "string", "description": "Repository root (optional)"},
+        },
+        "required": ["req_root"],
+    },
+)
+@langfuse_trace(name="start_loop", span_type="tool")
+def start_loop(req_root: str, repo_root: str | None = None) -> dict:
+    return get_loop_registry().start(req_root, repo_root=repo_root)
+
+
+@mcp.tool(
+    name="stop_loop",
+    description="Cancel a running autonomous loop",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "pipeline_id": {"type": "string"},
+        },
+        "required": ["pipeline_id"],
+    },
+)
+@langfuse_trace(name="stop_loop", span_type="tool")
+def stop_loop(pipeline_id: str) -> dict:
+    return get_loop_registry().stop(pipeline_id)
+
+
+@mcp.tool(
+    name="loop_status",
+    description="Inspect autonomous loop runner state",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "pipeline_id": {"type": "string"},
+        },
+        "required": ["pipeline_id"],
+    },
+)
+@langfuse_trace(name="loop_status", span_type="tool")
+def loop_status(pipeline_id: str) -> dict:
+    return get_loop_registry().status(pipeline_id)
+
+
+@mcp.tool(
+    name="stall_report",
+    description="List stall / SLO alerts for a running loop",
+    input_schema={
+        "type": "object",
+        "properties": {
+            "pipeline_id": {"type": "string"},
+        },
+        "required": ["pipeline_id"],
+    },
+)
+@langfuse_trace(name="stall_report", span_type="tool")
+def stall_report(pipeline_id: str) -> dict:
+    return get_loop_registry().stall_report(pipeline_id)
+
+
+@mcp.tool(
+    name="intervene_loop",
+    description=(
+        "Human intervention entry for a loop (pause/resume/cancel/retry_node/"
+        "skip_node/approve_overbudget). resume and approve_overbudget require reason."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "pipeline_id": {"type": "string"},
+            "action": {
+                "type": "string",
+                "enum": [
+                    "pause",
+                    "resume",
+                    "cancel",
+                    "retry_node",
+                    "skip_node",
+                    "approve_overbudget",
+                ],
+            },
+            "node_id": {"type": "string"},
+            "reason": {"type": "string", "default": ""},
+            "actor": {"type": "string", "default": "human"},
+        },
+        "required": ["pipeline_id", "action"],
+    },
+)
+@langfuse_trace(name="intervene_loop", span_type="tool")
+def intervene_loop(
+    pipeline_id: str,
+    action: str,
+    node_id: str | None = None,
+    reason: str = "",
+    actor: str = "human",
+) -> dict:
+    return get_loop_registry().intervene(
+        pipeline_id,
+        action,
+        actor=actor,
+        node_id=node_id,
+        reason=reason,
+    )
+
+
 def _make_tool_decorator():
     pass
