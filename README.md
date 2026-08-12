@@ -27,7 +27,7 @@ The bootstrap script downloads a temporary release binary and runs the same cano
 git clone https://github.com/s-charvin/ai-delivery-kit.git
 ```
 
-For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination init` in your repo. This kit does not embed coordination logic.
+For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination-cli init` in your repo. This kit does not embed coordination logic.
 
 ## Upgrade
 
@@ -49,7 +49,13 @@ Or do both in one step:
 curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash -s -- --upgrade-init /path/to/repo
 ```
 
-`init --upgrade` refreshes the managed `ai-delivery` assets in the target repository while preserving requirement data.
+`init --upgrade` refreshes managed `.ai-delivery` script/test copies in the target repository while preserving requirement data. For this kit repo itself:
+
+```bash
+ai-delivery init --upgrade .
+```
+
+`.ai-delivery/backups/` holds ephemeral IDE-gate amend snapshots (gitignored); safe to delete anytime.
 
 ## What `ai-delivery init` Does
 
@@ -166,4 +172,4 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 - `archived` = immutable freeze (`archive/` + `MANIFEST.json`); requirement completes when all executable subreqs are `archived`
 - Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`
 
-For multi-party work, install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination init` in the repo; this kit does not embed coordination logic.
+For multi-party work, install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination-cli init` in the repo; this kit does not embed coordination logic.

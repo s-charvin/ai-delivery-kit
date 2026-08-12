@@ -126,22 +126,22 @@ bootstrap 完成后，目标仓库至少具备：
 │       ├── ui-truth-mapping/
 │       └── ai-delivery-orchestrator/
 ├── .ai-delivery/
-│   ├── docs/
-│   │   └── guides/
-│   │       └── ai-delivery-any-repo-onboarding.md
 │   ├── requirements/
 │   ├── meta/
 │   │   ├── project-binding.json
 │   │   ├── workflow-policy.json
 │   │   └── naming-rules.json
 │   ├── scripts/
-│   │   └── validate-project-ai-delivery-skills.sh
+│   │   ├── validate-project-ai-delivery-skills.sh
+│   │   └── hooks/
 │   └── tests/
 │       └── ai-delivery-skills/
 │           ├── validate-sources.test.sh
 │           ├── api-nonblocking-policy.test.sh
 │           └── ui-composition-guardrails.test.sh
 ```
+
+接入指南与阶段清单维护在 **kit 参考仓库** 的 `docs/guides/`（不会复制到目标仓库的 `.ai-delivery/`）。
 
 框架自有目录（如 `.specify/`、`openspec/`）由框架自身初始化，不属于本架构的目录契约。
 

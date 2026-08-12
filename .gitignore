@@ -7,6 +7,7 @@ bin/
 
 # Python build artifacts (repo root)
 __pycache__/
+scripts/__pycache__/
 *.pyc
 *.pyo
 *.egg-info/

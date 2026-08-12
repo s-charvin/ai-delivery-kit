@@ -11,7 +11,7 @@
 - `scripts/validate-artifact-layout.py`, `scripts/archive-subrequirement.py`
 - Spec persistence policy (`living` / `flow_forward`) and `verification.md` gate at `merged` / `archived`
 - OpenSpec-style closure: `merged` → `archive` action → `archived` terminal state, CP-ARCHIVE, `delivery-report.md`
-- Coordination: [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination) is a **separate skill + MCP service** (not vendored in this repo); MCP bridge in `references/coordination-mcp-bridge.md`
+- Coordination: [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination) is a **separate skill + MCP service** (not vendored in this repo); install separately when multi-party work is needed
 
 ### Changed
 
@@ -22,7 +22,7 @@
 
 ### Coordination
 
-Independent repository + MCP service only. **Removed** git submodule from ai-delivery-kit. `.ai-delivery/` does not contain coordination code or config. See `docs/coordination-repo.md`.
+Independent repository + MCP service only. **Removed** git submodule from ai-delivery-kit. `.ai-delivery/` does not contain coordination code or config.
 
 ### Completed in this refactor
 

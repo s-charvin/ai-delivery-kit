@@ -21,7 +21,7 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 引导脚本会下载临时 release 二进制，并执行与正式 `ai-delivery init` 相同的逻辑。
 
-若需多方协同（可选），另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在本仓运行 `coordination init`；kit 本身不包含协同逻辑。
+若需多方协同（可选），另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在业务仓运行 `coordination-cli init`；kit 本身不包含协同逻辑。
 
 ## 升级
 
@@ -43,7 +43,13 @@ ai-delivery init --upgrade /path/to/repo
 curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scripts/install-ai-delivery.sh | bash -s -- --upgrade-init /path/to/repo
 ```
 
-`init --upgrade` 会刷新目标仓库中受管的 `ai-delivery` 资产，并保留需求数据。
+`init --upgrade` 会刷新目标仓库中受管的 `.ai-delivery` 脚本/测试副本，并保留需求数据。本 kit 仓库自身也可用：
+
+```bash
+ai-delivery init --upgrade .
+```
+
+`.ai-delivery/backups/` 为 IDE gate  amend 的临时备份，已 gitignore，可随时删除。
 
 ## `ai-delivery init` 做什么
 
@@ -160,4 +166,4 @@ bash scripts/rehearse-release.sh
 - `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
 - CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
 
-若需多方协同，另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在本仓运行 `coordination init`；kit 本身不包含协同逻辑。
+若需多方协同，另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在业务仓运行 `coordination-cli init`；kit 本身不包含协同逻辑。
