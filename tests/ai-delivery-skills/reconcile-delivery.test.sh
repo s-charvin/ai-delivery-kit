@@ -89,4 +89,43 @@ require_runtime_mode "$FIXTURE_ROOT/blocked-design/status.json" "blocker_recover
 require_next_action "$FIXTURE_ROOT/blocked-design/status.json" "none"
 require_output_contains "$FIXTURE_ROOT/blocked-design/status.json" "BLOCKER_SCOPES=add-friend:slice_local"
 
+# Graph-only vs legacy dependency loading (unit-level via load_dependency_graph).
+python3 - "$RECONCILE" <<'PY' || fail "dependency-graph load assertions failed"
+import importlib.util, json, sys, tempfile
+from pathlib import Path
+
+script = Path(sys.argv[1]).resolve()
+spec = importlib.util.spec_from_file_location("reconcile_delivery", script)
+mod = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = mod
+# layout.py lives alongside reconcile-delivery.py
+sys.path.insert(0, str(script.parent))
+spec.loader.exec_module(mod)
+
+with tempfile.TemporaryDirectory() as td:
+    root = Path(td)
+    (root / "sub-requirements" / "SR-B").mkdir(parents=True)
+    (root / "dependency-graph.json").write_text(
+        json.dumps({"nodes": {"SR-A": {"depends_on": []}, "SR-B": {"depends_on": ["SR-A"]}}})
+    )
+    (root / "sub-requirements" / "SR-B" / "dependency.json").write_text(
+        json.dumps({"depends_on": ["SR-MISSING"]})
+    )
+    deps, warns = mod.load_dependency_graph(root)
+    assert deps.get("SR-B") == ["SR-A"], deps
+    assert not any("legacy" in w for w in warns), warns
+
+with tempfile.TemporaryDirectory() as td:
+    root = Path(td)
+    (root / "sub-requirements" / "SR-B").mkdir(parents=True)
+    (root / "sub-requirements" / "SR-B" / "dependency.json").write_text(
+        json.dumps({"depends_on": ["SR-A"]})
+    )
+    deps, warns = mod.load_dependency_graph(root)
+    assert deps.get("SR-B") == ["SR-A"], deps
+    assert any("[WARN] legacy dependency.json" in w for w in warns), warns
+
+print("dependency-graph load OK")
+PY
+
 print -- 'PASS: reconcile-delivery fixtures behave as expected.'

@@ -50,14 +50,19 @@ func (e Engine) Run(cfg Config) error {
 
 	for _, asset := range Manifest() {
 		target := filepath.Join(cfg.RepoRoot, filepath.FromSlash(asset.Target))
-		if asset.Kind == "dir" {
+		switch asset.Kind {
+		case "dir":
 			if err := copyEmbeddedDir(asset.Source, target); err != nil {
 				return err
 			}
-			continue
-		}
-		if err := copyEmbeddedFile(asset.Source, target, session); err != nil {
-			return err
+		case "hook_wrapper":
+			if err := writeHookWrapper(target); err != nil {
+				return err
+			}
+		default:
+			if err := copyEmbeddedFile(asset.Source, target, session); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -294,4 +299,18 @@ func fileModeForTarget(target string) os.FileMode {
 		return 0o755
 	}
 	return 0o644
+}
+
+// uiContractHookWrapper is the 2-line IDE adapter that points at the
+// canonical gate under .ai-delivery/scripts/hooks/.
+const uiContractHookWrapper = "#!/usr/bin/env bash\nexec bash \"$(git rev-parse --show-toplevel)/.ai-delivery/scripts/hooks/validate-ui-contract.sh\" \"$@\"\n"
+
+func writeHookWrapper(target string) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		return fmt.Errorf("create parent for %s: %w", target, err)
+	}
+	if err := os.WriteFile(target, []byte(uiContractHookWrapper), 0o755); err != nil {
+		return fmt.Errorf("write hook wrapper %s: %w", target, err)
+	}
+	return nil
 }

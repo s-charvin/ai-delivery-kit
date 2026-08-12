@@ -62,6 +62,24 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected bootstrap not to inject .agents/AGENTS.md, got %v", err)
 	}
+
+	for _, rel := range []string{
+		".cursor/hooks/validate-ui-contract.sh",
+		".claude/hooks/validate-ui-contract.sh",
+		".codex/hooks/validate-ui-contract.sh",
+	} {
+		body, err := os.ReadFile(filepath.Join(target, rel))
+		if err != nil {
+			t.Fatalf("expected generated hook wrapper %s: %v", rel, err)
+		}
+		text := string(body)
+		if !strings.Contains(text, ".ai-delivery/scripts/hooks/validate-ui-contract.sh") {
+			t.Fatalf("expected %s to point at canonical hook, got:\n%s", rel, text)
+		}
+		if strings.Count(text, "\n") > 3 {
+			t.Fatalf("expected short hook wrapper for %s, got %d lines", rel, strings.Count(text, "\n"))
+		}
+	}
 }
 
 func TestRunFailsOnManagedConflictWithoutMutatingRepo(t *testing.T) {

@@ -12,7 +12,7 @@ from pathlib import Path
 # Resolve the sibling layout resolver (single source of truth for artifact paths
 # and for the one normalize/hash implementation behind drift detection).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from layout import find_ai_delivery_dir, spec_drift  # noqa: E402
+from layout import resolve_validator_script, spec_drift  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"archived"})
 BLOCKED_PREFIX = "blocked_"
@@ -114,15 +114,49 @@ def needs_design_approval(entry: dict, ui_bearing: bool) -> bool:
     return False
 
 
-def load_dependency_graph(req_root: Path) -> dict[str, list[str]]:
+def _load_legacy_dependency_json(req_root: Path) -> dict[str, list[str]]:
+    """Fallback when dependency-graph.json is absent (legacy per-subreq files)."""
+    deps: dict[str, list[str]] = {}
+    subreq_dirs = req_root / "sub-requirements"
+    if not subreq_dirs.is_dir():
+        return deps
+    for child in sorted(subreq_dirs.iterdir()):
+        if not child.is_dir():
+            continue
+        dep_file = child / "dependency.json"
+        if not dep_file.exists():
+            continue
+        try:
+            dep_data = json.loads(dep_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        raw = dep_data.get("depends_on") or []
+        deps[child.name] = list(raw) if isinstance(raw, list) else []
+    return deps
+
+
+def load_dependency_graph(req_root: Path) -> tuple[dict[str, list[str]], list[str]]:
+    """Load deps from canonical dependency-graph.json; legacy fallback with WARN.
+
+    When ``dependency-graph.json`` exists it is the sole source (per-subreq
+    ``dependency.json`` is ignored). When missing, scan legacy files and emit
+    a ``[WARN]`` so callers can surface the layout drift.
+    """
+    warnings: list[str] = []
     graph_path = req_root / "dependency-graph.json"
     if not graph_path.exists():
-        return {}
+        deps = _load_legacy_dependency_json(req_root)
+        if deps:
+            warnings.append(
+                "[WARN] legacy dependency.json: dependency-graph.json missing; "
+                "using per-subreq dependency.json (derived view)"
+            )
+        return deps, warnings
 
     try:
         data = json.loads(graph_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {}
+        return {}, warnings
 
     deps: dict[str, list[str]] = {}
     nodes = data.get("nodes") or data.get("sub_requirements") or data
@@ -131,7 +165,7 @@ def load_dependency_graph(req_root: Path) -> dict[str, list[str]]:
             if isinstance(node, dict):
                 raw = node.get("depends_on") or []
                 deps[subreq_id] = list(raw) if isinstance(raw, list) else []
-        return deps
+        return deps, warnings
 
     edges = data.get("edges")
     if isinstance(edges, list):
@@ -142,22 +176,9 @@ def load_dependency_graph(req_root: Path) -> dict[str, list[str]]:
             raw = edge.get("depends_on") or []
             if isinstance(subreq_id, str):
                 deps[subreq_id] = list(raw) if isinstance(raw, list) else []
-        return deps
+        return deps, warnings
 
-    subreq_dirs = req_root / "sub-requirements"
-    if subreq_dirs.is_dir():
-        for child in sorted(subreq_dirs.iterdir()):
-            dep_file = child / "dependency.json"
-            if not dep_file.exists():
-                continue
-            try:
-                dep_data = json.loads(dep_file.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                continue
-            raw = dep_data.get("depends_on") or []
-            deps[child.name] = list(raw) if isinstance(raw, list) else []
-
-    return deps
+    return deps, warnings
 
 
 def dependencies_satisfied(
@@ -205,18 +226,7 @@ def run_status_validator(
     req_root: Path,
     validator_script: Path | None,
 ) -> list[str]:
-    # Single-source resolution backed by layout.py (unified artifact contract).
-    # 1) explicit arg, 2) canonical seeded location under .ai-delivery/scripts,
-    # 3) kit-relative fallback (so the kit repo's own tests resolve it).
-    candidates: list[Path] = []
-    if validator_script is not None:
-        candidates.append(Path(validator_script))
-    ad_dir = find_ai_delivery_dir(req_root)
-    if ad_dir is not None:
-        candidates.append(ad_dir / "scripts" / "validate-delivery-status.py")
-    kit_root = Path(__file__).resolve().parents[4]
-    candidates.append(kit_root / "scripts" / "validate-delivery-status.py")
-    chosen = next((p.resolve() for p in candidates if p.exists()), None)
+    chosen = resolve_validator_script(req_root, validator_script=validator_script)
     if chosen is None:
         return []
 
@@ -281,7 +291,8 @@ def reconcile(
     validation_errors = run_status_validator(status_path, req_root, validator_script)
     errors.extend(validation_errors)
 
-    deps = load_dependency_graph(req_root)
+    deps, dep_warnings = load_dependency_graph(req_root)
+    errors.extend(dep_warnings)
     recorded_checkpoint = status_data.get("current_checkpoint")
     runnable: list[str] = []
     blocked: list[str] = []

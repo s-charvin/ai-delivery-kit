@@ -27,7 +27,5 @@ Moved to the ai-delivery-coordination repository (submodule). See `docs/coordina
 ### Completed in this refactor
 
 - Moved `.ai-delivery/requirements/example-requirement/` → `tests/ai-delivery-contracts/fixtures/example-requirement/`; `zero-based-flow.test.sh` copies the fixture into a temp dir before asserting.
-
-### Deferred
-
-- IDE hooks 4× → 1 canonical + bootstrap-generated wrappers (adapters already delegate to `.ai-delivery/scripts/hooks/validate-ui-contract.sh` in-repo)
+- IDE hooks 4× → 1 canonical + bootstrap-generated 2-line wrappers (`.cursor` / `.claude` / `.codex`)
+- Reconcile dependency-graph-only path + `layout.resolve_validator_script` single entry

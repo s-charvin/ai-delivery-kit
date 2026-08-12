@@ -65,12 +65,12 @@
 
 ## 5. 其他收敛规则
 
-- **ui-contract 索引**：新增 `contracts/ui-contract-index.json`；reconcile 的 `find_contracts` 改为索引优先、rglob 兜底并报告孤儿。
-- **依赖数据收敛**：`dependency-graph.json` 为唯一 canonical；per-subreq `dependency.json` 降为派生视图。
-- **验证器去重**：`.ai-delivery/meta/scripts/*.py` 为运行位置（bootstrap 从 kit 拷贝）；删 reconcile 的三候选路径探测，改经 `layout.py` 解析唯一路径。
-- **hooks 收敛**：`.cursor/.claude/.codex` 下同名脚本由 bootstrap 生成 2 行 wrapper 指向 canonical 实现。
+- **ui-contract 索引**（已完成）：`contracts/ui-contract-index.json`；reconcile 的 `find_contracts` 索引优先、rglob 兜底并报告孤儿。
+- **依赖数据收敛**（已完成）：`dependency-graph.json` 为唯一 canonical；缺失时 reconcile 才 fallback 读 per-subreq `dependency.json` 并输出 `[WARN]`。
+- **验证器去重**（已完成）：bootstrap 播种到 `.ai-delivery/scripts/`；reconcile 经 `layout.py` 的 `resolve_validator_script` 单一入口解析。
+- **hooks 收敛**（已完成）：`.cursor/.claude/.codex` 下同名脚本由 bootstrap 生成 2 行 wrapper，指向 `.ai-delivery/scripts/hooks/validate-ui-contract.sh`。
 - **测试夹具迁出治理区**（已完成）：`tests/ai-delivery-contracts/fixtures/example-requirement/**`；`zero-based-flow.test.sh` 运行时复制到临时目录再断言。
-- **native tier 拆 plan/tasks**：统一规则下 `spec/plan.md` 必须真实存在（归档要三件套）；不再允许 `plan_path→tasks.md` 特例。
+- **native tier 拆 plan/tasks**（已完成）：统一规则下 `spec/plan.md` 必须真实存在（归档要三件套）；不再允许 `plan_path→tasks.md` 特例。
 
 ## 6. 验证纪律（verification_policy）
 

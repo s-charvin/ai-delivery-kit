@@ -14,8 +14,7 @@ Artifact kinds come in two scopes:
   * requirement-level   (no sub-requirement): status, requirement, ...
   * sub-requirement-level: spec, plan, tasks, design, verification, ...
 
-Phase 0 only introduces this module + the layout contract. Nothing else in
-the kit imports it yet; Phase 1 onwards wires reconcile / validators to it.
+Reconcile, validators, and archive scripts resolve paths through this module.
 """
 
 from __future__ import annotations
@@ -68,6 +67,32 @@ def find_ai_delivery_dir(start: Path | str) -> Path | None:
     for cand in [p, *p.parents]:
         if (cand / "meta" / "project-binding.json").exists():
             return cand
+    return None
+
+
+def resolve_validator_script(
+    req_root: Path | str,
+    validator_script: Path | str | None = None,
+    kit_root: Path | str | None = None,
+) -> Path | None:
+    """Resolve the single canonical validate-delivery-status.py path.
+
+    Order: explicit override → seeded ``.ai-delivery/scripts/`` → kit-relative
+    fallback (so the kit repo's own tests resolve without bootstrap).
+    """
+    if validator_script is not None:
+        p = Path(validator_script)
+        if p.is_file():
+            return p.resolve()
+    ad_dir = find_ai_delivery_dir(req_root)
+    if ad_dir is not None:
+        cand = ad_dir / "scripts" / "validate-delivery-status.py"
+        if cand.is_file():
+            return cand.resolve()
+    root = Path(kit_root) if kit_root is not None else Path(__file__).resolve().parents[4]
+    cand = root / "scripts" / "validate-delivery-status.py"
+    if cand.is_file():
+        return cand.resolve()
     return None
 
 
