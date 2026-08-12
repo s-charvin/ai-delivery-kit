@@ -2,7 +2,14 @@
 set -euo pipefail
 
 ROOT=$(git rev-parse --show-toplevel)
-REQ_ROOT="$ROOT/.ai-delivery/requirements/example-requirement"
+FIXTURE_ROOT="$ROOT/tests/ai-delivery-contracts/fixtures/example-requirement"
+WORK=$(mktemp -d "${TMPDIR:-/tmp}/zero-based-flow.XXXXXX")
+trap 'rm -rf "$WORK"' EXIT
+
+mkdir -p "$WORK/.ai-delivery/requirements"
+cp -R "$FIXTURE_ROOT" "$WORK/.ai-delivery/requirements/example-requirement"
+
+REQ_ROOT="$WORK/.ai-delivery/requirements/example-requirement"
 SUBREQ_ROOT="$REQ_ROOT/sub-requirements/SR-001"
 
 fail() {

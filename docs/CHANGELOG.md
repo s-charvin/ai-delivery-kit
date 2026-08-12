@@ -26,7 +26,10 @@
 - Removed unused deps (`langgraph`, `APScheduler`, `watchdog`), empty `visual/` package, MCP skeleton dual-registration
 - Consolidated `_ROLE_MAP`, fixed cascade double-computation, real `review_artifact_pr` validation
 
+### Completed in this refactor
+
+- Moved `.ai-delivery/requirements/example-requirement/` → `tests/ai-delivery-contracts/fixtures/example-requirement/`; `zero-based-flow.test.sh` copies the fixture into a temp dir before asserting.
+
 ### Deferred
 
-- Move `.ai-delivery/requirements/example-requirement/` to `tests/ai-delivery-contracts/fixtures/`
 - IDE hooks 4× → 1 canonical + bootstrap-generated wrappers (adapters already delegate to `.ai-delivery/scripts/hooks/validate-ui-contract.sh` in-repo)

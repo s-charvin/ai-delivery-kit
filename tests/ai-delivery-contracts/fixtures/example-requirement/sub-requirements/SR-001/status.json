@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "subreq_id": "SR-001",
+  "status": "split_ready",
+  "blocked_from_status": null,
+  "resume_target_status": null,
+  "blocker_scope": null,
+  "detail": null,
+  "updated_at": "2026-04-05T00:00:00.000Z",
+  "updated_by": "system"
+}

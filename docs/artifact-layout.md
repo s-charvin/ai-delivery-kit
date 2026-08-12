@@ -69,7 +69,7 @@
 - **依赖数据收敛**：`dependency-graph.json` 为唯一 canonical；per-subreq `dependency.json` 降为派生视图。
 - **验证器去重**：`.ai-delivery/meta/scripts/*.py` 为运行位置（bootstrap 从 kit 拷贝）；删 reconcile 的三候选路径探测，改经 `layout.py` 解析唯一路径。
 - **hooks 收敛**：`.cursor/.claude/.codex` 下同名脚本由 bootstrap 生成 2 行 wrapper 指向 canonical 实现。
-- **测试夹具迁出治理区**：`.ai-delivery/requirements/example-requirement/**` → `tests/ai-delivery-contracts/fixtures/example-requirement/**`。
+- **测试夹具迁出治理区**（已完成）：`tests/ai-delivery-contracts/fixtures/example-requirement/**`；`zero-based-flow.test.sh` 运行时复制到临时目录再断言。
 - **native tier 拆 plan/tasks**：统一规则下 `spec/plan.md` 必须真实存在（归档要三件套）；不再允许 `plan_path→tasks.md` 特例。
 
 ## 6. 验证纪律（verification_policy）

@@ -76,6 +76,7 @@ main() {
   run_step "verification gate" bash tests/ai-delivery-skills/verification-gate.test.sh
   run_step "reconcile delivery" zsh tests/ai-delivery-skills/reconcile-delivery.test.sh
   run_step "archive immutability" bash tests/ai-delivery-skills/archive-immutability.test.sh
+  run_step "zero-based flow fixture" zsh tests/ai-delivery-contracts/zero-based-flow.test.sh
   run_step "ui contract validator" zsh tests/ai-delivery-skills/ui-contract-validator.test.sh
   run_step "ui contract pressure gate" zsh tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh
   run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh

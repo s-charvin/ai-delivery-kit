@@ -15,6 +15,11 @@
     "spec_path": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/spec.md",
     "tasks_path": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/tasks.md"
   },
+  "api_contract_mapping": {
+    "status": "missing_nonblocking",
+    "updated_at": "2026-04-05T00:00:00.000Z",
+    "notes": "fixture placeholder; API work is non-blocking for early UI stages"
+  },
   "source_index": {
     "requirement": [
       {
