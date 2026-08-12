@@ -170,4 +170,4 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
 5. **评审永不自动合并** — 循环执行器可跑 `implement` 步骤，但 `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
 
-需要自主执行时，通过 `coordination/orchestration/skill_bridge.py` 桥接，使用 `coordination/` MCP 工具（`start_loop`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md)。操作指南：[references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md)。**禁止在 skill 层 import coordination Python** — coordination 可部署在独立环境。
+需要自主执行时，使用**外部** coordination MCP 服务（`start_loop`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md) 与 [docs/coordination-repo.md](../../../docs/coordination-repo.md)。

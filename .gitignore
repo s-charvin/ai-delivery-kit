@@ -4,18 +4,16 @@
 dist/
 bin/
 .gocache/
-/coordination/.venv/
 
-# Python build artifacts
+# Python build artifacts (repo root; coordination submodule has its own .gitignore)
 __pycache__/
 *.pyc
 *.pyo
 *.egg-info/
 .eggs/
 
-# Test/dev databases
+# Test/dev databases (repo root)
 *.db
-/coordination/data/
 
 # Coverage
 .coverage

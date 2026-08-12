@@ -38,4 +38,4 @@
 3. 监控 `loop_status` / `stall_report`；停滞或超预算（ALR-15）用 `intervene_loop`。
 4. 切片到 `merged` 后回到 skill 层 `finish` / `archive` — 循环**不会**自动归档。
 
-实现参考（coordination 仓库）：`orchestration/skill_bridge.py`、`mcp/loop_registry.py`。
+实现参考（[coordination](https://github.com/s-charvin/coordination) 仓库）：`orchestration/skill_bridge.py`、`mcp/loop_registry.py`。

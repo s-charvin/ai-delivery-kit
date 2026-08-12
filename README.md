@@ -21,6 +21,14 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 The bootstrap script downloads a temporary release binary and runs the same canonical `ai-delivery init` logic.
 
+**Developing this repo** (includes the coordination engine submodule):
+
+```bash
+git clone --recurse-submodules https://github.com/s-charvin/ai-delivery-kit.git
+```
+
+See [docs/coordination-repo.md](docs/coordination-repo.md) for coordination-only development.
+
 ## Upgrade
 
 Upgrade the installed CLI by rerunning the installer:
@@ -160,7 +168,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 ### Coordination bridge (MCP)
 
-The `coordination/` Python engine is a separate deployable component. Skill-layer truth remains `status.json`; bridge via MCP:
+The coordination Python engine lives in a **separate repository** ([`s-charvin/coordination`](https://github.com/s-charvin/coordination)), vendored here as the `coordination/` git submodule. Skill-layer truth remains `status.json`; bridge via MCP:
 
 | Tool | Purpose |
 |------|---------|
@@ -169,6 +177,4 @@ The `coordination/` Python engine is a separate deployable component. Skill-laye
 | `stall_report` | ALR stall visibility |
 | `intervene_loop` | Human-only pause/resume/cancel/retry/skip/approve_overbudget |
 
-Implementation: `coordination/orchestration/skill_bridge.py` + `coordination/mcp/loop_registry.py`.
-
-See also [docs/CHANGELOG.md](docs/CHANGELOG.md) for the full refactor notes.
+See [docs/coordination-repo.md](docs/coordination-repo.md) and `references/coordination-mcp-bridge.md` in the orchestrator skill.

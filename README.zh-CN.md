@@ -160,7 +160,7 @@ bash scripts/rehearse-release.sh
 
 ### Coordination 桥接（MCP）
 
-`coordination/` Python 引擎为可独立部署组件。skill 层真值仍在 `status.json`；通过 MCP 桥接：
+coordination 引擎在**独立仓库** [`s-charvin/coordination`](https://github.com/s-charvin/coordination)，本仓库以 `coordination/` git submodule 引用。skill 层真值仍在 `status.json`；通过 MCP 桥接：
 
 | 工具 | 用途 |
 |------|------|
@@ -169,6 +169,4 @@ bash scripts/rehearse-release.sh
 | `stall_report` | ALR 停滞可见性 |
 | `intervene_loop` | 人工介入：pause/resume/cancel/retry/skip/approve_overbudget |
 
-实现：`coordination/orchestration/skill_bridge.py` + `coordination/mcp/loop_registry.py`。
-
-详见 [docs/CHANGELOG.md](docs/CHANGELOG.md)。
+详见 [docs/coordination-repo.md](docs/coordination-repo.md) 与 orchestrator skill 的 `references/coordination-mcp-bridge.md`。

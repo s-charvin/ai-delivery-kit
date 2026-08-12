@@ -38,4 +38,4 @@ The engine does not cache reconcile conclusions; after every flush, reconcile re
 3. Monitor `loop_status` / `stall_report`; use `intervene_loop` on stalls or budget (ALR-15).
 4. When slices reach `merged`, return to skill-layer `finish` / `archive` — loop runner does **not** auto-archive.
 
-Implementation reference (coordination repo): `orchestration/skill_bridge.py`, `mcp/loop_registry.py`.
+Implementation reference ([coordination](https://github.com/s-charvin/coordination) repo): `orchestration/skill_bridge.py`, `mcp/loop_registry.py`.

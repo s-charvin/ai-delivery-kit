@@ -1,0 +1,3 @@
+[submodule "coordination"]
+	path = coordination
+	url = https://github.com/s-charvin/coordination.git
