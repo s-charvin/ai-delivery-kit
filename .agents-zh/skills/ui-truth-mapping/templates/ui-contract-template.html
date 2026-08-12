@@ -14,7 +14,9 @@
 
   ALLOWED regions (exactly these four, in this order):
     1. <script id="ui-contract-meta" type="application/json">
-       — schema_version, contract_id, source, unit, states, revision, delivery
+       — schema_version, contract_id, source, unit, states, dynamics (optional;
+         entries: id, figma_node, kind, evidence_source, hint_*, asset_status),
+         revision, delivery
     2. <style> — CSS custom properties + evidence-backed layout/visual rules
     3. <main data-ui-contract> — the single unit's renderable DOM, including
        required preview infrastructure (switcher / host / state templates /
@@ -61,6 +63,7 @@
   "states": [
     { "id": "PLACEHOLDER-state-id", "source_node": "PLACEHOLDER-figma-frame-node-id", "default": true }
   ],
+  "dynamics": [],
   "revision": 1,
   "delivery": {
     "status": "frozen",
@@ -179,6 +182,10 @@
         data-evidence   — "code" | "structure" | "structure+code" | "inferred"
                            ("inferred" requires a matching note in the review
                            panel below — never leave an inference silent)
+        data-ui-dynamic — optional; one of content-bound | component-variant |
+                           motion-preset | design-animation-asset |
+                           prototype-transition (must match meta.dynamics[].kind)
+        data-ui-dynamic-id — optional; matches meta.dynamics[].id for this node
     -->
     <template data-ui-state="PLACEHOLDER-state-id">
       <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
@@ -203,6 +210,8 @@
         <dd>PLACEHOLDER: list chrome kept only for positioning, or write "none".</dd>
         <dt data-ui-asset-inventory>Assets</dt>
         <dd>PLACEHOLDER: for every icon/image — its resolution (inlined asset bytes + asset hash, reused project asset path, server-provided placeholder, or pending: awaiting user decision). Write "none" if this unit has no icons/images.</dd>
+        <dt data-ui-dynamics-inventory>Dynamics &amp; motion</dt>
+        <dd>PLACEHOLDER: for every meta.dynamics[] entry — kind, evidence_source, hint text (if any), asset_status (resolved/pending-user/waived), static preview, design asset path/hash when resolved, implementation hint. Write "none — static Figma snapshots only" when dynamics is []. List every pending-user item explicitly.</dd>
         <dt data-ui-evidence-for="PLACEHOLDER-region-id">Inference</dt>
         <dd>PLACEHOLDER explanation of which Figma nodes this was derived from and why normalization was needed.</dd>
       </dl>

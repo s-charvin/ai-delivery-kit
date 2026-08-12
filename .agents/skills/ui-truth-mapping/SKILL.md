@@ -54,6 +54,74 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 | Bottom sheet / dialog / popover | `modal` alone; trigger button patched into the button's physical container contract | Sheet/dialog frame | All sheet frames as `<template data-ui-state>` in the modal file | Nest sheet as a page state; omit preview script; put trigger inside the modal contract |
 | Multi-state list/form/module | One `component` (or `page` if the route itself is the scope) | Scoped module root | Every visual frame → one template; hydrate + switcher mandatory | Separate contracts per state; empty default template |
 | Element property only (`disabled` / `selected`) | Patch that node in its existing unit | Unchanged | Do **not** add a unit-level state template | Spawn `disabled` as a full-unit `<template data-ui-state>` |
+| Component with **variant properties** or **motion** (pulse, Lottie, GIF, prototype) | Same unit as the component; add `meta.dynamics[]` + review-panel inventory | Component/instance root | Static **keyframe** in a state template for preview; motion spec in `dynamics` | Treat motion as static PNG only; omit design-delivered animation assets |
+
+## Dynamics & motion — what this skill already does vs gaps
+
+| Dynamic concern | Covered today? | How |
+|---|---|---|
+| Whole-unit visual states (loading / empty / error / selected shell) | **Yes** | Sibling frames → `meta.states[]` + `<template data-ui-state>` + switcher |
+| Element property only (`disabled`, tab `selected`) | **Yes** | Patch attributes on the node — not a unit-level state template |
+| Server/user **content** (avatar, upload, live badge count) | **Partial** | Asset step classifies `content-bound`; placeholder + review-panel note — **not** a structured inventory |
+| Figma **component variant** properties (`State=Hover`, `Type=Primary`) | **No** | Frames may become states by accident; variant axes are not discovered or exposed |
+| **Motion / animation** (Figma Motion presets, keyframes, smart animate) | **No** | HTML preview is static snapshots only; no `get_node_motion` step |
+| Designer-delivered **animation assets** (Lottie / GIF / video / sprite sheet) | **No** | Only static raster/vector asset path exists |
+
+**Goal of §2c below:** actively discover dynamic components and effects, classify them, persist bytes when design provides assets, and expose a machine-readable `meta.dynamics[]` plus review-panel inventory so implementation knows what is static truth vs runtime behavior.
+
+### Dynamics taxonomy (`meta.dynamics[].kind`)
+
+| `kind` | Meaning | Freeze in HTML | Design asset |
+|---|---|---|---|
+| `content-bound` | Data from server/user/API (avatar URL, nickname, count) | Geometry + placeholder; Figma image is example only | None — note binding field in `implementation_notes` |
+| `component-variant` | Figma component property axis (not a full frame) | One state template per variant value **or** element patch when single-property | Static preview per variant frame |
+| `motion-preset` | Figma Motion / prototype-driven effect on a node | **Static keyframe** in default state for layout review | Optional reference frame id in `static_preview` |
+| `design-animation-asset` | Designer supplied Lottie/GIF/video/spritesheet | Static poster frame in contract; persist animation file in project assets | **Required** — path + hash in `design_asset` |
+| `prototype-transition` | Transition between frames (duration, easing) | Document only — not playable in contract | N/A — `implementation_notes` describe trigger → target |
+
+`meta.dynamics` is optional; use `[]` when the unit is entirely static snapshots. When non-empty, every entry must have a matching row in `[data-ui-review-panel]` and, when tied to a frozen node, `data-ui-dynamic` + `data-ui-dynamic-id` on that DOM node.
+
+Each `meta.dynamics[]` entry should also record **how you learned it** and **whether the asset exists**:
+
+| Field | Values | Meaning |
+|---|---|---|
+| `evidence_source` | `figma-structure` \| `figma-text-hint` \| `requirement-slice` \| `user-confirmed` | Layer/variant/motion probe vs designer **文案/便签** vs requirement doc vs user chat |
+| `hint_text` | string (optional) | Verbatim designer note when `evidence_source` is `figma-text-hint` — cite the TEXT node id in `hint_node` |
+| `hint_node` | Figma node id (optional) | The annotation TEXT / sticky / callout node — not the UI node it describes |
+| `asset_status` | `resolved` \| `pending-user` \| `not-applicable` \| `waived` | Whether design bytes are already in the repo, **must ask user**, N/A (content-bound), or user waived |
+
+Example when Figma only has a text callout and no Lottie file:
+
+```json
+{
+  "id": "badge-breathe",
+  "figma_node": "12:340",
+  "kind": "design-animation-asset",
+  "evidence_source": "figma-text-hint",
+  "hint_node": "12:901",
+  "hint_text": "红点呼吸动效，Lottie 资源另附",
+  "asset_status": "pending-user",
+  "design_asset": null,
+  "static_preview": "default",
+  "implementation_notes": "Poster frame only until user provides .json"
+}
+```
+
+### Messy Figma is normal — do not rely on clean layer names alone
+
+Designers often have **non-canonical** layer hygiene. Assume dynamics may appear only as:
+
+- A **TEXT / sticky / callout** near the UI ("动态", "Lottie", "gif", "资源另附", "占位图", "接口返回", "示例", "动效见…")
+- A **static screenshot** standing in for animation (no asset embedded in Figma)
+- **No file at all** — asset delivered later via drive, chat, or handoff outside Figma
+
+**Rules:**
+
+1. **Text hints are first-class evidence** for *whether* something is dynamic — not for inventing motion curves or asset bytes. Record `evidence_source: "figma-text-hint"` + verbatim `hint_text`.
+2. **Map hint → target node** by spatial proximity and copy semantics (e.g. arrow/callout parent, same auto-layout row, or explicit node name in the note). If ambiguous → **ask the user** which node the note refers to; do not guess.
+3. **Do not classify dynamics-hint text as `ignore`** unless it is clearly unrelated meta (version stamp, designer credit). Notes that describe motion, placeholders, or "resource attached separately" feed §2c — they are not disposable chrome.
+4. **Off-Figma assets are expected.** When hint or requirement says Lottie/GIF/video/spritesheet but Figma has no fetchable bytes → `asset_status: "pending-user"`, freeze **poster/placeholder** geometry only, and **escalate to the user** (see §2d). Never redraw animation as a static icon and call it done.
+5. **Empty `dynamics: []` is allowed only after** structure sweep **and** text-hint sweep **and** requirement-slice keyword pass all return nothing dynamic.
 
 ## Hard Boundary
 
@@ -66,6 +134,16 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 - Do not invent or redraw icon/image glyphs. Every icon or image must come from the design asset itself (mechanical transfer of asset bytes) or from an **existing project asset** reused verbatim. When `get_code` returns an asset shell (`<svg data-src="...">` or an asset URL), the asset bytes must be fetched and persisted (inline SVG bytes or a saved project asset file, annotated with the asset hash) — never an empty shell left in place, and never a hand-drawn "looks close enough" approximation. An icon that merely resembles the design is a forged truth.
 - `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
+- Do not skip the **§2c dynamics scan** when the scoped subtree contains COMPONENT/INSTANCE nodes, motion-named layers, or the requirement mentions animation/Lottie/GIF/video — record `dynamics: []` only after explicit confirmation the unit is static.
+- Do not approximate **Lottie/GIF/video** motion as a hand-drawn static icon — classify as `design-animation-asset`, persist the file when fetchable, and freeze a poster keyframe for preview.
+- Do not ignore **Figma component variant properties** when variant frames or `componentProperties` exist — map them to `component-variant` dynamics and/or state templates; do not collapse unrelated variants into one static snapshot without documentation.
+- Do not claim motion is "obvious from design" without probing: call `get_node_motion` (figma-bridge) when available; otherwise cite structure + requirement + designer notes in the dynamics inventory.
+- Do not embed autoplay animation inside `ui-contract.html` — the contract preview stays **static keyframes**; runtime motion is specified via `meta.dynamics` for implementers.
+- Do not treat designer **文案/便签** that describe motion, placeholders, or "resource attached separately" as `ignore` — they are dynamics hints for §2c unless clearly unrelated meta.
+- Do not infer which UI node a text hint refers to when multiple candidates exist — ask the user to point at the target node or provide the asset.
+- Do not declare a contract **frozen** while any `meta.dynamics[]` entry or asset note has `asset_status: "pending-user"` (or equivalent `pending:` wording) **unless** the user explicitly waives that item in chat — then set `asset_status: "waived"` and quote their waiver in the review panel.
+- Do not silently skip missing Lottie/GIF/video because it is "probably on the designer's drive" — **actively ask the user** to attach or path the file (§2d).
+- Do not require perfectly named layers (`animate`, `lottie`) as the only discovery signal — **always run the text-hint sweep** in §2c step 0.
 - Do not declare a contract frozen without **explicit per-contract user confirmation**. Every generated or patched `ui-contract.html` must be presented to the user for manual review; skip this gate only when the user explicitly waives re-review.
 - Do not treat screenshots or node names alone as sufficient evidence. Structured `get_code`/`get_structure` payloads are required.
 - Do not create a second UI truth source beside `ui-contract.html` — no companion YAML, JSON, or markdown mapping/notes file.
@@ -123,7 +201,7 @@ Contract `unit.source_node` / `source.root_node` must be the **minimal ancestor 
 Publish this plan in the session (chat is enough — do **not** create a companion mapping file) and do not copy the template until every must-freeze artifact has a row:
 
 ```
-| artifact (node id + label) | unit id | type (page\|component\|modal\|shared-component) | action (create\|patch\|rebuild) | source_node (scoped root) | states (or "element-patch") | get_code target (= source_node) |
+| artifact (node id + label) | unit id | type (page\|component\|modal\|shared-component) | action (create\|patch\|rebuild) | source_node (scoped root) | states (or "element-patch") | dynamics (static \| content-bound \| variant \| motion \| animation-asset) | get_code target (= source_node) |
 ```
 
 Rules for filling the plan:
@@ -146,7 +224,8 @@ Classify each frame:
 | `modal` | A modal dialog, bottom sheet, popover, or overlay | One `ui-contract.html` with `unit.type: "modal"` — never nested inside a page |
 | `shared-component` | A shared navigation shell, tab bar, or persistent frame wrapping pages | One `ui-contract.html` with `unit.type: "shared-component"`; referenced via `unit.dependencies` from pages that use it |
 | `context` | Page chrome needed only to locate the in-scope subtree | Omit from acceptance DOM, or include with `data-ui-scope="context"` — never treat as freeze truth |
-| `ignore` | Non-UI content (designer notes, annotations, guide lines) or out-of-scope chrome | Exclude from contracts entirely |
+| `ignore` | Non-UI content (unrelated designer credit, version stamps) or out-of-scope chrome | Exclude from contracts entirely |
+| `dynamics-hint` | Designer **TEXT / sticky / callout** describing motion, placeholders, or off-Figma resources | **Not** frozen as UI truth — feed §2c; cite `hint_node` + verbatim text; map to target UI node |
 
 **Grouping rules:**
 - When In Scope is a local change (tip, badge, sheet entry, one control) → prefer `component` or `modal`, **not** a full `page` dump of the Figma screen.
@@ -162,6 +241,55 @@ Classify each frame:
 
 **Verification:** confirm every enumerated frame has been assigned to a unit, state, context, or ignore. No frame left unclassified. Confirm every must-freeze artifact from §1 appears in some unit's DOM.
 
+### 2c. Dynamics & motion scan (REQUIRED per unit, after §2 frame list)
+
+Before the first `get_code` for this unit:
+
+0. **Text-hint sweep (do this even when layers look messy)** — on the scoped subtree, list every TEXT / sticky / callout whose copy matches dynamics keywords, in any language designers use, e.g.:
+   - 动态, 动效, 动画, Lottie, GIF, 视频, 骨架屏, 占位, 示例图, 接口返回, 资源另附, 另发, 外链, pulse, loading, skeleton, placeholder, "asset attached", "see drive"
+   - Classify each as `dynamics-hint` (§2 table); record `hint_node`, verbatim `hint_text`, and your best **target UI node** hypothesis.
+   - If one hint could attach to multiple UI nodes → **stop and ask the user** before freezing.
+1. **Candidate sweep** — on the unit's scoped `source_node`, use `get_structure` (and requirement-slice keywords: avatar, 动画, Lottie, GIF, 骨架屏, loading, pulse, badge count…) to list nodes that are likely dynamic:
+   - `INSTANCE` / `COMPONENT` with variant siblings or property-like frame names (when present — **absence of variants does not mean static**)
+   - Image fills on user/content fields (avatar, cover, UGC)
+   - Layers named like `animate`, `lottie`, `gif`, `motion`, `loading`, `skeleton` (bonus signal only)
+2. **Motion probe** — for each candidate (including text-hint targets), when figma-bridge MCP is available call `get_node_motion` on the node id. Record `animationStyles`, `manualKeyframeTracks`, and timeline hints. TemPad-only: record "motion: not probed (no figma-bridge)" — **text hints and requirement slice still count**.
+3. **Design animation assets** — when `get_code` or designer exports expose Lottie/GIF/video/sprite bytes, **persist** under the project asset directory and set `asset_status: "resolved"` with path + hash. When hints/requirements mention an asset but **Figma has no bytes** → `asset_status: "pending-user"`, `design_asset: null`, poster frame only — **do not invent the file**.
+4. **Classify** each row with the taxonomy table (`content-bound`, `component-variant`, `motion-preset`, `design-animation-asset`, `prototype-transition`) and set `evidence_source`.
+5. **Map to contract artifacts:**
+   - Variant values that change the whole unit → additional `meta.states[]` entries **and** `component-variant` dynamics linking state id ↔ property values.
+   - Time-based effects → static **poster** frame in HTML + `motion-preset` or `design-animation-asset` entry; implementation replays the asset at runtime.
+   - Content fields → placeholder DOM + `content-bound` with `implementation_notes` naming the API/binding field.
+
+Publish a **Dynamics inventory** in chat (no side file) before HTML authoring:
+
+```
+| dynamic-id | target node | kind | evidence_source | hint (if any) | asset_status | static preview | implementation hint |
+```
+
+If the unit has no dynamic behavior after **steps 0–1 and requirement pass**, set `"dynamics": []` and write `none — static Figma snapshots only` in the review panel.
+
+### 2d. Missing-resource escalation (REQUIRED before freeze)
+
+When any dynamics row or asset note has `asset_status: "pending-user"` (or `pending:` in review panel), **stop and message the user** with a structured request before claiming frozen — unless they already waived in this session.
+
+Use this template in chat:
+
+```
+【ui-truth-mapping 待补充资源】<unit-id>
+以下项在 Figma/需求中有动态或资源说明，但仓库内尚无可用文件。请提供资源或明确豁免后再冻结契约：
+
+1. <dynamic-id> — <kind>
+   - 依据：<evidence_source> / 原文：「<hint_text>」
+   - 关联节点：<figma_node>
+   - 需要：<.json|.gif|.mp4|… 或项目内路径>
+   - 当前合同：仅冻结静态海报帧 / 占位几何
+
+（可复制多条）
+```
+
+After the user provides a file: persist it, update `design_asset`, set `asset_status: "resolved"`, re-run validator. After explicit waiver: set `asset_status: "waived"` and quote the waiver in `[data-ui-dynamics-inventory]`.
+
 **Dispatch:** for more than one independent unit, spawn a per-unit subagent so evidence gathering and DOM authoring stay isolated — no cross-unit contamination. Skip subagent dispatch only when the user explicitly requests no subagent usage, or there is exactly one unit with ≤2 states.
 
 ### 3. Gather minimal TemPad evidence *(runs inside per-unit subagent when dispatched)*
@@ -173,7 +301,7 @@ For each **planned unit** (and each of its state frames), one at a time:
 3. Call `get_structure` on the same scoped node only when hierarchy, geometry, or overlap remains ambiguous after `get_code`. Do not call it by default.
 4. Record every `data-figma-node` you intend to cite before writing DOM — no node id may be invented.
 5. **Resolve every asset reference** returned by `get_code` (`<svg data-src="...">`, image fills, asset URLs) before writing DOM. For each one:
-   1. **Classify first:** static design icon, or dynamic/server-provided content (avatars, user uploads, server-rendered badges)? Requirement context decides — the Figma picture may be only an example. Dynamic content → freeze the container's geometry with a placeholder and note "server-provided" in the review panel; do not download the example image.
+   1. **Classify first:** static design icon, **dynamic content** (`content-bound`), **component variant**, or **motion/animation asset**? Requirement context + §2c inventory decide — the Figma picture may be only an example or a static keyframe. Dynamic content → placeholder + `content-bound` dynamic entry; motion → poster frame + `design-animation-asset` / `motion-preset`.
    2. **Reuse check:** search the target project's existing asset directories (whatever layout that project uses) for the same icon. If it exists → reference it and record the existing asset path in the review panel instead of duplicating bytes.
    3. **Simple vector** → fetch the asset bytes and inline the SVG verbatim into the contract, annotated with the asset hash. Treat every asset URL as **ephemeral** (some TemPad environments serve assets from a temporary local server that dies after the session) — persist the bytes now, never reference the URL later.
    4. **Complex/raster asset** → download the original image and persist it into the project asset directory; reference the persisted path in the contract (a project-root-relative path, never an asset URL).
@@ -193,7 +321,7 @@ For each **planned unit** (and each of its state frames), one at a time:
 
 ### 5. Fill or patch the one-unit HTML
 
-- `#ui-contract-meta` — fill `schema_version: 2`, `contract_id`, `source` (`requirement`/`design_file`/`root_node`), `unit` (`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`), `states` (one entry per frame, exactly one `default: true`), `revision`, `delivery.status`. `unit.type` is `page` | `modal` | `shared-component` | `component`. `unit.source_node` is the scoped root from §1. **State ids must be kebab-case lowercase ASCII** (`^[a-z][a-z0-9-]*$`, e.g. `loading`, `empty-state`) — the preview script builds CSS selectors from state ids and breaks on spaces, quotes, or brackets. **Default state** = the state a reviewer sees on first page load (typically `loaded`/`success`, not transient `loading`/`error`), so the hydrated preview matches the screen's primary visual, not a flicker frame.
+- `#ui-contract-meta` — fill `schema_version: 2`, `contract_id`, `source` (`requirement`/`design_file`/`root_node`), `unit` (`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`), `states` (one entry per frame, exactly one `default: true`), optional `dynamics` (array from §2c; `[]` when static), `revision`, `delivery.status`. `unit.type` is `page` | `modal` | `shared-component` | `component`. `unit.source_node` is the scoped root from §1. **State ids must be kebab-case lowercase ASCII** (`^[a-z][a-z0-9-]*$`, e.g. `loading`, `empty-state`) — the preview script builds CSS selectors from state ids and breaks on spaces, quotes, or brackets. **Default state** = the state a reviewer sees on first page load (typically `loaded`/`success`, not transient `loading`/`error`), so the hydrated preview matches the screen's primary visual, not a flicker frame.
 - `<style>` — **mechanical transfer** of evidence-backed CSS from `get_code` (including geometry: width/height, position, inset, gap, padding, margin, display, flex/grid, z-index, typography, color). Prefer `var(--token)` when TemPad returns a canonical token binding; otherwise keep the literal value TemPad returned. Do not replace get_code layout with a rewritten semantic stylesheet.
 - `<main data-ui-contract>` —
   - Keep `[data-ui-state-switcher]` and empty `[data-ui-state-host]`.
@@ -202,11 +330,13 @@ For each **planned unit** (and each of its state frames), one at a time:
   - Out-of-scope positioning chrome (context) may sit outside the host to preserve geometry, but must be marked `data-ui-scope="context"` and must **not** carry `data-ui-id` / `data-ui-kind` / `data-figma-node`. Context is not truth; the validator rejects truth-annotated context.
   - `data-ui-unit-id`/`data-ui-unit-type`/`data-ui-state-default` on `<main>` must match meta.
   - Every truth-bearing element carries unique `data-ui-id`, `data-ui-kind`, and `data-figma-node`.
+  - Nodes listed in `meta.dynamics[]` also carry `data-ui-dynamic="<kind>"` and `data-ui-dynamic-id="<dynamics[].id>"` when they appear in the frozen DOM.
   - Keep `script[data-ui-state-preview]` verbatim so open-in-browser hydrates the default state and enables switching.
 - `[data-ui-review-panel]` — include:
   - `dt[data-ui-scope="in_scope"]` / `dd` listing must-freeze artifacts (node ids + labels); every node id listed here must appear on a non-context `data-figma-node` in the DOM (the validator cross-checks this).
   - `dt[data-ui-scope="out_of_scope"]` / `dd` listing context chrome or `"none"`;
   - asset notes: for every icon/image — its resolution (inlined asset bytes + asset hash, reused project asset path, server-provided placeholder, or **pending: awaiting user decision**). No icon may be unaccounted for.
+  - dynamics notes (`dt[data-ui-dynamics-inventory]`): for every `meta.dynamics[]` entry — kind, `evidence_source`, hint text (if any), `asset_status`, static preview state/frame, design animation asset path/hash when `resolved`, and implementation hint; write `none — static Figma snapshots only` when `dynamics` is `[]`. List every `pending-user` item explicitly — do not bury missing assets in prose.
   - inference notes: every `data-evidence="inferred"` needs a matching `dt[data-ui-evidence-for]`/`dd`.
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched.
 
@@ -223,7 +353,7 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
 - The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
 - Never assume "validator OK ⇒ looks like Figma."
-- **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run.
+- **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). If §2d applied, include the pending-resource list (resolved / still waiting / waived). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run. **Do not treat confirmation as a substitute for providing missing assets** — waiving assets must be explicit.
 
 ### 7. Run the validator
 
@@ -286,7 +416,12 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - Leaving a `get_code` asset shell (`data-src` / asset URL) unresolved in the frozen contract — asset bytes must be inlined or persisted into the project, with the asset hash noted.
 - Reconstructing an asset-shell subtree (a subtree `get_code` exports as one SVG asset, e.g. a drag handle) from `get_structure` geometry and silently dropping paint attributes (fill-opacity, gradient, stroke) — structure is geometry-only evidence.
 - Downloading a Figma **example** image as a frozen asset when the requirement context shows the content is server-provided (avatar, user upload, dynamic badge).
-- Silently redrawing an unfetchable asset instead of recording a pending item and letting the user decide.
+- Skipping §2c and leaving `dynamics` undocumented when COMPONENT variants or motion layers are in scope.
+- Skipping §2c step 0 (text-hint sweep) because layer names are messy or absent.
+- Treating designer callout copy as `ignore` when it describes motion or off-Figma resources.
+- Hand-animating in the contract HTML instead of specifying `design-animation-asset` + poster frame.
+- Freezing with `pending-user` assets without §2d escalation or explicit user waiver.
+- Silently redrawing an unfetchable asset instead of recording a pending item and asking the user to provide it.
 - Saving preview screenshots (`contract-preview-*.png` etc.) as delivery artifacts — the hydrated HTML is the review medium.
 - Declaring a contract frozen without explicit per-contract user confirmation (unless the user explicitly waived re-review).
 - Writing `delivery.implemented.target` from memory or inheriting it from a superseded contract without re-verifying it against the current code.

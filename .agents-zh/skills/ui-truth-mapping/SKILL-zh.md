@@ -54,6 +54,57 @@ templates/
 | Bottom sheet / dialog / popover | 单独 `modal`；触发按钮 patch 进按钮所在物理容器契约 | sheet/dialog frame | 所有 sheet frame → `<template data-ui-state>`；必须 hydrate + switcher | 把 sheet 嵌成 page 状态；省略 preview 脚本；把触发按钮放进 modal 契约 |
 | 多状态列表/表单/模块 | 一个 `component`（若路由本身即范围则用 `page`） | 作用域模块 root | 每个视觉 frame → 一个 template；hydrate + switcher 强制 | 一态一份契约；空默认 template |
 | 仅元素属性（`disabled` / `selected`） | 在既有单元上 patch 该节点 | 不变 | **不要**加单元级状态模板 | 把 `disabled` 做成整单元 `<template data-ui-state>` |
+| 带 **变体属性** 或 **动效** 的组件（pulse、Lottie、GIF、prototype） | 仍属同一单元；补 `meta.dynamics[]` + review-panel 清单 | 组件/instance root | 预览用**静态关键帧** state template；动效规格写在 `dynamics` | 把动效压成静态 PNG；遗漏设计提供的动画资源 |
+
+## 动态与动效 — 现状与缺口
+
+| 动态关切 | 现已覆盖？ | 方式 |
+|---|---|---|
+| 整单元视觉状态（loading / empty / error / 选中外壳） | **是** | 兄弟 frame → `meta.states[]` + `<template data-ui-state>` + switcher |
+| 仅元素属性（`disabled`、tab `selected`） | **是** | patch 节点属性 — 不做单元级状态模板 |
+| 服务端/用户**内容**（头像、上传图、实时 badge 数字） | **部分** | 资产步骤可标 `content-bound`；**尚无**结构化 `dynamics` 清单 |
+| Figma **组件变体**属性（`State=Hover`） | **否** | frame 可能被误当成 state；变体轴未主动发现 |
+| **动效**（Figma Motion preset、关键帧、smart animate） | **否** | HTML 预览仅静态快照；未要求 `get_node_motion` |
+| 设计提供的**动画资源**（Lottie / GIF / video） | **否** | 仅有静态矢量/位图资产路径 |
+
+**§2c 的目标：** 主动发现动态组件与展示效果，分类、持久化设计资源，并用 `meta.dynamics[]` + review panel 暴露给实现方。
+
+### 动态分类（`meta.dynamics[].kind`）
+
+| `kind` | 含义 | HTML 冻结 | 设计资源 |
+|---|---|---|---|
+| `content-bound` | 服务端/用户/API 数据 | 几何 + 占位；Figma 图仅为示例 | 无 — 在 `implementation_notes` 写绑定字段 |
+| `component-variant` | Figma 组件属性轴 | 每变体值一个 state 或元素 patch | 每变体的静态预览 frame |
+| `motion-preset` | Figma Motion / 原型动效 | **静态关键帧** 供布局审查 | `static_preview` 引用 frame id |
+| `design-animation-asset` | 设计提供的 Lottie/GIF/video | 海报帧 + 项目内动画文件 | **必填** path + hash |
+| `prototype-transition` | 帧间过渡（时长、缓动） | 仅文档 — 合同内不可播放 | 写在 `implementation_notes` |
+
+`meta.dynamics` 可选；全静态时用 `[]`。非空时须在 review panel 逐条列出，且在 DOM 节点上标 `data-ui-dynamic` + `data-ui-dynamic-id`。
+
+每条 `meta.dynamics[]` 还应记录**依据从哪来**、**资源是否齐**：
+
+| 字段 | 取值 | 含义 |
+|---|---|---|
+| `evidence_source` | `figma-structure` \| `figma-text-hint` \| `requirement-slice` \| `user-confirmed` | 图层/变体/动效探测 vs 设计师**文案/便签** vs 需求文档 vs 用户对话 |
+| `hint_text` | 字符串（可选） | `figma-text-hint` 时原文逐字引用 |
+| `hint_node` | Figma 节点 id（可选） | 标注 TEXT/便签节点 — 不是被描述的 UI 节点 |
+| `asset_status` | `resolved` \| `pending-user` \| `not-applicable` \| `waived` | 资源已入库 / **须向用户索要** / 不适用 / 用户明确豁免 |
+
+### 图层不规范是常态 — 不能只靠规范命名
+
+设计师的图层管理往往**不规范**。动态信息可能只出现在：
+
+- 旁边的 **TEXT / 便签 / 说明**（「动态」「Lottie」「资源另附」「占位图」「接口返回」…）
+- **静态截图**代替动效（Figma 内无动画文件）
+- **完全不在 Figma** — 资源稍后通过网盘/聊天另发
+
+**规则：**
+
+1. **文案提示是「是否动态」的一等证据** — 不能凭此编造曲线或资源字节；记 `evidence_source: "figma-text-hint"` + 原文 `hint_text`。
+2. **把提示映射到目标 UI 节点** — 看位置邻近与语义；**多个候选时问用户**，禁止猜。
+3. **描述动效/占位/资源另附的说明不要标成 `ignore`** — 进入 §2c；只有版本号、署名等无关 meta 才可 ignore。
+4. **资源不在 Figma 很常见** — 提示或需求提到 Lottie/GIF/video 但取不到字节 → `asset_status: "pending-user"`，合同只冻海报/占位几何，并 **§2d 向用户索要**。
+5. 只有完成 **结构扫描 + 文案扫描 + 需求关键词** 且均无动态信号时，才可写 `dynamics: []`。
 
 ## 硬边界
 
@@ -66,6 +117,16 @@ templates/
 - 不要发明或重绘 icon/图片图形。每个 icon 或图片必须来自设计资产本身（机械转移资产字节），或逐字**复用项目已有资产**。当 `get_code` 返回资产空壳（`<svg data-src="...">` 或资产 URL）时，必须取得资产字节并持久化（内联 SVG 字节或保存为项目资产文件，并标注资产 hash）— 不允许留下空壳，更不允许手画一个「看起来差不多」的近似图形。仅仅「像」设计稿的 icon 是伪造真值。
 - `get_structure` 只是**几何证据** — 从不证明绘制属性。颜色、透明度、渐变、描边必须来自 `get_code` token 或资产字节；仅由 structure 引用的元素不得携带凭记忆补上的绘制值（把 20% 透明度的拖拽条重建成纯黑就是伪造真值）。
 - 不要把 Figma 中的每张图都当静态设计资产。区分**静态设计 icon**（冻结资产真值）与**动态/服务端提供的内容**（头像、用户上传、服务端徽章 — Figma 图只是举例）。依据需求上下文判断；动态内容只冻结几何 + 占位语义并在 review panel 注明，绝不把示例内容下载为冻结资产。
+- 当作用域子树含 COMPONENT/INSTANCE、动效命名图层，或需求提到 animation/Lottie/GIF/video 时，**禁止跳过 §2c 动态扫描** — 仅在确认全单元为静态快照后才可写 `dynamics: []`。
+- **禁止**用手绘静态 icon 近似 Lottie/GIF/video — 应标为 `design-animation-asset`，可获取时持久化文件，预览用海报关键帧。
+- 存在变体 frame 或 `componentProperties` 时**禁止忽略 Figma 组件变体** — 映射为 `component-variant` 与/或 state 模板。
+- 有 figma-bridge 时应对候选节点调用 `get_node_motion`；禁止无证据编造 easing/时长。
+- **禁止**在 `ui-contract.html` 内嵌 autoplay 动画 — 合同预览保持静态关键帧；运行时动效由 `meta.dynamics` 交给实现方。
+- 描述动效、占位、**资源另附**的设计师**文案/便签**不要标成 `ignore` — 它们是 §2c 动态线索。
+- 文案指向多个 UI 节点时**禁止猜测** — 问用户指明节点或提供资源。
+- 存在 `asset_status: "pending-user"`（或 review panel 里 `pending:`）时**禁止宣布 frozen**，除非用户在本会话**明确豁免** — 此时改 `waived` 并在 review panel 引用原话。
+- 资源「可能在设计师网盘」**不是**跳过理由 — 必须 **§2d 主动问用户** 提供文件或路径。
+- **禁止**只靠 `animate`/`lottie` 图层名发现动态 — **必须做 §2c 步骤 0 文案扫描**。
 - 未经**逐份契约的用户显式确认**不得宣布冻结。每份生成或修补的 `ui-contract.html` 都必须提交用户人工复审；仅当用户明确豁免复审时才可跳过此门禁。
 - 不要仅将截图或节点名称视为充分证据。需要结构化的 `get_code`/`get_structure` 载荷。
 - 不要在 `ui-contract.html` 之外创建第二个 UI 真值源 — 不允许有并存的 YAML、JSON 或 markdown 映射/笔记文件。
@@ -123,7 +184,7 @@ templates/
 在会话中公开此计划即可（聊天即可 — **不要**另建伴生映射文件）。每个 must-freeze 产物都有行之后，才能拷贝模板：
 
 ```
-| 产物 (node id + 标签) | 单元 id | 类型 (page\|component\|modal\|shared-component) | 动作 (create\|patch\|rebuild) | source_node (作用域 root) | 状态 (或 "element-patch") | get_code 目标 (= source_node) |
+| 产物 (node id + 标签) | 单元 id | 类型 (page\|component\|modal\|shared-component) | 动作 (create\|patch\|rebuild) | source_node (作用域 root) | 状态 (或 "element-patch") | 动态 (static \| content-bound \| variant \| motion \| animation-asset) | get_code 目标 (= source_node) |
 ```
 
 填表规则：
@@ -146,7 +207,8 @@ templates/
 | `modal` | 模态对话框、底部弹出层、气泡或覆盖层 | 一份 `unit.type: "modal"` 的 `ui-contract.html` — 绝不嵌套在页面内 |
 | `shared-component` | 共享的导航外壳、标签栏或包裹页面的持久框架 | 一份 `unit.type: "shared-component"` 的 `ui-contract.html`；被依赖它的页面通过 `unit.dependencies` 引用 |
 | `context` | 仅用于定位 in-scope 子树的页面 chrome | 从验收 DOM 省略，或带 `data-ui-scope="context"` 保留 — 绝不当作冻结真值 |
-| `ignore` | 非 UI 内容（设计师备注、标注、辅助线）或范围外 chrome | 完全排除在契约之外 |
+| `ignore` | 无关 meta（版本号、署名）或范围外 chrome | 完全排除在契约之外 |
+| `dynamics-hint` | 描述动效、占位、**Figma 外资源**的 TEXT/便签/说明 | **不**当作 UI 真值冻结 — 喂给 §2c；记 `hint_node` + 原文；映射到目标 UI 节点 |
 
 **分组规则：**
 - 当 In Scope 是局部变更（tip、badge、sheet 入口、单个控件）→ 优先 `component` 或 `modal`，**不要**把 Figma 整屏 dump 成 `page`。
@@ -162,7 +224,45 @@ templates/
 
 **验证：** 确认每个枚举的帧都已分配到单元、状态、context 或 ignore。没有帧被遗漏。确认 §1 的每个 must-freeze 产物都出现在某个单元的 DOM 中。
 
-**派发：** 对于多于一个的独立单元，派发逐单元子代理，使证据收集与 DOM 编写保持隔离 — 不产生跨单元污染。仅当用户明确要求不使用子代理，或恰好只有一个单元且 ≤2 个状态时，才跳过子代理派发。
+### 2c. 动态与动效扫描（每单元强制，在 §2 帧列表之后）
+
+在本单元第一次 `get_code` 之前：
+
+0. **文案提示扫描（图层乱也必须做）** — 在作用域子树列出所有 TEXT/便签/说明，命中例如：动态、动效、动画、Lottie、GIF、视频、骨架屏、占位、示例图、接口返回、资源另附、另发、外链、pulse、loading、placeholder、"asset attached" 等。标为 `dynamics-hint`；记 `hint_node`、原文、推测的**目标 UI 节点**；多候选 → **先问用户**。
+1. **候选扫描** — `get_structure` + 需求关键词：`INSTANCE`/`COMPONENT` 变体（**没有变体也不代表静态**）、用户内容类图片、动效命名图层（仅加分项）。
+2. **动效探测** — 含文案指向的节点；有 figma-bridge 则 `get_node_motion`；仅 TemPad 时记「未探测」，**文案与需求仍有效**。
+3. **设计动画资源** — 能取到字节则持久化，`asset_status: "resolved"`；提示/需求有资源但 Figma 无文件 → `pending-user`，只冻海报帧，**禁止编造文件**。
+4. **分类** + 填 `evidence_source` / `asset_status`。
+5. **映射到契约**（同英文版）。
+
+发布**动态清单**（会话内，无旁路文件）：
+
+```
+| dynamic-id | 目标节点 | kind | evidence_source | 文案依据 | asset_status | 静态预览 | 实现提示 |
+```
+
+确认 **步骤 0–1 + 需求** 均无动态后，才写 `dynamics: []` 与 `none — static Figma snapshots only`。
+
+### 2d. 缺资源升级（冻结前强制）
+
+任一 `asset_status: "pending-user"`（或 review panel `pending:`）时，**先向用户发结构化索要清单**，再称 frozen — 除非用户已明确豁免。
+
+聊天模板：
+
+```
+【ui-truth-mapping 待补充资源】<unit-id>
+以下项在 Figma/需求中有动态或资源说明，但仓库内尚无可用文件。请提供资源或明确豁免后再冻结契约：
+
+1. <dynamic-id> — <kind>
+   - 依据：<evidence_source> / 原文：「<hint_text>」
+   - 关联节点：<figma_node>
+   - 需要：<.json|.gif|.mp4|… 或项目内路径>
+   - 当前合同：仅冻结静态海报帧 / 占位几何
+```
+
+用户补文件后：持久化、更新 `design_asset`、`resolved`、重跑 validator。用户豁免后：`waived` + review panel 引用原话。
+
+**派发：** 对于多于一个的独立单元，派发逐单元子代理…
 
 ### 3. 收集最小 TemPad 证据 *（派发时在逐单元子代理内运行）*
 
