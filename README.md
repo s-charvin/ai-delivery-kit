@@ -27,7 +27,7 @@ The bootstrap script downloads a temporary release binary and runs the same cano
 git clone https://github.com/s-charvin/ai-delivery-kit.git
 ```
 
-For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately — see [docs/coordination-repo.md](docs/coordination-repo.md).
+For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination init` in your repo. This kit does not embed coordination logic.
 
 ## Upgrade
 
@@ -166,15 +166,4 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 - `archived` = immutable freeze (`archive/` + `MANIFEST.json`); requirement completes when all executable subreqs are `archived`
 - Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`
 
-### Coordination bridge (MCP)
-
-The orchestration engine lives in a **separate repository** ([`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)). Install its skill + MCP server when you need multi-party claims and `hub://` pointers. Skill-layer truth remains `status.json`; bridge via MCP:
-
-| Tool | Purpose |
-|------|---------|
-| `start_loop` | Load requirement → autonomous `LoopRunner` |
-| `stop_loop` / `loop_status` | Control / inspect |
-| `stall_report` | ALR stall visibility |
-| `intervene_loop` | Human-only pause/resume/cancel/retry/skip/approve_overbudget |
-
-See [docs/coordination-repo.md](docs/coordination-repo.md) and `references/coordination-mcp-bridge.md` in the orchestrator skill.
+For multi-party work, install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination init` in the repo; this kit does not embed coordination logic.

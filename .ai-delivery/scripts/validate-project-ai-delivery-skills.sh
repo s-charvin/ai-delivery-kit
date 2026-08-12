@@ -185,7 +185,7 @@ validate_managed_contract() {
     require_contains "$readme_file" 'scripts/bootstrap-ai-delivery.sh'
     require_contains "$readme_file" 'ai-delivery-orchestrator'
     require_contains "$readme_file" 'continue an existing requirement or create a new one'
-    require_contains "$readme_file" 'runs `specify init` only when `specify-cli` is already available or was installed during onboarding'
+    require_contains "$readme_file" 'It never installs third-party frameworks.'
     require_contains "$readme_file" 'main'
     require_contains "$readme_file" 'tag push'
     require_not_contains "$readme_file" '--project-id'
@@ -287,7 +287,7 @@ validate_orchestrator_skill() {
   require_contains "$skill_file" 'runnable'
   require_contains "$skill_file" 'validate-ui-contract-html.py'
   require_contains "$skill_file" 'blocked_verification_failure'
-  require_contains "$skill_file" 'subagent-driven-development'
+  require_contains "$skill_file" 'framework-adaptation.md'
 
   require_file "$reconcile_script"
   python3 "$reconcile_script" /tmp/nonexistent-status-for-bootstrap-test.json 2>/dev/null | grep -q 'RUNTIME_MODE=bootstrap' \

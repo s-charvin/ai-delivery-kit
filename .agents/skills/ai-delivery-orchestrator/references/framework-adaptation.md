@@ -90,25 +90,3 @@ Canonical path fields:
 - `source_index.spec`: one entry per artifact with `ref_type` `spec` / `plan` / `tasks`
 
 Governed truth (status, gates, contracts) always stays in `.ai-delivery`; framework artifacts are referenced, never moved, and never treated as the source of truth.
-
-### Optional cross-repo `hub_refs` (coordination pointers)
-
-When a requirement depends on artifacts owned by another party, declare **pointers** (not storage contracts) on `dependency-graph.json`:
-
-```json
-{
-  "nodes": {
-    "SR-002": {
-      "depends_on": ["SR-001"],
-      "hub_refs": ["hub://other-pipeline/api.n2@^1.0.0"]
-    }
-  }
-}
-```
-
-- `hub_refs` entries are declarative `hub://` strings for AI / MCP consumers.
-- `load_requirement` / `start_loop` sync `hub_refs` into coordination cross-pipeline edges.
-- Register live pointers with `register_artifact_ref`; resolve via `resolve_hub_ref`.
-- Canonical SR pointer: `hub://{pipeline_id}/{SR-id}@version` (`pipeline_id` defaults to `status.json` → `requirement_id`).
-- Execution config (`participation`, MCP URL, etc.) is owned by the coordination skill — **not** stored under `.ai-delivery/`.
-- Coordination does **not** require a particular path or file format behind the URI.

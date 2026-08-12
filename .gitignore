@@ -18,3 +18,6 @@ __pycache__/
 # Coverage
 .coverage
 htmlcov/
+
+# Runtime backups from init --upgrade / ide-gates amend
+.ai-delivery/backups/

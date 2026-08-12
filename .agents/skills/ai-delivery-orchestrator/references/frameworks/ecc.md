@@ -25,14 +25,6 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 - When ECC and another framework are both installed, ECC typically pairs well with a spec-producing tier (spec-kit/OpenSpec): ECC for design/implement/finish, the spec tier for `spec`/`plan`/`tasks`.
 - Before `merged`, write `verification.md` (sections: 评审轮次记录 / 验证命令与结果 / 签署). The status validator rejects `merged` without it.
 
-## Coordination loop (optional, MCP only)
-
-For autonomous implement loops with checkpoint recovery and cost/stall supervision, use the **external** coordination MCP server — never import coordination Python here. Bridge rules and tool list: [coordination-mcp-bridge.md](coordination-mcp-bridge.md). Loop execution still cannot auto-merge or auto-archive; return to skill-layer `finish` / `archive` after `merged`.
-
-## Autonomous loop (optional, MCP only)
-
-When a coordination MCP server is available, ECC-style long implement loops may use `start_loop` / `intervene_loop` instead of inline session stepping. This path is **optional**; gates, `verification.md`, and CP-ARCHIVE rules are unchanged. See [coordination-mcp-bridge.md](coordination-mcp-bridge.md) — do not import coordination Python locally.
-
 ## Traceability recording
 
 ECC produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-producing tier. Record the ECC commands/agents actually used in `decisions.md` so a later session can resume with the same mapping.

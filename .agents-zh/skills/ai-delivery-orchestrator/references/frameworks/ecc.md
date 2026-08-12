@@ -25,10 +25,6 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 - ECC 与另一个框架同时安装时，ECC 通常与规格类档位（spec-kit/OpenSpec）搭配良好：ECC 负责 design/implement/finish，规格档位负责 `spec`/`plan`/`tasks`。
 - 进入 `merged` 前须写 `verification.md`（须含小节：评审轮次记录 / 验证命令与结果 / 签署）。无此文件时状态验证器拒绝 `merged`。
 
-## Coordination 循环（可选，仅 MCP）
-
-需要带检查点恢复与成本/停滞监督的自主 implement 循环时，使用**外部** coordination MCP 服务 — 禁止在此 import coordination Python。桥接规则与工具列表：[coordination-mcp-bridge.md](coordination-mcp-bridge.md)。循环仍不能自动合并或自动归档；`merged` 后须回到 skill 层 `finish` / `archive`。
-
 ## 可追溯性记录
 
 ECC 本身不产出规格产物；`spec_refs.tier` 保持规格类档位不变。把实际使用的 ECC 命令/代理记入 `decisions.md`，方便后续会话按同一映射恢复。

@@ -166,13 +166,12 @@ All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Run `sc
 
 ## Orchestration shape (invariants)
 
-These rules prevent orchestration regressions. They apply to the main session, reconcile dispatch, and any coordination MCP loop runner:
+These rules prevent orchestration regressions. They apply to the main session and reconcile dispatch:
 
 1. **Main session is the orchestrator** — one human-facing session drives the sequential pipeline (Pattern 4). No router persona sits between stages.
 2. **Dispatch table is data, not a router** — `ACTION_BY_STATUS` / reconcile output names abstract actions; do not introduce a persona that re-derives or re-explains the table.
 3. **Subagents are leaf-only, depth ≤ 1** — implementation and review may delegate to subagents per tier rules; the orchestrator never nests orchestrator personas.
 4. **Forbidden patterns** — persona-calls-persona chains, “sequential orchestrator” layers that only paraphrase the previous stage, and deep persona trees.
-5. **Review never auto-merges** — a loop runner may execute `implement` steps, but `merged` / `archived` require clean review evidence (`verification.md`) and human gates; budget exhaustion always pauses for the user.
-6. **Cross-repo execution is MCP-only** — claim, status, and `hub://` pointers go through the coordination MCP server; never invent a local fake hub status or import coordination Python.
+5. **Review never auto-merges** — `merged` / `archived` require clean review evidence (`verification.md`) and human gates; budget exhaustion always pauses for the user.
 
-When autonomous execution is needed, use the **external** coordination MCP server (`start_loop`, `claim_node`, `register_artifact_ref`, `intervene_loop`, …). The skill layer keeps spec-segment truth in `status.json`; the engine only writes back execution-segment statuses and immediately re-runs reconcile. **Never import coordination Python from the skill layer** — see [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md) and [docs/coordination-repo.md](../../../docs/coordination-repo.md).
+This kit owns single-repo governed delivery (`.ai-delivery/`, `status.json`, gates). Multi-party coordination is out of scope here — install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately if needed.

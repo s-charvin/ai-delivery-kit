@@ -132,4 +132,4 @@ with tempfile.TemporaryDirectory() as td:
 print("dependency-graph load OK")
 PY
 
-print -- 'PASS: reconcile-delivery fixtures behave as expected.'
+echo 'PASS: reconcile-delivery fixtures behave as expected.'

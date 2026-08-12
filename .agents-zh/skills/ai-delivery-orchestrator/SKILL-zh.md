@@ -162,13 +162,12 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 ## 编排形态（不变量）
 
-以下规则防止编排退化，适用于主会话、对账 dispatch 及 coordination MCP 循环执行器：
+以下规则防止编排退化，适用于主会话与对账 dispatch：
 
 1. **主会话即编排者** — 单个人工会话驱动顺序管线（Pattern 4），阶段之间不得插入 router persona。
 2. **Dispatch 表是数据，不是 router** — `ACTION_BY_STATUS` / 对账输出的是抽象动作名；不得引入重新推导或转述该表的 persona。
 3. **Subagent 仅叶子、深度 ≤ 1** — 实现与评审可按 tier 规则委派 subagent；编排器不得嵌套编排 persona。
 4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
-5. **评审永不自动合并** — 循环执行器可跑 `implement` 步骤，但 `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
-6. **跨仓执行仅经 MCP** — 认领、状态与 `hub://` 指针一律走 coordination MCP；不得本地伪造 hub 状态，也不得 import coordination Python。
+5. **评审永不自动合并** — `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
 
-需要自主执行时，使用**外部** coordination MCP 服务（`start_loop`、`claim_node`、`register_artifact_ref`、`intervene_loop` 等）。skill 层在 `status.json` 保留 spec 段真值；引擎只写回执行段状态并立即重新对账。**禁止从 skill 层 import coordination Python** — 见 [references/coordination-mcp-bridge.md](references/coordination-mcp-bridge.md) 与 [docs/coordination-repo.md](../../../docs/coordination-repo.md)。
+本 kit 只负责单仓治理交付（`.ai-delivery/`、`status.json`、门禁）。多方协同不在本 skill 范围内 — 需要时另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination)。

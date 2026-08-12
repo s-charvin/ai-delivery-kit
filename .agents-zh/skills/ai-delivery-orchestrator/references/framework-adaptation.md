@@ -74,25 +74,3 @@ reconcile 就是 evaluate 步骤：重读治理真值、检查门禁、输出下
 - `source_index.spec`：每个产物一条记录，`ref_type` 为 `spec` / `plan` / `tasks`
 
 治理真值（状态、门禁、契约）永远留在 `.ai-delivery`；框架产物只被引用，绝不搬移。
-
-### 可选跨仓 `hub_refs`（coordination 指针）
-
-当需求依赖他方产物时，在 `dependency-graph.json` 上声明**指针**（非存储契约）：
-
-```json
-{
-  "nodes": {
-    "SR-002": {
-      "depends_on": ["SR-001"],
-      "hub_refs": ["hub://other-pipeline/api.n2@^1.0.0"]
-    }
-  }
-}
-```
-
-- `hub_refs` 是给 AI / MCP 消费的声明式 `hub://` 字符串。
-- `load_requirement` / `start_loop` 会自动将 `hub_refs` 同步到 coordination 跨仓边。
-- 用 coordination `register_artifact_ref` 登记活动指针；用 `resolve_hub_ref` 解析。
-- coordination **不**要求 URI 背后的路径或文件格式。
-- Canonical SR pointer: `hub://{pipeline_id}/{SR-id}@version`（`pipeline_id` 默认 `status.json` → `requirement_id`）。
-- `participation` 等执行配置由 coordination skill 管理，**不**写入 `.ai-delivery/`。

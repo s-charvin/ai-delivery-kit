@@ -21,6 +21,8 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 引导脚本会下载临时 release 二进制，并执行与正式 `ai-delivery init` 相同的逻辑。
 
+若需多方协同（可选），另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在本仓运行 `coordination init`；kit 本身不包含协同逻辑。
+
 ## 升级
 
 重新运行安装脚本即可升级已安装的 CLI：
@@ -158,15 +160,4 @@ bash scripts/rehearse-release.sh
 - `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
 - CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
 
-### Coordination 桥接（MCP）
-
-`ai-delivery-coordination` 是**独立 skill + MCP 服务**（[`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)），不属于本 kit，也不在 `.ai-delivery/` 内。按需安装后通过 MCP 桥接；skill 层真值仍在 `status.json`：
-
-| 工具 | 用途 |
-|------|------|
-| `start_loop` | 加载需求 → 自主 `LoopRunner` |
-| `stop_loop` / `loop_status` | 控制 / 检视 |
-| `stall_report` | ALR 停滞可见性 |
-| `intervene_loop` | 人工介入：pause/resume/cancel/retry/skip/approve_overbudget |
-
-详见 [docs/coordination-repo.md](docs/coordination-repo.md) 与 orchestrator skill 的 `references/coordination-mcp-bridge.md`。
+若需多方协同，另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在本仓运行 `coordination init`；kit 本身不包含协同逻辑。

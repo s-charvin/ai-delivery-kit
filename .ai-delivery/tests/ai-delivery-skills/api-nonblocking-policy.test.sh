@@ -35,7 +35,7 @@ require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 
 require_contains \
   "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \
-  "API docs are passed directly to implementation"
+  "API docs pass directly to the spec pipeline and implementation"
 
 require_contains \
   "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \
@@ -47,6 +47,6 @@ require_contains \
 
 require_contains \
   "$SKILL_ROOT/requirement-breakdown/SKILL.md" \
-  "Do not invent product truth"
+  "Do not split requirements without source line-range coverage for every slice"
 
 print -- "PASS: non-blocking API policy is documented across governed skill stages."

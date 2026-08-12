@@ -2,15 +2,15 @@
   "hooks": {
     "PostToolUse": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
-            "type": "command",
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/validate-ui-contract.sh\"",
+            "statusMessage": "Validating UI acceptance contract",
             "timeout": 60,
-            "statusMessage": "Validating UI acceptance contract"
+            "type": "command"
           }
-        ]
+        ],
+        "matcher": "Edit|Write"
       }
     ]
   }

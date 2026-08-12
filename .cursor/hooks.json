@@ -1,12 +1,12 @@
 {
-  "version": 1,
   "hooks": {
     "afterFileEdit": [
       {
         "command": ".cursor/hooks/validate-ui-contract.sh",
-        "matcher": "Write|TabWrite",
-        "failClosed": true
+        "failClosed": true,
+        "matcher": "Write|TabWrite"
       }
     ]
-  }
+  },
+  "version": 1
 }

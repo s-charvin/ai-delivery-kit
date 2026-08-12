@@ -1,6 +1,6 @@
 # 产物布局统一规则（One Rule）
 
-本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**，仅描述客户端 `.ai-delivery/` 工作流。可选的 `ai-delivery-coordination`（独立 skill + MCP，见 `docs/coordination-repo.md`）通过 MCP 读取同一 `layout` JSON，但不属于本布局的一部分。
+本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**，仅描述客户端 `.ai-delivery/` 工作流。
 
 > 适用边界：**仅对新 `ai-delivery init` 的仓库生效**。旧仓库的散落布局不做迁移。
 
