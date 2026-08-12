@@ -131,6 +131,69 @@
   }
   [data-ui-state-host] {
     position: relative;
+    padding: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
+  }
+  /* Review panel — human audit copy (not product UI). Style for readability. */
+  [data-ui-review-panel] {
+    margin: 0 16px 24px;
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #374151;
+  }
+  [data-ui-review-panel] > summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: #111827;
+  }
+  [data-ui-review-panel] dl {
+    margin: 12px 0 0;
+  }
+  [data-ui-review-panel] dt {
+    font-weight: 600;
+    color: #111827;
+    margin-top: 14px;
+  }
+  [data-ui-review-panel] dt:first-of-type {
+    margin-top: 0;
+  }
+  [data-ui-review-panel] dd {
+    margin: 6px 0 0;
+  }
+  [data-ui-review-panel] ul {
+    margin: 6px 0 0;
+    padding-left: 18px;
+  }
+  [data-ui-review-panel] li {
+    margin: 4px 0;
+  }
+  [data-ui-review-panel] .effect-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 8px;
+    font-size: 12px;
+  }
+  [data-ui-review-panel] .effect-table th,
+  [data-ui-review-panel] .effect-table td {
+    border: 1px solid #e5e7eb;
+    padding: 6px 8px;
+    text-align: left;
+    vertical-align: top;
+  }
+  [data-ui-review-panel] .effect-table th {
+    background: #f3f4f6;
+    font-weight: 600;
+  }
+  [data-ui-review-panel] .tag-motion {
+    color: #7c3aed;
+    font-weight: 600;
+  }
+  [data-ui-review-panel] .tag-static {
+    color: #6b7280;
   }
   /*
     [data-ui-id="PLACEHOLDER-region-id"] { ...evidence-backed rules only... }
@@ -158,7 +221,8 @@
       validator rejects truth-annotated context.
     -->
 
-    <!-- Live mount: empty in source; script hydrates meta default on load. -->
+    <!-- CRITICAL: exact attribute form — <div data-ui-state-host></div>
+         A stray quote (data-ui-state-host">) breaks hydration and leaves the canvas blank. -->
     <div data-ui-state-host></div>
 
     <!--
@@ -194,26 +258,59 @@
     </template>
 
     <!--
-      Review panel: collapsed-by-default detail layer for source nodes,
-      scope inventory, asset resolution, state notes, and inference
-      reasoning. Every data-evidence="inferred" element above MUST have a
-      matching dt[data-ui-evidence-for]/dd pair here — silent inference is
-      a process failure, not a shortcut. Every icon/image must be accounted
-      for in the Assets entry — no unaccounted glyphs.
+      Review panel: human audit copy in reviewer language (see ui-truth-mapping SKILL).
+      - Canvas ([data-ui-state-host]) = static layout only (+ optional CSS motion preview hints).
+      - Do NOT put field-binding tables or motion spec prose on the canvas.
+      - When meta.dynamics has motion entries: include a 动态 UI 效果 table (effect-table).
+      - content-bound placeholders → dt[data-ui-evidence-for], not the motion table.
+      - Avoid "1:1" in prose (validator may parse as Figma node id); use 一比一 / 像素级.
     -->
-    <details data-ui-review-panel>
-      <summary>Contract evidence</summary>
+    <details data-ui-review-panel open>
+      <summary>PLACEHOLDER: 验收说明（非产品 UI） / Review notes (not product UI)</summary>
       <dl>
-        <dt data-ui-scope="in_scope">In scope</dt>
-        <dd>PLACEHOLDER: list the visual artifacts this requirement must freeze (node ids + short labels).</dd>
-        <dt data-ui-scope="out_of_scope">Out of scope context</dt>
-        <dd>PLACEHOLDER: list chrome kept only for positioning, or write "none".</dd>
+        <dt data-ui-scope="in_scope">PLACEHOLDER: 画布验收什么 / What the canvas accepts</dt>
+        <dd>
+          <p>PLACEHOLDER: one sentence — white area below the state switcher is the static layout check.</p>
+          <ul>
+            <li><strong>PLACEHOLDER-state-id</strong> — short label for what this state shows</li>
+          </ul>
+        </dd>
+        <dt data-ui-scope="out_of_scope">PLACEHOLDER: 不在这里验收 / Not accepted here</dt>
+        <dd>
+          <ul>
+            <li>PLACEHOLDER: outer shell, real Spine/Lottie runtime, etc.</li>
+          </ul>
+        </dd>
+        <!-- Plain dt (no data-ui-scope) when motion dynamics exist: -->
+        <dt>PLACEHOLDER: 动态 UI 效果（开发需实现） / Motion &amp; transitions (implement in code)</dt>
+        <dd>
+          <p>PLACEHOLDER: 下列为<strong>动效与过渡</strong>，不是数据绑定。画布只做静态截图级还原。</p>
+          <table class="effect-table">
+            <thead>
+              <tr>
+                <th>状态</th>
+                <th>位置</th>
+                <th>效果</th>
+                <th>参考</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>PLACEHOLDER</td>
+                <td>PLACEHOLDER</td>
+                <td><span class="tag-motion">PLACEHOLDER effect</span></td>
+                <td>PLACEHOLDER code/asset ref</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>PLACEHOLDER: if a CSS motion preview hint exists on canvas, say it is 预览示意 only.</p>
+        </dd>
         <dt data-ui-asset-inventory>Assets</dt>
-        <dd>PLACEHOLDER: for every icon/image — its resolution (inlined asset bytes + asset hash, reused project asset path, server-provided placeholder, or pending: awaiting user decision). Write "none" if this unit has no icons/images.</dd>
-        <dt data-ui-dynamics-inventory>Dynamics &amp; motion</dt>
-        <dd>PLACEHOLDER: for every meta.dynamics[] entry — kind, evidence_source, hint text (if any), asset_status (resolved/pending-user/waived), static preview, design asset path/hash when resolved, implementation hint. Write "none — static Figma snapshots only" when dynamics is []. List every pending-user item explicitly.</dd>
-        <dt data-ui-evidence-for="PLACEHOLDER-region-id">Inference</dt>
-        <dd>PLACEHOLDER explanation of which Figma nodes this was derived from and why normalization was needed.</dd>
+        <dd>PLACEHOLDER: every icon/image — inline hash, reused path, placeholder, or pending. Write "none" if no icons/images.</dd>
+        <dt data-ui-dynamics-inventory>Dynamics &amp; motion (machine mirror)</dt>
+        <dd>PLACEHOLDER: mirror meta.dynamics[] or write "见上方动态 UI 效果表格" / "none — static Figma snapshots only" when dynamics is [].</dd>
+        <dt data-ui-evidence-for="PLACEHOLDER-region-id">PLACEHOLDER: 画布占位 / Canvas placeholder</dt>
+        <dd>PLACEHOLDER: inferred or content-bound nodes — why poster/placeholder geometry, product replacement.</dd>
       </dl>
     </details>
 
