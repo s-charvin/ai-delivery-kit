@@ -162,7 +162,7 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 ## 编排形态（不变量）
 
-以下规则防止编排退化，适用于主会话、对账 dispatch 及任何 `coordination/` 循环执行器：
+以下规则防止编排退化，适用于主会话、对账 dispatch 及任何 `ai-delivery-coordination/` 循环执行器：
 
 1. **主会话即编排者** — 单个人工会话驱动顺序管线（Pattern 4），阶段之间不得插入 router persona。
 2. **Dispatch 表是数据，不是 router** — `ACTION_BY_STATUS` / 对账输出的是抽象动作名；不得引入重新推导或转述该表的 persona。

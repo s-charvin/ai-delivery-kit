@@ -11,18 +11,18 @@
 - `scripts/validate-artifact-layout.py`, `scripts/archive-subrequirement.py`
 - Spec persistence policy (`living` / `flow_forward`) and `verification.md` gate at `merged` / `archived`
 - OpenSpec-style closure: `merged` → `archive` action → `archived` terminal state, CP-ARCHIVE, `delivery-report.md`
-- Coordination engine split to [`s-charvin/coordination`](https://github.com/s-charvin/coordination) (git submodule); MCP-only bridge documented in `references/coordination-mcp-bridge.md`
+- Coordination engine split to [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination) (git submodule `ai-delivery-coordination/`); MCP-only bridge documented in `references/coordination-mcp-bridge.md`
 
 ### Changed
 
 - **`merged` vs `archived`**: `merged` = code integrated; `archived` = immutable freeze; requirement `completed` when all executable subreqs are `archived`
 - Reconcile terminal status is `archived` (not `merged`)
 - `native` tier: separate `spec/plan.md` and `spec/tasks.md` (no `plan_path → tasks.md` shortcut)
-- `coordination/` STORE is write-through to SQLite (see coordination repo)
+- `ai-delivery-coordination/` STORE is write-through to SQLite (see ai-delivery-coordination repo)
 
 ### Coordination cleanup
 
-Moved to the coordination repository (submodule). See `docs/coordination-repo.md`.
+Moved to the ai-delivery-coordination repository (submodule). See `docs/coordination-repo.md`.
 
 ### Completed in this refactor
 

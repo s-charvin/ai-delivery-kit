@@ -1,6 +1,6 @@
 # Coordination MCP 桥接
 
-`coordination/` 是**可独立部署的引擎**。skill 层**禁止** `import` coordination 的 Python 模块。一切自主执行须经运行中的 coordination 服务 **MCP 工具**完成。
+`ai-delivery-coordination/` 是与 ai-delivery-kit 配套的**可独立部署引擎**。skill 层**禁止** `import` 其 Python 模块。一切自主执行须经运行中的 coordination 服务 **MCP 工具**完成。
 
 ## 何时使用
 
@@ -38,4 +38,4 @@
 3. 监控 `loop_status` / `stall_report`；停滞或超预算（ALR-15）用 `intervene_loop`。
 4. 切片到 `merged` 后回到 skill 层 `finish` / `archive` — 循环**不会**自动归档。
 
-实现参考（[coordination](https://github.com/s-charvin/coordination) 仓库）：`orchestration/skill_bridge.py`、`mcp/loop_registry.py`。
+实现参考（[ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 仓库）：`orchestration/skill_bridge.py`、`mcp/loop_registry.py`。

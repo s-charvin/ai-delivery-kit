@@ -27,7 +27,7 @@ The bootstrap script downloads a temporary release binary and runs the same cano
 git clone --recurse-submodules https://github.com/s-charvin/ai-delivery-kit.git
 ```
 
-See [docs/coordination-repo.md](docs/coordination-repo.md) for coordination-only development.
+See [docs/coordination-repo.md](docs/coordination-repo.md) for ai-delivery-coordination development.
 
 ## Upgrade
 
@@ -168,7 +168,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 ### Coordination bridge (MCP)
 
-The coordination Python engine lives in a **separate repository** ([`s-charvin/coordination`](https://github.com/s-charvin/coordination)), vendored here as the `coordination/` git submodule. Skill-layer truth remains `status.json`; bridge via MCP:
+The orchestration engine lives in a **separate repository** ([`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)), vendored here as the `ai-delivery-coordination/` git submodule. Skill-layer truth remains `status.json`; bridge via MCP:
 
 | Tool | Purpose |
 |------|---------|

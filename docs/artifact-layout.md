@@ -1,6 +1,6 @@
 # 产物布局统一规则（One Rule）
 
-本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**。skill 层与 coordination 引擎（独立仓库，见 `docs/coordination-repo.md`）都必须遵守：最终产物有且只有一个规范家（canonical home），框架特定目录（`.specify/`、`openspec/`）只是**派生 / 同步视图**，不是真值所在地。
+本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**。skill 层与 `ai-delivery-coordination` 引擎（独立仓库，见 `docs/coordination-repo.md`）都必须遵守：最终产物有且只有一个规范家（canonical home），框架特定目录（`.specify/`、`openspec/`）只是**派生 / 同步视图**，不是真值所在地。
 
 > 适用边界：**仅对新 `ai-delivery init` 的仓库生效**。旧仓库的散落布局不做迁移。
 
@@ -60,7 +60,7 @@
 
 - 唯一 JSON 源：`.ai-delivery/meta/project-binding.json` 的 `layout` 段。
 - skill 侧读取器：`.agents/skills/ai-delivery-orchestrator/scripts/layout.py`
-- 引擎侧读取器：coordination 仓库 `config/paths.py`（不依赖 skill 层，只读同一 JSON）
+- 引擎侧读取器：ai-delivery-coordination 仓库 `config/paths.py`（不依赖 skill 层，只读同一 JSON）
 - hash 规范化（两侧一致）：去 CRLF、去行尾空白、去文末空白后再算 sha256，避免误报。
 
 ## 5. 其他收敛规则
