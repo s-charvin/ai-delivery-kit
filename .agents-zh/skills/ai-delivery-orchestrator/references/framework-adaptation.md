@@ -91,5 +91,8 @@ reconcile 就是 evaluate 步骤：重读治理真值、检查门禁、输出下
 ```
 
 - `hub_refs` 是给 AI / MCP 消费的声明式 `hub://` 字符串。
+- `load_requirement` / `start_loop` 会自动将 `hub_refs` 同步到 coordination 跨仓边。
 - 用 coordination `register_artifact_ref` 登记活动指针；用 `resolve_hub_ref` 解析。
 - coordination **不**要求 URI 背后的路径或文件格式。
+- Canonical SR pointer: `hub://{pipeline_id}/{SR-id}@version`（`pipeline_id` 默认 `status.json` → `requirement_id`）。
+- `participation` 等执行配置由 coordination skill 管理，**不**写入 `.ai-delivery/`。

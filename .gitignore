@@ -5,7 +5,7 @@ dist/
 bin/
 .gocache/
 
-# Python build artifacts (repo root; coordination submodule has its own .gitignore)
+# Python build artifacts (repo root)
 __pycache__/
 *.pyc
 *.pyo

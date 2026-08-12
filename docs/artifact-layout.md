@@ -1,12 +1,12 @@
 # 产物布局统一规则（One Rule）
 
-本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**。skill 层与 `ai-delivery-coordination` 引擎（独立仓库，见 `docs/coordination-repo.md`）都必须遵守：最终产物有且只有一个规范家（canonical home），框架特定目录（`.specify/`、`openspec/`）只是**派生 / 同步视图**，不是真值所在地。
+本文件是 `ai-delivery-kit` 治理产物的**唯一布局契约**，仅描述客户端 `.ai-delivery/` 工作流。可选的 `ai-delivery-coordination`（独立 skill + MCP，见 `docs/coordination-repo.md`）通过 MCP 读取同一 `layout` JSON，但不属于本布局的一部分。
 
 > 适用边界：**仅对新 `ai-delivery init` 的仓库生效**。旧仓库的散落布局不做迁移。
 
 ## 1. 规范家（Canonical Home）
 
-所有产物都位于 `.ai-delivery/` 之下；具体路径由 `.ai-delivery/meta/project-binding.json` 的 `layout` 段定义（skill 解析器：`scripts/layout.py`；coordination 仓库镜像：`config/paths.py`）。
+所有产物都位于 `.ai-delivery/` 之下；具体路径由 `.ai-delivery/meta/project-binding.json` 的 `layout` 段定义（skill 解析器：`scripts/layout.py`）。
 
 ```
 .ai-delivery/
@@ -60,7 +60,7 @@
 
 - 唯一 JSON 源：`.ai-delivery/meta/project-binding.json` 的 `layout` 段。
 - skill 侧读取器：`.agents/skills/ai-delivery-orchestrator/scripts/layout.py`
-- 引擎侧读取器：ai-delivery-coordination 仓库 `config/paths.py`（不依赖 skill 层，只读同一 JSON）
+- coordination MCP（可选）：读取同一 `project-binding.json` layout 段（见 coordination 仓库 `config/paths.py`）
 - hash 规范化（两侧一致）：去 CRLF、去行尾空白、去文末空白后再算 sha256，避免误报。
 
 ## 5. 其他收敛规则

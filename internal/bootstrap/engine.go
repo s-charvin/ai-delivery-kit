@@ -104,11 +104,6 @@ func (e Engine) Run(cfg Config) error {
 				"manifest":           "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
 			},
 		},
-		"coordination": map[string]any{
-			"mcp_url":     "",
-			"pipeline_id": "",
-			"party_id":    "",
-		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,
 	}); err != nil {

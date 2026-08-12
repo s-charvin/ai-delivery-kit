@@ -166,7 +166,7 @@ All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Run `sc
 
 ## Orchestration shape (invariants)
 
-These rules prevent orchestration regressions. They apply to the main session, reconcile dispatch, and any `ai-delivery-coordination/` loop runner:
+These rules prevent orchestration regressions. They apply to the main session, reconcile dispatch, and any coordination MCP loop runner:
 
 1. **Main session is the orchestrator** — one human-facing session drives the sequential pipeline (Pattern 4). No router persona sits between stages.
 2. **Dispatch table is data, not a router** — `ACTION_BY_STATUS` / reconcile output names abstract actions; do not introduce a persona that re-derives or re-explains the table.

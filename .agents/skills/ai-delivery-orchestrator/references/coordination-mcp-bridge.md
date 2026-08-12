@@ -1,6 +1,6 @@
 # Coordination MCP bridge
 
-`ai-delivery-coordination/` is a **separate deployable engine** companion to ai-delivery-kit. The skill layer must never `import` its Python modules. All autonomous execution goes through **MCP tools** on a running coordination server.
+`ai-delivery-coordination` is a **separate skill + MCP service** (not part of this kit or `.ai-delivery/`). The skill layer must never `import` its Python modules. All autonomous execution goes through **MCP tools** on a running coordination server installed by the user.
 
 ## Lightweight principles (AI-first)
 
@@ -46,7 +46,37 @@ Normal governed delivery still flows through reconcile + abstract actions (`desi
 | `claim_node` / `release_claim` | Lease-based claim (`E_ALREADY_CLAIMED` on conflict) |
 | `report_node_status` | Legal status transition + optional `context` / `artifact_hints` |
 | `list_claimable_nodes` | READY + unclaimed; upstream satisfaction (status / ref presence only) |
-| `schedule_dependents` | After `done`, unlock BLOCKED→READY dependents; emit cross-pipeline notices |
+| `schedule_dependents` | After `done`, unlock BLOCKED→READY dependents; hub unlock + notices |
+| `apply_hub_upstream_done` | Cross-pipeline upstream `done` → unlock consumer BLOCKED→READY |
+| `list_notices` / `ack_notices` | Poll / ack notices (webhook is best-effort) |
+
+### CLI (no kit)
+
+```bash
+coordination-cli register --pipeline X --node Y --version 1 --uri ...
+coordination-cli resolve hub://X/Y@1
+coordination-cli notices --pipeline X --unread
+```
+
+### SR ↔ hub:// mapping
+
+Canonical pointer for sub-requirement `SR-001` in pipeline `login-client`:
+
+`hub://login-client/SR-001@1`
+
+`pipeline_id` defaults to `status.json` → `requirement_id`.
+
+### Status mapping (flush_back)
+
+| Coordination | Kit `status.json` |
+|--------------|-------------------|
+| `pending_review` / `review` / `in_progress` | `in_dev` |
+| `done` | `merged` |
+| `ready` / spec-segment `blocked_*` | no write-back |
+
+### `start_loop` + `respect_claims`
+
+With `start_loop(req_root, respect_claims=true)`, the loop only dispatches READY nodes that have an active claim lease.
 
 ### Task claim workflow
 

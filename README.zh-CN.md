@@ -160,7 +160,7 @@ bash scripts/rehearse-release.sh
 
 ### Coordination 桥接（MCP）
 
-`ai-delivery-coordination` 引擎在**独立仓库** [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)，本仓库以 `ai-delivery-coordination/` git submodule 引用。skill 层真值仍在 `status.json`；通过 MCP 桥接：
+`ai-delivery-coordination` 是**独立 skill + MCP 服务**（[`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)），不属于本 kit，也不在 `.ai-delivery/` 内。按需安装后通过 MCP 桥接；skill 层真值仍在 `status.json`：
 
 | 工具 | 用途 |
 |------|------|

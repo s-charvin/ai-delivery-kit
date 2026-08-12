@@ -1,35 +1,38 @@
-# AI Delivery Coordination（独立仓库）
+# AI Delivery Coordination（独立 skill + MCP 服务）
 
-`ai-delivery-coordination` 是与本 kit 配套的编排引擎，已拆出单独版本管理：
+`ai-delivery-coordination` **不属于** ai-delivery-kit，也**不在** `.ai-delivery/` 布局内。它是独立的 skill + MCP 服务，用户按需安装后通过 MCP 与客户端工作流协作。
 
 | 项 | 值 |
 |---|---|
-| 本地路径（submodule） | `ai-delivery-coordination/` |
-| 独立仓库 | [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)（可与 `ai-delivery-kit` 同级克隆） |
-| 集成方式 | **仅 MCP** — skill 层禁止 `import` coordination Python |
-| 职责边界 | 状态流转、认领租约、`hub://` 指针、依赖协议；**不**强制各方产物存储形态 |
+| 独立仓库 | [`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination) |
+| 集成方式 | **仅 MCP** — kit skill 层禁止 `import` coordination Python |
+| 职责边界 | 多方认领、状态机、`hub://` 指针、跨仓依赖协议 |
+| kit 职责 | `.ai-delivery/` 客户端工作流（`status.json`、门禁、产物布局） |
 
-## 克隆 ai-delivery-kit（含 submodule）
+## 安装与启用
 
-```bash
-git clone --recurse-submodules https://github.com/s-charvin/ai-delivery-kit.git
-# 或已克隆后：
-git submodule update --init --recursive
-```
-
-## 仅开发 ai-delivery-coordination
+1. 克隆并安装 coordination（skill + MCP 服务）：
 
 ```bash
 git clone https://github.com/s-charvin/ai-delivery-coordination.git
 cd ai-delivery-coordination
 pip install -e ".[dev]"
-pytest tests/unit --ignore=tests/unit/test_task10_crew.py --ignore=tests/unit/test_crew_bridge.py
 ```
 
-## 与 skill 层的桥接
+2. 在 Cursor / IDE 中启用 coordination MCP server（见 coordination 仓库 README）。
 
-- 操作指南：`.agents/skills/ai-delivery-orchestrator/references/coordination-mcp-bridge.md`
-- 循环实现：`orchestration/skill_bridge.py`、`mcp/loop_registry.py`
-- 指针与认领：`mcp/ref_claim_tools.py`、`repo/hub_ref.py`、`docs/coordination/artifact-refs-and-claims.md`
+3. 客户端仓库仅保留 ai-delivery-kit（`ai-delivery init`）— **无需** submodule，**无需**在 `.ai-delivery/` 内放置 coordination 代码。
 
-产品级 PRD / 场景文档仍留在 `docs/prd/`（描述平台能力，非运行时代码）。
+## 与 kit 的边界
+
+| 层 | 拥有 |
+|----|------|
+| **kit / `.ai-delivery`** | spec 段状态、子需求布局、`dependency-graph.json`（含可选 `hub_refs` 声明） |
+| **coordination MCP** | 执行段认领、节点状态机、hub 指针注册与解析 |
+| **桥接** | MCP 工具（`start_loop`、`claim_node`、`register_artifact_ref` 等） |
+
+kit 侧操作指南：`.agents/skills/ai-delivery-orchestrator/references/coordination-mcp-bridge.md`
+
+coordination 侧实现与文档：coordination 仓库 `docs/coordination/artifact-refs-and-claims.md`
+
+产品级 PRD / 场景文档留在本仓库 `docs/prd/`（描述平台能力，非运行时代码）。

@@ -21,13 +21,13 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 The bootstrap script downloads a temporary release binary and runs the same canonical `ai-delivery init` logic.
 
-**Developing this repo** (includes the coordination engine submodule):
+**Developing this repo:**
 
 ```bash
-git clone --recurse-submodules https://github.com/s-charvin/ai-delivery-kit.git
+git clone https://github.com/s-charvin/ai-delivery-kit.git
 ```
 
-See [docs/coordination-repo.md](docs/coordination-repo.md) for ai-delivery-coordination development.
+For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately — see [docs/coordination-repo.md](docs/coordination-repo.md).
 
 ## Upgrade
 
@@ -168,7 +168,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 ### Coordination bridge (MCP)
 
-The orchestration engine lives in a **separate repository** ([`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)), vendored here as the `ai-delivery-coordination/` git submodule. Skill-layer truth remains `status.json`; bridge via MCP:
+The orchestration engine lives in a **separate repository** ([`s-charvin/ai-delivery-coordination`](https://github.com/s-charvin/ai-delivery-coordination)). Install its skill + MCP server when you need multi-party claims and `hub://` pointers. Skill-layer truth remains `status.json`; bridge via MCP:
 
 | Tool | Purpose |
 |------|---------|

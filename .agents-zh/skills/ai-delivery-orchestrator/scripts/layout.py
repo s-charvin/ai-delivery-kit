@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Canonical artifact-layout resolver for ai-delivery-kit.
 
-Single source of truth for *where* governed artifacts live. Both the
-skill-layer orchestrator (reconcile-delivery.py) and, by reading the same
-`project-binding.json` layout section, the coordination/ Python engine use
-this contract.
+Single source of truth for *where* governed artifacts live under `.ai-delivery/`.
+The skill-layer orchestrator (reconcile-delivery.py) reads this contract from
+`project-binding.json`. The optional coordination MCP service may read the same
+layout JSON when bridging client repos — it is not vendored in this kit.
 
 The layout is declared once in `.ai-delivery/meta/project-binding.json`
 under the `layout` key. Every path below is *relative to* `ai_delivery_path`
@@ -190,8 +190,8 @@ def normalize_text(text: str) -> str:
     """Normalize for stable hashing: CRLF->LF, strip trailing whitespace/EOF.
 
     Used by spec-kit persistence hash-drift checks so cosmetic edits don't
-    trigger false re-generation. Applied identically on both skill and engine
-    sides (see coordination/config/paths.py).
+    trigger false re-generation. The coordination MCP service uses the same
+    normalization when reading client layout JSON.
     """
     out_lines = []
     for line in text.replace("\r\n", "\n").split("\n"):

@@ -107,5 +107,8 @@ When a requirement depends on artifacts owned by another party, declare **pointe
 ```
 
 - `hub_refs` entries are declarative `hub://` strings for AI / MCP consumers.
-- Register the live pointer with coordination `register_artifact_ref`; resolve via `resolve_hub_ref`.
+- `load_requirement` / `start_loop` sync `hub_refs` into coordination cross-pipeline edges.
+- Register live pointers with `register_artifact_ref`; resolve via `resolve_hub_ref`.
+- Canonical SR pointer: `hub://{pipeline_id}/{SR-id}@version` (`pipeline_id` defaults to `status.json` → `requirement_id`).
+- Execution config (`participation`, MCP URL, etc.) is owned by the coordination skill — **not** stored under `.ai-delivery/`.
 - Coordination does **not** require a particular path or file format behind the URI.

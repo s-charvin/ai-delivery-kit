@@ -1,6 +1,6 @@
 # Coordination MCP 桥接
 
-`ai-delivery-coordination/` 是与 ai-delivery-kit 配套的**可独立部署引擎**。skill 层**禁止** `import` 其 Python 模块。一切自主执行须经运行中的 coordination 服务 **MCP 工具**完成。
+`ai-delivery-coordination` 是**独立 skill + MCP 服务**（不属于本 kit，也不在 `.ai-delivery/` 内）。skill 层**禁止** `import` 其 Python 模块。一切自主执行须经用户安装的 coordination **MCP 工具**完成。
 
 ## 轻约束原则（面向 AI）
 
@@ -46,7 +46,37 @@ kit 的 `.ai-delivery/` 布局契约仍约束经 `ai-delivery init` 播种的治
 | `claim_node` / `release_claim` | 租约认领（冲突返回 `E_ALREADY_CLAIMED`） |
 | `report_node_status` | 合法状态转移 + 可选 `context` / `artifact_hints` |
 | `list_claimable_nodes` | READY 且未认领；上游是否满足（只看状态 / 是否有 ref） |
-| `schedule_dependents` | 节点 `done` 后解锁下游 BLOCKED→READY；发出跨管线通知 |
+| `schedule_dependents` | 节点 `done` 后解锁下游 BLOCKED→READY；发出跨管线通知并尝试 hub 解阻 |
+| `apply_hub_upstream_done` | 跨 pipeline 上游 `done` 后解锁依赖方 BLOCKED→READY |
+| `list_notices` / `ack_notices` | 轮询 / 确认 coordination 通知（webhook 为 best-effort） |
+
+### 无 kit 方 CLI
+
+```bash
+coordination-cli register --pipeline X --node Y --version 1 --uri ...
+coordination-cli resolve hub://X/Y@1
+coordination-cli notices --pipeline X --unread
+```
+
+### SR ↔ hub:// 映射
+
+子需求 `SR-001` 在 pipeline `login-client` 下的规范指针：
+
+`hub://login-client/SR-001@1`
+
+`pipeline_id` 默认取 `status.json` → `requirement_id`。
+
+### 状态映射（flush_back）
+
+| Coordination | Kit `status.json` |
+|--------------|-------------------|
+| `pending_review` / `review` / `in_progress` | `in_dev` |
+| `done` | `merged` |
+| `ready` / spec 段 `blocked_*` | 不回写 |
+
+### `start_loop` + `respect_claims`
+
+`start_loop(req_root, respect_claims=true)` 时，循环**仅调度**已有有效 claim 租约的 READY 节点。
 
 ### 认领工作流
 
