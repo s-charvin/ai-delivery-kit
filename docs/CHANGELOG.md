@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased — unified artifact layout refactor
+## v0.3.0 — 2026-08-13
+
+Unified artifact layout refactor.
 
 **Applies only to new `ai-delivery init` repositories.** No automatic migration for existing layouts.
 
