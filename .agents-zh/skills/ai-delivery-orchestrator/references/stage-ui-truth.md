@@ -27,7 +27,7 @@ Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code
 5. 每个 icon/图片/矢量化子树都有证据背书：内联资产字节（含资产 hash）、复用的项目资产，或 review panel 注明的服务端占位/待办项。手绘图形、仅凭 `get_structure` 的重建（structure 不能证明绘制属性：透明度/渐变/描边）与未解析的 `data-src` 空壳不达标。
 6. 用户已逐份人工确认 `ui-contract.html`（仅当用户明确豁免复审时可跳过）。hydrate 后的 HTML 就是复审媒介 — 不保存预览截图产物。
 7. 若本轮契约集合发生变化（新增、删除、替换契约或 unit id 变更），已完成陈旧指针清扫（`ui-truth-mapping` §9）：`status.json` notes、`visual-acceptance.md`、progress/todo、拆分摘要中没有任何**活跃**指针仍指向已删除/更名的契约。允许保留一行「被 … 取代」的历史注记。
-8. 父级 SECTION 画布上（不只在 `source_node` 内）描述动效/过渡的 Figma 备注，已写入 `meta.dynamics[]` **以及** review-panel **动态 UI 效果** 表，并保留完整原文 `hint_text`。
+8. 父级 SECTION 画布上（不只在 `source_node` 内）描述动效/过渡的 Figma 备注，已写入 `meta.dynamics[]` **以及** review-panel **动态 UI 效果** 表，并保留完整原文 `hint_text`。多条款备注必须 **按 unit 拆分** — 同一画布上的编号模块经常点名兄弟 unit，而不是第一张邻近卡片里剩下的子节点。
 
 ## 完成后
 

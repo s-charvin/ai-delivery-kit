@@ -123,7 +123,10 @@ templates/
 - 有 figma-bridge 时应对候选节点调用 `get_node_motion`；禁止无证据编造 easing/时长。
 - **禁止**在 `ui-contract.html` 内嵌 autoplay 动画 — 合同预览保持静态关键帧；运行时动效由 `meta.dynamics` 交给实现方。
 - 描述动效、占位、**资源另附**的设计师**文案/便签**不要标成 `ignore` — 它们是 §2c 动态线索。父级 SECTION 上、不在 `source_node` 内的过渡动画备注同样是一等证据；禁止只扫冻结根而丢掉画布备注。
-- 不要把「加载完成→success」这类过渡备注当成每个状态上的循环；记 `prototype-transition`。
+- 不要把多 unit 的 SECTION 动效备注的**每一条款**都塞给第一张邻近契约。按条款点名的 unit 拆分；剩下的编号模块经常是**兄弟 unit**，不是同一张卡片里剩下的子节点。
+- 不要把描述 **从一个状态/unit 变到另一个** 的条款当成每个状态快照上的循环。记 `prototype-transition`（trigger → target）。
+- 同一套 chrome 在不同状态、实例或兄弟上被不一致对待时，禁止**静默**增删或挪动动效映射。这是**异常 — 停下问用户**，再等待。不限于某一对状态。
+- 不要删除、挪动或收窄 dynamics 行 / 预览提示后继续写。先对照剩余原文条款与剩余目标做覆盖复查；覆盖变窄则停下问用户。
 - review-panel 已有动效表时，`meta.dynamics[]` 必须同步，禁止只写表不写 meta。
 - 文案指向多个 UI 节点时**禁止猜测** — 问用户指明节点或提供资源。
 - 存在 `asset_status: "pending-user"`（或 review panel 里 `pending:`）时**禁止宣布 frozen**，除非用户在本会话**明确豁免** — 此时改 `waived` 并在 review panel 引用原话。
@@ -232,16 +235,21 @@ templates/
 
 0. **文案提示扫描（图层乱也必须做）** — 列出所有 TEXT/便签/说明（文案**或图层名**命中关键词）。扫 **两圈**，不要只扫冻结根：
    1. **作用域子树**（`unit.source_node` 与各 state `source_node`）。
-   2. **父级 SECTION / 画布兄弟（必做）** — 设计师备注经常画在 unit 根**外面**，与页面 Frame 同级。对父 SECTION 做浅层 `get_structure`，收集不在任何 `source_node` 内的 TEXT/便签。用空间邻近、箭头、或点名状态的文案（「加载完成」「过渡」「打字机」）映射到本 unit。
+   2. **父级 SECTION / 画布兄弟（必做）** — 设计师备注经常画在 unit 根**外面**，与页面 Frame 同级。对父 SECTION 做浅层 `get_structure`，收集不在任何 `source_node` 内的 TEXT/便签。用空间邻近、箭头、或点名状态/效果的文案映射到本 unit。
    - 关键词例如：动态、动效、动画、过渡、打字机、扫光、Lottie、GIF、视频、骨架屏、占位、示例图、接口返回、资源另附、另发、外链、pulse、loading、placeholder、typewriter。
    - 标为 `dynamics-hint`；记 `hint_node`、**完整原文**（多行备注禁止截断）、推测的目标 UI 节点。
-   - 描述 **状态过渡**（如「加载完成后…」）记 `prototype-transition`，**不要**当成每个状态模板上的循环。
+   - **多条款 SECTION 备注按 unit 拆分。** 编号模块（「第一个…模块」「第二个…模块」）经常点名**同一画布上的兄弟 unit**，不是最近 unit 里剩下的子节点。把每条款分给 `source_node` 匹配该模块的 unit。禁止把剩余条款倒进第一张契约的剩余行。
+   - 描述 **从一个状态/unit 变到另一个** 的条款记 `prototype-transition`，**不要**当成每个状态快照上的循环。
+   - 某效果作用的 chrome **也出现在**其它状态、实例或兄弟上：若映射会让这些副本不一致，**停下问用户** — 禁止静默剥掉或静默补上。时间短语（「之后…」「当…完成」「然后…」）只说明**过渡何时发生**，本身不能证明其它仍展示该 chrome 的快照没有该效果。
+   - 带全体量词（全部 / 每个 / 同时 / 整个模块）的提示覆盖**每一个匹配目标**，不是任意剩余子集。拆分后匹配集仍不清楚 → 停下问用户。
    - 多候选 unit/节点 → **先问用户**。不要因为备注不在 `source_node` 内就标 `ignore`。
 1. **候选扫描** — `get_structure` + 需求关键词：`INSTANCE`/`COMPONENT` 变体（**没有变体也不代表静态**）、用户内容类图片、动效命名图层（仅加分项）。
 2. **动效探测** — 含文案指向的节点；有 figma-bridge 则 `get_node_motion`；仅 TemPad 时记「未探测」，**文案与需求仍有效**。
 3. **设计动画资源** — 能取到字节则持久化，`asset_status: "resolved"`；提示/需求有资源但 Figma 无文件 → `pending-user`，只冻海报帧，**禁止编造文件**。
 4. **分类** + 填 `evidence_source` / `asset_status`。
 5. **映射到契约**（同英文版）。
+6. **一致性检查（写 HTML 前必做）：** 对每个已映射效果，列出画布上该 chrome 的每一份副本（每个状态模板、每个重复实例、每个仍匹配的兄弟）。若有的副本会有该效果、有的没有，且原文**没有**明确排除后者 — 这是**异常**。先展示不一致并**等待**。禁止先改再问。
+7. **每次裁剪后的覆盖复查（必做）：** 每当删除、挪动或收窄 dynamics 行、预览提示或 `data-ui-dynamic` 标注时：(1) 重读原文剩余条款（全文）；(2) 列出本 unit 中每条剩余条款仍能覆盖的目标；(3) 若剩余 chrome 仍匹配某条款却已无效果，或全体量词现在只打中子集 — **停下问用户**。错分的行删掉不算完成，直到本次复查通过或用户确认更窄的覆盖。
 
 发布**动态清单**（会话内，无旁路文件）：
 
@@ -316,7 +324,7 @@ templates/
   - `dt[data-ui-scope="out_of_scope"]` / `dd` 列出上下文 chrome 或 `"none"`；
   - 资产说明：每个 icon/图片 — 其处置方式（内联资产字节 + 资产 hash、复用的项目资产路径、服务端占位，或**待办：等待用户决策**）。不允许有来历不明的 icon。
   - 推断说明：每个 `data-evidence="inferred"` 都要有匹配的 `dt[data-ui-evidence-for]`/`dd`。
-- 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关 `data-ui-id` 子树、无关状态及其它单元的 `unit.dependencies`。
+- 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关 `data-ui-id` 子树、无关状态及其它单元的 `unit.dependencies`。若修补会**删除、挪动或收窄** dynamics / 预览提示，先跑 §2c 覆盖复查再继续。
 
 一次处理一个帧 — 绝不将所有帧批量塞入单次查询或单次编辑。
 
@@ -326,7 +334,7 @@ templates/
 
 - 确认 **hydrate 后的默认态**布局匹配 Figma 范围 root（几何 + 内容），而不是空 host 或手写近似。
 - 若 host 看起来空白：检查（1）预览脚本在场，（2）默认 template 非空，（3）`--color-text` / `--color-surface` 是合法 CSS 颜色（绝不能残留无效 token `#PLACEHOLDER` — IDE 暗色画布会把黑字藏掉）。模板因此为 `html, body` 强制浅色底 + `color-scheme: light`；用证据色覆盖，不要写占位字符串。
-- 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。
+- 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。若同一套 chrome 跨状态（或重复实例）出现但动效覆盖不均，按 §2c 异常处理 — 不得宣称预览完成。
 - 逐一比对**每个 icon/图片**与其证据：内联字节必须与取得的资产载荷一致；复用资产必须与项目文件一致；服务端占位必须可见地是占位。即便几何完全正确，「看起来是对的 icon」的重绘图也不通过本项检查。
 - 展开 `[data-ui-review-panel]`，确认范围清单、资产说明、每个 `data-figma-node` 与推断说明清晰准确。
 - hydrate 后的 HTML **就是**复审媒介。不要生成或保存预览截图产物（如 `contract-preview-*.png`）— 人直接审核 HTML，截图会与契约漂移。
@@ -395,6 +403,10 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - 用 `get_structure` 几何重建资产空壳子树（`get_code` 把整个子树导出为一个 SVG 资产时，如拖拽条），静默丢掉绘制属性（fill-opacity、渐变、描边）— structure 只是几何证据。
 - 需求上下文表明内容是服务端提供（头像、用户上传、动态徽章）时，仍把 Figma **示例图**下载为冻结资产。
 - 无法获取的资产静默重绘，而不是记为待办项交由用户决策。
+- 把 SECTION 动效备注的剩余条款倒进第一张邻近 unit 的剩余子节点，而不是条款点名的兄弟 unit。
+- 把状态↔状态或 unit↔unit 过渡当成每个快照上的循环重放。
+- 同一套 chrome 会被不一致对待时，静默改写动效覆盖（增 / 删 / 挪），而不是停下问用户。
+- 删除或挪动 dynamics 行却不对照剩余原文条款与剩余目标做覆盖复查。
 - 把预览截图（`contract-preview-*.png` 等）当作交付产物保存 — hydrate 后的 HTML 才是复审媒介。
 - 未经逐份契约的用户显式确认即宣布冻结（除非用户明确豁免复审）。
 - 凭记忆写入 `delivery.implemented.target`，或在未对照当前代码重新核实的情况下从被取代的旧契约继承 target。

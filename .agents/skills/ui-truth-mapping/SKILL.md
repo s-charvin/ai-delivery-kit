@@ -79,8 +79,8 @@ When reviewers ask where the motion is, the failure is usually **presentation**,
 | Motion known from requirement/Figma hints but absent from HTML | §2c inventory stayed in chat only; `meta.dynamics[]` / review panel never filled; **or** the note lived on the parent SECTION and the sweep never left `source_node` | Fill **both** `meta.dynamics[]` and the human table **before** presenting the contract; sweep SECTION siblings |
 | Cluttered or misleading canvas | Binding tables, field legends, or motion callouts on `[data-ui-state-host]` | Canvas = static layout only (+ optional motion **preview hint**); audit copy lives in `[data-ui-review-panel]` only |
 | States switch but host looks blank | Malformed host tag (`<div data-ui-state-host"></div>` with a stray `"`) | Copy verbatim from template: `<div data-ui-state-host></div>` |
-
-**For req-dm-match-card–style units:** Lottie, shimmer, and Spine were in the requirement slice and breakdown — discovery succeeded; reviewers could not audit until the **Motion and transitions** table lived in the review panel (not on the canvas, not as a top field-binding table). A later Figma note (`4451:90123`: load-complete typewriter + tip scale/fade 300ms + match stagger fade 300ms) sat on the **SECTION canvas**, outside `source_node`, and was dropped until the parent-sibling sweep was required.
+| Same chrome treated inconsistently (some copies have an effect, others do not) | Agent silently rewrote coverage to match a time phrase or a nearest-node guess | **Anomaly — stop and ask.** Do not silently add, strip, or move. See §2c consistency check. |
+| After a delete/move, leftover chrome that still matches a remaining clause has no effect | Agent treated the delete as done and did not re-read remaining source | **Coverage review** after every prune. If coverage shrank, stop and ask. See §2c. |
 
 ### Two acceptance surfaces (mandatory split)
 
@@ -97,7 +97,7 @@ Never put API field-binding tables, `data-ui-binding` legends, or motion-spec pr
 |---|---|---|
 | **Motion / UI effects** — Spine loop, Lottie, shimmer, typewriter, transitions | `motion-preset`, `design-animation-asset`, `prototype-transition` | **Motion and transitions** `<table class="effect-table">` |
 | **Dynamic data / placeholders** — server text, avatar URL, counts | `content-bound` | **Canvas placeholder / Copy** `dt[data-ui-evidence-for]` |
-| Whole-unit state flip (loading shell → success shell) | (state templates) | State switcher + `in_scope` list |
+| Whole-unit state flip (empty / error / selected / loading shells) | (state templates) | State switcher + `in_scope` list |
 
 When the product doc says “dynamic”, default to **motion / UI effects** unless the sentence is clearly about API fields.
 
@@ -115,7 +115,7 @@ Write `[data-ui-review-panel]` as **human audit copy** (not product UI, not engi
 
 ### Motion preview hints (optional, canvas only)
 
-When a directional cue helps (e.g. loading shimmer):
+When a directional cue helps (e.g. a shimmer loop):
 
 - CSS-only loop inside the relevant state template, `aria-hidden="true"`, no Lottie/Spine/video bytes in HTML.
 - Review panel must say the hint is **preview-only**; product motion is defined in the **Motion and transitions** table.
@@ -188,8 +188,11 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
 - Do not skip the **§2c dynamics scan** when the scoped subtree contains COMPONENT/INSTANCE nodes, motion-named layers, or the requirement mentions animation/Lottie/GIF/video — record `dynamics: []` only after explicit confirmation the unit is static.
 - Do not skip **parent SECTION / canvas sibling** TEXT notes in §2c step 0. A note that sits beside the frames (not nested in `source_node`) is still first-class motion evidence. Truncating a multi-line transition note, or classifying it as `ignore` because it is “outside the unit root”, is a process failure.
+- Do not assign **every clause** of a multi-unit SECTION motion note to the first nearby contract. Split clauses onto the units they name; leftover numbered modules are often **sibling units**, not leftover children of the same card.
 - Do not omit `meta.dynamics[]` when the review panel already lists motion, or when a nearby Figma note describes a transition / typewriter / shimmer. The table and `meta.dynamics[]` must stay in sync; a table-only inventory is not freeze-complete.
-- Do not treat a **loading→success (or similar) transition note** as a loop that plays inside every state. Map it to `prototype-transition` with trigger → target; canvas may show a **preview hint only on the target state**.
+- Do not treat a clause that describes a **change from one state or unit to another** as a loop on every state snapshot. Map those to `prototype-transition` with trigger → target.
+- Do not **silently** add, strip, or move a motion mapping when the result treats the **same chrome** inconsistently across states, instances, or siblings, without explicit evidence that the difference is intended. That is an **anomaly** — **stop and ask**, then wait. This is not limited to any one state pair.
+- Do not delete, move, or narrow a dynamics row / preview hint and continue. Re-read remaining source clauses against remaining targets first. If coverage shrank, stop and ask.
 - Do not approximate **Lottie/GIF/video** motion as a hand-drawn static icon — classify as `design-animation-asset`, persist the file when fetchable, and freeze a poster keyframe for preview.
 - Do not ignore **Figma component variant properties** when variant frames or `componentProperties` exist — map them to `component-variant` dynamics and/or state templates; do not collapse unrelated variants into one static snapshot without documentation.
 - Do not claim motion is "obvious from design" without probing: call `get_node_motion` (figma-bridge) when available; otherwise cite structure + requirement + designer notes in the dynamics inventory.
@@ -305,10 +308,13 @@ Before the first `get_code` for this unit:
 
 0. **Text-hint sweep (do this even when layers look messy)** — list every TEXT / sticky / callout whose copy **or layer name** matches dynamics keywords. Sweep **two rings**, not only the freeze root:
    1. **Scoped subtree** (`unit.source_node` and each state `source_node`).
-   2. **Parent canvas / SECTION siblings (REQUIRED)** — designer notes often sit **outside** the unit root as siblings of the page frames (same SECTION / parent FRAME, not nested under `source_node`). `get_structure` the parent SECTION (or the smallest common ancestor that also contains the unit frames) at shallow depth and collect TEXT / sticky / callout children that are **not** inside any `source_node`. Spatial proximity (near the unit frames), arrows, or copy that names a unit state (load complete, transition, typewriter) maps the hint to this unit.
+   2. **Parent canvas / SECTION siblings (REQUIRED)** — designer notes often sit **outside** the unit root as siblings of the page frames (same SECTION / parent FRAME, not nested under `source_node`). `get_structure` the parent SECTION (or the smallest common ancestor that also contains the unit frames) at shallow depth and collect TEXT / sticky / callout children that are **not** inside any `source_node`. Spatial proximity (near the unit frames), arrows, or copy that names a unit state or effect maps the hint to this unit.
    - Keywords (match equivalent wording in the designer's language), e.g.: motion, animation, transition, typewriter, shimmer, Lottie, GIF, video, skeleton, placeholder, sample image, API-returned, asset attached separately, send later, external link, pulse, loading
    - Classify each as `dynamics-hint` (§2 table); record `hint_node`, **verbatim full** `hint_text` (do not truncate multi-line notes), and your best **target UI node** hypothesis.
-   - A hint that describes a **state-to-state transition** (e.g. after loading completes…) is `prototype-transition`, **not** a per-state loop. Do not replay it on every state template.
+   - **Split a multi-clause SECTION note per unit.** Numbered modules ("first … module", "second … module") often name **sibling units on the same canvas**, not leftover children inside the nearest unit. Assign each clause to the unit whose `source_node` matches that module. Do not dump leftover clauses onto leftover rows of the first unit.
+   - A hint that describes a **change from one state or unit to another** is `prototype-transition`, **not** a per-state loop. Do not replay that transition on every state snapshot.
+   - A hint that applies an effect to chrome that **also exists** in other states, instances, or siblings: if the mapping would treat those copies inconsistently, **stop and ask** — do not silently strip or silently add. A time phrase ("after …", "when … completes", "then …") names **when a transition runs**; it does not by itself prove the effect is absent from other snapshots that still show that chrome.
+   - A hint with a collective quantifier (all / every / simultaneous / each / the whole module) covers **every matching target**, not an arbitrary leftover subset. If the matching set is unclear after a split, stop and ask.
    - If one hint could attach to multiple UI nodes **or** multiple units → **stop and ask the user** before freezing.
    - Do **not** mark these canvas notes `ignore` just because they are outside `source_node`.
 1. **Candidate sweep** — on the unit's scoped `source_node`, use `get_structure` (and requirement-slice keywords: avatar, animation, Lottie, GIF, skeleton, loading, pulse, badge count…) to list nodes that are likely dynamic:
@@ -322,6 +328,8 @@ Before the first `get_code` for this unit:
    - Variant values that change the whole unit → additional `meta.states[]` entries **and** `component-variant` dynamics linking state id ↔ property values.
    - Time-based effects → static **poster** frame in HTML + `motion-preset` or `design-animation-asset` entry; implementation replays the asset at runtime.
    - Content fields → placeholder DOM + `content-bound` with `implementation_notes` naming the API/binding field.
+6. **Consistency check (REQUIRED before writing HTML):** for each mapped effect, list every copy of that chrome still on the canvas (every state template, every repeated instance, every sibling that still matches). If some copies would get the effect and others would not, and the source does **not** explicitly exclude the others, this is an **anomaly**. Present the inconsistency and **wait**. Do not patch first.
+7. **Coverage review after every prune (REQUIRED):** whenever you delete, move, or narrow a dynamics row, preview hint, or `data-ui-dynamic` annotation: (1) re-read remaining clauses of the source note (full text); (2) list remaining targets in this unit that each remaining clause can still cover; (3) if leftover chrome still matches a remaining clause but now has no effect, or a collective quantifier now hits only a subset — **stop and ask**. Deleting a wrongly assigned row is not done until this review passes or the user confirms the narrower coverage.
 
 Publish a **Dynamics inventory** in chat (no side file) **and** mirror motion rows into the review-panel **Motion and transitions** table before HTML authoring:
 
@@ -403,10 +411,10 @@ For each **planned unit** (and each of its state frames), one at a time:
   - **When motion dynamics exist:** plain `dt` + `dd` with **Motion and transitions** `<table class="effect-table">` (columns equivalent to State | Where | Effect | Reference, in the user's language). Lead sentence: motion and transitions, not data binding.
   - `dt[data-ui-asset-inventory]` — every icon/image resolution (inline hash, reused path, placeholder, pending).
   - `dt[data-ui-dynamics-inventory]` — mirrors `meta.dynamics[]` (or points to the table above); `none — static Figma snapshots only` when `dynamics` is `[]`; list every `pending-user` item explicitly.
-  - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate pet/avatar placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
+  - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
   - Style the panel for readability: `[data-ui-review-panel]` spacing, `.effect-table` borders, `.tag-motion` / `.tag-static` for effect types — copy patterns from `templates/ui-contract-template.html`.
   - Every `data-figma-node` cited in `in_scope` must still appear on a non-context DOM node (validator cross-check).
-- Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched.
+- Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched. If the patch **deletes, moves, or narrows** dynamics / preview hints, run §2c coverage review before continuing.
 
 Process one frame at a time — never batch every frame into a single query or a single edit pass.
 
@@ -416,7 +424,7 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 
 - Confirm the **hydrated default** layout matches the Figma scoped root (geometry + content), not an empty host or a hand-rewritten approximation.
 - If the host looks blank: check (1) preview script present, (2) default template non-empty, (3) `--color-text` / `--color-surface` are real CSS colors (never the invalid token `#PLACEHOLDER`), and (4) `html, body` keep the template's light preview base — IDE dark canvases otherwise show black text on a transparent page. Overwrite tokens with evidence colors, not placeholder strings.
-- Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame.
+- Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame. If the same chrome appears across states (or as repeated instances) but motion coverage is uneven, treat that as a §2c anomaly — do not call the preview done.
 - Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
 - Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
 - When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec.
@@ -489,7 +497,10 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - Skipping §2c step 0 (text-hint sweep) because layer names are messy or absent.
 - **Scoping the text-hint sweep only to `source_node`** and missing SECTION-level notes / sticky siblings that describe a transition animation for that unit.
 - Truncating a multi-line Figma motion note (first line only) instead of recording the full `hint_text`.
-- Putting a transition animation (loading→success typewriter / stagger fade) on **every** state template as if it were a per-state loop.
+- Dumping leftover clauses of a SECTION motion note onto leftover children of the first nearby unit instead of the sibling unit those clauses name.
+- Replaying a state-to-state or unit-to-unit transition as a loop on every snapshot.
+- Silently rewriting motion coverage (add / strip / move) when the same chrome would be treated inconsistently, instead of stopping to ask.
+- Deleting or moving a dynamics row without re-reading remaining source clauses against remaining targets.
 - Review-panel Motion and transitions table present but `meta.dynamics` omitted or `[]`.
 - Treating designer callout copy as `ignore` when it describes motion or off-Figma resources.
 - Hand-animating in the contract HTML instead of specifying `design-animation-asset` + poster frame (CSS **motion preview hints** with review-panel disclaimer are OK).

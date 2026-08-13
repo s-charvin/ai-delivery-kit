@@ -37,6 +37,11 @@ require "$EN" "Reference check:** run a reference/usage search" "EN two-step tar
 require "$EN" "### 9. Replace or deprecate — sweep stale pointers in the same change" "EN §9 pointer sweep"
 require "$EN" "**Rebuild/split metadata rule:**" "EN rebuild inherited-delivery re-verification"
 
+# EN — motion note split / consistency / coverage review
+require "$EN" "Split a multi-clause SECTION note per unit" "EN split SECTION note per unit"
+require "$EN" "Consistency check (REQUIRED before writing HTML)" "EN §2c consistency check"
+require "$EN" "Coverage review after every prune (REQUIRED)" "EN §2c coverage review"
+
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
   fail "EN description summarizes workflow (Auto-detects) — SDO violation"
@@ -55,6 +60,11 @@ require "$ZH" "不要写入未经核实的 \`delivery.implemented.target\`" "ZH 
 require "$ZH" "引用核实：** 运行引用/使用搜索" "ZH two-step target verification"
 require "$ZH" "### 9. 替换或废弃 — 同一次变更内清扫陈旧指针" "ZH §9 pointer sweep"
 require "$ZH" "**重建/拆分的元数据规则：**" "ZH rebuild inherited-delivery re-verification"
+
+# ZH parity for motion note split / consistency / coverage review
+require "$ZH" "多条款 SECTION 备注按 unit 拆分" "ZH split SECTION note per unit"
+require "$ZH" "一致性检查（写 HTML 前必做）" "ZH §2c consistency check"
+require "$ZH" "每次裁剪后的覆盖复查（必做）" "ZH §2c coverage review"
 
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.2 — 2026-08-13
+
+### Changed
+
+- `ui-truth-mapping`: split multi-clause SECTION motion notes onto the units they name; treat uneven coverage of the same chrome as an anomaly (stop and ask); require a coverage review after every dynamics prune.
+
 ## v0.3.1 — 2026-08-13
 
 ### Changed
