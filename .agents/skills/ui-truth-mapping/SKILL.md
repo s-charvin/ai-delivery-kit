@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: Use when a Figma design must become frozen HTML UI contract(s) (schema v2) before implementation — especially when evidence is a whole page but the requirement only hits a subtree, when multiple states need browser-switchable preview, when motion/Spine/Lottie/shimmer must be audited via a review-panel 动态 UI 效果 table, or when prior contracts dumped full screens / conflated motion with data binding / failed hydrated preview.
+description: Use when a Figma design must become frozen HTML UI contract(s) (schema v2) before implementation — especially when evidence is a whole page but the requirement only hits a subtree, when multiple states need browser-switchable preview, when motion/Spine/Lottie/shimmer must be audited via a review-panel motion table, or when prior contracts dumped full screens / conflated motion with data binding / failed hydrated preview.
 ---
 
 # UI Truth Mapping
@@ -62,63 +62,63 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 |---|---|---|
 | Whole-unit visual states (loading / empty / error / selected shell) | **Yes** | State switcher + `[data-ui-state-host]` static snapshots |
 | Element property only (`disabled`, tab `selected`) | **Yes** | Patched node in default state — not a unit-level state template |
-| Server/user **content** (avatar, nickname, counts) | **Yes** | `content-bound` in `meta.dynamics[]` + review-panel **画布占位 / 文案** notes — **not** the motion table |
+| Server/user **content** (avatar, nickname, counts) | **Yes** | `content-bound` in `meta.dynamics[]` + review-panel **Canvas placeholder / Copy** notes — **not** the motion table |
 | Figma **component variant** properties | **Yes** | `component-variant` + state templates or element patch |
-| **Motion / animation** (Spine, Lottie, shimmer, typewriter, Figma Motion) | **Yes** | `meta.dynamics[]` **and** review-panel **动态 UI 效果** table (§ below) |
+| **Motion / animation** (Spine, Lottie, shimmer, typewriter, Figma Motion) | **Yes** | `meta.dynamics[]` **and** review-panel **Motion and transitions** table (§ below) |
 | Designer-delivered **animation assets** (Lottie / GIF / video) | **Yes** | Poster frame on canvas + `design-animation-asset` + table row + `asset_status` |
 
-**Goal of §2c:** discover, classify, and persist assets when available. **Goal of the review panel:** expose the same facts in **reviewer language** so humans can approve **动态 UI 效果** before freeze — not only in chat or `meta.dynamics[]`.
+**Goal of §2c:** discover, classify, and persist assets when available. **Goal of the review panel:** expose the same facts in **human audit copy** (the user's language) so humans can approve motion and transitions before freeze — not only in chat or `meta.dynamics[]`.
 
 ### Why dynamics often miss user review (RCA)
 
-When reviewers ask “动态在哪？”, the failure is usually **presentation**, not that §2c never ran:
+When reviewers ask where the motion is, the failure is usually **presentation**, not that §2c never ran:
 
 | Symptom | Typical cause | Fix |
 |---|---|---|
-| “动态” confused with API/字段绑定 | Agent treated **动态 UI 效果** (Spine, Lottie, shimmer, typewriter) as **动态数据** (server fields, avatars) | Motion → **动态 UI 效果** table; data → **画布占位 / 文案** notes |
-| Motion known from requirement/Figma hints but absent from HTML | §2c inventory stayed in chat only; `meta.dynamics[]` / review panel never filled | Fill **both** `meta.dynamics[]` and the human table **before** presenting the contract |
+| “Dynamic” confused with API / field binding | Agent treated **motion / UI effects** (Spine, Lottie, shimmer, typewriter) as **dynamic data** (server fields, avatars) | Motion → **Motion and transitions** table; data → **Canvas placeholder / Copy** notes |
+| Motion known from requirement/Figma hints but absent from HTML | §2c inventory stayed in chat only; `meta.dynamics[]` / review panel never filled; **or** the note lived on the parent SECTION and the sweep never left `source_node` | Fill **both** `meta.dynamics[]` and the human table **before** presenting the contract; sweep SECTION siblings |
 | Cluttered or misleading canvas | Binding tables, field legends, or motion callouts on `[data-ui-state-host]` | Canvas = static layout only (+ optional motion **preview hint**); audit copy lives in `[data-ui-review-panel]` only |
 | States switch but host looks blank | Malformed host tag (`<div data-ui-state-host"></div>` with a stray `"`) | Copy verbatim from template: `<div data-ui-state-host></div>` |
 
-**For req-dm-match-card–style units:** Lottie, shimmer, and Spine were in the requirement slice and breakdown — discovery succeeded; reviewers could not audit until the **动态 UI 效果** table lived in the review panel (not on the canvas, not as a top field-binding table).
+**For req-dm-match-card–style units:** Lottie, shimmer, and Spine were in the requirement slice and breakdown — discovery succeeded; reviewers could not audit until the **Motion and transitions** table lived in the review panel (not on the canvas, not as a top field-binding table). A later Figma note (`4451:90123`: load-complete typewriter + tip scale/fade 300ms + match stagger fade 300ms) sat on the **SECTION canvas**, outside `source_node`, and was dropped until the parent-sibling sweep was required.
 
 ### Two acceptance surfaces (mandatory split)
 
 | Surface | Purpose | What belongs here |
 |---|---|---|
 | `[data-ui-state-host]` | Static layout acceptance | get_code DOM in state templates; optional CSS **motion preview hints** (`aria-hidden`, review-panel disclaimer) |
-| `[data-ui-review-panel]` | Human audit (reviewer's language) | 画布验收什么 · 不在这里验收 · **动态 UI 效果** table · 画布占位 & inference notes |
+| `[data-ui-review-panel]` | Human audit (user's language) | What the canvas accepts · Not accepted here · **Motion and transitions** table · Canvas placeholder & inference notes |
 
 Never put API field-binding tables, `data-ui-binding` legends, or motion-spec prose on the canvas.
 
-### Terminology — 动态 UI 效果 ≠ 动态数据
+### Terminology — motion / UI effects ≠ dynamic data
 
 | Reviewer term | Skill `kind` | Review-panel home |
 |---|---|---|
-| **动态 UI 效果** — Spine loop, Lottie, shimmer, typewriter, transitions | `motion-preset`, `design-animation-asset`, `prototype-transition` | **动态 UI 效果** `<table class="effect-table">` |
-| **动态数据 / 占位** — server text, avatar URL, counts | `content-bound` | **画布占位** / **文案** `dt[data-ui-evidence-for]` |
+| **Motion / UI effects** — Spine loop, Lottie, shimmer, typewriter, transitions | `motion-preset`, `design-animation-asset`, `prototype-transition` | **Motion and transitions** `<table class="effect-table">` |
+| **Dynamic data / placeholders** — server text, avatar URL, counts | `content-bound` | **Canvas placeholder / Copy** `dt[data-ui-evidence-for]` |
 | Whole-unit state flip (loading shell → success shell) | (state templates) | State switcher + `in_scope` list |
 
-When the product doc says “动态”, default to **动态 UI 效果** unless the sentence is clearly about API fields.
+When the product doc says “dynamic”, default to **motion / UI effects** unless the sentence is clearly about API fields.
 
-### Review panel — 动态 UI 效果 table (required when motion dynamics exist)
+### Review panel — Motion and transitions table (required when motion dynamics exist)
 
 When `meta.dynamics[]` contains any `motion-preset`, `design-animation-asset`, or `prototype-transition` entry:
 
-1. Add a plain `<dt>` (no `data-ui-scope`) in reviewer language, e.g. **动态 UI 效果（开发需实现）**.
-2. Open with one sentence: these rows are **动效与过渡**, not data-binding specs.
-3. Include `<table class="effect-table">` with columns such as **状态 | 位置 | 效果 | 参考** (adapt headers to reviewer language).
-4. Keep `dt[data-ui-dynamics-inventory]` in sync (full rows, or “见上方「动态 UI 效果」表格” when the table is canonical).
+1. Add a plain `<dt>` (no `data-ui-scope`) in the **user's language**, e.g. the local equivalent of **Motion and transitions (implement in code)**.
+2. Open with one sentence: these rows are **motion and transitions**, not data-binding specs.
+3. Include `<table class="effect-table">` with columns equivalent to **State | Where | Effect | Reference**, translated into the user's language.
+4. Keep `dt[data-ui-dynamics-inventory]` in sync (full rows, or “see Motion and transitions table above” in the user's language when the table is canonical).
 5. In §6 user confirmation, **explicitly direct the user to this table** before claiming frozen.
 
-Use reviewer language from the requirement slice (e.g. 中文 for Chinese product docs). Summary line example: `验收说明（非产品 UI）` — not engineer-only “Contract evidence” unless the requirement is English.
+Write `[data-ui-review-panel]` as **human audit copy** (not product UI, not engineer-only jargon). Use the **user's language** for summary, dt labels, table headers, and body copy — the language they are using in this conversation (or the requirement, if that is clearer). Template PLACEHOLDER English is structure only; do not lock the filled panel to English. Keep Figma notes verbatim in `meta.dynamics[].hint_text`; the panel cites `hint_node` and may paraphrase in the user's language. Summary example in the template: `Review notes (not product UI)`.
 
 ### Motion preview hints (optional, canvas only)
 
 When a directional cue helps (e.g. loading shimmer):
 
 - CSS-only loop inside the relevant state template, `aria-hidden="true"`, no Lottie/Spine/video bytes in HTML.
-- Review panel must say the hint is **预览示意 only**; product motion is defined in the **动态 UI 效果** table.
+- Review panel must say the hint is **preview-only**; product motion is defined in the **Motion and transitions** table.
 - Hints do **not** replace `meta.dynamics[]` or the table.
 
 ### Dynamics taxonomy (`meta.dynamics[].kind`)
@@ -137,7 +137,7 @@ Each `meta.dynamics[]` entry should also record **how you learned it** and **whe
 
 | Field | Values | Meaning |
 |---|---|---|
-| `evidence_source` | `figma-structure` \| `figma-text-hint` \| `requirement-slice` \| `user-confirmed` | Layer/variant/motion probe vs designer **文案/便签** vs requirement doc vs user chat |
+| `evidence_source` | `figma-structure` \| `figma-text-hint` \| `requirement-slice` \| `user-confirmed` | Layer/variant/motion probe vs designer copy / sticky vs requirement doc vs user chat |
 | `hint_text` | string (optional) | Verbatim designer note when `evidence_source` is `figma-text-hint` — cite the TEXT node id in `hint_node` |
 | `hint_node` | Figma node id (optional) | The annotation TEXT / sticky / callout node — not the UI node it describes |
 | `asset_status` | `resolved` \| `pending-user` \| `not-applicable` \| `waived` | Whether design bytes are already in the repo, **must ask user**, N/A (content-bound), or user waived |
@@ -151,7 +151,7 @@ Example when Figma only has a text callout and no Lottie file:
   "kind": "design-animation-asset",
   "evidence_source": "figma-text-hint",
   "hint_node": "12:901",
-  "hint_text": "红点呼吸动效，Lottie 资源另附",
+  "hint_text": "Badge pulse motion; Lottie asset attached separately",
   "asset_status": "pending-user",
   "design_asset": null,
   "static_preview": "default",
@@ -163,7 +163,7 @@ Example when Figma only has a text callout and no Lottie file:
 
 Designers often have **non-canonical** layer hygiene. Assume dynamics may appear only as:
 
-- A **TEXT / sticky / callout** near the UI ("动态", "Lottie", "gif", "资源另附", "占位图", "接口返回", "示例", "动效见…")
+- A **TEXT / sticky / callout** near the UI ("motion", "Lottie", "gif", "asset attached separately", "placeholder", "API-returned", "sample", "see motion…")
 - A **static screenshot** standing in for animation (no asset embedded in Figma)
 - **No file at all** — asset delivered later via drive, chat, or handoff outside Figma
 
@@ -173,7 +173,7 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 2. **Map hint → target node** by spatial proximity and copy semantics (e.g. arrow/callout parent, same auto-layout row, or explicit node name in the note). If ambiguous → **ask the user** which node the note refers to; do not guess.
 3. **Do not classify dynamics-hint text as `ignore`** unless it is clearly unrelated meta (version stamp, designer credit). Notes that describe motion, placeholders, or "resource attached separately" feed §2c — they are not disposable chrome.
 4. **Off-Figma assets are expected.** When hint or requirement says Lottie/GIF/video/spritesheet but Figma has no fetchable bytes → `asset_status: "pending-user"`, freeze **poster/placeholder** geometry only, and **escalate to the user** (see §2d). Never redraw animation as a static icon and call it done.
-5. **Empty `dynamics: []` is allowed only after** structure sweep **and** text-hint sweep **and** requirement-slice keyword pass all return nothing dynamic.
+5. **Empty `dynamics: []` is allowed only after** structure sweep **and** text-hint sweep (**scoped subtree + parent SECTION siblings**) **and** requirement-slice keyword pass all return nothing dynamic.
 
 ## Hard Boundary
 
@@ -187,14 +187,17 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
 - Do not skip the **§2c dynamics scan** when the scoped subtree contains COMPONENT/INSTANCE nodes, motion-named layers, or the requirement mentions animation/Lottie/GIF/video — record `dynamics: []` only after explicit confirmation the unit is static.
+- Do not skip **parent SECTION / canvas sibling** TEXT notes in §2c step 0. A note that sits beside the frames (not nested in `source_node`) is still first-class motion evidence. Truncating a multi-line transition note, or classifying it as `ignore` because it is “outside the unit root”, is a process failure.
+- Do not omit `meta.dynamics[]` when the review panel already lists motion, or when a nearby Figma note describes a transition / typewriter / shimmer. The table and `meta.dynamics[]` must stay in sync; a table-only inventory is not freeze-complete.
+- Do not treat a **loading→success (or similar) transition note** as a loop that plays inside every state. Map it to `prototype-transition` with trigger → target; canvas may show a **preview hint only on the target state**.
 - Do not approximate **Lottie/GIF/video** motion as a hand-drawn static icon — classify as `design-animation-asset`, persist the file when fetchable, and freeze a poster keyframe for preview.
 - Do not ignore **Figma component variant properties** when variant frames or `componentProperties` exist — map them to `component-variant` dynamics and/or state templates; do not collapse unrelated variants into one static snapshot without documentation.
 - Do not claim motion is "obvious from design" without probing: call `get_node_motion` (figma-bridge) when available; otherwise cite structure + requirement + designer notes in the dynamics inventory.
-- Do not embed **product** animation bytes (Lottie JSON, Spine, GIF, video) inside `ui-contract.html` — freeze poster/placeholder geometry and specify runtime motion via `meta.dynamics[]` + the **动态 UI 效果** table. CSS **motion preview hints** are allowed only per “Motion preview hints” above.
+- Do not embed **product** animation bytes (Lottie JSON, Spine, GIF, video) inside `ui-contract.html` — freeze poster/placeholder geometry and specify runtime motion via `meta.dynamics[]` + the **Motion and transitions** table. CSS **motion preview hints** are allowed only per “Motion preview hints” above.
 - Do not put API field-binding tables, `data-ui-binding` legends, or motion-spec callouts on `[data-ui-state-host]` or above it — binding belongs in implementation specs, not the visual acceptance canvas.
-- Do not conflate **动态 UI 效果** (motion table) with **content-bound** placeholders in the same table row without labeling — server-filled copy/avatars go under **画布占位 / 文案** notes.
-- Do not write `1:1` next to digits in review-panel prose — the validator may parse `\d+:\d+` as a Figma node id; use「一比一」or「像素级」instead.
-- Do not treat designer **文案/便签** that describe motion, placeholders, or "resource attached separately" as `ignore` — they are dynamics hints for §2c unless clearly unrelated meta.
+- Do not conflate **motion / UI effects** (motion table) with **content-bound** placeholders in the same table row without labeling — server-filled copy/avatars go under **Canvas placeholder / Copy** notes.
+- Do not write `1:1` next to digits in review-panel prose — the validator may parse `\d+:\d+` as a Figma node id; write "pixel-level" instead.
+- Do not treat designer copy / stickies that describe motion, placeholders, or "resource attached separately" as `ignore` — they are dynamics hints for §2c unless clearly unrelated meta.
 - Do not infer which UI node a text hint refers to when multiple candidates exist — ask the user to point at the target node or provide the asset.
 - Do not declare a contract **frozen** while any `meta.dynamics[]` entry or asset note has `asset_status: "pending-user"` (or equivalent `pending:` wording) **unless** the user explicitly waives that item in chat — then set `asset_status: "waived"` and quote their waiver in the review panel.
 - Do not silently skip missing Lottie/GIF/video because it is "probably on the designer's drive" — **actively ask the user** to attach or path the file (§2d).
@@ -280,7 +283,7 @@ Classify each frame:
 | `shared-component` | A shared navigation shell, tab bar, or persistent frame wrapping pages | One `ui-contract.html` with `unit.type: "shared-component"`; referenced via `unit.dependencies` from pages that use it |
 | `context` | Page chrome needed only to locate the in-scope subtree | Omit from acceptance DOM, or include with `data-ui-scope="context"` — never treat as freeze truth |
 | `ignore` | Non-UI content (unrelated designer credit, version stamps) or out-of-scope chrome | Exclude from contracts entirely |
-| `dynamics-hint` | Designer **TEXT / sticky / callout** describing motion, placeholders, or off-Figma resources | **Not** frozen as UI truth — feed §2c; cite `hint_node` + verbatim text; map to target UI node |
+| `dynamics-hint` | Designer **TEXT / sticky / callout** describing motion, placeholders, or off-Figma resources — **including notes that are siblings of the unit frames on the parent SECTION**, not nested in `source_node` | **Not** frozen as UI truth — feed §2c; cite `hint_node` + verbatim **full** text; map to target UI node / transition |
 
 **Grouping rules:**
 - When In Scope is a local change (tip, badge, sheet entry, one control) → prefer `component` or `modal`, **not** a full `page` dump of the Figma screen.
@@ -300,11 +303,15 @@ Classify each frame:
 
 Before the first `get_code` for this unit:
 
-0. **Text-hint sweep (do this even when layers look messy)** — on the scoped subtree, list every TEXT / sticky / callout whose copy matches dynamics keywords, in any language designers use, e.g.:
-   - 动态, 动效, 动画, Lottie, GIF, 视频, 骨架屏, 占位, 示例图, 接口返回, 资源另附, 另发, 外链, pulse, loading, skeleton, placeholder, "asset attached", "see drive"
-   - Classify each as `dynamics-hint` (§2 table); record `hint_node`, verbatim `hint_text`, and your best **target UI node** hypothesis.
-   - If one hint could attach to multiple UI nodes → **stop and ask the user** before freezing.
-1. **Candidate sweep** — on the unit's scoped `source_node`, use `get_structure` (and requirement-slice keywords: avatar, 动画, Lottie, GIF, 骨架屏, loading, pulse, badge count…) to list nodes that are likely dynamic:
+0. **Text-hint sweep (do this even when layers look messy)** — list every TEXT / sticky / callout whose copy **or layer name** matches dynamics keywords. Sweep **two rings**, not only the freeze root:
+   1. **Scoped subtree** (`unit.source_node` and each state `source_node`).
+   2. **Parent canvas / SECTION siblings (REQUIRED)** — designer notes often sit **outside** the unit root as siblings of the page frames (same SECTION / parent FRAME, not nested under `source_node`). `get_structure` the parent SECTION (or the smallest common ancestor that also contains the unit frames) at shallow depth and collect TEXT / sticky / callout children that are **not** inside any `source_node`. Spatial proximity (near the unit frames), arrows, or copy that names a unit state (load complete, transition, typewriter) maps the hint to this unit.
+   - Keywords (match equivalent wording in the designer's language), e.g.: motion, animation, transition, typewriter, shimmer, Lottie, GIF, video, skeleton, placeholder, sample image, API-returned, asset attached separately, send later, external link, pulse, loading
+   - Classify each as `dynamics-hint` (§2 table); record `hint_node`, **verbatim full** `hint_text` (do not truncate multi-line notes), and your best **target UI node** hypothesis.
+   - A hint that describes a **state-to-state transition** (e.g. after loading completes…) is `prototype-transition`, **not** a per-state loop. Do not replay it on every state template.
+   - If one hint could attach to multiple UI nodes **or** multiple units → **stop and ask the user** before freezing.
+   - Do **not** mark these canvas notes `ignore` just because they are outside `source_node`.
+1. **Candidate sweep** — on the unit's scoped `source_node`, use `get_structure` (and requirement-slice keywords: avatar, animation, Lottie, GIF, skeleton, loading, pulse, badge count…) to list nodes that are likely dynamic:
    - `INSTANCE` / `COMPONENT` with variant siblings or property-like frame names (when present — **absence of variants does not mean static**)
    - Image fills on user/content fields (avatar, cover, UGC)
    - Layers named like `animate`, `lottie`, `gif`, `motion`, `loading`, `skeleton` (bonus signal only)
@@ -316,7 +323,7 @@ Before the first `get_code` for this unit:
    - Time-based effects → static **poster** frame in HTML + `motion-preset` or `design-animation-asset` entry; implementation replays the asset at runtime.
    - Content fields → placeholder DOM + `content-bound` with `implementation_notes` naming the API/binding field.
 
-Publish a **Dynamics inventory** in chat (no side file) **and** mirror motion rows into the review-panel **动态 UI 效果** table before HTML authoring:
+Publish a **Dynamics inventory** in chat (no side file) **and** mirror motion rows into the review-panel **Motion and transitions** table before HTML authoring:
 
 ```
 | dynamic-id | target node | kind | evidence_source | hint (if any) | asset_status | static preview | implementation hint |
@@ -330,19 +337,19 @@ If the unit has no dynamic behavior after **steps 0–1 and requirement pass**, 
 
 When any dynamics row or asset note has `asset_status: "pending-user"` (or `pending:` in review panel), **stop and message the user** with a structured request before claiming frozen — unless they already waived in this session.
 
-Use this template in chat:
+Write the request in the **user's language**. English skeleton (translate before sending):
 
 ```
-【ui-truth-mapping 待补充资源】<unit-id>
-以下项在 Figma/需求中有动态或资源说明，但仓库内尚无可用文件。请提供资源或明确豁免后再冻结契约：
+[ui-truth-mapping pending assets] <unit-id>
+These items have motion or resource notes in Figma/requirements, but no usable file in the repo yet. Provide the asset or an explicit waiver before freeze:
 
 1. <dynamic-id> — <kind>
-   - 依据：<evidence_source> / 原文：「<hint_text>」
-   - 关联节点：<figma_node>
-   - 需要：<.json|.gif|.mp4|… 或项目内路径>
-   - 当前合同：仅冻结静态海报帧 / 占位几何
+   - Evidence: <evidence_source> / verbatim: "<hint_text>"
+   - Related node: <figma_node>
+   - Need: <.json|.gif|.mp4|… or in-repo path>
+   - Contract now: static poster frame / placeholder geometry only
 
-（可复制多条）
+(repeat for each item)
 ```
 
 After the user provides a file: persist it, update `design_asset`, set `asset_status: "resolved"`, re-run validator. After explicit waiver: set `asset_status: "waived"` and quote the waiver in `[data-ui-dynamics-inventory]`.
@@ -389,14 +396,14 @@ For each **planned unit** (and each of its state frames), one at a time:
   - Every truth-bearing element carries unique `data-ui-id`, `data-ui-kind`, and `data-figma-node`.
   - Nodes listed in `meta.dynamics[]` also carry `data-ui-dynamic="<kind>"` and `data-ui-dynamic-id="<dynamics[].id>"` when they appear in the frozen DOM.
   - Keep `script[data-ui-state-preview]` verbatim so open-in-browser hydrates the default state and enables switching.
-- `[data-ui-review-panel]` — human-readable, reviewer-language sections (see “Two acceptance surfaces”):
-  - `<summary>` — e.g. `验收说明（非产品 UI）`, not a dump of engineer jargon.
-  - `dt[data-ui-scope="in_scope"]` — **what the canvas accepts** (short labels; Figma node ids optional in `dd` — avoid noisy id lists in the first line reviewers read).
+- `[data-ui-review-panel]` — human-readable audit sections in the **user's language** (see “Two acceptance surfaces”):
+  - `<summary>` — local equivalent of `Review notes (not product UI)` (template English is an example, not a language lock).
+  - `dt[data-ui-scope="in_scope"]` — **what the canvas accepts** (short labels; Figma node ids optional in `dd`).
   - `dt[data-ui-scope="out_of_scope"]` — what is explicitly not accepted here (outer shell, real Spine/Lottie runtime, etc.).
-  - **When motion dynamics exist:** plain `dt` + `dd` with **动态 UI 效果** `<table class="effect-table">` (状态 | 位置 | 效果 | 参考). Lead sentence: 动效与过渡，不是数据绑定.
+  - **When motion dynamics exist:** plain `dt` + `dd` with **Motion and transitions** `<table class="effect-table">` (columns equivalent to State | Where | Effect | Reference, in the user's language). Lead sentence: motion and transitions, not data binding.
   - `dt[data-ui-asset-inventory]` — every icon/image resolution (inline hash, reused path, placeholder, pending).
   - `dt[data-ui-dynamics-inventory]` — mirrors `meta.dynamics[]` (or points to the table above); `none — static Figma snapshots only` when `dynamics` is `[]`; list every `pending-user` item explicitly.
-  - `dt[data-ui-evidence-for]` — **画布占位 / 文案** for `inferred` nodes and `content-bound` fields; merge duplicate pet/avatar placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
+  - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate pet/avatar placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
   - Style the panel for readability: `[data-ui-review-panel]` spacing, `.effect-table` borders, `.tag-motion` / `.tag-static` for effect types — copy patterns from `templates/ui-contract-template.html`.
   - Every `data-figma-node` cited in `in_scope` must still appear on a non-context DOM node (validator cross-check).
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched.
@@ -412,10 +419,10 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame.
 - Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
 - Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
-- When `meta.dynamics[]` has motion entries: confirm the **动态 UI 效果** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec.
+- When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec.
 - The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
 - Never assume "validator OK ⇒ looks like Figma."
-- **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). When motion dynamics exist, **call out the 动态 UI 效果 table by name** and ask the user to confirm those effects — not only static layout. If §2d applied, include the pending-resource list (resolved / still waiting / waived). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run. **Do not treat confirmation as a substitute for providing missing assets** — waiving assets must be explicit.
+- **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). When motion dynamics exist, **call out the Motion and transitions table by name** and ask the user to confirm those effects — not only static layout. If §2d applied, include the pending-resource list (resolved / still waiting / waived). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run. **Do not treat confirmation as a substitute for providing missing assets** — waiving assets must be explicit.
 
 ### 7. Run the validator
 
@@ -480,11 +487,15 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - Downloading a Figma **example** image as a frozen asset when the requirement context shows the content is server-provided (avatar, user upload, dynamic badge).
 - Skipping §2c and leaving `dynamics` undocumented when COMPONENT variants or motion layers are in scope.
 - Skipping §2c step 0 (text-hint sweep) because layer names are messy or absent.
+- **Scoping the text-hint sweep only to `source_node`** and missing SECTION-level notes / sticky siblings that describe a transition animation for that unit.
+- Truncating a multi-line Figma motion note (first line only) instead of recording the full `hint_text`.
+- Putting a transition animation (loading→success typewriter / stagger fade) on **every** state template as if it were a per-state loop.
+- Review-panel Motion and transitions table present but `meta.dynamics` omitted or `[]`.
 - Treating designer callout copy as `ignore` when it describes motion or off-Figma resources.
 - Hand-animating in the contract HTML instead of specifying `design-animation-asset` + poster frame (CSS **motion preview hints** with review-panel disclaimer are OK).
 - Putting field-binding / API mapping tables on the canvas or above `[data-ui-state-host]`.
-- Surfacing §2c motion inventory only in chat while the review panel lacks a **动态 UI 效果** table.
-- Conflating **动态 UI 效果** with **content-bound** data filling in one undifferentiated “dynamic” section.
+- Surfacing §2c motion inventory only in chat while the review panel lacks a **Motion and transitions** table.
+- Conflating **motion / UI effects** with **content-bound** data filling in one undifferentiated “dynamic” section.
 - Malforming `[data-ui-state-host]` (`data-ui-state-host">`) so hydration fails and the canvas looks broken.
 - Using `1:1` in review-panel copy where the validator will mis-read it as a Figma node id.
 - Freezing with `pending-user` assets without §2d escalation or explicit user waiver.

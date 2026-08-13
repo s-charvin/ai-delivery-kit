@@ -27,6 +27,7 @@ Feed requirement-slice and design source. Produces one `ui-contract.html` (schem
 5. Every icon/image/vectorized subtree is evidence-backed: inlined asset bytes (with asset hash), a reused project asset, or a review-panel-noted server-provided placeholder / pending item. Hand-drawn glyphs, `get_structure`-only reconstructions (structure cannot prove paint: opacity/gradient/stroke), and unresolved `data-src` shells fail the bar.
 6. The user has manually confirmed each `ui-contract.html` (skip only when the user explicitly waived re-review). The hydrated HTML is the review medium — do not save preview screenshot artifacts.
 7. If the contract set changed in this run (contracts added, deleted, replaced, or unit ids changed), the stale-pointer sweep (`ui-truth-mapping` §9) is done: no **active** pointer in `status.json` notes, `visual-acceptance.md`, progress/todo, or breakdown summaries targets a removed/renamed contract. One historical "superseded by …" note line is allowed.
+8. Nearby Figma notes / stickies on the **parent SECTION** (not only inside `source_node`) that describe motion / transitions are in `meta.dynamics[]` **and** the review-panel **Motion and transitions** table, with verbatim `hint_text` (source language in JSON; the HTML panel paraphrases in the user's language).
 
 ## After completion
 

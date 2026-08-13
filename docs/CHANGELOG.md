@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1 — 2026-08-13
+
+### Changed
+
+- `ui-truth-mapping`: treat Figma notes on the **parent SECTION / canvas siblings** (not only inside `source_node`) as first-class motion evidence; keep `meta.dynamics[]` in sync with the review-panel motion table; map loading→success notes to `prototype-transition`; write the review panel in the user's language.
+
 ## v0.3.0 — 2026-08-13
 
 Unified artifact layout refactor.

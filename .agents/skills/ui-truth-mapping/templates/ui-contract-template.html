@@ -258,40 +258,45 @@
     </template>
 
     <!--
-      Review panel: human audit copy in reviewer language (see ui-truth-mapping SKILL).
+      Review panel: human audit copy (not product UI). Fill summary, labels,
+      table headers, and body copy in the user's language. Template PLACEHOLDER
+      English is structure only — not a language lock.
       - Canvas ([data-ui-state-host]) = static layout only (+ optional CSS motion preview hints).
       - Do NOT put field-binding tables or motion spec prose on the canvas.
-      - When meta.dynamics has motion entries: include a 动态 UI 效果 table (effect-table).
+      - When meta.dynamics has motion entries: include a Motion and transitions table (effect-table).
+      - Cite nearby Figma notes via hint_node; keep verbatim source language in
+        meta.dynamics[].hint_text; paraphrase in the user's language in the panel.
+      - Prototype transitions belong in the table as trigger to target, not as a loop on every state.
       - content-bound placeholders → dt[data-ui-evidence-for], not the motion table.
-      - Avoid "1:1" in prose (validator may parse as Figma node id); use 一比一 / 像素级.
+      - Avoid "1:1" in prose (validator may parse as a Figma node id); write "pixel-level" instead.
     -->
     <details data-ui-review-panel open>
-      <summary>PLACEHOLDER: 验收说明（非产品 UI） / Review notes (not product UI)</summary>
+      <summary>PLACEHOLDER: Review notes (not product UI)</summary>
       <dl>
-        <dt data-ui-scope="in_scope">PLACEHOLDER: 画布验收什么 / What the canvas accepts</dt>
+        <dt data-ui-scope="in_scope">PLACEHOLDER: What the canvas accepts</dt>
         <dd>
           <p>PLACEHOLDER: one sentence — white area below the state switcher is the static layout check.</p>
           <ul>
             <li><strong>PLACEHOLDER-state-id</strong> — short label for what this state shows</li>
           </ul>
         </dd>
-        <dt data-ui-scope="out_of_scope">PLACEHOLDER: 不在这里验收 / Not accepted here</dt>
+        <dt data-ui-scope="out_of_scope">PLACEHOLDER: Not accepted here</dt>
         <dd>
           <ul>
             <li>PLACEHOLDER: outer shell, real Spine/Lottie runtime, etc.</li>
           </ul>
         </dd>
         <!-- Plain dt (no data-ui-scope) when motion dynamics exist: -->
-        <dt>PLACEHOLDER: 动态 UI 效果（开发需实现） / Motion &amp; transitions (implement in code)</dt>
+        <dt>PLACEHOLDER: Motion and transitions (implement in code)</dt>
         <dd>
-          <p>PLACEHOLDER: 下列为<strong>动效与过渡</strong>，不是数据绑定。画布只做静态截图级还原。</p>
+          <p>PLACEHOLDER: These rows are <strong>motion and transitions</strong>, not data binding. The canvas is a static snapshot.</p>
           <table class="effect-table">
             <thead>
               <tr>
-                <th>状态</th>
-                <th>位置</th>
-                <th>效果</th>
-                <th>参考</th>
+                <th>State</th>
+                <th>Where</th>
+                <th>Effect</th>
+                <th>Reference</th>
               </tr>
             </thead>
             <tbody>
@@ -303,13 +308,13 @@
               </tr>
             </tbody>
           </table>
-          <p>PLACEHOLDER: if a CSS motion preview hint exists on canvas, say it is 预览示意 only.</p>
+          <p>PLACEHOLDER: if a CSS motion preview hint exists on canvas, say it is preview-only.</p>
         </dd>
         <dt data-ui-asset-inventory>Assets</dt>
         <dd>PLACEHOLDER: every icon/image — inline hash, reused path, placeholder, or pending. Write "none" if no icons/images.</dd>
-        <dt data-ui-dynamics-inventory>Dynamics &amp; motion (machine mirror)</dt>
-        <dd>PLACEHOLDER: mirror meta.dynamics[] or write "见上方动态 UI 效果表格" / "none — static Figma snapshots only" when dynamics is [].</dd>
-        <dt data-ui-evidence-for="PLACEHOLDER-region-id">PLACEHOLDER: 画布占位 / Canvas placeholder</dt>
+        <dt data-ui-dynamics-inventory>Dynamics and motion (machine mirror)</dt>
+        <dd>PLACEHOLDER: mirror meta.dynamics[] or write "see Motion and transitions table above" / "none — static Figma snapshots only" when dynamics is [].</dd>
+        <dt data-ui-evidence-for="PLACEHOLDER-region-id">PLACEHOLDER: Canvas placeholder</dt>
         <dd>PLACEHOLDER: inferred or content-bound nodes — why poster/placeholder geometry, product replacement.</dd>
       </dl>
     </details>

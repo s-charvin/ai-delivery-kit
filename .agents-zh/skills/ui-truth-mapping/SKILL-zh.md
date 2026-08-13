@@ -122,7 +122,9 @@ templates/
 - 存在变体 frame 或 `componentProperties` 时**禁止忽略 Figma 组件变体** — 映射为 `component-variant` 与/或 state 模板。
 - 有 figma-bridge 时应对候选节点调用 `get_node_motion`；禁止无证据编造 easing/时长。
 - **禁止**在 `ui-contract.html` 内嵌 autoplay 动画 — 合同预览保持静态关键帧；运行时动效由 `meta.dynamics` 交给实现方。
-- 描述动效、占位、**资源另附**的设计师**文案/便签**不要标成 `ignore` — 它们是 §2c 动态线索。
+- 描述动效、占位、**资源另附**的设计师**文案/便签**不要标成 `ignore` — 它们是 §2c 动态线索。父级 SECTION 上、不在 `source_node` 内的过渡动画备注同样是一等证据；禁止只扫冻结根而丢掉画布备注。
+- 不要把「加载完成→success」这类过渡备注当成每个状态上的循环；记 `prototype-transition`。
+- review-panel 已有动效表时，`meta.dynamics[]` 必须同步，禁止只写表不写 meta。
 - 文案指向多个 UI 节点时**禁止猜测** — 问用户指明节点或提供资源。
 - 存在 `asset_status: "pending-user"`（或 review panel 里 `pending:`）时**禁止宣布 frozen**，除非用户在本会话**明确豁免** — 此时改 `waived` 并在 review panel 引用原话。
 - 资源「可能在设计师网盘」**不是**跳过理由 — 必须 **§2d 主动问用户** 提供文件或路径。
@@ -228,7 +230,13 @@ templates/
 
 在本单元第一次 `get_code` 之前：
 
-0. **文案提示扫描（图层乱也必须做）** — 在作用域子树列出所有 TEXT/便签/说明，命中例如：动态、动效、动画、Lottie、GIF、视频、骨架屏、占位、示例图、接口返回、资源另附、另发、外链、pulse、loading、placeholder、"asset attached" 等。标为 `dynamics-hint`；记 `hint_node`、原文、推测的**目标 UI 节点**；多候选 → **先问用户**。
+0. **文案提示扫描（图层乱也必须做）** — 列出所有 TEXT/便签/说明（文案**或图层名**命中关键词）。扫 **两圈**，不要只扫冻结根：
+   1. **作用域子树**（`unit.source_node` 与各 state `source_node`）。
+   2. **父级 SECTION / 画布兄弟（必做）** — 设计师备注经常画在 unit 根**外面**，与页面 Frame 同级。对父 SECTION 做浅层 `get_structure`，收集不在任何 `source_node` 内的 TEXT/便签。用空间邻近、箭头、或点名状态的文案（「加载完成」「过渡」「打字机」）映射到本 unit。
+   - 关键词例如：动态、动效、动画、过渡、打字机、扫光、Lottie、GIF、视频、骨架屏、占位、示例图、接口返回、资源另附、另发、外链、pulse、loading、placeholder、typewriter。
+   - 标为 `dynamics-hint`；记 `hint_node`、**完整原文**（多行备注禁止截断）、推测的目标 UI 节点。
+   - 描述 **状态过渡**（如「加载完成后…」）记 `prototype-transition`，**不要**当成每个状态模板上的循环。
+   - 多候选 unit/节点 → **先问用户**。不要因为备注不在 `source_node` 内就标 `ignore`。
 1. **候选扫描** — `get_structure` + 需求关键词：`INSTANCE`/`COMPONENT` 变体（**没有变体也不代表静态**）、用户内容类图片、动效命名图层（仅加分项）。
 2. **动效探测** — 含文案指向的节点；有 figma-bridge 则 `get_node_motion`；仅 TemPad 时记「未探测」，**文案与需求仍有效**。
 3. **设计动画资源** — 能取到字节则持久化，`asset_status: "resolved"`；提示/需求有资源但 Figma 无文件 → `pending-user`，只冻海报帧，**禁止编造文件**。
