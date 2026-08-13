@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.3 — 2026-08-13
+
+### Changed
+
+- `ui-truth-mapping`: when the user names an existing implementation as the motion to reuse, read it first; preview mechanics must match the reference (get_code packing must not silently invert growth/reveal).
+
 ## v0.3.2 — 2026-08-13
 
 ### Changed

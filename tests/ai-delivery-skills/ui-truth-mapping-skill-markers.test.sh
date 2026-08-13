@@ -41,6 +41,7 @@ require "$EN" "**Rebuild/split metadata rule:**" "EN rebuild inherited-delivery 
 require "$EN" "Split a multi-clause SECTION note per unit" "EN split SECTION note per unit"
 require "$EN" "Consistency check (REQUIRED before writing HTML)" "EN §2c consistency check"
 require "$EN" "Coverage review after every prune (REQUIRED)" "EN §2c coverage review"
+require "$EN" "User-named reference implementation" "EN user-named reference"
 
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
@@ -65,6 +66,7 @@ require "$ZH" "**重建/拆分的元数据规则：**" "ZH rebuild inherited-del
 require "$ZH" "多条款 SECTION 备注按 unit 拆分" "ZH split SECTION note per unit"
 require "$ZH" "一致性检查（写 HTML 前必做）" "ZH §2c consistency check"
 require "$ZH" "每次裁剪后的覆盖复查（必做）" "ZH §2c coverage review"
+require "$ZH" "用户点名的参考实现" "ZH user-named reference"
 
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"

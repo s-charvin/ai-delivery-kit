@@ -81,6 +81,17 @@ templates/
 
 `meta.dynamics` 可选；全静态时用 `[]`。非空时须在 review panel 逐条列出，且在 DOM 节点上标 `data-ui-dynamic` + `data-ui-dynamic-id`。
 
+### 用户点名的参考实现（用户指向既有代码时必做）
+
+用户点名某个既有 widget / 类 / preset / 文件作为要复用的动效时：
+
+1. **写预览 CSS/JS 之前先读参考实现。** 抽出该效果实际如何推进。
+2. **预览力学必须匹配参考**，不是看起来像。参考是原地生长/显现时，用 clip / mask / translate 或相反 packing 去移动已经显示的内容，是流程失败。
+3. **保留 get_code 几何；get_code packing 不得静默覆盖参考。** 尺寸/位置/padding 来自 TemPad。若转移来的 alignment/overflow 会让预览与点名参考不一致，只改动效相关 packing 使预览匹配参考，并在 review panel 注明。HTML 里复现不了力学就说明并**停下** — 禁止交付误导性替身。
+4. 在 `implementation_notes` 与动效表 **Reference** 列引用参考路径/符号。
+
+适用于任何点名复用（显现、stagger、循环、过渡），不限于某一种效果。
+
 每条 `meta.dynamics[]` 还应记录**依据从哪来**、**资源是否齐**：
 
 | 字段 | 取值 | 含义 |
@@ -122,6 +133,7 @@ templates/
 - 存在变体 frame 或 `componentProperties` 时**禁止忽略 Figma 组件变体** — 映射为 `component-variant` 与/或 state 模板。
 - 有 figma-bridge 时应对候选节点调用 `get_node_motion`；禁止无证据编造 easing/时长。
 - **禁止**在 `ui-contract.html` 内嵌 autoplay 动画 — 合同预览保持静态关键帧；运行时动效由 `meta.dynamics` 交给实现方。
+- 不要交付**力学**与**用户点名的参考实现**不一致的动效预览。先读参考。get_code packing 不得静默反转生长/显现方向，也不得移动已经显示的内容。见「用户点名的参考实现」。
 - 描述动效、占位、**资源另附**的设计师**文案/便签**不要标成 `ignore` — 它们是 §2c 动态线索。父级 SECTION 上、不在 `source_node` 内的过渡动画备注同样是一等证据；禁止只扫冻结根而丢掉画布备注。
 - 不要把多 unit 的 SECTION 动效备注的**每一条款**都塞给第一张邻近契约。按条款点名的 unit 拆分；剩下的编号模块经常是**兄弟 unit**，不是同一张卡片里剩下的子节点。
 - 不要把描述 **从一个状态/unit 变到另一个** 的条款当成每个状态快照上的循环。记 `prototype-transition`（trigger → target）。
@@ -247,7 +259,7 @@ templates/
 2. **动效探测** — 含文案指向的节点；有 figma-bridge 则 `get_node_motion`；仅 TemPad 时记「未探测」，**文案与需求仍有效**。
 3. **设计动画资源** — 能取到字节则持久化，`asset_status: "resolved"`；提示/需求有资源但 Figma 无文件 → `pending-user`，只冻海报帧，**禁止编造文件**。
 4. **分类** + 填 `evidence_source` / `asset_status`。
-5. **映射到契约**（同英文版）。
+5. **映射到契约**（同英文版）。**用户点名的参考：** 若用户为本效果指向既有代码，映射前先读。把符号记入 `implementation_notes`。预览 CSS/JS 必须跟随该参考的力学（见「用户点名的参考实现」）。
 6. **一致性检查（写 HTML 前必做）：** 对每个已映射效果，列出画布上该 chrome 的每一份副本（每个状态模板、每个重复实例、每个仍匹配的兄弟）。若有的副本会有该效果、有的没有，且原文**没有**明确排除后者 — 这是**异常**。先展示不一致并**等待**。禁止先改再问。
 7. **每次裁剪后的覆盖复查（必做）：** 每当删除、挪动或收窄 dynamics 行、预览提示或 `data-ui-dynamic` 标注时：(1) 重读原文剩余条款（全文）；(2) 列出本 unit 中每条剩余条款仍能覆盖的目标；(3) 若剩余 chrome 仍匹配某条款却已无效果，或全体量词现在只打中子集 — **停下问用户**。错分的行删掉不算完成，直到本次复查通过或用户确认更窄的覆盖。
 
@@ -336,7 +348,7 @@ templates/
 - 若 host 看起来空白：检查（1）预览脚本在场，（2）默认 template 非空，（3）`--color-text` / `--color-surface` 是合法 CSS 颜色（绝不能残留无效 token `#PLACEHOLDER` — IDE 暗色画布会把黑字藏掉）。模板因此为 `html, body` 强制浅色底 + `color-scheme: light`；用证据色覆盖，不要写占位字符串。
 - 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。若同一套 chrome 跨状态（或重复实例）出现但动效覆盖不均，按 §2c 异常处理 — 不得宣称预览完成。
 - 逐一比对**每个 icon/图片**与其证据：内联字节必须与取得的资产载荷一致；复用资产必须与项目文件一致；服务端占位必须可见地是占位。即便几何完全正确，「看起来是对的 icon」的重绘图也不通过本项检查。
-- 展开 `[data-ui-review-panel]`，确认范围清单、资产说明、每个 `data-figma-node` 与推断说明清晰准确。
+- 展开 `[data-ui-review-panel]`，确认范围清单、资产说明、每个 `data-figma-node` 与推断说明清晰准确。若用户点名了参考实现，确认画布预览使用同一套力学（已显示内容相对参考不得平移或反向）。
 - hydrate 后的 HTML **就是**复审媒介。不要生成或保存预览截图产物（如 `contract-preview-*.png`）— 人直接审核 HTML，截图会与契约漂移。
 - 绝不假设「校验器 OK ⇒ 看起来像 Figma」。
 - **用户确认门禁：** 把每份契约提交用户人工确认（路径 + 打开方式 + review panel 摘要）。在用户显式确认前不得宣布冻结 — 除非用户已明确豁免本轮复审。
@@ -407,6 +419,7 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - 把状态↔状态或 unit↔unit 过渡当成每个快照上的循环重放。
 - 同一套 chrome 会被不一致对待时，静默改写动效覆盖（增 / 删 / 挪），而不是停下问用户。
 - 删除或挪动 dynamics 行却不对照剩余原文条款与剩余目标做覆盖复查。
+- 交付力学与用户点名参考实现不一致的动效预览（clip / mask / translate 或相反 packing 去移动已经显示的内容，而不是先读参考如何推进）。
 - 把预览截图（`contract-preview-*.png` 等）当作交付产物保存 — hydrate 后的 HTML 才是复审媒介。
 - 未经逐份契约的用户显式确认即宣布冻结（除非用户明确豁免复审）。
 - 凭记忆写入 `delivery.implemented.target`，或在未对照当前代码重新核实的情况下从被取代的旧契约继承 target。

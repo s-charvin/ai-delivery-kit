@@ -81,6 +81,7 @@ When reviewers ask where the motion is, the failure is usually **presentation**,
 | States switch but host looks blank | Malformed host tag (`<div data-ui-state-host"></div>` with a stray `"`) | Copy verbatim from template: `<div data-ui-state-host></div>` |
 | Same chrome treated inconsistently (some copies have an effect, others do not) | Agent silently rewrote coverage to match a time phrase or a nearest-node guess | **Anomaly — stop and ask.** Do not silently add, strip, or move. See §2c consistency check. |
 | After a delete/move, leftover chrome that still matches a remaining clause has no effect | Agent treated the delete as done and did not re-read remaining source | **Coverage review** after every prune. If coverage shrank, stop and ask. See §2c. |
+| Preview motion disagrees with a user-named reference implementation | Agent kept get_code packing in the preview, or invented a CSS stand-in, without reading how the reference actually progresses | Read the reference first. Preview must match **mechanics**. See “User-named reference”. |
 
 ### Two acceptance surfaces (mandatory split)
 
@@ -120,6 +121,17 @@ When a directional cue helps (e.g. a shimmer loop):
 - CSS-only loop inside the relevant state template, `aria-hidden="true"`, no Lottie/Spine/video bytes in HTML.
 - Review panel must say the hint is **preview-only**; product motion is defined in the **Motion and transitions** table.
 - Hints do **not** replace `meta.dynamics[]` or the table.
+
+### User-named reference implementation (REQUIRED when the user points at existing code)
+
+When the user names an existing widget, class, preset, or file as the motion to reuse:
+
+1. **Read the reference before writing preview CSS/JS.** Extract how the effect is actually implemented.
+2. **Preview mechanics must match the reference**, not a look-alike. A clip, mask, translate, or opposite packing that moves already-shown content is a process failure when the reference grows or reveals in place.
+3. **get_code geometry stays; get_code packing must not silently override the reference.** Layout size/position/padding come from TemPad. If transferred alignment/overflow would make the preview disagree with the named reference, change only the motion-relevant packing so the preview matches the reference, and note that in the review panel. If you cannot reproduce the mechanics in HTML, say so and **stop** — do not ship a misleading stand-in.
+4. Cite the reference path/symbol in `implementation_notes` and the motion table **Reference** column.
+
+This applies to any named reuse (reveal, stagger, loop, transition), not only one effect type.
 
 ### Dynamics taxonomy (`meta.dynamics[].kind`)
 
@@ -197,6 +209,7 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - Do not ignore **Figma component variant properties** when variant frames or `componentProperties` exist — map them to `component-variant` dynamics and/or state templates; do not collapse unrelated variants into one static snapshot without documentation.
 - Do not claim motion is "obvious from design" without probing: call `get_node_motion` (figma-bridge) when available; otherwise cite structure + requirement + designer notes in the dynamics inventory.
 - Do not embed **product** animation bytes (Lottie JSON, Spine, GIF, video) inside `ui-contract.html` — freeze poster/placeholder geometry and specify runtime motion via `meta.dynamics[]` + the **Motion and transitions** table. CSS **motion preview hints** are allowed only per “Motion preview hints” above.
+- Do not ship a motion preview whose **mechanics** disagree with a **user-named reference implementation**. Read the reference first. get_code packing must not silently invert growth/reveal direction or move already-shown content. See “User-named reference”.
 - Do not put API field-binding tables, `data-ui-binding` legends, or motion-spec callouts on `[data-ui-state-host]` or above it — binding belongs in implementation specs, not the visual acceptance canvas.
 - Do not conflate **motion / UI effects** (motion table) with **content-bound** placeholders in the same table row without labeling — server-filled copy/avatars go under **Canvas placeholder / Copy** notes.
 - Do not write `1:1` next to digits in review-panel prose — the validator may parse `\d+:\d+` as a Figma node id; write "pixel-level" instead.
@@ -328,6 +341,7 @@ Before the first `get_code` for this unit:
    - Variant values that change the whole unit → additional `meta.states[]` entries **and** `component-variant` dynamics linking state id ↔ property values.
    - Time-based effects → static **poster** frame in HTML + `motion-preset` or `design-animation-asset` entry; implementation replays the asset at runtime.
    - Content fields → placeholder DOM + `content-bound` with `implementation_notes` naming the API/binding field.
+   - **User-named reference:** if the user pointed at existing code for this effect, read it before mapping. Record the symbol in `implementation_notes`. Preview CSS/JS must follow that reference's mechanics (see “User-named reference”).
 6. **Consistency check (REQUIRED before writing HTML):** for each mapped effect, list every copy of that chrome still on the canvas (every state template, every repeated instance, every sibling that still matches). If some copies would get the effect and others would not, and the source does **not** explicitly exclude the others, this is an **anomaly**. Present the inconsistency and **wait**. Do not patch first.
 7. **Coverage review after every prune (REQUIRED):** whenever you delete, move, or narrow a dynamics row, preview hint, or `data-ui-dynamic` annotation: (1) re-read remaining clauses of the source note (full text); (2) list remaining targets in this unit that each remaining clause can still cover; (3) if leftover chrome still matches a remaining clause but now has no effect, or a collective quantifier now hits only a subset — **stop and ask**. Deleting a wrongly assigned row is not done until this review passes or the user confirms the narrower coverage.
 
@@ -427,7 +441,7 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame. If the same chrome appears across states (or as repeated instances) but motion coverage is uneven, treat that as a §2c anomaly — do not call the preview done.
 - Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
 - Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
-- When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec.
+- When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec. If the user named a reference implementation, confirm the canvas preview uses the same mechanics (already-shown content does not shift or reverse relative to the reference).
 - The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
 - Never assume "validator OK ⇒ looks like Figma."
 - **User confirmation gate:** present each contract to the user for manual confirmation (path + how to open it + review-panel summary). When motion dynamics exist, **call out the Motion and transitions table by name** and ask the user to confirm those effects — not only static layout. If §2d applied, include the pending-resource list (resolved / still waiting / waived). Do not declare the contract frozen until the user explicitly confirms it — unless the user has explicitly waived re-review for this run. **Do not treat confirmation as a substitute for providing missing assets** — waiving assets must be explicit.
@@ -504,6 +518,7 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - Review-panel Motion and transitions table present but `meta.dynamics` omitted or `[]`.
 - Treating designer callout copy as `ignore` when it describes motion or off-Figma resources.
 - Hand-animating in the contract HTML instead of specifying `design-animation-asset` + poster frame (CSS **motion preview hints** with review-panel disclaimer are OK).
+- Shipping a motion preview whose mechanics disagree with a user-named reference implementation (clip/mask/translate or opposite packing that moves already-shown content, instead of reading how the reference progresses).
 - Putting field-binding / API mapping tables on the canvas or above `[data-ui-state-host]`.
 - Surfacing §2c motion inventory only in chat while the review panel lacks a **Motion and transitions** table.
 - Conflating **motion / UI effects** with **content-bound** data filling in one undifferentiated “dynamic” section.
