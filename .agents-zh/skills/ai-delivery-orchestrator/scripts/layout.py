@@ -96,22 +96,48 @@ def resolve_validator_script(
     return None
 
 
+def _is_fs_root(path: Path) -> bool:
+    return path.parent == path
+
+
+def _safe_is_file(path: Path) -> bool:
+    try:
+        return path.is_file()
+    except OSError:
+        return False
+
+
+def _safe_is_dir(path: Path) -> bool:
+    try:
+        return path.is_dir()
+    except OSError:
+        return False
+
+
 def _find_binding(repo_root: Path) -> Path | None:
     """Locate project-binding.json.
 
     The meta dir is always ``<root>/<ai_delivery_path>/meta/``, but
     ``ai_delivery_path`` may be overridden, so probe the default location
     plus one level of immediate subdirectories (bounded, no deep walk).
+    Never scan the filesystem root — walking ``/`` hits unreadable mounts.
     """
     root = Path(repo_root)
+    if _is_fs_root(root):
+        return None
     default_pb = root / DEFAULT_AI_DELIVERY_PATH / "meta" / "project-binding.json"
-    if default_pb.exists():
+    if _safe_is_file(default_pb):
         return default_pb
-    for child in root.iterdir():
-        if child.is_dir():
-            cand = child / "meta" / "project-binding.json"
-            if cand.exists():
-                return cand
+    try:
+        children = list(root.iterdir())
+    except OSError:
+        return None
+    for child in children:
+        if not _safe_is_dir(child):
+            continue
+        cand = child / "meta" / "project-binding.json"
+        if _safe_is_file(cand):
+            return cand
     return None
 
 
@@ -127,19 +153,31 @@ def _read_binding(repo_root: Path) -> dict | None:
 
 
 def load_participation_profile(start: Path | str) -> str:
-    """Read coordination.participation from project-binding.json (default: fullstack)."""
-    for cand in [Path(start), *Path(start).parents]:
+    """Read coordination.participation from project-binding.json (default: fullstack).
+
+    Stop at the first project-binding.json (even if participation is absent)
+    and never walk past a git root or the filesystem root.
+    """
+    start_path = Path(start)
+    for cand in [start_path, *start_path.parents]:
+        if _is_fs_root(cand):
+            break
         data = _read_binding(cand)
-        if not isinstance(data, dict):
-            continue
-        coord = data.get("coordination")
-        if isinstance(coord, dict):
-            part = coord.get("participation")
+        if isinstance(data, dict):
+            coord = data.get("coordination")
+            if isinstance(coord, dict):
+                part = coord.get("participation")
+                if isinstance(part, str) and part.strip():
+                    return part.strip()
+            part = data.get("participation")
             if isinstance(part, str) and part.strip():
                 return part.strip()
-        part = data.get("participation")
-        if isinstance(part, str) and part.strip():
-            return part.strip()
+            return "fullstack"
+        try:
+            if (cand / ".git").exists():
+                break
+        except OSError:
+            break
     return "fullstack"
 
 
@@ -484,6 +522,21 @@ def _selftest() -> int:
         policy = load_workflow_policy(Path(td))
         assert policy["review_loop"]["max_rounds"] == 3
         assert policy["spec_persistence"]["active"] == "living"
+
+    # 8) participation walks stop at the first binding / do not scan /
+    with tempfile.TemporaryDirectory() as td:
+        nested = Path(td) / "requirements" / "R1"
+        nested.mkdir(parents=True)
+        assert load_participation_profile(nested) == "fullstack"
+        meta = Path(td) / ".ai-delivery" / "meta"
+        meta.mkdir(parents=True)
+        (meta / "project-binding.json").write_text(json.dumps({"version": 1}), encoding="utf-8")
+        assert load_participation_profile(nested) == "fullstack"
+        (meta / "project-binding.json").write_text(
+            json.dumps({"coordination": {"participation": "no-design-client"}}),
+            encoding="utf-8",
+        )
+        assert load_participation_profile(nested) == "no-design-client"
 
     print("layout.py selftest OK")
     return 0
