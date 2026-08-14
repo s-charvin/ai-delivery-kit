@@ -12,7 +12,7 @@ For each sub-requirement where `ui_bearing: true` and a Figma design source is a
 
 ## Run `ui-truth-mapping` only (Stage 2)
 
-Stage 2 runs **`ui-truth-mapping` alone**. Do **not** run `figma-design-to-code` here — that skill is an implementation-time consumer, not a contract author. Mixing them in Stage 2 confuses authorship and skips scope/layout gates.
+Stage 2 runs **`ui-truth-mapping` alone**. Do **not** run `figma-design-to-code` here — that skill is an implementation-time consumer, not a contract author. Mixing them in Stage 2 confuses authorship and skips scope/layout gates. Stage 4 does not re-run it by default — implement from the frozen HTML (see [stage-implementation.md](stage-implementation.md)).
 
 Feed requirement-slice and design source. Produces one `ui-contract.html` (schema v2) per independent unit, each under its own `<unit-id>/` directory in the sub-requirement. There is no aggregate index file or companion YAML/JSON — each unit's `meta.unit.type` (`page` / `modal` / `shared-component` / `component`) and `meta.unit.dependencies` are the sole source for cross-unit relationships and delivery ordering.
 

@@ -43,6 +43,15 @@ require "$EN" "Consistency check (REQUIRED before writing HTML)" "EN §2c consis
 require "$EN" "Coverage review after every prune (REQUIRED)" "EN §2c coverage review"
 require "$EN" "User-named reference implementation" "EN user-named reference"
 
+# EN — layout sizing (fill vs hug vs fixed). YAML-era L3 was dropped in HTML v2;
+# agents then copied get_code pixel widths into runtime constants.
+require "$EN" "### 5b. Layout sizing classification (REQUIRED after mechanical transfer)" "EN §5b"
+require "$EN" "fill detection rule" "EN fill detection rule"
+require "$EN" "parent width minus symmetrical horizontal inset" "EN fill = parent − inset"
+require "$EN" "data-ui-sizing=\"fill|hug|fixed\"" "EN data-ui-sizing"
+require "$EN" "Preview CSS px is an artboard snapshot, not runtime sizing" "EN preview px ≠ runtime"
+require "$EN" "Copying get_code \`w-[Npx]\` into implementation as a hardcoded width" "EN anti hardcoded width"
+
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
   fail "EN description summarizes workflow (Auto-detects) — SDO violation"
@@ -68,6 +77,14 @@ require "$ZH" "一致性检查（写 HTML 前必做）" "ZH §2c consistency che
 require "$ZH" "每次裁剪后的覆盖复查（必做）" "ZH §2c coverage review"
 require "$ZH" "用户点名的参考实现" "ZH user-named reference"
 
+# ZH parity for layout sizing
+require "$ZH" "### 5b. 布局尺寸分类（机械转移后必做）" "ZH §5b"
+require "$ZH" "fill 判定规则" "ZH fill detection rule"
+require "$ZH" "父宽减去对称水平内边距" "ZH fill = parent − inset"
+require "$ZH" "data-ui-sizing=\"fill|hug|fixed\"" "ZH data-ui-sizing"
+require "$ZH" "预览 CSS 的 px 是画板快照，不是运行时尺寸" "ZH preview px ≠ runtime"
+require "$ZH" "把 get_code 的 \`w-[Npx]\` 抄进实现当硬编码宽度" "ZH anti hardcoded width"
+
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"
 [[ -f "$TPL" ]] || fail "Missing template: $TPL"
@@ -75,5 +92,13 @@ require "$TPL" "data-ui-state-preview" "template preview script"
 require "$TPL" "data-ui-state-switcher" "template switcher"
 require "$TPL" "data-ui-state-host" "template host"
 require "$TPL" "html, body" "template light html/body base"
+require "$TPL" "data-ui-sizing" "template sizing annotation"
+
+# Kit skills must stay framework-agnostic — no host-app size tokens or artboard numbers.
+for f in "$EN" "$ZH"; do
+  if grep -E '343|375[[:space:]]*artboard|343\.w' "$f" >/dev/null; then
+    fail "project-specific size anecdote in $(basename "$f")"
+  fi
+done
 
 echo "PASS: ui-truth-mapping skill markers"

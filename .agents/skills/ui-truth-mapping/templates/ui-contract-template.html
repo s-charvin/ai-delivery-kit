@@ -81,6 +81,9 @@
     Transfer layout geometry from get_code mechanically (width/height,
     position, gap, padding, margin, display, flex/grid props, z-index).
     Do not rewrite into a hand-authored semantic flex page.
+    Snapshot px is preview-only. Classify runtime sizing with
+    data-ui-sizing="fill|hug|fixed" (see skill §5b). Do not replace
+    preview width: Npx with width: 100% in this file.
   */
   :root {
     /* Replace with evidence-backed values from get_code. Keep real CSS colors
@@ -250,6 +253,9 @@
                            motion-preset | design-animation-asset |
                            prototype-transition (must match meta.dynamics[].kind)
         data-ui-dynamic-id — optional; matches meta.dynamics[].id for this node
+        data-ui-sizing  — fill | hug | fixed (runtime sizing; preview CSS
+                          px stays as the artboard snapshot). Unit root
+                          required; children when sizing differs.
     -->
     <template data-ui-state="PLACEHOLDER-state-id">
       <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
@@ -268,6 +274,8 @@
         meta.dynamics[].hint_text; paraphrase in the user's language in the panel.
       - Prototype transitions belong in the table as trigger to target, not as a loop on every state.
       - content-bound placeholders → dt[data-ui-evidence-for], not the motion table.
+      - Include a Layout sizing table (fill / hug / fixed). Preview CSS px
+        is not runtime sizing.
       - Avoid "1:1" in prose (validator may parse as a Figma node id); write "pixel-level" instead.
     -->
     <details data-ui-review-panel open>

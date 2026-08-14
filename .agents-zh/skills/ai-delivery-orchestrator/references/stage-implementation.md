@@ -10,7 +10,29 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输
 
 来自各 unit 内嵌的 `meta.unit.type` 与 `meta.unit.dependencies`：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当 `meta.unit.dependencies` 列出的 unit 均已 `merged`，该 unit 才能启动。
 
-UI 切片必须对照已冻结、浏览器可预览（hydrate 默认态 + 状态切换）且与需求 scope 对齐的 `ui-contract.html` 实现。`figma-design-to-code` 只在本阶段（或后续视觉修复 loop）使用，绝不当作 Stage 2 契约作者 — 冻结契约才是视觉真值来源。
+UI 切片必须对照已冻结、浏览器可预览（hydrate 默认态 + 状态切换）且与需求 scope 对齐的 `ui-contract.html` 实现。**该 HTML 是 Stage 4 唯一的视觉真值。** 绝不要把 `figma-design-to-code` 当作 Stage 2 契约作者。
+
+### 视觉真值 — 默认不要再查 Figma
+
+默认不要跑 `figma-design-to-code`，也不要调用 TemPad（`get_code` / `get_structure`）作为实现前仪式。Stage 2 已经把几何冻进 HTML。再拉一次会制造第二真值，并可能和契约打架（冻结 inset 与事后现场节点坐标不一致）。
+
+仅在下列情况才调用 TemPad / `figma-design-to-code`：
+
+1. 冻结契约缺少任务所需的节点或几何，或
+2. 视觉验收失败，且无法从契约 HTML 消解偏差，或
+3. 用户明确要求重新拉取 Figma。
+
+若现场 TemPad 与冻结契约不一致，**以冻结契约为准**，除非用户解冻契约，或你正处于明确的契约修复 loop。
+
+### 实现时的布局尺寸
+
+遵循 `data-ui-sizing` 与 review-panel 的布局尺寸表。
+
+- `fill` → 撑满父级；把测得的 inset 做成 padding/margin。**禁止**把预览 px 写成硬编码。
+- `hug` → 固有 / 内容尺寸。
+- `fixed` → 用快照 px 作显式尺寸（若宿主项目有尺寸缩放，再套该缩放）。
+
+契约 CSS 里的像素宽是为了让画布预览对上 Figma 的画板快照 — **不是运行时常量**。fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度。
 
 ## 执行纪律（抽象链路）
 

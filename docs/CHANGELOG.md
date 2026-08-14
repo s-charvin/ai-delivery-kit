@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.4 — 2026-08-14
+
+### Changed
+
+- `ai-delivery-orchestrator` Stage 4: implement from the frozen `ui-contract.html`. Do not re-query TemPad / run `figma-design-to-code` as a pre-implement ritual (only when the contract is missing geometry, visual acceptance cannot be resolved from HTML, or the user asks). Live TemPad vs contract → contract wins.
+- `ui-truth-mapping`: restore YAML-era **fill detection rule**. `get_code` px is an artboard snapshot; classify `data-ui-sizing="fill|hug|fixed"` so implementers stretch with parent insets instead of hardcoding snapshot widths.
+
 ## v0.3.3 — 2026-08-13
 
 ### Changed

@@ -125,6 +125,7 @@ templates/
 - **微小变更的 create vs patch：** 若已有契约拥有该物理容器 → **增量修补**（只增改 in-scope 节点；更新 `unit.requirements` + review-panel `in_scope`；不要把整个 shell 扩进 `in_scope`）。若不存在匹配契约 → **新建 `component`**，root 取产物最小祖先 — **不要**仅为挂一个 badge 而发明整根新的 `shared-component` / `page` dump。
 - 不要发明视觉真值 — 不添加超出 Figma 证据支持范围的单元、状态、组件或字段。
 - 不要发明布局 — DOM 结构、尺寸、定位、间距、层级必须从 TemPad `get_code` **机械转移**。只允许添加 `data-ui-*` / `data-figma-node` / `data-evidence` 标注。用手写语义化 flex/grid 重写并丢掉 get_code 几何是流程失败。
+- 不要把 get_code 的像素宽度当成实现上的固定宽。机械转移后必须跑 §5b，按 **fill 判定规则** 标注 `data-ui-sizing="fill|hug|fixed"`。分类不是布局重写：预览 CSS 保留 px；禁止在契约里把它们改成 `width: 100%`。
 - 不要发明或重绘 icon/图片图形。每个 icon 或图片必须来自设计资产本身（机械转移资产字节），或逐字**复用项目已有资产**。当 `get_code` 返回资产空壳（`<svg data-src="...">` 或资产 URL）时，必须取得资产字节并持久化（内联 SVG 字节或保存为项目资产文件，并标注资产 hash）— 不允许留下空壳，更不允许手画一个「看起来差不多」的近似图形。仅仅「像」设计稿的 icon 是伪造真值。
 - `get_structure` 只是**几何证据** — 从不证明绘制属性。颜色、透明度、渐变、描边必须来自 `get_code` token 或资产字节；仅由 structure 引用的元素不得携带凭记忆补上的绘制值（把 20% 透明度的拖拽条重建成纯黑就是伪造真值）。
 - 不要把 Figma 中的每张图都当静态设计资产。区分**静态设计 icon**（冻结资产真值）与**动态/服务端提供的内容**（头像、用户上传、服务端徽章 — Figma 图只是举例）。依据需求上下文判断；动态内容只冻结几何 + 占位语义并在 review panel 注明，绝不把示例内容下载为冻结资产。
@@ -298,7 +299,7 @@ templates/
 
 1. 对单元拆分计划中的**作用域** `source_node` / 状态 `source_node` 调用 `get_code` — 绝不要对整屏 page「先取再剪」。整页 `get_code` 再裁剪是流程失败，即便把多余部分标成 `context`。
 2. 只把该作用域节点返回的 markup 转入该单元的 `<template>`。不要粘贴整页 DOM dump 再删除/隐藏兄弟。
-3. 仅当同一作用域节点在 `get_code` 后仍有层级/几何/重叠歧义时，才调用 `get_structure`。默认不要调用。
+3. 当同一作用域节点在 `get_code` 后仍有层级/几何/重叠歧义，**或 fill / hug / fixed 分不清**时，才调用 `get_structure`。fill 判定规则需要父宽/内边距时，也对父节点 `get_structure`。不要为了绘制属性或第二次整页 dump 默认调用。
 4. 在编写 DOM 之前，记录你打算引用的每个 `data-figma-node` — 不得凭空捏造节点 ID。
 5. **解析 `get_code` 返回的每一个资产引用**（`<svg data-src="...">`、图片填充、资产 URL），在写 DOM 之前逐一处理：
    1. **先分类：** 静态设计 icon，还是动态/服务端内容（头像、用户上传、服务端渲染徽章）？由需求上下文决定 — Figma 图可能只是举例。动态内容 → 冻结容器几何 + 占位符，并在 review panel 注明「服务端提供」；不下载示例图。
@@ -322,7 +323,7 @@ templates/
 ### 5. 填充或修补单元 HTML
 
 - `#ui-contract-meta` — 填充 `schema_version: 2`、`contract_id`、`source`（`requirement`/`design_file`/`root_node`）、`unit`（`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`）、`states`（每帧一条，恰好一条 `default: true`）、`revision`、`delivery.status`。`unit.type` 为 `page` | `modal` | `shared-component` | `component`。`unit.source_node` 为 §1 的范围 root。**State id 必须是 kebab-case 小写 ASCII**（`^[a-z][a-z0-9-]*$`，如 `loading`、`empty-state`）— 预览脚本用 state id 拼接 CSS 选择器，遇到空格、引号或方括号会失效。**默认态** = 评审首次打开页面时看到的状态（通常是 `loaded`/`success`，而非瞬态 `loading`/`error`），这样 hydrate 后的预览匹配屏幕的主视觉，而非一闪而过的帧。
-- `<style>` — 从 `get_code` **机械转移**有证据的 CSS（含几何：宽高、定位、inset、gap、padding、margin、display、flex/grid、z-index、排版、颜色）。TemPad 返回规范 token 绑定时优先 `var(--token)`；否则保留字面值。禁止用重写的语义化样式表替代 get_code 布局。
+- `<style>` — 从 `get_code` **机械转移**有证据的 CSS（含几何：宽高、定位、inset、gap、padding、margin、display、flex/grid、z-index、排版、颜色）。TemPad 返回规范 token 绑定时优先 `var(--token)`；否则保留字面值。禁止用重写的语义化样式表替代 get_code 布局。预览保留画板快照 px；转移后跑 §5b — 那些 px 不是运行时 FIXED。
 - `<main data-ui-contract>` —
   - 保留 `[data-ui-state-switcher]` 与空的 `[data-ui-state-host]`。
   - **每一个**已声明状态（含默认态）都放入 `<template data-ui-state="<id>">`。将 get_code DOM 转入 template；只加标注属性。
@@ -336,9 +337,36 @@ templates/
   - `dt[data-ui-scope="out_of_scope"]` / `dd` 列出上下文 chrome 或 `"none"`；
   - 资产说明：每个 icon/图片 — 其处置方式（内联资产字节 + 资产 hash、复用的项目资产路径、服务端占位，或**待办：等待用户决策**）。不允许有来历不明的 icon。
   - 推断说明：每个 `data-evidence="inferred"` 都要有匹配的 `dt[data-ui-evidence-for]`/`dd`。
+  - **布局尺寸**（`dt[data-ui-sizing]` 或普通 dt）：in-scope 盒子 → fill / hug / fixed，附证据与「实现时应」。单元 root 必填。见 §5b。
 - 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关 `data-ui-id` 子树、无关状态及其它单元的 `unit.dependencies`。若修补会**删除、挪动或收窄** dynamics / 预览提示，先跑 §2c 覆盖复查再继续。
 
 一次处理一个帧 — 绝不将所有帧批量塞入单次查询或单次编辑。
+
+### 5b. 布局尺寸分类（机械转移后必做）
+
+`get_code` 几乎总会吐出具体像素宽（`width: Npx` 或等价 codegen）。那是设计画板的**预览几何**，**不能**证明该节点在运行时是 FIXED。
+
+转移 CSS 之后，给每个 in-scope 盒子分类（单元 root 必做；子节点仅在尺寸语义与父级不同时）。节点上标注 `data-ui-sizing="fill|hug|fixed"`。
+
+| `data-ui-sizing` | 含义 | 实现时应 |
+|---|---|---|
+| `fill` | 撑满父级剩余空间 | 父宽减去内边距（padding / stretch / flex-grow）。**禁止**把快照 px 写成运行时常量 |
+| `hug` | 随内容收缩 | 固有尺寸 / min-content。快照 px 只是内容样例 |
+| `fixed` | 设计锁定 | 用 get_code px 作显式尺寸（若宿主项目有尺寸缩放，再套该缩放） |
+
+**fill 判定规则：** 满足任一则用 `fill`：
+
+1. Figma `layoutSizingHorizontal` / `layoutSizingVertical` 为 FILL，或该轴两端约束都钉住（stretch）。
+2. 测得的 px 宽等于 **父宽减去对称水平内边距**（允许 1px 误差）。
+3. 扣除对应 inset 后，视觉上横跨剩余内容栏。
+
+**hug：** 文字、标签、chip、随内容收缩的行。
+
+**仅保留 fixed：** 图标、头像、最小触控目标（≥44px）、以及设计明确锁宽的弹窗/控件。若保留固定 px，在 review panel 写明理由。
+
+**预览 vs 运行时：** 契约 CSS 保留转移来的快照 px，让画板宽度画布对得上 Figma。**禁止**把预览 CSS 改成 `width: 100%` — 那会改验收快照。用 `data-ui-sizing` 标注即可。预览 CSS 的 px 是画板快照，不是运行时尺寸。
+
+分不清 → 停下问用户。禁止猜 `fixed`。
 
 ### 6. 浏览器审查
 
@@ -410,6 +438,9 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - **为单个元素的属性变体衍生单元级状态模板**（按钮 `disabled`、输入框 `readonly`），而不是 patch 该元素的属性。
 - **把 modal 的触发按钮放进 modal 契约**，而不是 patch 进按钮物理容器所在的契约。
 - 用手写语义化 flex/grid 布局替代 `get_code` 几何的机械转移。
+- 把 get_code 的 `w-[Npx]` 抄进实现当硬编码宽度，而 fill 判定规则已是 `fill` — 应按父宽减内边距实现。
+- 把契约预览 CSS 从快照 px 改成 `width: 100%` 来代替 `data-ui-sizing` — 那会破坏画板快照。
+- 跳过 §5b，只冻结像素几何。
 - **手写 icon 或图片图形**（重绘一个「差不多」的 SVG），而非机械转移设计资产字节或复用项目已有资产。
 - 在冻结契约里留下未解析的 `get_code` 资产空壳（`data-src` / 资产 URL）— 资产字节必须内联或持久化进项目，并标注资产 hash。
 - 用 `get_structure` 几何重建资产空壳子树（`get_code` 把整个子树导出为一个 SVG 资产时，如拖拽条），静默丢掉绘制属性（fill-opacity、渐变、描边）— structure 只是几何证据。

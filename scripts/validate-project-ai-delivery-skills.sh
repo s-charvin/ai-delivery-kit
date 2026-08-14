@@ -245,6 +245,8 @@ validate_ui_truth_mapping_skill() {
   require_contains "$skill_file" 'Do not invent visual truth'
   require_contains "$skill_file" 'Anti-patterns'
   require_contains "$skill_file" 'validate-ui-contract-html.py'
+  require_contains "$skill_file" 'fill detection rule'
+  require_contains "$skill_file" 'data-ui-sizing'
 
   contract_validator=$(resolve_managed_asset_path "scripts/validate-ui-contract-html.py")
   good_fixture=$(resolve_managed_asset_path "tests/ai-delivery-skills/fixtures/ui-contract-good.html")

@@ -59,6 +59,8 @@ require_contains "$UI_SKILL" 'ui-contract-template.html'
 require_contains "$UI_SKILL" 'incremental patch'
 require_contains "$UI_SKILL" 'implementation lookup'
 require_contains "$UI_SKILL" 'Do not invent visual truth'
+require_contains "$UI_SKILL" 'fill detection rule'
+require_contains "$UI_SKILL" 'data-ui-sizing'
 
 # Scenario 3: the HTML contract template carries the required schema v2
 # anchors — metadata script, unit root, and the collapsible review panel.

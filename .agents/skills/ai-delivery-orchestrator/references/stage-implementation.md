@@ -10,7 +10,29 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile 
 
 Derived from each unit's embedded `meta.unit.type` and `meta.unit.dependencies`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when the units listed in its `meta.unit.dependencies` are `merged`.
 
-For UI-bearing slices, implement against an already-frozen `ui-contract.html` that is browser-previewable (hydrated default + state switcher) and requirement-scope aligned. Run `figma-design-to-code` only in this stage (or later visual fix loops), never as a Stage 2 contract author — the frozen contract is the visual source of truth.
+For UI-bearing slices, implement against an already-frozen `ui-contract.html` that is browser-previewable (hydrated default + state switcher) and requirement-scope aligned. **That HTML is the only visual source of truth for Stage 4.** Never use `figma-design-to-code` as a Stage 2 contract author.
+
+### Visual truth — do not re-query Figma by default
+
+Do not run `figma-design-to-code` or call TemPad (`get_code` / `get_structure`) as a pre-implement ritual. Stage 2 already froze geometry into the HTML. Re-fetching creates a second truth and can disagree with the contract (frozen insets vs a later live node position).
+
+Call TemPad / `figma-design-to-code` **only** when:
+
+1. The frozen contract is missing a node or geometry the task needs, or
+2. Visual acceptance failed and the mismatch cannot be resolved from the contract HTML, or
+3. The user explicitly asks to re-pull Figma.
+
+If live TemPad disagrees with the frozen contract, **the contract wins**, unless the user unfreezes the contract or you are in an explicit contract-repair loop.
+
+### Layout sizing at implement time
+
+Follow `data-ui-sizing` and the review-panel Layout sizing table.
+
+- `fill` → stretch to the parent; apply the measured insets as padding/margin. Do **not** hardcode the preview px.
+- `hug` → intrinsic / content size.
+- `fixed` → explicit size from the snapshot px (then the host project's size scale, if any).
+
+Contract CSS pixel widths are an artboard snapshot so the canvas preview matches Figma — **not a runtime constant**. If fill detection says `fill`, implement as parent minus insets, not as a copied snapshot width.
 
 ## Execution discipline (abstract chain)
 

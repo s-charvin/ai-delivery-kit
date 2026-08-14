@@ -195,6 +195,7 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - **Tiny-change create vs patch:** if a matching contract already owns the physical container → **incremental patch** (add/adjust only the in-scope nodes; update `unit.requirements` + review-panel `in_scope`; do not expand `in_scope` to the whole shell). If no matching contract exists → **create `component`** rooted at the artifact's minimal ancestor — do **not** invent a brand-new full `shared-component` / `page` dump of the surrounding chrome solely to host a badge.
 - Do not invent visual truth — no adding units, states, components, or fields beyond what Figma evidence supports.
 - Do not invent layout — DOM structure, dimensions, positioning, spacing, and stacking come from TemPad `get_code` by **mechanical transfer**. Only add `data-ui-*` / `data-figma-node` / `data-evidence` annotations. Hand-authored semantic flex/grid rewrites that drop get_code geometry are process failures.
+- Do not treat get_code pixel widths as implementation-fixed. After mechanical transfer, run §5b and classify fill/hug/fixed (`data-ui-sizing="fill|hug|fixed"`) using the **fill detection rule**. Classifying is not a layout rewrite: keep preview px; do not replace them with `width: 100%` in the contract.
 - Do not invent or redraw icon/image glyphs. Every icon or image must come from the design asset itself (mechanical transfer of asset bytes) or from an **existing project asset** reused verbatim. When `get_code` returns an asset shell (`<svg data-src="...">` or an asset URL), the asset bytes must be fetched and persisted (inline SVG bytes or a saved project asset file, annotated with the asset hash) — never an empty shell left in place, and never a hand-drawn "looks close enough" approximation. An icon that merely resembles the design is a forged truth.
 - `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
@@ -384,7 +385,7 @@ For each **planned unit** (and each of its state frames), one at a time:
 
 1. Call `get_code` on that unit's **scoped** `source_node` / state `source_node` from the Unit Split Plan — never on the full-screen page "to prune later". Full-page `get_code` then carve-down is a process failure even if you mark leftovers `context`.
 2. Transfer only the markup returned for that scoped node into the unit's `<template>`. Do not paste a whole-page DOM dump and delete/hide siblings.
-3. Call `get_structure` on the same scoped node only when hierarchy, geometry, or overlap remains ambiguous after `get_code`. Do not call it by default.
+3. Call `get_structure` on the same scoped node when hierarchy, geometry, overlap, **or fill vs hug vs fixed** remains ambiguous after `get_code`. If parent width/insets are needed for the fill detection rule, `get_structure` the parent too. Do not call it by default for paint or for a second full dump.
 4. Record every `data-figma-node` you intend to cite before writing DOM — no node id may be invented.
 5. **Resolve every asset reference** returned by `get_code` (`<svg data-src="...">`, image fills, asset URLs) before writing DOM. For each one:
    1. **Classify first:** static design icon, **dynamic content** (`content-bound`), **component variant**, or **motion/animation asset**? Requirement context + §2c inventory decide — the Figma picture may be only an example or a static keyframe. Dynamic content → placeholder + `content-bound` dynamic entry; motion → poster frame + `design-animation-asset` / `motion-preset`.
@@ -408,7 +409,7 @@ For each **planned unit** (and each of its state frames), one at a time:
 ### 5. Fill or patch the one-unit HTML
 
 - `#ui-contract-meta` — fill `schema_version: 2`, `contract_id`, `source` (`requirement`/`design_file`/`root_node`), `unit` (`id`/`type`/`title`/`route_or_trigger`/`requirements`/`source_node`/`dependencies`), `states` (one entry per frame, exactly one `default: true`), optional `dynamics` (array from §2c; `[]` when static), `revision`, `delivery.status`. `unit.type` is `page` | `modal` | `shared-component` | `component`. `unit.source_node` is the scoped root from §1. **State ids must be kebab-case lowercase ASCII** (`^[a-z][a-z0-9-]*$`, e.g. `loading`, `empty-state`) — the preview script builds CSS selectors from state ids and breaks on spaces, quotes, or brackets. **Default state** = the state a reviewer sees on first page load (typically `loaded`/`success`, not transient `loading`/`error`), so the hydrated preview matches the screen's primary visual, not a flicker frame.
-- `<style>` — **mechanical transfer** of evidence-backed CSS from `get_code` (including geometry: width/height, position, inset, gap, padding, margin, display, flex/grid, z-index, typography, color). Prefer `var(--token)` when TemPad returns a canonical token binding; otherwise keep the literal value TemPad returned. Do not replace get_code layout with a rewritten semantic stylesheet.
+- `<style>` — **mechanical transfer** of evidence-backed CSS from `get_code` (including geometry: width/height, position, inset, gap, padding, margin, display, flex/grid, z-index, typography, color). Prefer `var(--token)` when TemPad returns a canonical token binding; otherwise keep the literal value TemPad returned. Do not replace get_code layout with a rewritten semantic stylesheet. Keep snapshot px for the artboard preview; after transfer, run §5b — those px are not runtime FIXED.
 - `<main data-ui-contract>` —
   - Keep `[data-ui-state-switcher]` and empty `[data-ui-state-host]`.
   - Put **every** declared state (including default) into `<template data-ui-state="<id>">`. Transfer get_code DOM into the template; only add annotation attributes.
@@ -426,11 +427,38 @@ For each **planned unit** (and each of its state frames), one at a time:
   - `dt[data-ui-asset-inventory]` — every icon/image resolution (inline hash, reused path, placeholder, pending).
   - `dt[data-ui-dynamics-inventory]` — mirrors `meta.dynamics[]` (or points to the table above); `none — static Figma snapshots only` when `dynamics` is `[]`; list every `pending-user` item explicitly.
   - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
+  - **Layout sizing** (`dt[data-ui-sizing]` or a plain dt): table of in-scope boxes → fill / hug / fixed, with evidence and “implement as”. The unit root is required. See §5b.
   - Style the panel for readability: `[data-ui-review-panel]` spacing, `.effect-table` borders, `.tag-motion` / `.tag-static` for effect types — copy patterns from `templates/ui-contract-template.html`.
   - Every `data-figma-node` cited in `in_scope` must still appear on a non-context DOM node (validator cross-check).
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched. If the patch **deletes, moves, or narrows** dynamics / preview hints, run §2c coverage review before continuing.
 
 Process one frame at a time — never batch every frame into a single query or a single edit pass.
+
+### 5b. Layout sizing classification (REQUIRED after mechanical transfer)
+
+`get_code` almost always emits concrete pixel widths (`width: Npx` or equivalent codegen). That is **preview geometry** for the design artboard. It is **not** proof the node is FIXED at runtime.
+
+After transferring CSS, classify every in-scope box (unit root required; children when their sizing differs from the parent). Put `data-ui-sizing="fill|hug|fixed"` on those nodes.
+
+| `data-ui-sizing` | Meaning | Implement as |
+|---|---|---|
+| `fill` | stretches to remaining parent space | parent width minus insets (padding / stretch / flex-grow). Do **not** hardcode the snapshot px |
+| `hug` | sizes to content | intrinsic / min-content. Snapshot px is a content example |
+| `fixed` | designed lock | explicit size from get_code px (then the host project's size scale, if any) |
+
+**fill detection rule:** use `fill` when ANY of:
+
+1. Figma `layoutSizingHorizontal` / `layoutSizingVertical` is FILL, or constraints pin both start and end on that axis (stretch).
+2. Measured px width equals **parent width minus symmetrical horizontal inset** (1px tolerance).
+3. The node visually spans the remaining content column after matching insets.
+
+**hug:** text, labels, chips, and rows that shrink to content.
+
+**fixed only:** icons, avatars, minimum touch targets (≥44px), and dialogs/controls the design explicitly locks. If you keep fixed px, say why in the review panel.
+
+**Preview vs runtime:** keep transferred snapshot px in contract CSS so the artboard-width canvas matches Figma. **Do not** rewrite preview CSS to `width: 100%` — that changes the acceptance snapshot. Annotate `data-ui-sizing` instead. Preview CSS px is an artboard snapshot, not runtime sizing.
+
+Ambiguous → stop and ask. Do not guess `fixed`.
 
 ### 6. Browser review
 
@@ -503,6 +531,9 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - **Spawning a unit-level state template for a single element's property variant** (button `disabled`, input `readonly`) instead of patching that element's attributes.
 - **Putting the modal's trigger button inside the modal contract** instead of patching it into the button's physical container contract.
 - Hand-authoring a semantic flex/grid layout instead of mechanically transferring `get_code` geometry.
+- Copying get_code `w-[Npx]` into implementation as a hardcoded width when the fill detection rule says `fill` — implement as parent minus insets.
+- Rewriting contract preview CSS from snapshot px to `width: 100%` as a substitute for `data-ui-sizing` — that breaks the artboard snapshot.
+- Skipping §5b and freezing only pixel geometry.
 - **Hand-authoring an icon or image glyph** (redrawing a "close enough" SVG) instead of transferring the design asset bytes or reusing an existing project asset.
 - Leaving a `get_code` asset shell (`data-src` / asset URL) unresolved in the frozen contract — asset bytes must be inlined or persisted into the project, with the asset hash noted.
 - Reconstructing an asset-shell subtree (a subtree `get_code` exports as one SVG asset, e.g. a drag handle) from `get_structure` geometry and silently dropping paint attributes (fill-opacity, gradient, stroke) — structure is geometry-only evidence.

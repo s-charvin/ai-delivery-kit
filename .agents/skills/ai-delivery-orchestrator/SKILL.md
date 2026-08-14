@@ -98,6 +98,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
 - Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
 - Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment + icon asset fidelity + explicit per-contract user confirmation (unless explicitly waived) pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
+- Stage 4: do not re-query TemPad / run `figma-design-to-code` by default; the frozen HTML is the visual source of truth. Follow `data-ui-sizing` (fill = parent minus insets, not snapshot px).
 - Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
 - Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
@@ -129,6 +130,8 @@ After `split_ready`, main session runs inline 4-check audit per subreq (gaps, co
 The `implement` action executes per the selected tier (see `references/frameworks/`): subagent-driven when superpowers is present, agent-driven with ECC, inline disciplined on the native tier. Default discipline regardless of tier: sequential tasks, TDD inside, code review before completion claims. Never parallel implementers on the same slice files.
 
 Chain: isolated workspace → task execution (TDD) → code review → visual acceptance (UI) → verification before completion → full test → merge.
+
+UI slices: implement from the frozen `ui-contract.html`; do not re-query TemPad / run `figma-design-to-code` by default.
 
 Full runbook: [references/stage-implementation.md](references/stage-implementation.md).
 

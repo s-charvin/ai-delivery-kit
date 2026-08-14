@@ -12,7 +12,7 @@
 
 ## 仅运行 `ui-truth-mapping`（Stage 2）
 
-Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code` — 该技能是实现期消费者，不是契约作者。Stage 2 混用会搞乱归属并跳过 scope/布局门禁。
+Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code` — 该技能是实现期消费者，不是契约作者。Stage 2 混用会搞乱归属并跳过 scope/布局门禁。Stage 4 默认也不再跑 — 对照冻结 HTML 实现（见 [stage-implementation.md](stage-implementation.md)）。
 
 传入需求切片与设计源。每个独立 unit 产出一份 `ui-contract.html`（schema v2），各自位于子需求下自己的 `<unit-id>/` 目录中。不存在聚合索引文件或配套 YAML/JSON——跨 unit 关系与交付顺序唯一来自各 unit 自身的 `meta.unit.type`（`page` / `modal` / `shared-component` / `component`）与 `meta.unit.dependencies`。
 
