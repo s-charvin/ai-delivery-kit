@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.5 — 2026-08-14
+
+### Changed
+
+- `ui-truth-mapping`: variable content must record overflow / min / max or stop and ask. Validator requires `dt[data-ui-sizing]` plus a truth-node annotation. Implementation must consume the sizing table, not dump snapshot px as layout constants.
+
 ## v0.3.4 — 2026-08-14
 
 ### Changed

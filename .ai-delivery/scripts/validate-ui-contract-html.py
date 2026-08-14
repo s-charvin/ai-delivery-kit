@@ -40,6 +40,7 @@ DELIVERY_STATUSES_REQUIRING_IMPLEMENTED = frozenset({"implemented", "merged"})
 DELIVERY_IMPLEMENTED_FIELDS = ("type", "target", "requirement", "version", "status")
 PREVIEW_INFRA_ATTRS = ("data-ui-state-switcher", "data-ui-state-host")
 REQUIRED_SCOPE_KEYS = ("in_scope", "out_of_scope")
+VALID_SIZING_VALUES = frozenset({"fill", "hug", "fixed"})
 CONTEXT_SCOPE_VALUE = "context"
 # State ids become CSS selector fragments inside the preview script
 # (template[data-ui-state="<id>"]); keep them kebab-case ASCII so the
@@ -122,6 +123,20 @@ def text_content(node: Node | None) -> str:
     for child in node.children:
         parts.append(text_content(child))
     return "".join(parts).strip()
+
+
+def following_dd(dt_node: Node) -> Node | None:
+    """Return the first ``dd`` sibling after ``dt_node``, if any."""
+    if dt_node.parent is None:
+        return None
+    siblings = dt_node.parent.children
+    idx = siblings.index(dt_node)
+    for sibling in siblings[idx + 1 :]:
+        if sibling.tag == "dd":
+            return sibling
+        if sibling.tag == "dt":
+            return None
+    return None
 
 
 def has_media_descendant(node: Node | None) -> bool:
@@ -373,6 +388,7 @@ class ContractValidator:
         self.validate_state_content(root)
         self.validate_scope_inventory(root)
         self.validate_scope_node_coverage(root)
+        self.validate_layout_sizing(root)
         self.validate_evidence(root)
         self.validate_assets(root)
 
@@ -749,6 +765,62 @@ class ContractValidator:
                     "(no non-context element carries this data-figma-node); either "
                     "freeze the matching subtree or correct the in_scope inventory",
                 )
+
+    def validate_layout_sizing(self, root: Node) -> None:
+        """Require a Layout sizing table and at least one annotated truth node.
+
+        Preview CSS px is an artboard snapshot. Without ``data-ui-sizing``,
+        implementers copy those px into runtime constants. The table plus one
+        unit-root annotation is the mechanical gate; semantic fill/hug/fixed
+        correctness remains a §6 check.
+        """
+        panels = [node for node in walk(root) if node.has("data-ui-review-panel")]
+        if not panels:
+            return
+
+        found_table = False
+        for panel in panels:
+            for node in walk(panel):
+                if node.tag != "dt" or not node.has("data-ui-sizing"):
+                    continue
+                dd_node = following_dd(node)
+                if dd_node is None or not text_content(dd_node):
+                    self.add_error(
+                        "SIZING",
+                        "dt[data-ui-sizing] has an empty dd; table in-scope boxes "
+                        "as fill / hug / fixed with implement-as and overflow / "
+                        "min / max for variable content",
+                    )
+                else:
+                    found_table = True
+        if not found_table:
+            self.add_error(
+                "SIZING",
+                "missing dt[data-ui-sizing] with a following dd in "
+                "[data-ui-review-panel]; snapshot px is not runtime sizing",
+            )
+
+        annotated = False
+        for node in walk(root):
+            if node.get("data-ui-scope") == CONTEXT_SCOPE_VALUE:
+                continue
+            value = node.get("data-ui-sizing")
+            if value is None:
+                continue
+            if value not in VALID_SIZING_VALUES:
+                self.add_error(
+                    "SIZING",
+                    f'invalid data-ui-sizing="{value}"; must be fill, hug, or fixed',
+                )
+                continue
+            if node.has("data-ui-id"):
+                annotated = True
+        if not annotated:
+            self.add_error(
+                "SIZING",
+                "no truth node carries data-ui-sizing; unit root is required "
+                "(fill | hug | fixed). Preview CSS px is not runtime sizing",
+            )
 
     def validate_evidence(self, root: Node) -> None:
         panels = [node for node in walk(root) if node.has("data-ui-review-panel")]

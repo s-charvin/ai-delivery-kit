@@ -26,13 +26,19 @@ If live TemPad disagrees with the frozen contract, **the contract wins**, unless
 
 ### Layout sizing at implement time
 
-Follow `data-ui-sizing` and the review-panel Layout sizing table.
+Follow `data-ui-sizing` and the review-panel Layout sizing table. Contract CSS pixel widths are an artboard snapshot so the canvas preview matches Figma — **not a runtime constant**.
 
 - `fill` → stretch to the parent; apply the measured insets as padding/margin. Do **not** hardcode the preview px.
-- `hug` → intrinsic / content size.
-- `fixed` → explicit size from the snapshot px (then the host project's size scale, if any).
+- `hug` → intrinsic / content size, with overflow / min / max from the sizing table.
+- `fixed` → explicit size from the snapshot px (then the host project's size scale, if any) **only** when the table says fixed (icons, avatars, asset boxes, explicit locks).
 
-Contract CSS pixel widths are an artboard snapshot so the canvas preview matches Figma — **not a runtime constant**. If fill detection says `fill`, implement as parent minus insets, not as a copied snapshot width.
+If fill detection says `fill`, implement as parent minus insets, not as a copied snapshot width. Do **not** dump every snapshot `width`/`height`/`left`/`top` into layout constants.
+
+If a box is content-bound / i18n / variable length and the sizing table (or requirement / design) does not record overflow / min / max → **stop and ask**. Do not invent a lock from snapshot px.
+
+Prefer constraint layout (flex / stretch / intrinsic). A few fixed or min sizes for unchanging chrome is acceptable; copying the whole artboard as constants is not.
+
+Tests and visual acceptance for `fill`/`hug` boxes assert constraint behavior (stretches with parent, hugs short content, clamps long content) — **not** snapshot `w×h` equality. A visual-acceptance note that scores `fill`/`hug` boxes by matching snapshot px is a review finding, not a pass.
 
 ## Execution discipline (abstract chain)
 

@@ -60,7 +60,7 @@
     <nav data-ui-state-switcher aria-label="UI contract states"></nav>
     <div data-ui-state-host></div>
     <template data-ui-state="idle">
-      <section data-ui-id="profile-header" data-ui-kind="container" data-figma-node="1:201" data-evidence="structure+code">
+      <section data-ui-id="profile-header" data-ui-kind="container" data-figma-node="1:201" data-evidence="structure+code" data-ui-sizing="fill">
         <h1 data-ui-id="profile-title" data-ui-kind="text" data-figma-node="1:202" data-evidence="code">Profile</h1>
         <div data-ui-id="profile-idle-note" data-ui-kind="text" data-figma-node="1:203" data-evidence="code">No notifications.</div>
       </section>
@@ -77,6 +77,8 @@
         <dd>1:201 profile header; 1:202 title; 1:203 idle note; 1:301–1:302 empty state.</dd>
         <dt data-ui-scope="out_of_scope">Out of scope context</dt>
         <dd>none</dd>
+        <dt data-ui-sizing>Layout sizing</dt>
+        <dd>profile-header fill (parent minus page inset); title hug. Snapshot px is preview-only.</dd>
         <dt data-ui-evidence-for="profile-header">Inference</dt>
         <dd>Grouped repeated Figma rows into a semantic header container from nodes 1:201-1:202.</dd>
       </dl>

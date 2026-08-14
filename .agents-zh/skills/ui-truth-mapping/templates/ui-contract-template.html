@@ -255,7 +255,10 @@
         data-ui-dynamic-id — optional; matches meta.dynamics[].id for this node
         data-ui-sizing  — fill | hug | fixed (runtime sizing; preview CSS
                           px stays as the artboard snapshot). Unit root
-                          required; children when sizing differs.
+                          required; children when sizing differs. Variable
+                          content is hug or fill plus overflow / min / max
+                          in the Layout sizing table — never fixed from the
+                          snapshot sample.
     -->
     <template data-ui-state="PLACEHOLDER-state-id">
       <section data-ui-id="PLACEHOLDER-region-id" data-ui-kind="container" data-figma-node="PLACEHOLDER-figma-node-id" data-evidence="code">
@@ -274,8 +277,9 @@
         meta.dynamics[].hint_text; paraphrase in the user's language in the panel.
       - Prototype transitions belong in the table as trigger to target, not as a loop on every state.
       - content-bound placeholders → dt[data-ui-evidence-for], not the motion table.
-      - Include a Layout sizing table (fill / hug / fixed). Preview CSS px
-        is not runtime sizing.
+      - Include a Layout sizing table (`dt[data-ui-sizing]`). Preview CSS px
+        is not runtime sizing. Variable content needs overflow / min / max
+        or an explicit user decision — do not guess fixed from the snapshot.
       - Avoid "1:1" in prose (validator may parse as a Figma node id); write "pixel-level" instead.
     -->
     <details data-ui-review-panel open>
@@ -322,6 +326,13 @@
         <dd>PLACEHOLDER: every icon/image — inline hash, reused path, placeholder, or pending. Write "none" if no icons/images.</dd>
         <dt data-ui-dynamics-inventory>Dynamics and motion (machine mirror)</dt>
         <dd>PLACEHOLDER: mirror meta.dynamics[] or write "see Motion and transitions table above" / "none — static Figma snapshots only" when dynamics is [].</dd>
+        <dt data-ui-sizing>Layout sizing (runtime, not preview px)</dt>
+        <dd>
+          PLACEHOLDER table: in-scope box → fill / hug / fixed, evidence,
+          implement as, overflow (wrap | ellipsis | clip | scroll | grow-parent)
+          and min/max when content can change. Unit root required. Snapshot CSS
+          px stays for the artboard canvas — do not rewrite to width: 100%.
+        </dd>
         <dt data-ui-evidence-for="PLACEHOLDER-region-id">PLACEHOLDER: Canvas placeholder</dt>
         <dd>PLACEHOLDER: inferred or content-bound nodes — why poster/placeholder geometry, product replacement.</dd>
       </dl>

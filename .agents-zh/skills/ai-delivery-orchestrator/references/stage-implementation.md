@@ -26,13 +26,19 @@ UI 切片必须对照已冻结、浏览器可预览（hydrate 默认态 + 状态
 
 ### 实现时的布局尺寸
 
-遵循 `data-ui-sizing` 与 review-panel 的布局尺寸表。
+遵循 `data-ui-sizing` 与 review-panel 的布局尺寸表。契约 CSS 里的像素宽是为了让画布预览对上 Figma 的画板快照 — **不是运行时常量**。
 
 - `fill` → 撑满父级；把测得的 inset 做成 padding/margin。**禁止**把预览 px 写成硬编码。
-- `hug` → 固有 / 内容尺寸。
-- `fixed` → 用快照 px 作显式尺寸（若宿主项目有尺寸缩放，再套该缩放）。
+- `hug` → 固有 / 内容尺寸，加上尺寸表里的 overflow / min / max。
+- `fixed` → **仅当**表写明 fixed 时，用快照 px 作显式尺寸（若宿主项目有尺寸缩放，再套该缩放）（图标、头像、资产盒、明确锁死）。
 
-契约 CSS 里的像素宽是为了让画布预览对上 Figma 的画板快照 — **不是运行时常量**。fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度。
+fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度。**禁止**把每个快照 `width`/`height`/`left`/`top` dump 成布局常量。
+
+若盒子是 content-bound / i18n / 可变长度，且尺寸表（或需求 / 设计）没写 overflow / min / max → **停下问用户**。禁止用快照 px 发明锁死。
+
+优先约束布局（flex / stretch / 固有尺寸）。少量不变 chrome 的 fixed 或 min-size 可以；把整张画板抄成常量不行。
+
+`fill`/`hug` 盒子的测试和视觉验收断言约束行为（随父级拉伸、短内容 hug、长内容钳制）— **不是**与快照 `w×h` 相等。用快照 px 给 `fill`/`hug` 盒子打分的 visual-acceptance 是评审发现项，不是通过。
 
 ## 执行纪律（抽象链路）
 

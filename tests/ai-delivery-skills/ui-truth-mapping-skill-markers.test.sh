@@ -51,6 +51,11 @@ require "$EN" "parent width minus symmetrical horizontal inset" "EN fill = paren
 require "$EN" "data-ui-sizing=\"fill|hug|fixed\"" "EN data-ui-sizing"
 require "$EN" "Preview CSS px is an artboard snapshot, not runtime sizing" "EN preview px ≠ runtime"
 require "$EN" "Copying get_code \`w-[Npx]\` into implementation as a hardcoded width" "EN anti hardcoded width"
+require "$EN" "Implementation consumption (REQUIRED whenever this contract is implemented)" "EN implement from sizing not px"
+require "$EN" "overflow policy" "EN overflow policy"
+require "$EN" "stop and ask the user" "EN ask overflow"
+require "$EN" "Dumping every snapshot box" "EN anti dump snapshot constants"
+require "$EN" "dt[data-ui-sizing]\` — required attribute" "EN sizing table required attr"
 
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
@@ -84,6 +89,11 @@ require "$ZH" "父宽减去对称水平内边距" "ZH fill = parent − inset"
 require "$ZH" "data-ui-sizing=\"fill|hug|fixed\"" "ZH data-ui-sizing"
 require "$ZH" "预览 CSS 的 px 是画板快照，不是运行时尺寸" "ZH preview px ≠ runtime"
 require "$ZH" "把 get_code 的 \`w-[Npx]\` 抄进实现当硬编码宽度" "ZH anti hardcoded width"
+require "$ZH" "实现时如何消费（凡按本契约实现都必须遵守）" "ZH implement from sizing not px"
+require "$ZH" "overflow 策略" "ZH overflow policy"
+require "$ZH" "停下问用户" "ZH ask overflow"
+require "$ZH" "把每个快照盒子" "ZH anti dump snapshot constants"
+require "$ZH" "dt[data-ui-sizing]\` — 必须带此属性" "ZH sizing table required attr"
 
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"

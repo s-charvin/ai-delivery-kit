@@ -110,7 +110,7 @@ cat > "$TMP_DIR/settings-page.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="loaded">
-    <ul data-ui-id="settings-list" data-ui-kind="list" data-figma-node="10:5" data-evidence="code">
+    <ul data-ui-id="settings-list" data-ui-kind="list" data-figma-node="10:5" data-evidence="code" data-ui-sizing="fill">
       <li data-ui-id="settings-row-notifications" data-ui-kind="list-item" data-figma-node="10:6" data-evidence="code">Notifications</li>
       <li data-ui-id="settings-row-privacy" data-ui-kind="list-item" data-figma-node="10:7" data-evidence="code">Privacy</li>
     </ul>
@@ -125,6 +125,8 @@ cat > "$TMP_DIR/settings-page.html" <<HTML
       <dd>10:5 settings list; 10:6 notifications row; 10:7 privacy row; 10:51 loading skeleton.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>none</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>settings-list fill (parent minus page inset). Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -179,7 +181,7 @@ cat > "$TMP_DIR/unread-badge.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="default">
-    <span data-ui-id="unread-badge" data-ui-kind="badge" data-figma-node="20:5" data-evidence="code">3</span>
+    <span data-ui-id="unread-badge" data-ui-kind="badge" data-figma-node="20:5" data-evidence="code" data-ui-sizing="fixed">3</span>
   </template>
   <details data-ui-review-panel>
     <summary>Contract evidence</summary>
@@ -188,6 +190,8 @@ cat > "$TMP_DIR/unread-badge.html" <<HTML
       <dd>20:5 unread badge only.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>Messages page chrome and the rest of the tab bar — not frozen here.</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>unread-badge fixed (16px asset box). Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -244,7 +248,7 @@ cat > "$TMP_DIR/reject-tip.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="default">
-    <div data-ui-id="reject-tip-card" data-ui-kind="card" data-figma-node="30:11" data-evidence="code">
+    <div data-ui-id="reject-tip-card" data-ui-kind="card" data-figma-node="30:11" data-evidence="code" data-ui-sizing="fill">
       <span data-ui-id="reject-tip-icon" data-ui-kind="icon" data-figma-node="30:12" data-evidence="code">!</span>
       <p data-ui-id="reject-tip-text" data-ui-kind="text" data-figma-node="30:13" data-evidence="code">This candidate is no longer available.</p>
     </div>
@@ -256,6 +260,8 @@ cat > "$TMP_DIR/reject-tip.html" <<HTML
       <dd>30:11 reject tip card; 30:12 alert icon; 30:13 tip text. Split from appeal-cta (disconnected subtree).</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>none</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>reject-tip-card fill (parent minus list inset); icon fixed; text hug + wrap. Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -308,7 +314,7 @@ cat > "$TMP_DIR/appeal-cta.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="default">
-    <button data-ui-id="appeal-button" data-ui-kind="button" data-figma-node="30:41" data-evidence="code">Appeal this decision</button>
+    <button data-ui-id="appeal-button" data-ui-kind="button" data-figma-node="30:41" data-evidence="code" data-ui-sizing="hug">Appeal this decision</button>
   </template>
   <details data-ui-review-panel>
     <summary>Contract evidence</summary>
@@ -317,6 +323,8 @@ cat > "$TMP_DIR/appeal-cta.html" <<HTML
       <dd>30:41 appeal CTA button. Split from reject-tip (disconnected subtree).</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>none</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>appeal-button hug (content + padding). Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -374,7 +382,7 @@ cat > "$TMP_DIR/inbox-list.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="loaded">
-    <ul data-ui-id="inbox-list-root" data-ui-kind="list" data-figma-node="40:2" data-evidence="code">
+    <ul data-ui-id="inbox-list-root" data-ui-kind="list" data-figma-node="40:2" data-evidence="code" data-ui-sizing="fill">
       <li data-ui-id="inbox-row-1" data-ui-kind="list-item" data-figma-node="40:3" data-evidence="code">New message from Alice</li>
       <li data-ui-id="inbox-row-2" data-ui-kind="list-item" data-figma-node="40:4" data-evidence="code">Meeting reminder</li>
     </ul>
@@ -394,6 +402,8 @@ cat > "$TMP_DIR/inbox-list.html" <<HTML
       <dd>40:2 list root; 40:3-40:4 rows; 40:31 loading skeleton; 40:21-40:22 empty state.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>none</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>inbox-list-root fill (parent minus page inset); rows hug. Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>
@@ -452,7 +462,7 @@ cat > "$TMP_DIR/report-sheet.html" <<HTML
   <nav data-ui-state-switcher aria-label="UI contract states"></nav>
   <div data-ui-state-host></div>
   <template data-ui-state="default">
-    <div data-ui-id="report-sheet-panel" data-ui-kind="sheet" data-figma-node="50:2" data-evidence="code">
+    <div data-ui-id="report-sheet-panel" data-ui-kind="sheet" data-figma-node="50:2" data-evidence="code" data-ui-sizing="fill">
       <button data-ui-id="report-option-spam" data-ui-kind="button" data-figma-node="50:3" data-evidence="code">Report as spam</button>
       <button data-ui-id="report-option-cancel" data-ui-kind="button" data-figma-node="50:4" data-evidence="code">Cancel</button>
     </div>
@@ -474,6 +484,8 @@ cat > "$TMP_DIR/report-sheet.html" <<HTML
       <dd>50:2-50:4 default options; 50:21-50:22 submitting; 50:31-50:32 success. Trigger button lives in the message-row contract, not here.</dd>
       <dt data-ui-scope="out_of_scope">Out of scope context</dt>
       <dd>Messages page chrome — not frozen here.</dd>
+      <dt data-ui-sizing>Layout sizing</dt>
+      <dd>report-sheet-panel fill (parent width); options hug. Snapshot px is preview-only.</dd>
     </dl>
   </details>
   <script data-ui-state-preview>

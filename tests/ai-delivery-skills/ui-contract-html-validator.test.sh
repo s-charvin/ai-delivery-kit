@@ -164,4 +164,21 @@ fi
 grep -q 'kebab-case lowercase ASCII' "$TMP_DIR/bad-state-id.out" \
   || fail "non-kebab-case state id must report STATE format"
 
+# Missing layout sizing table must fail SIZING.
+python3 - "$GOOD" "$TMP_DIR/no-sizing.html" <<'PY'
+from pathlib import Path
+import sys
+src, dst = Path(sys.argv[1]), Path(sys.argv[2])
+raw = src.read_text(encoding="utf-8")
+raw = raw.replace('data-ui-sizing="fill"', "", 1)
+raw = raw.replace('data-ui-sizing', 'data-ui-other', 1)
+dst.write_text(raw, encoding="utf-8")
+PY
+if python3 "$VALIDATOR" "$TMP_DIR/no-sizing.html" >"$TMP_DIR/no-sizing.out" 2>&1; then
+  cat "$TMP_DIR/no-sizing.out" >&2
+  fail "missing data-ui-sizing should fail validation"
+fi
+grep -q 'SIZING' "$TMP_DIR/no-sizing.out" \
+  || fail "missing data-ui-sizing must report SIZING"
+
 echo "PASS: ui-contract-html-validator"

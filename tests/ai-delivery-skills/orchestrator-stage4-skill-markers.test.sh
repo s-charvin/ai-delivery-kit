@@ -42,11 +42,15 @@ require "$EN" "Do not run \`figma-design-to-code\` or call TemPad" "EN no TemPad
 require "$EN" "the contract wins" "EN contract wins vs live TemPad"
 require "$EN" "data-ui-sizing" "EN follow sizing annotation"
 require "$EN" "not a runtime constant" "EN preview px ≠ runtime"
+require "$EN" "stop and ask" "EN ask overflow at implement"
+require "$EN" "snapshot \`w×h\` equality" "EN VA not snapshot px"
 
 require "$ZH" "默认不要跑 \`figma-design-to-code\`，也不要调用 TemPad" "ZH no TemPad ritual"
 require "$ZH" "以冻结契约为准" "ZH contract wins vs live TemPad"
 require "$ZH" "data-ui-sizing" "ZH follow sizing annotation"
 require "$ZH" "不是运行时常量" "ZH preview px ≠ runtime"
+require "$ZH" "停下问用户" "ZH ask overflow at implement"
+require "$ZH" "与快照 \`w×h\` 相等" "ZH VA not snapshot px"
 
 require "$EN_UI" "Stage 4 does not re-run it by default" "EN Stage 2 pointer"
 require "$ZH_UI" "Stage 4 默认也不再跑" "ZH Stage 2 pointer"

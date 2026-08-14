@@ -195,7 +195,8 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - **Tiny-change create vs patch:** if a matching contract already owns the physical container → **incremental patch** (add/adjust only the in-scope nodes; update `unit.requirements` + review-panel `in_scope`; do not expand `in_scope` to the whole shell). If no matching contract exists → **create `component`** rooted at the artifact's minimal ancestor — do **not** invent a brand-new full `shared-component` / `page` dump of the surrounding chrome solely to host a badge.
 - Do not invent visual truth — no adding units, states, components, or fields beyond what Figma evidence supports.
 - Do not invent layout — DOM structure, dimensions, positioning, spacing, and stacking come from TemPad `get_code` by **mechanical transfer**. Only add `data-ui-*` / `data-figma-node` / `data-evidence` annotations. Hand-authored semantic flex/grid rewrites that drop get_code geometry are process failures.
-- Do not treat get_code pixel widths as implementation-fixed. After mechanical transfer, run §5b and classify fill/hug/fixed (`data-ui-sizing="fill|hug|fixed"`) using the **fill detection rule**. Classifying is not a layout rewrite: keep preview px; do not replace them with `width: 100%` in the contract.
+- Do not treat get_code pixel widths as implementation-fixed. After mechanical transfer, run §5b and classify fill/hug/fixed (`data-ui-sizing="fill|hug|fixed"`) using the **fill detection rule**, including overflow / min / max for variable content. Classifying is not a layout rewrite: keep preview px; do not replace them with `width: 100%` in the contract. A contract without a Layout sizing table and unit-root `data-ui-sizing` is not freeze-complete.
+- Do not treat snapshot `width`/`height` in contract CSS or review-panel prose as an implementation checklist. Implementers consume `data-ui-sizing` + overflow notes, not preview px. Copying every snapshot box into layout constants is a process failure.
 - Do not invent or redraw icon/image glyphs. Every icon or image must come from the design asset itself (mechanical transfer of asset bytes) or from an **existing project asset** reused verbatim. When `get_code` returns an asset shell (`<svg data-src="...">` or an asset URL), the asset bytes must be fetched and persisted (inline SVG bytes or a saved project asset file, annotated with the asset hash) — never an empty shell left in place, and never a hand-drawn "looks close enough" approximation. An icon that merely resembles the design is a forged truth.
 - `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
@@ -427,7 +428,7 @@ For each **planned unit** (and each of its state frames), one at a time:
   - `dt[data-ui-asset-inventory]` — every icon/image resolution (inline hash, reused path, placeholder, pending).
   - `dt[data-ui-dynamics-inventory]` — mirrors `meta.dynamics[]` (or points to the table above); `none — static Figma snapshots only` when `dynamics` is `[]`; list every `pending-user` item explicitly.
   - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
-  - **Layout sizing** (`dt[data-ui-sizing]` or a plain dt): table of in-scope boxes → fill / hug / fixed, with evidence and “implement as”. The unit root is required. See §5b.
+  - **Layout sizing** (`dt[data-ui-sizing]` — required attribute, not a plain dt): table of in-scope boxes → fill / hug / fixed, with evidence, “implement as”, and overflow / min / max for variable content. The unit root is required. See §5b. Validator rejects a missing or empty `dt[data-ui-sizing]`.
   - Style the panel for readability: `[data-ui-review-panel]` spacing, `.effect-table` borders, `.tag-motion` / `.tag-static` for effect types — copy patterns from `templates/ui-contract-template.html`.
   - Every `data-figma-node` cited in `in_scope` must still appear on a non-context DOM node (validator cross-check).
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched. If the patch **deletes, moves, or narrows** dynamics / preview hints, run §2c coverage review before continuing.
@@ -436,14 +437,14 @@ Process one frame at a time — never batch every frame into a single query or a
 
 ### 5b. Layout sizing classification (REQUIRED after mechanical transfer)
 
-`get_code` almost always emits concrete pixel widths (`width: Npx` or equivalent codegen). That is **preview geometry** for the design artboard. It is **not** proof the node is FIXED at runtime.
+`get_code` almost always emits concrete pixel widths (`width: Npx` or equivalent codegen). That is **preview geometry** for the design artboard. It is **not** proof the node is FIXED at runtime. The snapshot is one content example on one artboard width.
 
-After transferring CSS, classify every in-scope box (unit root required; children when their sizing differs from the parent). Put `data-ui-sizing="fill|hug|fixed"` on those nodes.
+After transferring CSS, classify every in-scope box (unit root required; children when their sizing differs from the parent). Put `data-ui-sizing="fill|hug|fixed"` on those nodes. Put a **Layout sizing** table in `[data-ui-review-panel]` (`dt[data-ui-sizing]`) with evidence, implement-as, and overflow / min / max. Skipping this table is a freeze defect — the validator requires `dt[data-ui-sizing]` and at least one truth node with `data-ui-sizing`.
 
 | `data-ui-sizing` | Meaning | Implement as |
 |---|---|---|
-| `fill` | stretches to remaining parent space | parent width minus insets (padding / stretch / flex-grow). Do **not** hardcode the snapshot px |
-| `hug` | sizes to content | intrinsic / min-content. Snapshot px is a content example |
+| `fill` | stretches to remaining parent space | parent constraints minus insets (padding / stretch / flex-grow). Do **not** hardcode the snapshot px |
+| `hug` | sizes to content | intrinsic / min-content, optionally clamped. Snapshot px is a content example |
 | `fixed` | designed lock | explicit size from get_code px (then the host project's size scale, if any) |
 
 **fill detection rule:** use `fill` when ANY of:
@@ -452,11 +453,29 @@ After transferring CSS, classify every in-scope box (unit root required; childre
 2. Measured px width equals **parent width minus symmetrical horizontal inset** (1px tolerance).
 3. The node visually spans the remaining content column after matching insets.
 
-**hug:** text, labels, chips, and rows that shrink to content.
+**hug:** text, labels, chips, rows, and any box whose size should follow content (including copy that will be replaced by server / i18n strings longer or shorter than the Figma sample).
 
-**fixed only:** icons, avatars, minimum touch targets (≥44px), and dialogs/controls the design explicitly locks. If you keep fixed px, say why in the review panel.
+**fixed only:** icons, avatars, non-content images whose box is the asset, minimum touch targets (≥44px), and nodes the design or requirement **explicitly** locks. Unchanging chrome (a spinner slot, a decorative mask bitmap) may be fixed or a min-size — say why in the table. Defaulting to `fixed` because get_code printed a px value is a process failure.
+
+**Variable content (REQUIRED):** if a box's copy, list length, or media can change at runtime (`content-bound`, i18n, user input, server arrays), it is `hug` or `fill` on that axis — never `fixed` from the snapshot. Record an **overflow policy** in the sizing table:
+
+| Policy | Meaning |
+|---|---|
+| `wrap` | text / chips wrap; parent may grow |
+| `ellipsis` | max lines + fade/ellipsis |
+| `clip` | hard clip, no ellipsis |
+| `scroll` | inner scroll |
+| `grow-parent` | ancestor grows with content |
+
+Also record **min / max** (min height so an empty/short state does not collapse; max width/lines so a long payload cannot blow the layout) when the requirement or design locks them.
+
+If requirement **and** design are silent on overflow / min / max → **stop and ask the user**. Do not invent a lock from snapshot px, and do not ship unbounded growth silently. Write the user's decision into the sizing table before freeze (or before implementation if freeze already happened without it).
 
 **Preview vs runtime:** keep transferred snapshot px in contract CSS so the artboard-width canvas matches Figma. **Do not** rewrite preview CSS to `width: 100%` — that changes the acceptance snapshot. Annotate `data-ui-sizing` instead. Preview CSS px is an artboard snapshot, not runtime sizing.
+
+**Implementation consumption (REQUIRED whenever this contract is implemented):** map each classified box to host-layout constraints (`fill` / `hug` / `fixed` + overflow clamps). Do **not** copy preview CSS px into a block of layout constants. Do not write tests that treat snapshot `w×h` as pass/fail for `fill`/`hug` boxes — assert constraint behavior (stretches with parent, hugs short content, clamps long content). Visual acceptance compares stacking, tokens, motion, and constraint behavior — not snapshot px equality on `fill`/`hug` boxes.
+
+Prefer constraint layout (flex / stretch / intrinsic). A small number of `fixed` or min sizes plus overlap offsets for unchanging chrome is acceptable when cheaper than deep intrinsic measurement. Dumping every snapshot box as a constant is not.
 
 Ambiguous → stop and ask. Do not guess `fixed`.
 
@@ -468,7 +487,8 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - If the host looks blank: check (1) preview script present, (2) default template non-empty, (3) `--color-text` / `--color-surface` are real CSS colors (never the invalid token `#PLACEHOLDER`), and (4) `html, body` keep the template's light preview base — IDE dark canvases otherwise show black text on a transparent page. Overwrite tokens with evidence colors, not placeholder strings.
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame. If the same chrome appears across states (or as repeated instances) but motion coverage is uneven, treat that as a §2c anomaly — do not call the preview done.
 - Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
-- Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, and inference notes are legible and accurate.
+- Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, inference notes, **and the Layout sizing table** are legible and accurate. Freeze is incomplete if the unit root lacks `data-ui-sizing` or `dt[data-ui-sizing]` is missing / empty. Confirm variable-content rows list overflow / min / max, or an explicit user decision.
+- Do **not** present snapshot `w×h` as the pass criterion for `fill`/`hug` boxes. Humans review hydrated layout against Figma; implementers follow the sizing table.
 - When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec. If the user named a reference implementation, confirm the canvas preview uses the same mechanics (already-shown content does not shift or reverse relative to the reference).
 - The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
 - Never assume "validator OK ⇒ looks like Figma."
@@ -484,9 +504,9 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 
 Only continue when it prints `OK`. On failure, fix the contract and re-run — never claim `acceptance_frozen` on a failing contract. Validator `OK` is necessary but not sufficient: browser-hydrated default preview and requirement-scope alignment from §1/§1b/§6 are still required before freezing.
 
-**What the validator checks automatically:** schema/DOM structure, single unit root, `data-ui-id` uniqueness + `data-figma-node`/`data-ui-kind` presence (placeholder figma nodes rejected), preview infrastructure present, **every** state template non-empty with visible text/media, `in_scope`/`out_of_scope` inventory present, **in_scope node ids cross-checked against `data-figma-node` values frozen in the DOM**, context chrome not truth-annotated, inference notes back every `data-evidence="inferred"`, `data-src` asset shells carry `data-ui-asset` metadata, delivery fields.
+**What the validator checks automatically:** schema/DOM structure, single unit root, `data-ui-id` uniqueness + `data-figma-node`/`data-ui-kind` presence (placeholder figma nodes rejected), preview infrastructure present, **every** state template non-empty with visible text/media, `in_scope`/`out_of_scope` inventory present, **in_scope node ids cross-checked against `data-figma-node` values frozen in the DOM**, context chrome not truth-annotated, inference notes back every `data-evidence="inferred"`, `data-src` asset shells carry `data-ui-asset` metadata, delivery fields, **`dt[data-ui-sizing]` present with a non-empty table and at least one truth node carrying `data-ui-sizing`**.
 
-**What the validator cannot check (remain §6 process checks):** `unit.source_node` minimality (no Figma tree access — you must verify the scoped root is the local minimal ancestor, not the full page), layout fidelity to Figma (mechanical transfer vs hand-authored rewrite), **icon asset fidelity** (SVG paths vs fetched asset bytes — the validator cannot see Figma assets), browser hydration fidelity (open it and look), and semantic correctness of state/default choices. `OK` ≠ "looks like Figma" and ≠ "scope matches the slice" — those are human/§6 gates.
+**What the validator cannot check (remain §6 process checks):** `unit.source_node` minimality (no Figma tree access — you must verify the scoped root is the local minimal ancestor, not the full page), layout fidelity to Figma (mechanical transfer vs hand-authored rewrite), **whether fill/hug/fixed labels are semantically correct**, overflow policy quality, **icon asset fidelity** (SVG paths vs fetched asset bytes — the validator cannot see Figma assets), browser hydration fidelity (open it and look), and semantic correctness of state/default choices. `OK` ≠ "looks like Figma" and ≠ "scope matches the slice" — those are human/§6 gates.
 
 ### 8. After implementation — backfill delivery and revalidate
 
@@ -501,6 +521,8 @@ Once the unit is implemented, edit the same file's `#ui-contract-meta`:
 2. **Reference check:** run a reference/usage search (findReferences, or grep for instantiations/call sites) to locate where the unit is **actually mounted or instantiated**. The mount site is the target — even when it differs from the definition file. A definition-only check is not sufficient (a symbol can be defined in one file and mounted in another).
 
 Write the verified location(s) into `target` (both definition and mount file when they differ). Never fill a target from memory, and never carry one over from a superseded contract without re-running both checks; if the implementation cannot be located yet, keep `delivery.status` at the pre-implementation value instead of guessing a target to complete the object.
+
+Spot-check the implementation against the Layout sizing table before claiming `implemented`: `fill`/`hug` boxes must not be locked to snapshot px; overflow clamps must match the table (or a recorded user decision). A widget that re-lists every preview `width`/`height` as layout constants is not a valid implementation of this contract.
 
 Re-run the validator — it enforces that `delivery.implemented` is complete whenever `delivery.status` is `"implemented"` or `"merged"`. Do not create a separate implementation-tracking file; this backfill inside the same HTML is the only implementation record.
 
@@ -532,8 +554,12 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - **Putting the modal's trigger button inside the modal contract** instead of patching it into the button's physical container contract.
 - Hand-authoring a semantic flex/grid layout instead of mechanically transferring `get_code` geometry.
 - Copying get_code `w-[Npx]` into implementation as a hardcoded width when the fill detection rule says `fill` — implement as parent minus insets.
+- Dumping every snapshot box (`width`/`height`/`left`/`top`) into implementation layout constants, including for `hug`/`fill` and content-bound copy.
+- Treating snapshot `w×h` as visual-acceptance or unit-test pass/fail for `fill`/`hug` boxes.
 - Rewriting contract preview CSS from snapshot px to `width: 100%` as a substitute for `data-ui-sizing` — that breaks the artboard snapshot.
 - Skipping §5b and freezing only pixel geometry.
+- Marking variable / content-bound / i18n copy as `fixed` because the Figma sample happened to measure Npx.
+- Inventing overflow, min, or max for variable content when requirement and design are silent, instead of stopping to ask.
 - **Hand-authoring an icon or image glyph** (redrawing a "close enough" SVG) instead of transferring the design asset bytes or reusing an existing project asset.
 - Leaving a `get_code` asset shell (`data-src` / asset URL) unresolved in the frozen contract — asset bytes must be inlined or persisted into the project, with the asset hash noted.
 - Reconstructing an asset-shell subtree (a subtree `get_code` exports as one SVG asset, e.g. a drag handle) from `get_structure` geometry and silently dropping paint attributes (fill-opacity, gradient, stroke) — structure is geometry-only evidence.
