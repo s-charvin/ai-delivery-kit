@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: Use when a Figma design must become frozen HTML UI contract(s) (schema v2) before implementation — especially when evidence is a whole page but the requirement only hits a subtree, when multiple states need browser-switchable preview, when motion/Spine/Lottie/shimmer must be audited via a review-panel motion table, or when prior contracts dumped full screens / conflated motion with data binding / failed hydrated preview.
+description: Use when a Figma design must become frozen HTML UI contract(s) (schema v2) before implementation — especially when evidence is a whole page but the requirement only hits a subtree, when multiple states need browser-switchable preview, when motion/Spine/Lottie/shimmer must be audited via a review-panel motion table, when overlapping fills/gradients or Figma masks might be alpha compositing rather than independent overlays, or when prior contracts dumped full screens / conflated motion with data binding / failed hydrated preview.
 ---
 
 # UI Truth Mapping
@@ -55,6 +55,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 | Multi-state list/form/module | One `component` (or `page` if the route itself is the scope) | Scoped module root | Every visual frame → one template; hydrate + switcher mandatory | Separate contracts per state; empty default template |
 | Element property only (`disabled` / `selected`) | Patch that node in its existing unit | Unchanged | Do **not** add a unit-level state template | Spawn `disabled` as a full-unit `<template data-ui-state>` |
 | Component with **variant properties** or **motion** (pulse, Lottie, GIF, prototype) | Same unit as the component; add `meta.dynamics[]` + review-panel inventory | Component/instance root | Static **keyframe** in a state template for preview; motion spec in `dynamics` | Treat motion as static PNG only; omit design-delivered animation assets |
+| Same-bounds **color gradient + alpha gradient** / Figma mask / `mask-image` | Same unit; run **§3b** before treating siblings as paint | The composited paint root | One composited effect (color axis × alpha axis) | Two `src-over` overlay fills; flattening a code-describable mask into a PNG wash |
 
 ## Dynamics & motion — discovery vs reviewer presentation
 
@@ -198,7 +199,9 @@ Designers often have **non-canonical** layer hygiene. Assume dynamics may appear
 - Do not treat get_code pixel widths as implementation-fixed. After mechanical transfer, run §5b and classify fill/hug/fixed (`data-ui-sizing="fill|hug|fixed"`) using the **fill detection rule**, including overflow / min / max for variable content. Classifying is not a layout rewrite: keep preview px; do not replace them with `width: 100%` in the contract. A contract without a Layout sizing table and unit-root `data-ui-sizing` is not freeze-complete.
 - Do not treat snapshot `width`/`height` in contract CSS or review-panel prose as an implementation checklist. Implementers consume `data-ui-sizing` + overflow notes, not preview px. Copying every snapshot box into layout constants is a process failure.
 - Do not invent or redraw icon/image glyphs. Every icon or image must come from the design asset itself (mechanical transfer of asset bytes) or from an **existing project asset** reused verbatim. When `get_code` returns an asset shell (`<svg data-src="...">` or an asset URL), the asset bytes must be fetched and persisted (inline SVG bytes or a saved project asset file, annotated with the asset hash) — never an empty shell left in place, and never a hand-drawn "looks close enough" approximation. An icon that merely resembles the design is a forged truth.
-- `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth).
+- `get_structure` is **geometry-only evidence** — it never proves paint. Color, opacity, gradient, and stroke values must come from `get_code` tokens or asset bytes; an element cited from structure alone must not carry paint values filled in from memory (a 20%-opacity handle bar rebuilt as solid black is a forged truth). `"isMask": true` on a structure node is **compositing-role** evidence only (the field is omitted when false) — it does not supply fill/gradient tokens.
+- Do not treat a Figma/CSS **mask**, alpha-only gradient, or non-`src-over` blend as an independent drawing layer stacked on top of another fill. That is compositing of the paint, not a second overlay. Run **§3b** whenever overlapping fills/gradients share bounds, mask/blend keywords appear, or TemPad emits `data-hint-mask`, `data-hint-has-mask`, or `isMask`. Skipping §3b and freezing two same-bounds washes is a process failure.
+- Never copy TemPad `data-hint-*` attributes into frozen HTML (hints only). Map mask hints to `data-ui-composite` / the compositing table.
 - Do not treat every picture in Figma as a static design asset. Distinguish **static design icons** (frozen asset truth) from **dynamic/server-provided imagery** (avatars, user uploads, server badges — the Figma picture is only an example). Judge from requirement context; freeze only geometry + placeholder semantics for dynamic content, note it in the review panel, and never download example content as a frozen asset.
 - Do not skip the **§2c dynamics scan** when the scoped subtree contains COMPONENT/INSTANCE nodes, motion-named layers, or the requirement mentions animation/Lottie/GIF/video — record `dynamics: []` only after explicit confirmation the unit is static.
 - Do not skip **parent SECTION / canvas sibling** TEXT notes in §2c step 0. A note that sits beside the frames (not nested in `source_node`) is still first-class motion evidence. Truncating a multi-line transition note, or classifying it as `ignore` because it is “outside the unit root”, is a process failure.
@@ -397,6 +400,53 @@ For each **planned unit** (and each of its state frames), one at a time:
 
    Note: `get_code` may return an entire subtree as **one** vector asset (e.g. a sheet drag handle). The asset bytes are the only complete truth — do not reconstruct child elements from `get_structure`, which carries geometry but silently loses paint attributes (fill-opacity, gradients, strokes).
 
+### 3b. Paint compositing / mask scan (REQUIRED after `get_code`, before filling HTML)
+
+Overlapping fills in the same box are **not** automatically two drawing layers. Classify compositing **before** writing sibling overlay DOM.
+
+**Discover** (run when **any** of these appear in `get_code` / `get_structure` / layer names):
+
+TemPad mask hints (first-class — do **not** copy `data-hint-*` into the contract):
+
+| Source | Signal | Meaning | Classify as |
+|---|---|---|---|
+| `get_code` | `data-hint-mask="true"` | **This node is the mask layer** | `mask` — not a painted overlay |
+| `get_code` | `data-hint-has-mask="true"` | **This SVG root already contains a baked mask** | Composited asset truth. Persist SVG bytes. Do **not** stack another mask overlay. Do **not** rebuild children from `get_structure` (that drops the baked mask). |
+| `get_structure` | `"isMask": true` | Same as `data-hint-mask` (field **omitted when false**) | `mask`. Still take fill/gradient tokens from `get_code`. |
+
+Also run when:
+
+- Names: mask, 蒙版, alpha, gradient mask, fade
+- CSS: `mask`, `mask-image`, `-webkit-mask`, `mix-blend-mode`, `background-blend-mode`
+- Two or more fills/gradients occupying the **same bounds**
+- A gradient whose stops share RGB and only change alpha
+- Figma Mask / Alpha mask / Vector mask, or blend other than Normal / `src-over`
+
+**Classify** each overlapping paint:
+
+| Role | Test | Freeze as |
+|---|---|---|
+| `paint` | Removing it removes the visible color/image | The color/image source |
+| `mask` | Removing it only changes another layer's alpha/clip; it is **not a second visible wash** | Alpha/clip **of the paint** — not a sibling overlay |
+| `overlay` | It still adds visible color if the other layer is gone (scrim, tint, border glow) | Independent drawing layer |
+
+**Rules:**
+
+1. Default for a same-bounds pair **opaque RGB gradient + fading alpha** → **one composited effect** (`paint` × `mask`), operator `dst-in` / `mask-image` / multiply-alpha. **Not** two `src-over` fills.
+2. Keep get_code geometry for preview, but annotate: `data-ui-composite="paint"` on the color/image node, `data-ui-composite="mask"` on the alpha/clip node, `data-ui-composite-op="dst-in|mask-image|multiply|src-over"`. `in_scope` lists the **composited result** as one artifact, not two accepted washes.
+3. Record **color axis** and **alpha axis** separately (horizontal color × vertical fade is common). A CSS `linear-gradient(θ)` on the mask is the **fade axis**. Near 0°/180° → vertical fade; near 90°/270° → horizontal fade. A few degrees off-axis is fade-axis noise unless the user/design explicitly wants the skew — left/right alpha mismatch at the same Y means a **tilted mask**, not a second overlay.
+4. Do not flatten a code-describable gradient mask into a PNG overlay bitmap. Rasterize only photographic / image masks.
+5. When any `mask` exists, publish a chat inventory **and** a review-panel **Paint compositing** block (`dt[data-ui-compositing]`):
+
+```
+| paint node | mask node | operator | color axis | alpha axis | not-an-overlay |
+```
+
+6. Ambiguous tint-vs-mask → **stop and ask**. Do not default to overlay.
+7. If a parent/root has `data-hint-has-mask="true"` **and** a sibling has `data-hint-mask="true"` / `isMask`, the SVG already includes that mask. Record the sibling in the compositing table as **already-baked**, not as an extra `src-over` wash on the SVG.
+
+Implementers consume the operator (mask / multiply alpha). Two stacked `src-over` layers is a failed reading of this contract.
+
 ### 4. Copy the template verbatim (create) or open the matched file (patch)
 
 **Create:** locate `templates/ui-contract-template.html` and copy it verbatim to `<output-dir>/<unit-id>/ui-contract.html`. All four regions (`#ui-contract-meta`, `<style>`, `<main data-ui-contract>`, `[data-ui-review-panel]`) stay intact; keep `[data-ui-state-switcher]`, `[data-ui-state-host]`, and `script[data-ui-state-preview]` from the template; never add a fifth free-form region.
@@ -429,6 +479,7 @@ For each **planned unit** (and each of its state frames), one at a time:
   - `dt[data-ui-dynamics-inventory]` — mirrors `meta.dynamics[]` (or points to the table above); `none — static Figma snapshots only` when `dynamics` is `[]`; list every `pending-user` item explicitly.
   - `dt[data-ui-evidence-for]` — **Canvas placeholder / Copy** for `inferred` nodes and `content-bound` fields; merge duplicate placeholder notes when possible (hidden duplicate `dt` entries are OK if the validator requires one `data-ui-evidence-for` per `inferred` id).
   - **Layout sizing** (`dt[data-ui-sizing]` — required attribute, not a plain dt): table of in-scope boxes → fill / hug / fixed, with evidence, “implement as”, and overflow / min / max for variable content. The unit root is required. See §5b. Validator rejects a missing or empty `dt[data-ui-sizing]`.
+  - **When §3b found a mask:** `dt[data-ui-compositing]` — Paint compositing table (paint node, mask node, operator, color axis, alpha axis). Implementation multiplies/clips; it does not stack a second overlay. Omit this dt only when there is no mask.
   - Style the panel for readability: `[data-ui-review-panel]` spacing, `.effect-table` borders, `.tag-motion` / `.tag-static` for effect types — copy patterns from `templates/ui-contract-template.html`.
   - Every `data-figma-node` cited in `in_scope` must still appear on a non-context DOM node (validator cross-check).
 - Incremental patch: touch only the subtree, states, and metadata fields the requirement actually changes. Leave unrelated `data-ui-id` subtrees, unrelated states, and other units' `unit.dependencies` untouched. If the patch **deletes, moves, or narrows** dynamics / preview hints, run §2c coverage review before continuing.
@@ -488,6 +539,7 @@ Open the contract HTML in a browser (or the IDE's rendered preview). The preview
 - Use `[data-ui-state-switcher]` to step through **every** declared state; each activated host contents must match its source frame. If the same chrome appears across states (or as repeated instances) but motion coverage is uneven, treat that as a §2c anomaly — do not call the preview done.
 - Compare **every icon/image** against its evidence: inlined bytes must match the fetched asset payload; reused assets must match the project file; server-provided placeholders must visibly be placeholders. A "looks like the right icon" redraw fails this check even when geometry is perfect.
 - Expand `[data-ui-review-panel]` and confirm scope inventory, asset notes, every cited `data-figma-node`, inference notes, **and the Layout sizing table** are legible and accurate. Freeze is incomplete if the unit root lacks `data-ui-sizing` or `dt[data-ui-sizing]` is missing / empty. Confirm variable-content rows list overflow / min / max, or an explicit user decision.
+- If the canvas has overlapping same-bounds fills/gradients or mask CSS, confirm **Paint compositing** (`dt[data-ui-compositing]`) is present and does **not** describe two overlay washes. Freeze is incomplete if a `mask` node is accepted as its own painted layer.
 - Do **not** present snapshot `w×h` as the pass criterion for `fill`/`hug` boxes. Humans review hydrated layout against Figma; implementers follow the sizing table.
 - When `meta.dynamics[]` has motion entries: confirm the **Motion and transitions** table is present, lists every motion the requirement expects, and explicitly states it is **not** a data-binding spec. If the user named a reference implementation, confirm the canvas preview uses the same mechanics (already-shown content does not shift or reverse relative to the reference).
 - The hydrated HTML **is** the review medium. Do not generate or save preview screenshot artifacts (no `contract-preview-*.png` etc.) — humans review the HTML directly, and screenshots drift from the contract.
@@ -523,6 +575,8 @@ Once the unit is implemented, edit the same file's `#ui-contract-meta`:
 Write the verified location(s) into `target` (both definition and mount file when they differ). Never fill a target from memory, and never carry one over from a superseded contract without re-running both checks; if the implementation cannot be located yet, keep `delivery.status` at the pre-implementation value instead of guessing a target to complete the object.
 
 Spot-check the implementation against the Layout sizing table before claiming `implemented`: `fill`/`hug` boxes must not be locked to snapshot px; overflow clamps must match the table (or a recorded user decision). A widget that re-lists every preview `width`/`height` as layout constants is not a valid implementation of this contract.
+
+Spot-check compositing: a `mask` row must be implemented as mask / multiply-alpha / `dst-in`, not as a second `src-over` overlay (including not as a PNG wash of the alpha gradient).
 
 Re-run the validator — it enforces that `delivery.implemented` is complete whenever `delivery.status` is `"implemented"` or `"merged"`. Do not create a separate implementation-tracking file; this backfill inside the same HTML is the only implementation record.
 
@@ -563,6 +617,13 @@ There is no aggregate index file, so pointers to a contract live scattered acros
 - **Hand-authoring an icon or image glyph** (redrawing a "close enough" SVG) instead of transferring the design asset bytes or reusing an existing project asset.
 - Leaving a `get_code` asset shell (`data-src` / asset URL) unresolved in the frozen contract — asset bytes must be inlined or persisted into the project, with the asset hash noted.
 - Reconstructing an asset-shell subtree (a subtree `get_code` exports as one SVG asset, e.g. a drag handle) from `get_structure` geometry and silently dropping paint attributes (fill-opacity, gradient, stroke) — structure is geometry-only evidence.
+- **Treating a mask / alpha gradient as a second src-over overlay** (two independent painted washes, or a PNG dump of the fade) instead of running §3b and compositing `paint` × `mask`.
+- Skipping §3b when overlapping fills/gradients share bounds or mask/blend keywords are present.
+- Freezing two same-bounds gradients as two `in_scope` painted layers without `data-ui-composite` / `dt[data-ui-compositing]`.
+- Using a slightly-off CSS angle on the alpha layer as a second overlay instead of a fade axis.
+- Copying TemPad `data-hint-mask` / `data-hint-has-mask` into frozen HTML.
+- Ignoring `data-hint-has-mask="true"` and stacking another mask overlay on a baked SVG, or rebuilding that SVG from `get_structure`.
+- Ignoring `data-hint-mask="true"` / `"isMask": true` and treating that node as independent overlay paint.
 - Downloading a Figma **example** image as a frozen asset when the requirement context shows the content is server-provided (avatar, user upload, dynamic badge).
 - Skipping §2c and leaving `dynamics` undocumented when COMPONENT variants or motion layers are in scope.
 - Skipping §2c step 0 (text-hint sweep) because layer names are messy or absent.

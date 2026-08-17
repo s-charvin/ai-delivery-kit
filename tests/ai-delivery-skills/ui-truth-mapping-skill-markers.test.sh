@@ -57,6 +57,16 @@ require "$EN" "stop and ask the user" "EN ask overflow"
 require "$EN" "Dumping every snapshot box" "EN anti dump snapshot constants"
 require "$EN" "dt[data-ui-sizing]\` — required attribute" "EN sizing table required attr"
 
+# EN — paint compositing / mask (not a second overlay wash)
+require "$EN" "### 3b. Paint compositing / mask scan" "EN §3b"
+require "$EN" "not a second visible wash" "EN mask ≠ overlay wash"
+require "$EN" "dt[data-ui-compositing]" "EN compositing table"
+require "$EN" "Treating a mask / alpha gradient as a second src-over overlay" "EN anti mask-as-overlay"
+require "$EN" "data-hint-mask=\"true\"" "EN TemPad hint-mask"
+require "$EN" "data-hint-has-mask=\"true\"" "EN TemPad hint-has-mask"
+require "$EN" "\"isMask\": true" "EN structure isMask"
+require "$EN" "Never copy TemPad \`data-hint-*\`" "EN strip data-hint"
+
 # Description must stay discovery-only (no procedure shortcut like "Auto-detects…")
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
   fail "EN description summarizes workflow (Auto-detects) — SDO violation"
@@ -95,6 +105,16 @@ require "$ZH" "停下问用户" "ZH ask overflow"
 require "$ZH" "把每个快照盒子" "ZH anti dump snapshot constants"
 require "$ZH" "dt[data-ui-sizing]\` — 必须带此属性" "ZH sizing table required attr"
 
+# ZH parity for paint compositing / mask
+require "$ZH" "### 3b. 绘制合成 / 蒙版扫描" "ZH §3b"
+require "$ZH" "不是第二层可见罩色" "ZH mask ≠ overlay wash"
+require "$ZH" "dt[data-ui-compositing]" "ZH compositing table"
+require "$ZH" "把蒙版 / 仅 alpha 渐变当成第二层 src-over 覆盖" "ZH anti mask-as-overlay"
+require "$ZH" "data-hint-mask=\"true\"" "ZH TemPad hint-mask"
+require "$ZH" "data-hint-has-mask=\"true\"" "ZH TemPad hint-has-mask"
+require "$ZH" "\"isMask\": true" "ZH structure isMask"
+require "$ZH" "禁止把 TemPad 的 \`data-hint-*\`" "ZH strip data-hint"
+
 # Template still ships hydrate + switcher + light preview base
 TPL="$ROOT/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html"
 [[ -f "$TPL" ]] || fail "Missing template: $TPL"
@@ -103,6 +123,7 @@ require "$TPL" "data-ui-state-switcher" "template switcher"
 require "$TPL" "data-ui-state-host" "template host"
 require "$TPL" "html, body" "template light html/body base"
 require "$TPL" "data-ui-sizing" "template sizing annotation"
+require "$TPL" "data-ui-compositing" "template compositing annotation"
 
 # Kit skills must stay framework-agnostic — no host-app size tokens or artboard numbers.
 for f in "$EN" "$ZH"; do

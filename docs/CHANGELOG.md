@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.6 — 2026-08-17
+
+### Changed
+
+- `ui-truth-mapping`: overlapping same-bounds fills/gradients or Figma masks are **paint × mask compositing**, not a second `src-over` overlay. Run §3b; record `data-ui-composite` / `dt[data-ui-compositing]`; never copy TemPad `data-hint-*` into frozen HTML.
+
 ## v0.3.5 — 2026-08-14
 
 ### Changed

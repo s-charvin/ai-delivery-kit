@@ -280,6 +280,13 @@
       - Include a Layout sizing table (`dt[data-ui-sizing]`). Preview CSS px
         is not runtime sizing. Variable content needs overflow / min / max
         or an explicit user decision — do not guess fixed from the snapshot.
+      - When overlapping fills are a mask (alpha fade / Figma mask / mask-image),
+        include Paint compositing (`dt[data-ui-compositing]`). A mask is not a
+        second src-over overlay. Annotate data-ui-composite="paint|mask".
+        TemPad `data-hint-mask` / `data-hint-has-mask` / structure `isMask` are
+        classification hints only — never copy `data-hint-*` into this HTML.
+        `data-hint-has-mask` means the SVG already baked the mask; do not stack
+        another overlay.
       - Avoid "1:1" in prose (validator may parse as a Figma node id); write "pixel-level" instead.
     -->
     <details data-ui-review-panel open>

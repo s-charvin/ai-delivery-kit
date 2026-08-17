@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: 当 Figma 设计需要在 1:1 实现前冻结为 HTML UI 契约（schema v2）时使用 — 尤其证据是整页但需求只命中子树（红点、tip、sheet）、需要多状态可切换预览、或既有合同整页 dump / 不像 Figma / 未 hydrate 预览时。
+description: 当 Figma 设计需要在 1:1 实现前冻结为 HTML UI 契约（schema v2）时使用 — 尤其证据是整页但需求只命中子树（红点、tip、sheet）、需要多状态可切换预览、重叠填充/渐变或 Figma 蒙版可能是 alpha 合成而非独立覆盖层、或既有合同整页 dump / 不像 Figma / 未 hydrate 预览时。
 ---
 
 # UI 真值映射
@@ -55,6 +55,7 @@ templates/
 | 多状态列表/表单/模块 | 一个 `component`（若路由本身即范围则用 `page`） | 作用域模块 root | 每个视觉 frame → 一个 template；hydrate + switcher 强制 | 一态一份契约；空默认 template |
 | 仅元素属性（`disabled` / `selected`） | 在既有单元上 patch 该节点 | 不变 | **不要**加单元级状态模板 | 把 `disabled` 做成整单元 `<template data-ui-state>` |
 | 带 **变体属性** 或 **动效** 的组件（pulse、Lottie、GIF、prototype） | 仍属同一单元；补 `meta.dynamics[]` + review-panel 清单 | 组件/instance root | 预览用**静态关键帧** state template；动效规格写在 `dynamics` | 把动效压成静态 PNG；遗漏设计提供的动画资源 |
+| 同框 **彩色渐变 + 透明渐变** / Figma 蒙版 / `mask-image` | 仍属同一单元；先跑 **§3b** 再把兄弟当绘制层 | 合成后的绘制 root | 一个合成效果（颜色轴 × 透明轴） | 两层 `src-over` 覆盖；把可用代码描述的蒙版压成 PNG 罩 |
 
 ## 动态与动效 — 现状与缺口
 
@@ -128,7 +129,9 @@ templates/
 - 不要把 get_code 的像素宽度当成实现上的固定宽。机械转移后必须跑 §5b，按 **fill 判定规则** 标注 `data-ui-sizing="fill|hug|fixed"`，并为可变内容写 overflow / min / max。分类不是布局重写：预览 CSS 保留 px；禁止在契约里把它们改成 `width: 100%`。缺少布局尺寸表或单元 root 没有 `data-ui-sizing` 的契约不算冻结完成。
 - 不要把契约 CSS 或 review-panel 里的快照 `width`/`height` 当成实现清单。实现方消费 `data-ui-sizing` + overflow 说明，而不是预览 px。把每个快照盒子抄成布局常量是流程失败。
 - 不要发明或重绘 icon/图片图形。每个 icon 或图片必须来自设计资产本身（机械转移资产字节），或逐字**复用项目已有资产**。当 `get_code` 返回资产空壳（`<svg data-src="...">` 或资产 URL）时，必须取得资产字节并持久化（内联 SVG 字节或保存为项目资产文件，并标注资产 hash）— 不允许留下空壳，更不允许手画一个「看起来差不多」的近似图形。仅仅「像」设计稿的 icon 是伪造真值。
-- `get_structure` 只是**几何证据** — 从不证明绘制属性。颜色、透明度、渐变、描边必须来自 `get_code` token 或资产字节；仅由 structure 引用的元素不得携带凭记忆补上的绘制值（把 20% 透明度的拖拽条重建成纯黑就是伪造真值）。
+- `get_structure` 只是**几何证据** — 从不证明绘制属性。颜色、透明度、渐变、描边必须来自 `get_code` token 或资产字节；仅由 structure 引用的元素不得携带凭记忆补上的绘制值（把 20% 透明度的拖拽条重建成纯黑就是伪造真值）。结构节点上的 `"isMask": true` 只是**合成角色**证据（`false` 时省略该字段）— 不提供填充/渐变 token。
+- 不要把 Figma/CSS **蒙版**、仅 alpha 渐变、或非 `src-over` 的混合，当成叠在另一填充上的独立绘制层。那是绘制的合成，不是第二层覆盖。只要同框重叠填充/渐变、出现 mask/blend 关键词，或 TemPad 给出 `data-hint-mask` / `data-hint-has-mask` / `isMask`，就必须跑 **§3b**。跳过 §3b、把两层同框罩色冻成独立绘制，是流程失败。
+- 禁止把 TemPad 的 `data-hint-*` 抄进冻结 HTML（hint 仅供分类）。蒙版 hint 映射到 `data-ui-composite` / 合成表。
 - 不要把 Figma 中的每张图都当静态设计资产。区分**静态设计 icon**（冻结资产真值）与**动态/服务端提供的内容**（头像、用户上传、服务端徽章 — Figma 图只是举例）。依据需求上下文判断；动态内容只冻结几何 + 占位语义并在 review panel 注明，绝不把示例内容下载为冻结资产。
 - 当作用域子树含 COMPONENT/INSTANCE、动效命名图层，或需求提到 animation/Lottie/GIF/video 时，**禁止跳过 §2c 动态扫描** — 仅在确认全单元为静态快照后才可写 `dynamics: []`。
 - **禁止**用手绘静态 icon 近似 Lottie/GIF/video — 应标为 `design-animation-asset`，可获取时持久化文件，预览用海报关键帧。
@@ -311,6 +314,53 @@ templates/
 
    注意：`get_code` 可能把整个子树作为**一个**矢量资产返回（如 sheet 拖拽条）。资产字节才是唯一完整真值 — 不要用 `get_structure` 重建子元素：structure 只携带几何，会静默丢掉绘制属性（fill-opacity、渐变、描边）。
 
+### 3b. 绘制合成 / 蒙版扫描（`get_code` 之后、填 HTML 之前必做）
+
+同框重叠的填充**不自动等于**两层绘制。写兄弟覆盖 DOM 之前，先做合成分类。
+
+**发现**（`get_code` / `get_structure` / 图层名出现以下任一即跑）：
+
+TemPad 蒙版 hint（一等证据 — **禁止**把 `data-hint-*` 抄进契约）：
+
+| 来源 | 信号 | 含义 | 分类为 |
+|---|---|---|---|
+| `get_code` | `data-hint-mask="true"` | **本节点是 mask 层** | `mask` — 不是绘制覆盖层 |
+| `get_code` | `data-hint-has-mask="true"` | **该 SVG 根含已烘焙的 mask** | 合成后的资产真值。持久化 SVG 字节。**禁止**再叠一层蒙版覆盖。**禁止**用 `get_structure` 重建子节点（会丢掉已烘焙 mask）。 |
+| `get_structure` | `"isMask": true` | 同 `data-hint-mask`（`false` 时**省略该字段**） | `mask`。填充/渐变 token 仍从 `get_code` 取。 |
+
+同时在这些情况跑：
+
+- 名称：mask、蒙版、alpha、gradient mask、fade
+- CSS：`mask`、`mask-image`、`-webkit-mask`、`mix-blend-mode`、`background-blend-mode`
+- 两个或以上填充/渐变占**同一框**
+- 停靠点 RGB 相同、只变 alpha 的渐变
+- Figma Mask / Alpha mask / Vector mask，或非 Normal / `src-over` 的混合
+
+**分类**每一层重叠绘制：
+
+| 角色 | 判定 | 冻结为 |
+|---|---|---|
+| `paint` | 去掉它，可见颜色/图像消失 | 颜色/图像源 |
+| `mask` | 去掉它只改变另一层的 alpha/裁剪；**不是第二层可见罩色** | 绘制的 alpha/裁剪 — 不是兄弟覆盖层 |
+| `overlay` | 另一层去掉后它仍贡献可见颜色（scrim、着色、描边光） | 独立绘制层 |
+
+**规则：**
+
+1. 默认同框一对 **不透明 RGB 渐变 + 渐隐 alpha** → **一个合成效果**（`paint` × `mask`），算子 `dst-in` / `mask-image` / 乘 alpha。**不是**两层 `src-over` 填充。
+2. 预览可保留 get_code 几何，但必须标注：颜色/图像节点 `data-ui-composite="paint"`，alpha/裁剪节点 `data-ui-composite="mask"`，`data-ui-composite-op="dst-in|mask-image|multiply|src-over"`。`in_scope` 把**合成结果**列为一项产物，不是两层验收罩色。
+3. **颜色轴**与 **透明轴**分开记（横向颜色 × 纵向淡出很常见）。蒙版上的 CSS `linear-gradient(θ)` 是**淡出轴**。接近 0°/180° → 纵向；接近 90°/270° → 横向。差几度通常是淡出轴噪声，除非用户/设计明确要斜切 — 同一 Y 左右 alpha 不同，说明是**倾斜蒙版**，不是第二层覆盖。
+4. 禁止把可用代码描述的渐变蒙版压成 PNG 覆盖图。只有照片/图像蒙版才栅格化。
+5. 存在任何 `mask` 时，会话清单 **以及** review-panel **绘制合成**（`dt[data-ui-compositing]`）都要有：
+
+```
+| paint 节点 | mask 节点 | 算子 | 颜色轴 | 透明轴 | 不是覆盖层 |
+```
+
+6. 分不清着色覆盖 vs 蒙版 → **停下问用户**。禁止默认成 overlay。
+7. 若父/根有 `data-hint-has-mask="true"`，同时兄弟有 `data-hint-mask="true"` / `isMask`，则 SVG 已包含该蒙版。合成表把该兄弟记为 **already-baked**，不要再给 SVG 加一层 `src-over` 罩。
+
+实现方消费算子（蒙版 / 乘 alpha）。两层 `src-over` 叠画是读错本契约。
+
 ### 4. 逐字复制模板（新建）或打开已匹配文件（修补）
 
 **新建：** 找到 `templates/ui-contract-template.html`，将其逐字复制到 `<output-dir>/<unit-id>/ui-contract.html`。四个区域（`#ui-contract-meta`、`<style>`、`<main data-ui-contract>`、`[data-ui-review-panel]`）保持完整；保留模板中的 `[data-ui-state-switcher]`、`[data-ui-state-host]`、`script[data-ui-state-preview]`；绝不新增第五个自由区域。
@@ -339,6 +389,7 @@ templates/
   - 资产说明：每个 icon/图片 — 其处置方式（内联资产字节 + 资产 hash、复用的项目资产路径、服务端占位，或**待办：等待用户决策**）。不允许有来历不明的 icon。
   - 推断说明：每个 `data-evidence="inferred"` 都要有匹配的 `dt[data-ui-evidence-for]`/`dd`。
   - **布局尺寸**（`dt[data-ui-sizing]` — 必须带此属性，不能只写普通 dt）：in-scope 盒子 → fill / hug / fixed，附证据、「实现时应」，以及可变内容的 overflow / min / max。单元 root 必填。见 §5b。校验器拒绝缺失或空的 `dt[data-ui-sizing]`。
+  - **当 §3b 发现蒙版时：** `dt[data-ui-compositing]` — 绘制合成表（paint 节点、mask 节点、算子、颜色轴、透明轴）。实现是相乘/裁剪，不是再叠一层覆盖。没有蒙版才可省略此 dt。
 - 增量修补：只触碰此次需求实际变更的子树、状态和元数据字段。不触碰无关 `data-ui-id` 子树、无关状态及其它单元的 `unit.dependencies`。若修补会**删除、挪动或收窄** dynamics / 预览提示，先跑 §2c 覆盖复查再继续。
 
 一次处理一个帧 — 绝不将所有帧批量塞入单次查询或单次编辑。
@@ -396,6 +447,7 @@ templates/
 - 用 `[data-ui-state-switcher]` 逐一切换**每个**已声明状态；每次激活后的 host 内容必须匹配其源帧。若同一套 chrome 跨状态（或重复实例）出现但动效覆盖不均，按 §2c 异常处理 — 不得宣称预览完成。
 - 逐一比对**每个 icon/图片**与其证据：内联字节必须与取得的资产载荷一致；复用资产必须与项目文件一致；服务端占位必须可见地是占位。即便几何完全正确，「看起来是对的 icon」的重绘图也不通过本项检查。
 - 展开 `[data-ui-review-panel]`，确认范围清单、资产说明、每个 `data-figma-node`、推断说明、**以及布局尺寸表**清晰准确。单元 root 缺少 `data-ui-sizing`，或 `dt[data-ui-sizing]` 缺失/为空，则冻结未完成。可变内容行必须列出 overflow / min / max，或明确的用户决定。
+- 若画布有同框重叠填充/渐变或 mask CSS，确认 **绘制合成**（`dt[data-ui-compositing]`）在场，且**没有**把蒙版写成两层覆盖。把 `mask` 节点当成独立绘制层验收，则冻结未完成。
 - **禁止**把快照 `w×h` 当作 `fill`/`hug` 盒子的通过标准。人对照 hydrate 布局与 Figma；实现遵循尺寸表。
 - 若用户点名了参考实现，确认画布预览使用同一套力学（已显示内容相对参考不得平移或反向）。
 - hydrate 后的 HTML **就是**复审媒介。不要生成或保存预览截图产物（如 `contract-preview-*.png`）— 人直接审核 HTML，截图会与契约漂移。
@@ -429,6 +481,8 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 2. **引用核实：** 运行引用/使用搜索（findReferences，或 grep 实例化/调用点），定位该单元**实际挂载或实例化的位置**。挂载点才是 target — 即使它与定义文件不同。只做定义核实不充分（符号完全可能定义在一个文件、挂载在另一个文件）。
 
 声称 `implemented` 前对照布局尺寸表抽查：`fill`/`hug` 盒子不得锁成快照 px；overflow 钳制必须与表（或已记录的用户决定）一致。把每个预览 `width`/`height` 再列成布局常量的 widget，不算有效实现。
+
+抽查合成：`mask` 行必须实现为蒙版 / 乘 alpha / `dst-in`，不得做成第二层 `src-over` 覆盖（包括不得把 alpha 渐变导出成 PNG 罩）。
 
 把核实到的位置写入 `target`（两者不同时，定义文件与挂载文件都写上）。绝不凭记忆填写 target，也绝不在未重新运行两步核实的情况下从被取代的旧契约携带 target；若暂时定位不到实现，保持 `delivery.status` 为实现前的值，而不是猜一个 target 凑齐对象。
 
@@ -471,6 +525,13 @@ python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
 - **手写 icon 或图片图形**（重绘一个「差不多」的 SVG），而非机械转移设计资产字节或复用项目已有资产。
 - 在冻结契约里留下未解析的 `get_code` 资产空壳（`data-src` / 资产 URL）— 资产字节必须内联或持久化进项目，并标注资产 hash。
 - 用 `get_structure` 几何重建资产空壳子树（`get_code` 把整个子树导出为一个 SVG 资产时，如拖拽条），静默丢掉绘制属性（fill-opacity、渐变、描边）— structure 只是几何证据。
+- **把蒙版 / 仅 alpha 渐变当成第二层 src-over 覆盖**（两层独立绘制罩色，或把淡出 dump 成 PNG），而不是跑 §3b 做 `paint` × `mask` 合成。
+- 同框重叠填充/渐变或已有 mask/blend 关键词时跳过 §3b。
+- 把两层同框渐变冻成两个 `in_scope` 绘制层，却没有 `data-ui-composite` / `dt[data-ui-compositing]`。
+- 把蒙版上差几度的 CSS 角度当成第二层覆盖，而不是淡出轴。
+- 把 TemPad 的 `data-hint-mask` / `data-hint-has-mask` 抄进冻结 HTML。
+- 忽略 `data-hint-has-mask="true"`，在已烘焙 SVG 上再叠一层蒙版，或用 `get_structure` 重建该 SVG。
+- 忽略 `data-hint-mask="true"` / `"isMask": true`，把该节点当成独立覆盖绘制。
 - 需求上下文表明内容是服务端提供（头像、用户上传、动态徽章）时，仍把 Figma **示例图**下载为冻结资产。
 - 无法获取的资产静默重绘，而不是记为待办项交由用户决策。
 - 把 SECTION 动效备注的剩余条款倒进第一张邻近 unit 的剩余子节点，而不是条款点名的兄弟 unit。
