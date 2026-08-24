@@ -186,7 +186,8 @@ bootstrap 完成后，目标仓库至少具备：
 
 要求：
 - 基于结构化 node payload 完成映射
-- 每个独立 unit 生成一份 ui-contract.html（schema v2），无配套 YAML/JSON 文件
+- 每个独立 unit 在宿主项目里写真实组件（Flutter：Widget + golden PNG），指针写入 `contracts/ui-truth-index.json`
+- 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter
 - 更新 traceability.json
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
@@ -196,7 +197,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 ### 第 3 步：Design + Spec 管道（框架无关）
 
-设计阶段（`design` 动作）：基于 `requirement-slice.md`、冻结的 `ui-contract.html`（如有）与 API 文档做设计探索，产出架构、组件分解、数据模型与关键取舍，摘要记入子需求 `notes`，**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
+设计阶段（`design` 动作）：基于 `requirement-slice.md`、已冻结的宿主组件与 `ui-truth-index.json` 预览指针（如有）与 API 文档做设计探索，产出架构、组件分解、数据模型与关键取舍，摘要记入子需求 `notes`，**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
 
 spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
@@ -207,7 +208,7 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 上游输入必须以这些文件为准：
 
 - `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md`
-- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/<unit-id>/ui-contract.html`（如有 UI，每个 unit 一份）
+- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/contracts/ui-truth-index.json`（如有 UI）
 - `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json`
 
 要求：

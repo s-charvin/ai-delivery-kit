@@ -54,41 +54,16 @@ def is_blocked(status: str) -> bool:
     return status.startswith(BLOCKED_PREFIX)
 
 
-def find_contracts(subreq_dir: Path) -> list[Path]:
-    """Find every ui-contract.html under a sub-requirement (one per unit).
-
-    Index-first: if ``contracts/ui-contract-index.json`` exists it is the
-    authoritative list (and missing entries are reported as orphans/warnings by
-    the layout validator). Otherwise fall back to a recursive scan so old-layout
-    repos keep working unchanged.
-    """
+def find_ui_truth_index(subreq_dir: Path) -> Path | None:
+    """Return the ui-truth-index.json path if it exists under a sub-requirement."""
     if not subreq_dir.is_dir():
-        return []
-    index = subreq_dir / "contracts" / "ui-contract-index.json"
-    if index.is_file():
-        try:
-            data = json.loads(index.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            data = None
-        if isinstance(data, dict):
-            entries = data.get("contracts") or []
-            found: list[Path] = []
-            for entry in entries:
-                if not isinstance(entry, dict):
-                    continue
-                rel = entry.get("path")
-                if not isinstance(rel, str):
-                    continue
-                cand = (subreq_dir / rel).resolve()
-                if cand.is_file():
-                    found.append(cand)
-            if found:
-                return sorted(found)
-    return sorted(subreq_dir.rglob("ui-contract.html"))
+        return None
+    index = subreq_dir / "contracts" / "ui-truth-index.json"
+    return index if index.is_file() else None
 
 
 def has_ui_artifacts(subreq_dir: Path) -> bool:
-    return bool(find_contracts(subreq_dir))
+    return find_ui_truth_index(subreq_dir) is not None
 
 
 def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:

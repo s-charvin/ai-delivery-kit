@@ -20,7 +20,7 @@
 
 ## UI Truth Mapping Gate Notes
 
-- `ui-truth-mapping` produces one `ui-contract.html` (schema v2) per independent unit, freezing that unit's component tree, layout, spacing, typography, and states (`<template data-ui-state>` blocks) — no companion YAML or JSON file.
+- `ui-truth-mapping` writes a real host-stack component per independent unit (Flutter: widget + golden PNG) and records pointers in `contracts/ui-truth-index.json`. Do not generate `ui-contract.html`.
 - Each unit's embedded `meta.unit.type` (`page` / `modal` / `shared-component`) and `meta.unit.dependencies` define delivery slice ordering (`shared-component` → `page` → `modal`).
 - All states must be source-backed before the contract's `delivery.status` can be `frozen`.
 - API docs are passed directly to implementation — not part of this gate.

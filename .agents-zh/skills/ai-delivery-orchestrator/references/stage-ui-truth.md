@@ -8,53 +8,45 @@
 
 - 阅读 `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/requirement-slice.md`。
 - 收集 Figma file key 与目标 node id。
-- 输出目录设为子需求目录。
+- 从仓库判断宿主栈（优先 Flutter）。拿不准就停下问用户。
 
 ## 仅运行 `ui-truth-mapping`（Stage 2）
 
-Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code` — 该技能是实现期消费者，不是契约作者。Stage 2 混用会搞乱归属并跳过 scope/布局门禁。Stage 4 默认也不再跑 — 对照冻结 HTML 实现（见 [stage-implementation.md](stage-implementation.md)）。
+Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code`。Stage 2 混用会搞乱归属。**Stage 4 默认也不再跑** — 接线已经写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
 
-传入需求切片与设计源。每个独立 unit 产出一份 `ui-contract.html`（schema v2），各自位于子需求下自己的 `<unit-id>/` 目录中。不存在聚合索引文件或配套 YAML/JSON——跨 unit 关系与交付顺序唯一来自各 unit 自身的 `meta.unit.type`（`page` / `modal` / `shared-component` / `component`）与 `meta.unit.dependencies`。
+传入需求切片与设计源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden 测试）以及官方栈预览。指针只记在 `contracts/ui-truth-index.json`（仓内相对的 `component_path`、`preview_path`，Flutter 另加 `golden_test`）。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
 **冻结门槛（全部满足）：**
 
-1. 每个 unit 契约校验器打印 `OK`。
-2. 浏览器打开后 `[data-ui-state-host]` 显示 **hydrate 后的默认态**（预览脚本存在）；空 host = 未冻结。
-3. `[data-ui-state-switcher]` 可切换每个已声明状态并看到对应预览。
-4. 契约 root 对齐需求切片 **In Scope**（最小祖先；非无关整页 dump）。
-5. 每个 icon/图片/矢量化子树都有证据背书：内联资产字节（含资产 hash）、复用的项目资产，或 review panel 注明的服务端占位/待办项。手绘图形、仅凭 `get_structure` 的重建（structure 不能证明绘制属性：透明度/渐变/描边）与未解析的 `data-src` 空壳不达标。
-6. 用户已逐份人工确认 `ui-contract.html`（仅当用户明确豁免复审时可跳过）。hydrate 后的 HTML 就是复审媒介 — 不保存预览截图产物。
-7. 若本轮契约集合发生变化（新增、删除、替换契约或 unit id 变更），已完成陈旧指针清扫（`ui-truth-mapping` §9）：`status.json` notes、`visual-acceptance.md`、progress/todo、拆分摘要中没有任何**活跃**指针仍指向已删除/更名的契约。允许保留一行「被 … 取代」的历史注记。
-8. 父级 SECTION 画布上（不只在 `source_node` 内）描述动效/过渡的 Figma 备注，已写入 `meta.dynamics[]` **以及** review-panel **动态 UI 效果** 表，并保留完整原文 `hint_text`。多条款备注必须 **按 unit 拆分** — 同一画布上的编号模块经常点名兄弟 unit，而不是第一张邻近卡片里剩下的子节点。
+1. 组件能编过 / 宿主预览能打开。
+2. 官方预览文件存在；对话出示了其 **绝对路径**（Flutter：`flutter test --update-goldens` 产出的 golden PNG）。
+3. `contracts/ui-truth-index.json` 列出的仓内相对路径能从 **仓库根** 解析。
+4. 范围匹配需求切片 **In Scope**（最小祖先；不是无关整页 dump）。
+5. 每个 icon/图片都有证据背书。手绘图形不达标。
+6. 用户已逐份人工确认预览（仅当用户明确豁免复审时可跳过）。官方预览就是复审媒介 — 不要用 `contract-preview-*.png` 代替。
+7. 若本轮 unit 集合变化，已完成陈旧指针清扫（`ui-truth-mapping` §9）。
+8. `ui-truth-mapping` 要求的动效 / 蒙版 / fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。
 
 ## 完成后
 
-```bash
-python3 scripts/validate-ui-contract-html.py <path-to-ui-contract.html>
-```
-
-每个 unit 的 `ui-contract.html` 各运行一次。
-
-- 仅当每次校验输出 `OK` **且**满足上方冻结门槛（hydrate 预览 + scope 对齐 + icon 资产保真 + 逐份契约用户确认 + 契约集合变化时的陈旧指针清扫）时设置 `acceptance_frozen`。
-- 失败 → `blocked_verification_failure` 并附校验输出；不推进状态。
-- 更新 `status.json`。
-
-可选批量检查：
+没有 HTML 校验器。Kit 状态校验检查索引与列出的文件：
 
 ```bash
 python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-除状态门禁外，该检查会拒绝需求目录内的**悬空 `ui-contract.html` 指针**（引用的契约路径不存在，且该行未标记为「已删除 / 被取代」的历史注记）。契约集合发生变化时，置 `acceptance_frozen` 前必须运行。
+- 仅当冻结门槛满足时设置 `acceptance_frozen`。
+- 失败 → `blocked_verification_failure`；不要推进状态。
+- 更新 `status.json`。
 
-## 无 Figma 链接时
+## 若无 Figma 链接
 
 - 非 UI 子需求：跳过（拆分阶段已处理）。
-- 无设计的 UI 子需求：`blocked_missing_design`（`blocker_scope: slice_local`）。
+- UI 子需求无设计：`blocked_missing_design`（`blocker_scope: slice_local`）。
 
-## 下一 handoff
+## 下一步交接
 
 `acceptance_frozen` → `design` 动作。见 [handoff-table.md](handoff-table.md)。

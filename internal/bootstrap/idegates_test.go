@@ -29,24 +29,7 @@ func TestMergeAmendableJSONPreservesForeignHooks(t *testing.T) {
   "permissions": {"allow": ["Bash"]}
 }
 `)
-	desired := []byte(`{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-ui-contract.sh\"",
-            "timeout": 60,
-            "statusMessage": "Validating UI acceptance contract"
-          }
-        ]
-      }
-    ]
-  }
-}
-`)
+	desired := []byte(`{"hooks":{}}`)
 
 	merged, err := mergeAmendableJSON(existing, desired)
 	if err != nil {
@@ -64,19 +47,15 @@ func TestMergeAmendableJSONPreservesForeignHooks(t *testing.T) {
 	if _, ok := hooks["Notification"]; !ok {
 		t.Fatal("expected existing Notification hooks to be preserved")
 	}
-	post := hooks["PostToolUse"].([]any)
-	if len(post) != 2 {
-		t.Fatalf("expected 2 PostToolUse groups, got %d: %s", len(post), string(merged))
-	}
 	if !strings.Contains(string(merged), "echo keep-me") {
 		t.Fatalf("expected foreign Bash hook preserved, got %s", string(merged))
 	}
-	if !strings.Contains(string(merged), "validate-ui-contract.sh") {
-		t.Fatalf("expected UI contract gate inserted, got %s", string(merged))
+	if strings.Contains(string(merged), "validate-ui-contract.sh") {
+		t.Fatalf("did not expect UI contract hook to be inserted, got %s", string(merged))
 	}
 }
 
-func TestMergeAmendableJSONReplacesOwnedGateOnly(t *testing.T) {
+func TestMergeAmendableJSONStripsOwnedGate(t *testing.T) {
 	existing := []byte(`{
   "hooks": {
     "PostToolUse": [
@@ -98,36 +77,17 @@ func TestMergeAmendableJSONReplacesOwnedGateOnly(t *testing.T) {
   }
 }
 `)
-	desired := []byte(`{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-ui-contract.sh\"",
-            "timeout": 60
-          }
-        ]
-      }
-    ]
-  }
-}
-`)
+	desired := []byte(`{"hooks":{}}`)
 
 	merged, err := mergeAmendableJSON(existing, desired)
 	if err != nil {
 		t.Fatalf("merge failed: %v", err)
 	}
-	if strings.Contains(string(merged), "old/validate-ui-contract.sh") {
-		t.Fatalf("expected owned gate replaced, got %s", string(merged))
+	if strings.Contains(string(merged), "validate-ui-contract.sh") {
+		t.Fatalf("expected owned UI contract gate stripped, got %s", string(merged))
 	}
 	if !strings.Contains(string(merged), "echo keep-me") {
 		t.Fatalf("expected foreign hook preserved, got %s", string(merged))
-	}
-	if strings.Count(string(merged), "validate-ui-contract.sh") != 1 {
-		t.Fatalf("expected exactly one owned gate entry, got %s", string(merged))
 	}
 }
 
@@ -148,23 +108,7 @@ func TestWriteAmendableJSONBacksUpExistingSettings(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	desired := []byte(`{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-ui-contract.sh\"",
-            "timeout": 60
-          }
-        ]
-      }
-    ]
-  }
-}
-`)
+	desired := []byte(`{"hooks":{}}`)
 
 	fixed := time.Date(2026, 7, 10, 6, 43, 0, 0, time.UTC)
 	report := AmendReport{}
@@ -183,8 +127,8 @@ func TestWriteAmendableJSONBacksUpExistingSettings(t *testing.T) {
 	if !strings.Contains(string(body), "echo stop") {
 		t.Fatalf("expected Stop hook preserved, got %s", string(body))
 	}
-	if !strings.Contains(string(body), "validate-ui-contract.sh") {
-		t.Fatalf("expected gate inserted, got %s", string(body))
+	if strings.Contains(string(body), "validate-ui-contract.sh") {
+		t.Fatalf("did not expect UI contract gate to be inserted, got %s", string(body))
 	}
 
 	if report.BackupStamp != "2026-07-10T06-43-00Z" {

@@ -13,16 +13,16 @@
 
 | 动作 | spec-kit 用法 | 输出产物 |
 |------|---------------|----------|
-| `spec` | 以 `requirement-slice.md`（UI 切片另附已评审的 `ui-contract.html`）为种子执行 `/speckit-specify` | spec-kit feature 分支区（`.specify/`）下的 `spec.md` |
+| `spec` | 以 `requirement-slice.md`（UI 切片另附已评审的冻结宿主组件 / `ui-truth-index.json`）为种子执行 `/speckit-specify` | spec-kit feature 分支区（`.specify/`）下的 `spec.md` |
 | `plan` | `/speckit-plan` | `plan.md` |
 | `tasks` | `/speckit-tasks` | `tasks.md` |
 
 ## 使用意见
 
-- 喂给 spec-kit 的是治理输入而非自由文本：`requirement-slice.md`、每个单元的冻结 `ui-contract.html`（含 UI 时）、可用时的 API 文档，以及依赖图。
-- 含 UI 的切片，spec-kit 的输入就是已评审的 `ui-contract.html`；不要再写第二份可能与契约漂移的视觉描述。
+- 喂给 spec-kit 的是治理输入而非自由文本：`requirement-slice.md`、每个单元的冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、可用时的 API 文档，以及依赖图。
+- 含 UI 的切片，spec-kit 的输入就是已评审的冻结宿主组件 / `ui-truth-index.json`；不要再写第二份可能与契约漂移的视觉描述。
 - 推进状态前逐一审计输出：
-  - `spec.md` → 对照 HTML 契约的状态审计（UI）→ `spec_ready`
+  - `spec.md` → 对照冻结组件的状态审计（UI）→ `spec_ready`
   - `plan.md` → 审计交付切片顺序 → `plan_ready`
   - `tasks.md` → 审计粒度、依赖顺序、文件范围 → `tasks_ready`
 - 生成产物与冻结契约或需求冲突时，开启 `blocked_spec_mismatch`；不要悄悄改契约去迁就。

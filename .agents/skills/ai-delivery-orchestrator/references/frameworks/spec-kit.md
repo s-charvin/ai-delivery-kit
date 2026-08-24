@@ -13,16 +13,16 @@ If `.specify/` exists but the CLI is missing or broken, degrade to the native ti
 
 | Action | spec-kit usage | Output artifact |
 |--------|----------------|-----------------|
-| `spec` | `/speckit-specify` seeded from `requirement-slice.md` (and reviewed `ui-contract.html` for UI slices) | `spec.md` under the spec-kit feature branch area (`.specify/`) |
+| `spec` | `/speckit-specify` seeded from `requirement-slice.md` (and reviewed host component + `ui-truth-index.json` for UI slices) | `spec.md` under the spec-kit feature branch area (`.specify/`) |
 | `plan` | `/speckit-plan` | `plan.md` |
 | `tasks` | `/speckit-tasks` | `tasks.md` |
 
 ## Usage advice
 
-- Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each unit's frozen `ui-contract.html` (UI-bearing), API docs if available, and the dependency graph.
-- For UI-bearing slices, spec-kit's input is the reviewed `ui-contract.html`; do not author a second visual description that could drift from the contract.
+- Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each unit's frozen host component + `ui-truth-index.json` (UI-bearing), API docs if available, and the dependency graph.
+- For UI-bearing slices, spec-kit's input is the reviewed host component + `ui-truth-index.json`; do not author a second visual description that could drift from the contract.
 - Audit each output before advancing status:
-  - `spec.md` → audit against the HTML contract's states (UI) → `spec_ready`
+  - `spec.md` → audit against the frozen component states (UI) → `spec_ready`
   - `plan.md` → audit delivery slice ordering → `plan_ready`
   - `tasks.md` → audit granularity, dependency order, file scope → `tasks_ready`
 - If a generated output conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch`; do not silently edit the contract to match.

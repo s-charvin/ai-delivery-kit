@@ -148,21 +148,15 @@ validate_managed_contract() {
   local readme_file=""
   local validate_script
   local validate_test
-  local contract_validator_test
-  local pressure_test
   local bootstrap_script=""
   local ci_workflow=""
   local release_workflow=""
 
   validate_script=$(resolve_managed_asset_path "scripts/validate-project-ai-delivery-skills.sh")
   validate_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/validate-sources.test.sh")
-  contract_validator_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/ui-contract-validator.test.sh")
-  pressure_test=$(resolve_managed_asset_path "tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh")
 
   require_file "$validate_script"
   require_file "$validate_test"
-  require_file "$contract_validator_test"
-  require_file "$pressure_test"
 
   if [[ "$SKILL_LAYOUT" == "source" ]]; then
     readme_file="$ROOT/README.md"
@@ -230,36 +224,20 @@ validate_requirement_breakdown_skill() {
 
 validate_ui_truth_mapping_skill() {
   local skill_file="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
-  local contract_validator
-  local good_fixture
-  local bad_fixture
 
   validate_skill_local_assets \
     ui-truth-mapping \
-    templates/ui-contract-template.html
+    templates/flutter-golden-preview-test.dart.example
 
   require_contains "$skill_file" 'requirement-slice'
   require_contains "$skill_file" 'Figma'
   require_contains "$skill_file" 'ui-contract.html'
-  require_contains "$skill_file" 'incremental patch'
+  require_contains "$skill_file" 'Incremental patch'
   require_contains "$skill_file" 'Do not invent visual truth'
   require_contains "$skill_file" 'Anti-patterns'
-  require_contains "$skill_file" 'validate-ui-contract-html.py'
-
-  contract_validator=$(resolve_managed_asset_path "scripts/validate-ui-contract-html.py")
-  good_fixture=$(resolve_managed_asset_path "tests/ai-delivery-skills/fixtures/ui-contract-good.html")
-  bad_fixture=$(resolve_managed_asset_path "tests/ai-delivery-skills/fixtures/ui-contract-bad.html")
-
-  require_file "$contract_validator"
-  require_file "$good_fixture"
-  require_file "$bad_fixture"
-
-  python3 "$contract_validator" "$good_fixture" >/dev/null \
-    || fail "Good ui-contract.html fixture must pass validation"
-
-  if python3 "$contract_validator" "$bad_fixture" >/dev/null 2>&1; then
-    fail "Bad ui-contract.html fixture must fail validation"
-  fi
+  require_contains "$skill_file" 'ui-truth-index.json'
+  require_contains "$skill_file" 'fill detection rule'
+  require_contains "$skill_file" '--update-goldens'
 }
 
 validate_orchestrator_skill() {
@@ -285,7 +263,7 @@ validate_orchestrator_skill() {
   require_contains "$skill_file" 'human confirmation'
   require_contains "$skill_file" 'blocker_scope'
   require_contains "$skill_file" 'runnable'
-  require_contains "$skill_file" 'validate-ui-contract-html.py'
+  require_contains "$skill_file" 'ui-truth-index.json'
   require_contains "$skill_file" 'blocked_verification_failure'
   require_contains "$skill_file" 'framework-adaptation.md'
 

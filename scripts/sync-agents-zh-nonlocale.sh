@@ -27,6 +27,6 @@ copy_identical "ai-delivery-orchestrator/templates/status-template.json"
 copy_identical "ai-delivery-orchestrator/templates/design-template.md"
 copy_identical "ai-delivery-orchestrator/templates/verification-template.md"
 copy_identical "ai-delivery-orchestrator/templates/delivery-report-template.md"
-copy_identical "ui-truth-mapping/templates/ui-contract-template.html"
+copy_identical "ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
 
 print -- "Synced non-localized assets to .agents-zh/skills"

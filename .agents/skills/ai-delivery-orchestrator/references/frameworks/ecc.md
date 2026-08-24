@@ -13,7 +13,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 
 | Action | ECC usage |
 |--------|-----------|
-| `design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, frozen `ui-contract.html` (UI-bearing), API docs |
+| `design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, frozen host component / `ui-truth-index.json` (UI-bearing), API docs |
 | `implement` | ECC task-execution agents with its rules/hooks enforcing conventions; treat its review agents as the per-task review step |
 | `finish` | ECC review/verification commands before rebase-merge |
 

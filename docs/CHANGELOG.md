@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.3.7 — 2026-08-24
+
+### Changed
+
+- Stage 2 freezes **real host-stack components** (Flutter first: widget + `flutter test --update-goldens` PNG). `contracts/ui-truth-index.json` stores repo-relative pointers only. Do not generate `ui-contract.html`. Do not translate HTML into Flutter.
+- Stage 4 wires the already-landed component (API / route / state / mount). Visual truth is the confirmed official preview, not a second HTML redraw.
+- Removed HTML contract template, HTML validator, UI git hooks, and `ui-contract-gate` rules. Layout key is `ui_truth_index`.
+
 ## v0.3.6 — 2026-08-17
 
 ### Changed

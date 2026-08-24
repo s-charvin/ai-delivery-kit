@@ -29,46 +29,34 @@ require_contains() {
   fi
 }
 
-require_not_contains() {
-  local file=$1
-  local needle=$2
-
-  if grep -Fq -- "$needle" "$file"; then
-    fail "Did not expect '$needle' in $file"
-  fi
-}
-
 REQ_SKILL="$SKILL_ROOT/requirement-breakdown/SKILL.md"
 REQ_TEMPLATE="$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 UI_SKILL="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
-UI_TEMPLATE="$SKILL_ROOT/ui-truth-mapping/templates/ui-contract-template.html"
+UI_EXAMPLE="$SKILL_ROOT/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
 
 require_file "$REQ_SKILL"
 require_file "$REQ_TEMPLATE"
 require_file "$UI_SKILL"
-require_file "$UI_TEMPLATE"
+require_file "$UI_EXAMPLE"
 
-# Scenario 1: requirement-breakdown truth linkage must be preserved.
 require_contains "$REQ_SKILL" 'source_ref'
 require_contains "$REQ_TEMPLATE" 'source_ref'
 
-# Scenario 2: ui-truth-mapping speaks HTML contract v2 (single-file truth).
 require_contains "$UI_SKILL" 'requirement-slice'
 require_contains "$UI_SKILL" 'ui-contract.html'
-require_contains "$UI_SKILL" 'ui-contract-template.html'
-require_contains "$UI_SKILL" 'incremental patch'
+require_contains "$UI_SKILL" 'Incremental patch'
 require_contains "$UI_SKILL" 'implementation lookup'
 require_contains "$UI_SKILL" 'Do not invent visual truth'
 require_contains "$UI_SKILL" 'fill detection rule'
-require_contains "$UI_SKILL" 'data-ui-sizing'
 require_contains "$UI_SKILL" 'Paint compositing / mask scan'
 require_contains "$UI_SKILL" 'not a second visible wash'
+require_contains "$UI_SKILL" 'ui-truth-index.json'
+require_contains "$UI_SKILL" '--update-goldens'
 
-# Scenario 3: the HTML contract template carries the required schema v2
-# anchors — metadata script, unit root, and the collapsible review panel.
-require_contains "$UI_TEMPLATE" 'id="ui-contract-meta"'
-require_contains "$UI_TEMPLATE" '<main data-ui-contract'
-require_contains "$UI_TEMPLATE" 'data-ui-unit-id'
-require_contains "$UI_TEMPLATE" 'data-ui-review-panel'
+require_contains "$UI_EXAMPLE" 'matchesGoldenFile'
+require_contains "$UI_EXAMPLE" 'RepaintBoundary'
+require_contains "$UI_EXAMPLE" '--update-goldens'
+require_contains "$UI_EXAMPLE" 'PNG canvas'
+require_contains "$UI_EXAMPLE" 'state-switcher'
 
 echo "PASS: composition guardrails are documented and validated across breakdown and mapping."

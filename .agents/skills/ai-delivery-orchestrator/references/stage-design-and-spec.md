@@ -22,7 +22,7 @@ Do not run `spec`, `plan`, or `tasks` actions until the design is presented and 
 Feed the design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
 
 - `requirement-slice.md`
-- each unit's `ui-contract.html` (if UI-bearing)
+- each unit's landed component + `ui-truth-index.json` preview pointer (if UI-bearing)
 - API docs (if available)
 - Dependency graph
 
@@ -37,7 +37,7 @@ Design session should produce:
 
 Write the design summary to `design.md` (one-line pointer in `notes`). On user approval, set `design_approved: true`.
 
-If design conflicts with the HTML contract or requirement → `blocked_spec_mismatch`.
+If design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
 
 **Pause:** design approval is checkpoint CP-DESIGN. Wait for explicit user approval.
 
@@ -45,7 +45,7 @@ If design conflicts with the HTML contract or requirement → `blocked_spec_mism
 
 When `design_approved: true`, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
 
-1. `spec` → `spec.md` — audit against the HTML contract's states (UI). For UI slices the reviewed `ui-contract.html` is the visual input, not a separate spec document.
+1. `spec` → `spec.md` — audit against frozen component states (UI). For UI slices the landed component + confirmed preview is the visual input, not a separate spec document.
 2. `plan` → `plan.md` — audit delivery slice ordering.
 3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope.
 

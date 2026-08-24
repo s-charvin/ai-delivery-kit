@@ -31,7 +31,7 @@ for rel in \
   ai-delivery-orchestrator/templates/status-template.json \
   requirement-breakdown/agents/openai.yaml \
   ui-truth-mapping/agents/openai.yaml \
-  ui-truth-mapping/templates/ui-contract-template.html
+  ui-truth-mapping/templates/flutter-golden-preview-test.dart.example
 do
   require_identical "$rel"
 done

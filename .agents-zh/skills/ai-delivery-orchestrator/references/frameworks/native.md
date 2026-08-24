@@ -8,7 +8,7 @@
 
 在主会话内联完成（无需单独工具）：
 
-1. 读取 `requirement-slice.md`、冻结的 `ui-contract.html`（含 UI 时）、API 文档、依赖图。
+1. 读取 `requirement-slice.md`、冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、API 文档、依赖图。
 2. 产出：架构草图、组件分解、数据模型、错误/空/加载态方案、关键取舍。
 3. 把精简摘要追加到子需求 `notes` 字段并向用户展示。
 4. CP-DESIGN：只有用户明确批准后才设置 `design_approved: true`。
@@ -35,7 +35,7 @@
 - [ ] 可测试的标准 2
 ```
 
-含 UI 的切片先对照冻结的 `ui-contract.html` 各状态审计，再设置 `spec_ready`。
+含 UI 的切片先对照冻结宿主组件 / `ui-truth-index.json` 各状态审计，再设置 `spec_ready`。
 
 ## `plan` + `tasks` 动作 — `tasks.md`
 

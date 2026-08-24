@@ -108,17 +108,15 @@ ai-delivery init --upgrade .
 
 各框架的具体使用意见随编排器技能分发：`references/framework-adaptation.md` 与 `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
 
-## IDE UI 契约门禁
+## 视觉冻结（无 HTML 契约 hook）
 
-`ai-delivery init` 会为 Cursor、Claude Code、Codex 安装项目级 UI 契约门禁：
+Stage 2 冻结 **真实宿主栈组件** 与官方栈预览（Flutter：Widget + golden PNG）。`ai-delivery init` **不会** 安装 UI git hook。
 
-| IDE | 配置 | 软性指引 |
-|-----|------|----------|
-| Cursor | `.cursor/hooks.json`（`afterFileEdit`，`Write\|TabWrite`） | `.cursor/rules/ui-contract-gate.mdc` |
-| Claude Code | `.claude/settings.json`（`PostToolUse`，`Edit\|Write`） | `.claude/rules/ui-contract-gate.md` |
-| Codex | `.codex/hooks.json` + `.codex/config.toml` | 仓库根目录 `AGENTS.md`（不是 `.codex/rules`） |
+对话里给用户预览的 **绝对路径**。索引里只存 **仓内相对路径**（`contracts/ui-truth-index.json`）。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
 
-**Codex 必须开启 hooks。** 入驻会写入 `.codex/config.toml`：
+仓库根 `AGENTS.md` 带有简短 UI 真值提醒（升级时 amend）。旧 IDE JSON 可从 `.ai-delivery/backups/ide-gates/` 恢复。
+
+若仍使用其他 Codex hook，入驻会写入 `.codex/config.toml`：
 
 ```toml
 [features]
@@ -154,7 +152,7 @@ bash scripts/rehearse-release.sh
 
 本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
 
-- `design.md`、`verification.md`、`spec/{spec,plan,tasks}.md`、`contracts/ui-contract-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`、`verification.md`、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
 - 框架目录（`.specify/`、`openspec/changes/`）为派生视图，产物须同步回 canonical
 

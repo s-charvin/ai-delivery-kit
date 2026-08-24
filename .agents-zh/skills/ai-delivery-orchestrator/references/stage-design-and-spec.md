@@ -22,7 +22,7 @@
 向设计会话（原生流程或已安装框架的设计流程，见 [framework-adaptation.md](framework-adaptation.md)）提供：
 
 - `requirement-slice.md`
-- 各 unit 的 `ui-contract.html`（若 UI）
+- 各 unit 已合入的组件 + `ui-truth-index.json` 预览指针（若 UI）
 - API 文档（若有）
 - 依赖图
 
@@ -37,7 +37,7 @@
 
 摘要存入 `notes`。用户批准后设 `design_approved: true`。
 
-若设计与 HTML 契约或需求冲突 → `blocked_spec_mismatch`。
+若设计与冻结组件 / 已确认预览或需求冲突 → `blocked_spec_mismatch`。
 
 **暂停：** 设计批准为检查点 CP-DESIGN。等待用户明确批准。
 
@@ -45,7 +45,7 @@
 
 当 `design_approved: true`，按 reconcile 输出的动作执行，使用 [frameworks/](frameworks/) 下所选档位的指南：
 
-1. `spec` → `spec.md` — 对照 HTML 契约的 states 审计（UI）。UI 切片的视觉输入是经评审的 `ui-contract.html`，不是另一份 spec 文档。
+1. `spec` → `spec.md` — 对照冻结组件状态审计（UI）。UI 切片的视觉输入是已合入组件 + 已确认预览，不是另一份 spec 文档。
 2. `plan` → `plan.md` — 对照交付切片顺序审计。
 3. `tasks` → `tasks.md` — 审计粒度、依赖顺序、文件范围。
 

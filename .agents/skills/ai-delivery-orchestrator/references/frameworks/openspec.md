@@ -22,7 +22,7 @@ One OpenSpec change per sub-requirement: `openspec/changes/<subreq-id-slug>/`.
 ## Usage advice
 
 - Name the change after the sub-requirement (e.g. `sr-001-friend-badge`) so the mapping stays obvious.
-- Seed the proposal from `requirement-slice.md`; for UI-bearing slices the frozen `ui-contract.html` remains the visual source of truth — the proposal describes behavior, not pixels.
+- Seed the proposal from `requirement-slice.md`; for UI-bearing slices the frozen host component + confirmed preview remains the visual source of truth — the proposal describes behavior, not pixels.
 - Validate before advancing status: `openspec validate <name>` (when the CLI exists) plus a manual audit against the slice scope.
   - proposal accepted → `spec_ready`
   - `design.md` audited → `plan_ready`

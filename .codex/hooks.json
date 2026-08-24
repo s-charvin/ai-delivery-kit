@@ -1,17 +1,3 @@
 {
-  "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "/bin/bash \"$(git rev-parse --show-toplevel)/.codex/hooks/validate-ui-contract.sh\"",
-            "statusMessage": "Validating UI acceptance contract",
-            "timeout": 60,
-            "type": "command"
-          }
-        ],
-        "matcher": "Edit|Write|apply_patch"
-      }
-    ]
-  }
+  "hooks": {}
 }

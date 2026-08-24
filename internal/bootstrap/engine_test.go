@@ -24,12 +24,10 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	required := []string{
 		filepath.Join(target, ".agents/skills/requirement-breakdown/SKILL.md"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/SKILL.md"),
-		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-contract-template.html"),
+		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
-		filepath.Join(target, ".ai-delivery/scripts/validate-ui-contract-html.py"),
+		filepath.Join(target, ".ai-delivery/scripts/validate-delivery-status.py"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
-		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-good.html"),
-		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/fixtures/ui-contract-bad.html"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
 		filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"),
 	}
@@ -68,16 +66,8 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		".claude/hooks/validate-ui-contract.sh",
 		".codex/hooks/validate-ui-contract.sh",
 	} {
-		body, err := os.ReadFile(filepath.Join(target, rel))
-		if err != nil {
-			t.Fatalf("expected generated hook wrapper %s: %v", rel, err)
-		}
-		text := string(body)
-		if !strings.Contains(text, ".ai-delivery/scripts/hooks/validate-ui-contract.sh") {
-			t.Fatalf("expected %s to point at canonical hook, got:\n%s", rel, text)
-		}
-		if strings.Count(text, "\n") > 3 {
-			t.Fatalf("expected short hook wrapper for %s, got %d lines", rel, strings.Count(text, "\n"))
+		if _, err := os.Stat(filepath.Join(target, rel)); !os.IsNotExist(err) {
+			t.Fatalf("expected UI contract hook wrapper %s to be absent, got %v", rel, err)
 		}
 	}
 }

@@ -97,9 +97,9 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
 - Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
-- Do not set `acceptance_frozen` until `scripts/validate-ui-contract-html.py` exits 0 for every unit's `ui-contract.html` **and** each contract's browser-hydrated default preview + requirement-scope alignment + icon asset fidelity + explicit per-contract user confirmation (unless explicitly waived) pass (see Stage 2 freeze bar). Stage 2 authors contracts via `ui-truth-mapping` only — never via `figma-design-to-code`.
-- Stage 4: do not re-query TemPad / run `figma-design-to-code` by default; the frozen HTML is the visual source of truth. Follow `data-ui-sizing` (fill = parent minus insets, not snapshot px).
-- Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + passing contracts.
+- Do not set `acceptance_frozen` until each UI unit has a real host-stack component, an official-stack preview whose **absolute path** was shown to the user, `contracts/ui-truth-index.json` lists repo-relative paths that exist from the repository root, and the user confirmed each preview (unless explicitly waived). Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`.
+- Stage 4: do not re-query TemPad / run `figma-design-to-code` by default; the already-landed component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
+- Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid `ui-truth-index.json`.
 - Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
@@ -108,9 +108,9 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 
 | Target | Requirement |
 |--------|-------------|
-| `acceptance_frozen` | All contracts pass `validate-ui-contract-html.py`; hydrated default + state switcher preview OK; scope matches slice In Scope; icons evidence-backed (no hand-drawn glyphs); user confirmed each contract (unless waived) |
-| `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; contracts still pass |
-| `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + contracts pass |
+| `acceptance_frozen` | Real component compiles; official preview absolute path shown; `ui-truth-index.json` repo-relative paths exist; scope matches slice In Scope; icons evidence-backed (no hand-drawn glyphs); user confirmed each preview (unless waived) |
+| `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; index paths still resolve |
+| `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + index still valid |
 | `archived` | Frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256; immutable (verified by `--verify-archive`) |
 
 ## Split decision
@@ -131,7 +131,7 @@ The `implement` action executes per the selected tier (see `references/framework
 
 Chain: isolated workspace → task execution (TDD) → code review → visual acceptance (UI) → verification before completion → full test → merge.
 
-UI slices: implement from the frozen `ui-contract.html`; do not re-query TemPad / run `figma-design-to-code` by default.
+UI slices: wire the already-written component (API / route / state / mount); do not re-query TemPad / run `figma-design-to-code` by default.
 
 Full runbook: [references/stage-implementation.md](references/stage-implementation.md).
 

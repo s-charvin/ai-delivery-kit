@@ -60,30 +60,27 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-contract-template.html" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
 for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/frameworks/$guide" ]]
 done
-[[ -f "$TARGET_REPO/.ai-delivery/scripts/hooks/validate-ui-contract.sh" ]]
-[[ -f "$TARGET_REPO/.ai-delivery/scripts/hooks/extract-hook-path.py" ]]
+[[ ! -e "$TARGET_REPO/.ai-delivery/scripts/hooks/validate-ui-contract.sh" ]]
 [[ -f "$TARGET_REPO/.cursor/hooks.json" ]]
-[[ -f "$TARGET_REPO/.cursor/hooks/validate-ui-contract.sh" ]]
-[[ -f "$TARGET_REPO/.cursor/rules/ui-contract-gate.mdc" ]]
+[[ ! -e "$TARGET_REPO/.cursor/hooks/validate-ui-contract.sh" ]]
+[[ ! -e "$TARGET_REPO/.cursor/rules/ui-contract-gate.mdc" ]]
 [[ -f "$TARGET_REPO/.claude/settings.json" ]]
-[[ -f "$TARGET_REPO/.claude/hooks/validate-ui-contract.sh" ]]
-[[ -f "$TARGET_REPO/.claude/rules/ui-contract-gate.md" ]]
+[[ ! -e "$TARGET_REPO/.claude/hooks/validate-ui-contract.sh" ]]
+[[ ! -e "$TARGET_REPO/.claude/rules/ui-contract-gate.md" ]]
 [[ -f "$TARGET_REPO/.codex/hooks.json" ]]
-[[ -f "$TARGET_REPO/.codex/hooks/validate-ui-contract.sh" ]]
+[[ ! -e "$TARGET_REPO/.codex/hooks/validate-ui-contract.sh" ]]
 [[ -f "$TARGET_REPO/.codex/config.toml" ]]
 grep -Fq 'hooks = true' "$TARGET_REPO/.codex/config.toml"
 [[ -f "$TARGET_REPO/AGENTS.md" ]]
 grep -Fq 'ai-delivery:ui-contract-gate:start' "$TARGET_REPO/AGENTS.md"
 [[ ! -e "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
-grep -Fq 'Write|TabWrite' "$TARGET_REPO/.cursor/hooks.json"
-grep -Fq 'CLAUDE_PROJECT_DIR' "$TARGET_REPO/.claude/settings.json"
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
 [[ ! -e "$TARGET_REPO/.codex/skills/README.md" ]]

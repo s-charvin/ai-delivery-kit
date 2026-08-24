@@ -8,7 +8,7 @@ All native artifacts live beside the slice: `.ai-delivery/requirements/<req-id>/
 
 Inline in the main session (no separate tool):
 
-1. Read `requirement-slice.md`, frozen `ui-contract.html` (UI-bearing), API docs, dependency graph.
+1. Read `requirement-slice.md`, frozen host component / `ui-truth-index.json` (UI-bearing), API docs, dependency graph.
 2. Produce: architecture sketch, component decomposition, data model, error/empty/loading plan, key trade-offs.
 3. Write the design to `design.md` (canonical design file — see `docs/artifact-layout.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
 4. CP-DESIGN: set `design_approved: true` only after explicit user approval.
@@ -35,7 +35,7 @@ Create `spec/spec.md` with exactly four sections:
 - [ ] testable criterion 2
 ```
 
-Audit against the frozen `ui-contract.html` states for UI-bearing slices, then set `spec_ready`.
+Audit against the frozen host component / `ui-truth-index.json` states for UI-bearing slices, then set `spec_ready`.
 
 ## `plan` action — `spec/plan.md`
 

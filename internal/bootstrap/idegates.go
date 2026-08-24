@@ -108,6 +108,14 @@ func mergeAmendableJSON(existing, desired []byte) ([]byte, error) {
 		desiredHooks = map[string]any{}
 	}
 
+	for event, existingValue := range existingHooks {
+		groups, ok := existingValue.([]any)
+		if !ok {
+			continue
+		}
+		existingHooks[event] = stripUIContractHookGroups(groups)
+	}
+
 	for event, desiredValue := range desiredHooks {
 		desiredGroups, ok := desiredValue.([]any)
 		if !ok {
@@ -158,6 +166,18 @@ func upsertHookGroups(existing, desired []any) []any {
 		}
 	}
 	return result
+}
+
+func stripUIContractHookGroups(groups []any) []any {
+	out := make([]any, 0, len(groups))
+	for _, group := range groups {
+		m, ok := group.(map[string]any)
+		if ok && hookGroupOwnsUIContractGate(m) {
+			continue
+		}
+		out = append(out, group)
+	}
+	return out
 }
 
 func hookGroupOwnsUIContractGate(group map[string]any) bool {

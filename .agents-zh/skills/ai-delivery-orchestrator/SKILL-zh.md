@@ -95,9 +95,9 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
 - 编排器设计模式不要把设计文档写进框架自有目录；设计摘要存入子需求 `notes`。
-- 所有 unit 的 `ui-contract.html` 未经 `scripts/validate-ui-contract-html.py` 退出 0，且浏览器 hydrate 默认态预览与需求 scope 对齐 + icon 资产保真 + 逐份契约用户显式确认（除非明确豁免）通过之前，不得设置 `acceptance_frozen`（见 Stage 2 冻结门槛）。Stage 2 仅通过 `ui-truth-mapping` 写契约 — 绝不经由 `figma-design-to-code`。
-- Stage 4：默认不要再查 TemPad / 不要跑 `figma-design-to-code`；冻结 HTML 才是视觉真值。遵循 `data-ui-sizing`（fill = 父宽减内边距，不是快照 px）。
-- UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且契约仍通过时，不得 `merged`。
+- 每个 UI unit 尚未具备真实宿主组件、未向用户出示官方预览 **绝对路径**、`contracts/ui-truth-index.json` 的仓内相对路径无法从仓库根解析、用户未确认预览（除非明确豁免）之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
+- Stage 4：默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已合入组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
+- UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且 `ui-truth-index.json` 仍有效时，不得 `merged`。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
 
@@ -105,9 +105,9 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | 所有契约通过 `validate-ui-contract-html.py`；hydrate 默认态 + 状态切换预览 OK；scope 对齐切片 In Scope；icon 有证据背书（禁手绘图形）；用户逐份确认契约（除非豁免） |
-| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；契约仍通过 |
-| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + 契约通过 |
+| `acceptance_frozen` | 真实组件能编过；官方预览绝对路径已出示；`ui-truth-index.json` 仓内相对路径存在；scope 对齐切片 In Scope；icon 有证据背书（禁手绘图形）；用户确认每份预览（除非豁免） |
+| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；索引路径仍能解析 |
+| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + 索引仍有效 |
 
 ## 拆分决策
 
@@ -127,7 +127,7 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 链路：隔离工作区 → 任务执行（TDD）→ 代码评审 → 视觉验收（UI）→ 完成前验证 → 全量测试 → 合并。
 
-UI 切片：对照冻结的 `ui-contract.html` 实现；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
+UI 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
 
 完整 runbook：[references/stage-implementation.md](references/stage-implementation.md)。
 

@@ -22,7 +22,7 @@
 ## 使用意见
 
 - change 以子需求命名（如 `sr-001-friend-badge`），保持映射一目了然。
-- 以 `requirement-slice.md` 为种子起草 proposal；含 UI 的切片中冻结的 `ui-contract.html` 仍是视觉真值 —— proposal 描述行为，不描述像素。
+- 以 `requirement-slice.md` 为种子起草 proposal；含 UI 的切片中冻结宿主组件 / `ui-truth-index.json` 仍是视觉真值 —— proposal 描述行为，不描述像素。
 - 推进状态前先验证：`openspec validate <name>`（CLI 存在时）+ 人工对照切片范围审计。
   - proposal 被接受 → `spec_ready`
   - `design.md` 审计通过 → `plan_ready`

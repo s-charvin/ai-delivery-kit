@@ -75,8 +75,8 @@ def _at_least(status: str, target: str) -> bool:
         return False
 
 
-def _has_contracts(subreq_dir: Path) -> bool:
-    return bool(list(subreq_dir.rglob("ui-contract.html")))
+def _has_ui_truth(subreq_dir: Path) -> bool:
+    return (subreq_dir / "contracts" / "ui-truth-index.json").is_file()
 
 
 def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list[str], list[str]]:
@@ -88,7 +88,7 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
         return errors, warnings
 
     new_layout = is_new_layout(subreq_dir)
-    ui_bearing = bool(entry.get("ui_bearing")) or _has_contracts(subreq_dir)
+    ui_bearing = bool(entry.get("ui_bearing")) or _has_ui_truth(subreq_dir)
 
     if new_layout:
         if _at_least(status, "spec_ready") and not (subreq_dir / "spec" / "spec.md").is_file():
@@ -122,6 +122,11 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
             (subreq_dir / "tasks.md").is_file() or (subreq_dir / "plan.md").is_file()
         ):
             errors.append(f"[LAYOUT] {subreq_id}: status={status} requires tasks.md or plan.md")
+
+    if ui_bearing and _at_least(status, "acceptance_frozen") and not _has_ui_truth(subreq_dir):
+        errors.append(
+            f"[LAYOUT] {subreq_id}: UI-bearing status={status} requires contracts/ui-truth-index.json"
+        )
 
     if ui_bearing and status in {"visual_acceptance_passed", "merged", "archived"}:
         if not (subreq_dir / "visual-acceptance.md").is_file() and not any(

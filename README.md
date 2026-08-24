@@ -114,17 +114,13 @@ No framework installed? The pipeline still runs end-to-end using built-in native
 
 Per-framework usage guidance ships with the orchestrator skill: `references/framework-adaptation.md` and `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
-## IDE UI Contract Gates
+## Visual freeze (no HTML contract hooks)
 
-`ai-delivery init` installs project-local UI contract gates for Cursor, Claude Code, and Codex:
+Stage 2 freezes **real host-stack components** plus an official-stack preview (Flutter: widget + golden PNG). `ai-delivery init` does **not** install UI git hooks.
 
-| IDE | Config | Soft guidance |
-|-----|--------|---------------|
-| Cursor | `.cursor/hooks.json` (`afterFileEdit`, `Write\|TabWrite`) | `.cursor/rules/ui-contract-gate.mdc` |
-| Claude Code | `.claude/settings.json` (`PostToolUse`, `Edit\|Write`) | `.claude/rules/ui-contract-gate.md` |
-| Codex | `.codex/hooks.json` + `.codex/config.toml` | root `AGENTS.md` (not `.codex/rules`) |
+Give the user the preview **absolute path**. Store **repo-relative** paths in `contracts/ui-truth-index.json`. Codex still needs `[features] hooks = true` in `.codex/config.toml` if you use other Codex hooks.
 
-**Codex requires hooks enabled.** Project bootstrap writes `.codex/config.toml` with:
+Project `AGENTS.md` carries a short UI-truth reminder (amend-on-upgrade). Restore older IDE JSON from `.ai-delivery/backups/ide-gates/` if needed.
 
 ```toml
 [features]
@@ -160,7 +156,7 @@ If `goreleaser` or `pwsh` are available locally, it includes those checks too.
 
 Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
 
-- `design.md`, `verification.md`, `spec/{spec,plan,tasks}.md`, `contracts/ui-contract-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`, `verification.md`, `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
 - Framework dirs (`.specify/`, `openspec/changes/`) are derived views synced back to canonical artifacts
 

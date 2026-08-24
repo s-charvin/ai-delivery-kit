@@ -24,7 +24,7 @@
       design.md                  # 新增：真实设计文件（替代 status.json notes 碎片）
       verification.md            # 新增：verify-before-completion 证据
       spec/  spec.md plan.md tasks.md      # canonical 三件套
-      contracts/  ui-contract-index.json  <unit-id>/ui-contract.html
+      contracts/  ui-truth-index.json
       visual-acceptance.md | visual-acceptance/*.png
       archive/<ISO-ts>/          # flow-forward 冻结区
         spec.md plan.md tasks.md design.md verification.md
@@ -65,10 +65,10 @@
 
 ## 5. 其他收敛规则
 
-- **ui-contract 索引**（已完成）：`contracts/ui-contract-index.json`；reconcile 的 `find_contracts` 索引优先、rglob 兜底并报告孤儿。
+- **ui-truth 索引**（已完成）：`contracts/ui-truth-index.json` 只存仓内相对指针（`component_path` / `preview_path` / Flutter `golden_test`）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`。
 - **依赖数据收敛**（已完成）：`dependency-graph.json` 为唯一 canonical；缺失时 reconcile 才 fallback 读 per-subreq `dependency.json` 并输出 `[WARN]`。
 - **验证器去重**（已完成）：bootstrap 播种到 `.ai-delivery/scripts/`；reconcile 经 `layout.py` 的 `resolve_validator_script` 单一入口解析。
-- **hooks 收敛**（已完成）：`.cursor/.claude/.codex` 下同名脚本由 bootstrap 生成 2 行 wrapper，指向 `.ai-delivery/scripts/hooks/validate-ui-contract.sh`。
+- **UI git hook 已拆除**：不再注入 `validate-ui-contract.sh` 或 `ui-contract-gate` 规则。升级时从已有 IDE JSON **剥离**旧 hook 组。
 - **测试夹具迁出治理区**（已完成）：`tests/ai-delivery-contracts/fixtures/example-requirement/**`；`zero-based-flow.test.sh` 运行时复制到临时目录再断言。
 - **native tier 拆 plan/tasks**（已完成）：统一规则下 `spec/plan.md` 必须真实存在（归档要三件套）；不再允许 `plan_path→tasks.md` 特例。
 

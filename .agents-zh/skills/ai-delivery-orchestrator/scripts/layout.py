@@ -49,7 +49,7 @@ DEFAULT_LAYOUT: dict = {
         "spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
         "plan": "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
         "tasks": "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
-        "ui_contract_index": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-contract-index.json",
+        "ui_truth_index": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
         "manifest": "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
     },
 }

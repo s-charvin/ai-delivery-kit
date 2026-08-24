@@ -2,7 +2,6 @@ package kitassets
 
 import (
 	"io/fs"
-	"strings"
 	"testing"
 )
 
@@ -13,18 +12,13 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/requirement-breakdown/SKILL.md",
 		".agents/skills/requirement-breakdown/templates/requirement-slice-template.md",
 		".agents/skills/ui-truth-mapping/SKILL.md",
-		".agents/skills/ui-truth-mapping/templates/ui-contract-template.html",
+		".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example",
 		"scripts/validate-project-ai-delivery-skills.sh",
-		"scripts/validate-ui-contract-html.py",
 		"scripts/validate-delivery-status.py",
 		"scripts/validate-artifact-layout.py",
 		"scripts/archive-subrequirement.py",
 		"tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
 		"tests/ai-delivery-skills/validate-sources.test.sh",
-		"tests/ai-delivery-skills/ui-contract-validator.test.sh",
-		"tests/ai-delivery-skills/ui-contract-gate-pressure.test.sh",
-		"tests/ai-delivery-skills/fixtures/ui-contract-good.html",
-		"tests/ai-delivery-skills/fixtures/ui-contract-bad.html",
 	}
 
 	for _, path := range required {
@@ -42,25 +36,6 @@ func TestManagedSourcePathsAreEmbeddable(t *testing.T) {
 		}
 		if !info.IsDir() && info.Size() == 0 {
 			t.Fatalf("expected non-empty managed file for %s", path)
-		}
-	}
-}
-
-func TestRestoredGateContentReferencesHTMLContract(t *testing.T) {
-	gateFiles := []string{
-		"AGENTS.md",
-		".cursor/rules/ui-contract-gate.mdc",
-		".claude/rules/ui-contract-gate.md",
-		"scripts/hooks/validate-ui-contract.sh",
-	}
-
-	for _, path := range gateFiles {
-		body, err := Embedded.ReadFile(path)
-		if err != nil {
-			t.Fatalf("expected embedded gate asset %s: %v", path, err)
-		}
-		if !strings.Contains(string(body), "ui-contract.html") {
-			t.Fatalf("expected %s to reference ui-contract.html, got:\n%s", path, string(body))
 		}
 	}
 }
