@@ -43,7 +43,7 @@ Rules:
 - Do not over-split for implementation convenience.
 
 ### 3. Write artifacts
-- **Copy template first.** For each `requirement-slice.md`, copy `templates/requirement-slice-template.md` verbatim to the output path, then fill in values. Do not regenerate the structure from memory — the template's section keys, field names, ordering, and comments are the source of truth. Only change values; never add, remove, or rename sections or fields.
+- **Copy template first.** For each `requirement-slice.md`, copy `templates/requirement-slice-template.md` to the output path, then fill in values. Do not regenerate the structure from memory — the template's section keys, field names, and ordering are the source of truth. Localize all human-readable headings, labels, prose, and necessary comments into the user's current conversation language, then remove the `ai-delivery-template-language` instruction comment. Preserve machine-readable keys, enum values, IDs, paths, commands, and code symbols exactly; never add, remove, or rename sections or fields.
 - `requirement-slice.md` references source document line ranges (sections). Do NOT copy the original text verbatim — that wastes tokens.
 - `dependency-graph.json` must be acyclic. Only lists `depends_on` — `blocks` is managed by the orchestrator, not this skill.
 
@@ -72,6 +72,6 @@ Do NOT copy the original text into the slice. The `source_ref` is sufficient —
 
 - Do not split requirements without source line-range coverage for every slice.
 - Do not duplicate cross-cutting rules across slices — they belong in `global-rules.md`.
-- Do not generate `requirement-slice.md` from memory. Locate `templates/requirement-slice-template.md`, copy it verbatim to the output path, then fill in values. Preserve all section keys, field names, ordering, and HTML comments. Only change values — never add, remove, or rename template sections or fields.
+- Do not generate `requirement-slice.md` from memory. Locate `templates/requirement-slice-template.md`, copy its structure to the output path, then fill in values. Preserve all section keys, field names, and ordering. Localize human-readable content into the user's current conversation language and remove only the `ai-delivery-template-language` instruction comment; preserve the remaining semantic HTML comments. Only change values — never add, remove, or rename template sections or fields.
 - Do not produce circular dependencies. The dependency graph must be a DAG.
 - Do not manage `blocks` — that is the orchestrator's responsibility.

@@ -33,7 +33,9 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 └── ui-truth-index.json        # 只做指针 — 不是绘制
 ```
 
-`ui-truth-index.json` 是 **指针**，不是图纸。使用 [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json)，至少持久化：
+审阅说明、冻结包以及生产/测试代码中的必要注释，都使用用户当前对话语言。代码符号、测试 API、机器可读键与枚举值、ID、路径、命令和协议字面量必须保持原样。产品 UI 文案仍遵守产品自身的本地化要求。
+
+`ui-truth-index.json` 是 **指针**，不是图纸。使用 [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json)，保持机器结构不变，并用用户当前对话语言填写人类可读的 `confirmation.note`；至少持久化：
 
 | 字段 | 含义 |
 |---|---|
@@ -64,7 +66,7 @@ templates/
 └── ui-truth-index-template.json
 ```
 
-示例只教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`，以及注释里的预览规则（PNG 画布 ≠ 运行时尺寸、每个状态一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。**它不是 Widget 模板。** Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
+示例只教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`，以及注释里的预览规则（PNG 画布 ≠ 运行时尺寸、每个状态一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。**它不是 Widget 模板。** 不要把其中的教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
 
 ## 快速参考 — 场景 → 单元拆分
 

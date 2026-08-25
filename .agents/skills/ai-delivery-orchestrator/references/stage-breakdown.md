@@ -17,7 +17,7 @@ Feed the requirement document path. It produces sub-requirements with `requireme
 
 - For each sub-requirement: if scope has complete source_ref coverage, normalized statements, and clear dependencies → set `split_ready`. If uncertain → leave `draft`.
 - Set `ui_bearing` on each subreq entry: `true` if the slice owns page/screen states; `false` if infra-only or no UI surfaces.
-- Initialize `status.json`: copy `templates/status-template.json` verbatim, then fill `requirement_id`, sub-requirement entries, and statuses. Preserve all `_`-prefixed metadata keys.
+- Initialize `status.json`: copy the structure of `templates/status-template.json`, then fill `requirement_id`, sub-requirement entries, and statuses. Preserve all `_`-prefixed metadata keys and machine values; localize their human-readable descriptive values into the user's current conversation language.
 - Record dependency graph at `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
 
 ## Light audit checklist (inline — do not run the `design` action)

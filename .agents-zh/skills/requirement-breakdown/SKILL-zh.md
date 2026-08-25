@@ -43,7 +43,7 @@ description: 当需要将需求文档拆分为可独立追踪的子需求并保�
 - 不要为实现便利而过度拆分。
 
 ### 3. 编写产物
-- **首先复制模板。** 对于每个 `requirement-slice.md`，将 `templates/requirement-slice-template-zh.md` 逐字复制到输出路径，然后填充值。不要凭记忆重新生成结构 — 模板的章节键、字段名、顺序和注释是唯一真值。只能修改值；不添加、删除或重命名章节或字段。
+- **首先复制模板。** 对于每个 `requirement-slice.md`，将 `templates/requirement-slice-template-zh.md` 复制到输出路径，然后填充值。不要凭记忆重新生成结构 — 模板的章节键、字段名和顺序是唯一真值。所有人类可读标题、标签、正文和必要注释都改为用户当前对话语言，然后删除 `ai-delivery-template-language` 指令注释。机器可读键、枚举值、ID、路径、命令和代码符号保持原样；不添加、删除或重命名章节或字段。
 - `requirement-slice.md` 引用源文档的行范围（章节）。不要逐字复制原文 — 浪费 token。
 - `dependency-graph.json` 必须是无环的。只列 `depends_on` — `blocks` 由 orchestrator 管理，不由此技能负责。
 
@@ -72,6 +72,6 @@ source_ref: "original-requirement.md#L14-L22, L30-L35"
 
 - 不要在没有源行范围覆盖的情况下拆分需求，每个切片都应有源依据。
 - 不要在多个切片中重复横切规则 — 它们应归入 `global-rules.md`。
-- 不要凭记忆生成 `requirement-slice.md`。找到 `templates/requirement-slice-template-zh.md`，逐字复制到输出路径，然后填充值。保留所有章节键、字段名、顺序和 HTML 注释。只能修改值 — 不添加、删除或重命名模板章节或字段。
+- 不要凭记忆生成 `requirement-slice.md`。找到 `templates/requirement-slice-template-zh.md`，复制其结构到输出路径，然后填充值。保留所有章节键、字段名和顺序。将人类可读内容改为用户当前对话语言，并且只删除 `ai-delivery-template-language` 指令注释；其余语义性 HTML 注释继续保留。只能修改值 — 不添加、删除或重命名模板章节或字段。
 - 不要产生循环依赖。依赖图必须是无环有向图。
 - 不要管理 `blocks` — 那是编排器的职责。

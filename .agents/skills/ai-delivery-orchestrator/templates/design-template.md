@@ -1,3 +1,7 @@
+<!-- ai-delivery-template-language
+When instantiating this template, write every human-readable heading, label, and prose passage in the user's current conversation language. Keep IDs, paths, commands, code symbols, and literal protocol tokens unchanged. Remove this comment from the finished artifact.
+-->
+
 # Design Document: {{subreq_id}}
 
 > This file is the **canonical design record** for sub-requirement `{subreq_id}`. It replaces the design fragments previously stored in `status.json` `notes`.

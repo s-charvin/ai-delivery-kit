@@ -13,6 +13,13 @@ Requirement → [Breakdown?] → UI Truth → Design → Spec → Plan → Tasks
 
 The orchestrator is **framework-agnostic**: it emits abstract stage actions and adapts them to whatever AI development framework the user has installed. It never requires installing anything.
 
+## Artifact language
+
+- Treat bundled template prose as an English source default, not as the output language.
+- Write headings, labels, explanations, review evidence, design/spec/plan/task prose, and necessary code comments in the user's current conversation language. Apply the same rule when updating an existing artifact.
+- Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, and literal protocol tokens exactly.
+- For Markdown templates, localize all human-readable content and remove the `ai-delivery-template-language` instruction comment before writing the artifact. For JSON templates, preserve the structure and localize only human-readable descriptive values.
+
 ## Framework adaptation (run once per session)
 
 Before executing any stage action:
@@ -45,7 +52,7 @@ draft → split_ready → acceptance_frozen → spec_ready → plan_ready → ta
 
 Non-UI subreqs skip `acceptance_frozen` and `visual_acceptance_passed`.
 
-Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy [templates/status-template.json](templates/status-template.json) verbatim — never regenerate structure from memory. Execution panel: [templates/todo-template.md](templates/todo-template.md) (not source of truth).
+Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy the structure of [templates/status-template.json](templates/status-template.json) verbatim and localize its human-readable descriptive values; never regenerate the structure from memory. Instantiate [templates/todo-template.md](templates/todo-template.md) in the user's current conversation language (not source of truth).
 
 | Field | Purpose |
 |-------|---------|
@@ -168,7 +175,7 @@ Checkpoints: CP-UI (pre-Stage-2 production code), CP-DESIGN (design approval), C
 
 ## Completion
 
-All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json`, advance status to `archived`, and generate `delivery-report.md`. When every subreq is `archived`, the requirement is `completed` and the archive is immutable — any change requires a new `<req-id>/` directory.
+All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` as a temporary template in the user's current conversation language, remove its `ai-delivery-template-language` comment, and preserve its placeholders. Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json` and advance status to `archived`; pass the prepared template to the final command with `--delivery-report-template <path>`. Do not claim `completed` until the localized `delivery-report.md` exists. When every subreq is `archived`, the requirement is `completed` and the archive is immutable — any change requires a new `<req-id>/` directory.
 
 ## Orchestration shape (invariants)
 

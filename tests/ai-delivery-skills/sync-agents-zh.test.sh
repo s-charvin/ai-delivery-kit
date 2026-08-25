@@ -55,6 +55,8 @@ done
 for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
   require_file "$SRC/$skill/SKILL.md"
   require_file "$DST/$skill/SKILL-zh.md"
+  require_no_han_content "$SRC/$skill/SKILL.md"
+  require_han_content "$DST/$skill/SKILL-zh.md"
 done
 
 # Localized templates

@@ -65,15 +65,10 @@ VISUAL_ACCEPTANCE_STATUSES = frozenset(
 )
 VERIFICATION_REQUIRED_STATUSES = frozenset({"merged", "archived"})
 VERIFICATION_ARTIFACT = "verification.md"
-DEFAULT_VERIFICATION_SECTIONS = (
-    "Review Rounds",
-    "Verification Commands and Results",
-    "Sign-off",
-)
-VERIFICATION_SECTION_ALIASES = (
-    frozenset({"Review Rounds", "评审轮次记录"}),
-    frozenset({"Verification Commands and Results", "验证命令与结果"}),
-    frozenset({"Sign-off", "签署"}),
+DEFAULT_VERIFICATION_MARKERS = (
+    "ai-delivery-verification:review-rounds",
+    "ai-delivery-verification:commands-results",
+    "ai-delivery-verification:sign-off",
 )
 
 
@@ -138,25 +133,20 @@ def has_visual_acceptance_evidence(subreq_dir: Path) -> bool:
     return False
 
 
-def verification_required_sections(req_root: Path) -> tuple[str, ...]:
+def verification_required_markers(req_root: Path) -> tuple[str, ...]:
     if load_workflow_policy is None:
-        return DEFAULT_VERIFICATION_SECTIONS
+        return DEFAULT_VERIFICATION_MARKERS
     policy = load_workflow_policy(req_root)
-    sections = policy.get("verification_policy", {}).get("required_sections")
-    if isinstance(sections, list) and sections:
-        return tuple(s for s in sections if isinstance(s, str) and s)
-    return DEFAULT_VERIFICATION_SECTIONS
-
-
-def verification_section_markers(section: str) -> frozenset[str]:
-    for aliases in VERIFICATION_SECTION_ALIASES:
-        if section in aliases:
-            return aliases
-    return frozenset({section})
+    markers = policy.get("verification_policy", {}).get("required_markers")
+    if isinstance(markers, list) and markers:
+        return tuple(
+            marker for marker in markers if isinstance(marker, str) and marker
+        )
+    return DEFAULT_VERIFICATION_MARKERS
 
 
 def check_verification_evidence(
-    subreq_id: str, subreq_dir: Path, status: str, sections: tuple[str, ...]
+    subreq_id: str, subreq_dir: Path, status: str, markers: tuple[str, ...]
 ) -> list[str]:
     if is_new_layout is None or not is_new_layout(subreq_dir):
         return []
@@ -170,15 +160,11 @@ def check_verification_evidence(
         raw = evidence.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         return [f"[GATE] {subreq_id} cannot read {VERIFICATION_ARTIFACT}: {exc}"]
-    missing = [
-        section
-        for section in sections
-        if not any(marker in raw for marker in verification_section_markers(section))
-    ]
+    missing = [marker for marker in markers if marker not in raw]
     if missing:
         return [
             f"[GATE] {subreq_id} status={status} {VERIFICATION_ARTIFACT} is missing "
-            f"required section(s): {', '.join(missing)}"
+            f"required marker(s): {', '.join(missing)}"
         ]
     return []
 
@@ -510,7 +496,7 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     if not isinstance(sub_requirements, dict):
         return ["[STATUS] sub_requirements must be a mapping"]
 
-    verification_sections = verification_required_sections(req_root)
+    verification_markers = verification_required_markers(req_root)
     repo_root = find_repo_root(req_root)
     errors: list[str] = []
 
@@ -545,7 +531,7 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
         if status in VERIFICATION_REQUIRED_STATUSES:
             errors.extend(
                 check_verification_evidence(
-                    subreq_id, subreq_dir, status, verification_sections
+                    subreq_id, subreq_dir, status, verification_markers
                 )
             )
 

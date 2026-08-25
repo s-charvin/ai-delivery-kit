@@ -13,6 +13,13 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 
 编排器是**框架无关**的：它输出抽象阶段动作，并适配用户已安装的任何 AI 开发框架。绝不要求用户安装任何东西。
 
+## 产物语言
+
+- 内置模板文本只是英文源默认值，不是最终输出语言。
+- 标题、标签、说明、评审证据、设计/spec/plan/task 正文和必要代码注释，都使用用户当前对话语言；更新已有产物时也遵守此规则。
+- 机器可读键、枚举值、ID、路径、命令、代码符号和协议字面量必须保持原样。
+- Markdown 模板实例化后，删除 `ai-delivery-template-language` 指令注释；JSON 模板保持结构不变，只本地化人类可读的描述值。
+
 ## 框架适配（每会话执行一次）
 
 执行任何阶段动作之前：
@@ -44,7 +51,7 @@ draft → split_ready → acceptance_frozen → spec_ready → plan_ready → ta
 
 非 UI 子需求跳过 `acceptance_frozen` 与 `visual_acceptance_passed`。
 
-真相源：`.ai-delivery/requirements/<req-id>/status.json`。逐字复制 [templates/status-template.json](templates/status-template.json)，禁止凭记忆生成结构。执行面板：[templates/todo-template.md](templates/todo-template.md)（非真相源）。
+真相源：`.ai-delivery/requirements/<req-id>/status.json`。逐字复制 [templates/status-template.json](templates/status-template.json) 的结构，并本地化其中人类可读的描述值；禁止凭记忆生成结构。使用用户当前对话语言实例化 [templates/todo-template.md](templates/todo-template.md)（非真相源）。
 
 | 字段 | 用途 |
 |------|------|
@@ -165,7 +172,7 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 ## 完成
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json`，将状态推进至 `archived`，并生成 `delivery-report.md`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并将状态推进至 `archived`；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
 
 ## 编排形态（不变量）
 

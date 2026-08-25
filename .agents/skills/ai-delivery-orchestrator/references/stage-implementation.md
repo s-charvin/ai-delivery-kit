@@ -48,7 +48,7 @@ The `implement` action always follows this chain, regardless of framework tier:
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
 4. **Visual acceptance** (UI only) — compare implementation against the confirmed official preview (Flutter: golden PNG) and the landed component; failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes.
-5. **Verification** — integration checks before merge; record the evidence in `verification.md` (template `templates/verification-template.md`).
+5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
 How each step is executed depends on the tier (superpowers skills, ECC agents, or native discipline): see [frameworks/superpowers.md](frameworks/superpowers.md), [frameworks/ecc.md](frameworks/ecc.md), [frameworks/native.md](frameworks/native.md).
@@ -68,7 +68,7 @@ implementer finishes the task
 Rules:
 
 - The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself.
-- Each round's findings and fix summary are appended to `progress.md` for traceability and to the `Review Rounds` section of `verification.md` (the verification artifact).
+- Each round's findings and fix summary are appended to `progress.md` for traceability and to the review-rounds area identified by its stable marker in `verification.md` (the verification artifact).
 - Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3.
 - Budget exhausted: pause, report the outstanding findings to the user, and either open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest review round is not clean.**
 - The loop owner is the main orchestrator session; it decides clean/not-clean from the reviewer report, not from the implementer's claim.
@@ -106,7 +106,7 @@ Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to su
 
 Slice complete → `finish` action → `merged`. See [handoff-table.md](handoff-table.md).
 
-When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json`, advance status to `archived`, and emit `delivery-report.md`; the requirement becomes `completed` only once all subreqs are `archived`.
+When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json` and advance status to `archived`; pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
 
 ## Finishing / PR
 

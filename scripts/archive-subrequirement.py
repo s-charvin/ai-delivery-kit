@@ -11,7 +11,8 @@ It:
    basis for later ``--verify-archive`` tamper detection).
 3. Advances the sub-requirement status ``merged`` -> ``archived``.
 4. When every executable sub-requirement is ``archived``, generates a
-   requirement-level ``delivery-report.md`` from the bundled template.
+   requirement-level ``delivery-report.md`` from a caller-supplied template
+   already localized to the user's current conversation language.
 
 The archive snapshot is immutable: any later byte change is caught by
 ``validate-artifact-layout.py --verify-archive``. Requirement changes must open a
@@ -27,6 +28,13 @@ import sys
 from pathlib import Path
 
 LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
+TEMPLATE_LANGUAGE_MARKER = "ai-delivery-template-language"
+REPORT_PLACEHOLDERS = (
+    "<req-id>",
+    "<archived_at>",
+    "<subreq_count>",
+    "<subreq_rows>",
+)
 
 # Canonical artifacts frozen into each archive snapshot, in on-disk form.
 ARTIFACT_RELS = (
@@ -58,15 +66,6 @@ def _locate_layout_dir() -> Path:
 
 sys.path.insert(0, str(_locate_layout_dir()))
 from layout import canonical_sha256  # noqa: E402
-
-
-def _locate_template(name: str) -> Path:
-    here = Path(__file__).resolve()
-    for base in [here, *here.parents]:
-        cand = base / ".agents" / "skills" / "ai-delivery-orchestrator" / "templates" / name
-        if cand.is_file():
-            return cand
-    raise SystemExit(f"ERROR: cannot locate template {name}")
 
 
 def freeze(subreq_dir: Path, req_id: str, subreq_id: str, now: datetime.datetime) -> tuple[Path, list[str]]:
@@ -132,8 +131,39 @@ def all_archived(data: dict) -> bool:
     )
 
 
-def render_delivery_report(req_root: Path, data: dict, now: datetime.datetime) -> Path:
-    template = _locate_template("delivery-report-template.md").read_text(encoding="utf-8")
+def all_archived_after(data: dict, subreq_id: str) -> bool:
+    subreqs = data.get("sub_requirements")
+    if not isinstance(subreqs, dict) or not subreqs:
+        return False
+    return all(
+        isinstance(entry, dict)
+        and (sid == subreq_id or entry.get("status") == "archived")
+        for sid, entry in subreqs.items()
+    )
+
+
+def load_delivery_report_template(path: Path) -> str:
+    try:
+        template = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SystemExit(f"ERROR: cannot read delivery report template {path}: {exc}")
+    if TEMPLATE_LANGUAGE_MARKER in template:
+        raise SystemExit(
+            "ERROR: delivery report template still contains its language instruction; "
+            "localize the human-readable content and remove the instruction before archiving"
+        )
+    missing = [placeholder for placeholder in REPORT_PLACEHOLDERS if placeholder not in template]
+    if missing:
+        raise SystemExit(
+            "ERROR: delivery report template is missing required placeholders: "
+            + ", ".join(missing)
+        )
+    return template
+
+
+def render_delivery_report(
+    req_root: Path, data: dict, now: datetime.datetime, template: str
+) -> Path:
     req_id = data.get("requirement_id", "<req-id>")
     subreqs = data.get("sub_requirements", {})
 
@@ -143,8 +173,12 @@ def render_delivery_report(req_root: Path, data: dict, now: datetime.datetime) -
         subreq_dir = req_root / "sub-requirements" / sid
         snapshots = sorted(subreq_dir.glob("archive/*/MANIFEST.json"))
         latest = snapshots[-1].parent.name if snapshots else "-"
-        signed = "yes" if (subreq_dir / "verification.md").is_file() else "MISSING"
-        rows.append(f"| {sid} | {entry.get('status', '-')} | {latest} | {signed} |")
+        verification = (
+            f"sub-requirements/{sid}/verification.md"
+            if (subreq_dir / "verification.md").is_file()
+            else "-"
+        )
+        rows.append(f"| {sid} | {entry.get('status', '-')} | {latest} | {verification} |")
 
     rendered = (
         template.replace("<req-id>", req_id)
@@ -163,7 +197,17 @@ def main() -> int:
     parser.add_argument("--subreq", type=str, required=True, help="Sub-requirement id to archive")
     parser.add_argument("--now", type=str, default=None, help="Override archive timestamp (ISO8601, for tests)")
     parser.add_argument("--no-status-write", action="store_true", help="Freeze only; do not touch status.json")
-    parser.add_argument("--no-delivery-report", action="store_true", help="Do not generate delivery-report.md even if all archived")
+    report_group = parser.add_mutually_exclusive_group()
+    report_group.add_argument(
+        "--delivery-report-template",
+        type=Path,
+        help="Localized delivery report template used when this command archives the final sub-requirement",
+    )
+    report_group.add_argument(
+        "--no-delivery-report",
+        action="store_true",
+        help="Do not generate delivery-report.md even if all archived",
+    )
     args = parser.parse_args()
 
     req_root = args.req_root.resolve()
@@ -187,6 +231,18 @@ def main() -> int:
         )
         return 2
 
+    report_template = None
+    will_complete = not args.no_status_write and all_archived_after(data, args.subreq)
+    if will_complete and not args.no_delivery_report:
+        if args.delivery_report_template is None:
+            print(
+                "ERROR: final archive requires --delivery-report-template with human-readable "
+                "content localized to the user's current conversation language",
+                file=sys.stderr,
+            )
+            return 2
+        report_template = load_delivery_report_template(args.delivery_report_template)
+
     now = (
         datetime.datetime.fromisoformat(args.now)
         if args.now
@@ -204,7 +260,10 @@ def main() -> int:
         print(f"WARNING: skipped missing canonical artifacts: {', '.join(missing)}", file=sys.stderr)
 
     if not args.no_delivery_report and all_archived(data):
-        report = render_delivery_report(req_root, data, now)
+        if report_template is None:
+            print("ERROR: localized delivery report template was not loaded", file=sys.stderr)
+            return 2
+        report = render_delivery_report(req_root, data, now, report_template)
         print(f"DELIVERY_REPORT {report.relative_to(req_root)}")
 
     return 0

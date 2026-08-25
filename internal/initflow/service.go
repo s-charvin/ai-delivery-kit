@@ -30,9 +30,9 @@ type Service struct {
 	Discover     func(string) (repo.Info, error)
 }
 
-// Run 只做两件事：解析目标仓库并播种 ai-delivery 受管资产。
-// 框架（spec-kit/OpenSpec/ECC/superpowers 等）的安装与使用完全交给
-// ai-delivery-orchestrator 技能在运行时自查适配，CLI 不做任何强制绑定。
+// Run resolves the target repository and seeds managed ai-delivery assets.
+// The ai-delivery-orchestrator skill discovers and adapts to frameworks such as
+// spec-kit, OpenSpec, ECC, and superpowers at runtime; the CLI binds none of them.
 func (s Service) Run(_ context.Context, input Input) (Result, error) {
 	if input.TargetPath == "" {
 		return Result{}, fmt.Errorf("target repo path is required")

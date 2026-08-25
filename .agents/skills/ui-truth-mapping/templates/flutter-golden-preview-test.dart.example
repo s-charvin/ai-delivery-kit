@@ -1,6 +1,9 @@
 // Golden preview skeleton for ui-truth-mapping (Flutter).
 // Copy the *pattern*, not this filename. This is NOT a widget template.
 // Widget code must follow neighboring production files.
+// In derived project code, keep only necessary comments and human-readable
+// test descriptions, and write them in the user's current conversation language.
+// Do not copy these instructional comments into the project.
 //
 // Hard rules (from the retired HTML preview; they still apply):
 // - One reviewable unit per golden. Out-of-scope shell stays out.

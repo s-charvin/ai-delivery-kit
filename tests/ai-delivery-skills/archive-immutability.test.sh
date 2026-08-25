@@ -28,7 +28,7 @@ printf '# spec\nfrozen content\n' > "$SUB/spec/spec.md"
 printf '# plan\n' > "$SUB/spec/plan.md"
 printf '# tasks\n' > "$SUB/spec/tasks.md"
 printf '# design\n' > "$SUB/design.md"
-printf '# verification\n\n## Review Rounds\n\n- Round 1: approved.\n\n## Verification Commands and Results\n\n- echo ok -> ok\n\n## Sign-off\n\n- reviewer: signed\n' > "$SUB/verification.md"
+printf '# verification\n\n<!-- ai-delivery-verification:review-rounds -->\n## Review Rounds\n\n- Round 1: approved.\n\n<!-- ai-delivery-verification:commands-results -->\n## Verification Commands and Results\n\n- echo ok -> ok\n\n<!-- ai-delivery-verification:sign-off -->\n## Sign-off\n\n- reviewer: signed\n' > "$SUB/verification.md"
 
 cat > "$TMP/status.json" <<'JSON'
 {
@@ -49,7 +49,7 @@ JSON
 TS="2026-07-10T000000Z"
 
 # 1) Freeze the merged sub-req into the immutable archive.
-python3 "$ARCHIVE" --req-root "$TMP" --subreq SR-001 --now "$TS" \
+python3 "$ARCHIVE" --req-root "$TMP" --subreq SR-001 --now "$TS" --no-delivery-report \
   || fail "archive-subrequirement.py failed to freeze SR-001"
 
 # 2) A fresh, untampered snapshot must validate cleanly (exit 0).

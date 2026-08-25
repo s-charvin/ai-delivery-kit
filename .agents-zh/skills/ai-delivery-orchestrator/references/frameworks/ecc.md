@@ -23,7 +23,7 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 - 每任务[评审循环](../stage-implementation.md#评审循环任务级闭环)优先用 ECC 评审代理：实现 → ECC 评审代理 → finding 交回实现者 → 复审，直到干净或 `review_loop.max_rounds` 预算耗尽（然后升级给用户；绝不自动合并）。
 - ECC hooks 强制格式/lint 规则时就让它跑；hook 失败即验证失败（经评审循环修复一轮后仍失败则 `blocked_verification_failure`），不是绕过 hook 的理由。
 - ECC 与另一个框架同时安装时，ECC 通常与规格类档位（spec-kit/OpenSpec）搭配良好：ECC 负责 design/implement/finish，规格档位负责 `spec`/`plan`/`tasks`。
-- 进入 `merged` 前须写 `verification.md`（须含小节：评审轮次记录 / 验证命令与结果 / 签署）。无此文件时状态验证器拒绝 `merged`。
+- 进入 `merged` 前须用用户当前对话语言写 `verification.md`。保留 `templates/verification-template.md` 中三个 `ai-delivery-verification:*` 标记；缺少这些标记时状态验证器拒绝 `merged`。
 
 ## 可追溯性记录
 

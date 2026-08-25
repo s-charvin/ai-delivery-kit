@@ -1,0 +1,84 @@
+#!/bin/bash
+set -euo pipefail
+
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+ARCHIVE="$ROOT/scripts/archive-subrequirement.py"
+DEFAULT_TEMPLATE="$ROOT/.agents/skills/ai-delivery-orchestrator/templates/delivery-report-template.md"
+
+fail() {
+  echo "[delivery-report-language.test] $1" >&2
+  exit 1
+}
+
+TMP=$(mktemp -d)
+trap 'rm -rf "$TMP"' EXIT
+
+SUB="$TMP/sub-requirements/SR-001"
+mkdir -p "$SUB/spec"
+printf '# spec\n' > "$SUB/spec/spec.md"
+printf '# plan\n' > "$SUB/spec/plan.md"
+printf '# tasks\n' > "$SUB/spec/tasks.md"
+printf '# design\n' > "$SUB/design.md"
+printf '# verification\n' > "$SUB/verification.md"
+
+cat > "$TMP/status.json" <<'JSON'
+{
+  "requirement_id": "report-language",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "merged"
+    }
+  }
+}
+JSON
+
+if python3 "$ARCHIVE" \
+  --req-root "$TMP" \
+  --subreq SR-001 \
+  --now "2026-08-25T00:00:00+00:00" \
+  --delivery-report-template "$DEFAULT_TEMPLATE" \
+  >"$TMP/default.out" 2>"$TMP/default.err"; then
+  fail "the unlocalized default template must be rejected"
+fi
+grep -Fq 'still contains its language instruction' "$TMP/default.err" \
+  || fail "missing language-instruction rejection"
+grep -Fq '"status": "merged"' "$TMP/status.json" \
+  || fail "failed preflight must not advance status"
+[[ ! -e "$SUB/archive" ]] || fail "failed preflight must not create an archive"
+
+cat > "$TMP/report-template.md" <<'TEMPLATE'
+# Informe de entrega - <req-id>
+
+- Archivado: <archived_at>
+- Cantidad: <subreq_count>
+
+## Subrequisitos
+
+| ID | Estado | Archivo | Verificacion |
+|----|--------|---------|--------------|
+<subreq_rows>
+TEMPLATE
+
+python3 "$ARCHIVE" \
+  --req-root "$TMP" \
+  --subreq SR-001 \
+  --now "2026-08-25T00:00:00+00:00" \
+  --delivery-report-template "$TMP/report-template.md" \
+  >"$TMP/localized.out" 2>"$TMP/localized.err" \
+  || fail "localized delivery report template should archive successfully"
+
+REPORT="$TMP/delivery-report.md"
+[[ -f "$REPORT" ]] || fail "localized delivery report was not generated"
+grep -Fq '# Informe de entrega - report-language' "$REPORT" \
+  || fail "localized report heading was not preserved"
+grep -Fq 'sub-requirements/SR-001/verification.md' "$REPORT" \
+  || fail "verification cell should use a language-neutral path"
+if grep -Fq 'ai-delivery-template-language' "$REPORT"; then
+  fail "finished report contains a template language instruction"
+fi
+if grep -Fq 'Delivery Report' "$REPORT"; then
+  fail "finished report leaked English default prose"
+fi
+
+echo "PASS: final archive requires and preserves a pre-localized delivery report template."

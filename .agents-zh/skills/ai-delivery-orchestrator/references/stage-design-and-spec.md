@@ -12,7 +12,7 @@
 <HARD-GATE>
 编排器设计模式：设计会话结束后，在用户批准设计之前，不要自行撰写 plan/spec 产物。
 不要把设计文档写进框架自有目录。
-摘要存入子需求 `notes`；仅用户批准后设 `design_approved=true`；然后进入 `spec` 动作。
+用用户当前对话语言把设计摘要写入 `design.md`（模板：`templates/design-template.md`，删除其中的语言指令注释）；`notes` 只保留单行指针。仅用户批准后设 `design_approved=true`；然后进入 `spec` 动作。
 </HARD-GATE>
 
 <HARD-GATE>
@@ -35,7 +35,7 @@
 - error/empty/loading 处理方案
 - 关键技术决策与权衡
 
-摘要存入 `notes`。用户批准后设 `design_approved: true`。
+用用户当前对话语言把设计摘要写入 `design.md`，`notes` 只保留单行指针。用户批准后设 `design_approved: true`。
 
 若设计与冻结组件 / 已确认预览或需求冲突 → `blocked_spec_mismatch`。
 
@@ -44,6 +44,8 @@
 ## Spec 管道（框架无关）
 
 当 `design_approved: true`，按 reconcile 输出的动作执行，使用 [frameworks/](frameworks/) 下所选档位的指南：
+
+`spec.md`、`plan.md` 和 `tasks.md` 的所有人类可读内容都使用用户当前对话语言。机器键、ID、路径、命令、代码符号和协议字面量保持原样。
 
 1. `spec` → `spec.md` — 对照冻结组件状态审计（UI）。UI 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份 spec 文档。
 2. `plan` → `plan.md` — 对照交付切片顺序审计。

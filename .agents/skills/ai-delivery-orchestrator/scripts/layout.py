@@ -287,10 +287,10 @@ DEFAULT_WORKFLOW_POLICY: dict = {
     "verification_policy": {
         "required_at": ["merged", "archived"],
         "artifact": "verification.md",
-        "required_sections": [
-            "Review Rounds",
-            "Verification Commands and Results",
-            "Sign-off",
+        "required_markers": [
+            "ai-delivery-verification:review-rounds",
+            "ai-delivery-verification:commands-results",
+            "ai-delivery-verification:sign-off",
         ],
     },
 }

@@ -52,14 +52,14 @@
     "max_rounds": 3
   },
   "spec_persistence": {
-    "_doc": "spec-kit 持久化约定：活跃期 living（spec.md 唯一事实源，plan/tasks 原地再生），完结后 flow_forward（archive/ 冻结不可变，变更开新需求目录）",
+    "_doc": "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work uses flow_forward with an immutable archive and a new requirement directory for changes",
     "active": "living",
     "complete": "flow_forward",
     "living": {
       "source_of_truth": "spec/spec.md",
       "derived": ["spec/plan.md", "spec/tasks.md"],
       "on_drift": "downgrade_to_spec_ready",
-      "before_regenerate": "旧关键决策先落 decisions.md"
+      "before_regenerate": "Record prior key decisions in decisions.md before regeneration"
     },
     "flow_forward": {
       "immutable_root": "archive",
@@ -67,13 +67,13 @@
     }
   },
   "verification_policy": {
-    "_doc": "Verification discipline: merged/archived requires verification.md evidence; the validator checks only file presence and required section headings, not their semantics",
+    "_doc": "Verification discipline: merged/archived requires verification.md evidence; language-neutral markers keep human-readable headings localizable",
     "required_at": ["merged", "archived"],
     "artifact": "verification.md",
-    "required_sections": ["Review Rounds", "Verification Commands and Results", "Sign-off"]
+    "required_markers": ["ai-delivery-verification:review-rounds", "ai-delivery-verification:commands-results", "ai-delivery-verification:sign-off"]
   },
   "archive": {
-    "_doc": "flow-forward 冻结：merged -> archived 经 CP-ARCHIVE 确认，archive/ 区不可变（MANIFEST.json sha256 校验）",
+    "_doc": "Flow-forward freeze: merged -> archived requires CP-ARCHIVE confirmation; archive/ is immutable and verified by MANIFEST.json SHA-256",
     "require_checkpoint": "CP-ARCHIVE",
     "immutable": true
   },

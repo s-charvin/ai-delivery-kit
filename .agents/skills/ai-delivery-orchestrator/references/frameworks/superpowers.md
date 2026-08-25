@@ -39,7 +39,7 @@ Edit one file at a time during implementation.
 
 - `finishing-a-development-branch` — structured merge options; rebase onto the development branch (no merge commits).
 - Set `merged` only after the rebase succeeds and all gates hold.
-- Before `merged`, write `verification.md` (sections: Review Rounds / Verification Commands and Results / Sign-off). The status validator rejects `merged` without it.
+- Before `merged`, write `verification.md` in the user's current conversation language. Preserve the three `ai-delivery-verification:*` markers from `templates/verification-template.md`; the status validator rejects `merged` without them.
 
 ## Traceability recording
 

@@ -1,3 +1,7 @@
+<!-- ai-delivery-template-language
+实例化本模板时，所有人类可读的标题、标签和说明都使用用户当前对话语言。机器键、枚举值、ID、路径、命令和占位符保持原样。完成产物前删除本注释。
+-->
+
 # AI 交付编排器 — 执行面板
 
 > **非真相源。** 若与本文件冲突，以 `.ai-delivery/requirements/<req-id>/status.json` 为准，并重写本文件头部。

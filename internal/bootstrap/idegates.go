@@ -18,18 +18,18 @@ const (
 	ideGateBackupRelRoot = ".ai-delivery/backups/ide-gates"
 )
 
-// AmendReport 记录一次 IDE gate JSON 的 amend 结果，供 CLI 提示恢复入口。
+// AmendReport records IDE gate amendments so the CLI can expose recovery options.
 type AmendReport struct {
-	BackupStamp string   // 备份时间戳目录名；无备份时为空
-	BackupDir   string   // 备份目录绝对路径
-	Files       []string // 被备份并 amend 的项目相对路径
+	BackupStamp string   // Backup timestamp directory name; empty when no backup was made.
+	BackupDir   string   // Absolute backup directory path.
+	Files       []string // Project-relative paths that were backed up and amended.
 }
 
 func (r AmendReport) Empty() bool {
 	return len(r.Files) == 0
 }
 
-// amendSession 绑定单次 bootstrap / reapply 过程，共享同一备份时间戳。
+// amendSession binds one bootstrap or reapply run to a shared backup timestamp.
 type amendSession struct {
 	repoRoot string
 	stamp    string
@@ -84,8 +84,8 @@ func amendableManagedTargets() []string {
 	}
 }
 
-// mergeAmendableJSON 将 kit 门禁配置合并进已有项目 JSON，
-// 不删除无关顶层字段与外来 hook 条目。
+// mergeAmendableJSON merges kit gate settings into existing project JSON without
+// deleting unrelated top-level fields or external hook entries.
 func mergeAmendableJSON(existing, desired []byte) ([]byte, error) {
 	desiredObj := map[string]any{}
 	if err := json.Unmarshal(desired, &desiredObj); err != nil {
@@ -127,7 +127,7 @@ func mergeAmendableJSON(existing, desired []byte) ([]byte, error) {
 	}
 	existingObj["hooks"] = existingHooks
 
-	// Cursor hooks.json：已有文件无 version 时补上 desired 的 version。
+	// Copy the desired version when an existing Cursor hooks.json has none.
 	if _, ok := existingObj["version"]; !ok {
 		if version, ok := desiredObj["version"]; ok {
 			existingObj["version"] = version
@@ -208,8 +208,8 @@ func commandContainsMarker(value any) bool {
 	return strings.Contains(command, uiContractHookMarker)
 }
 
-// writeAmendableJSON 合并写入 amendable IDE JSON：
-// 已有文件先备份，再原子写；首次创建不备份。
+// writeAmendableJSON merges an amendable IDE JSON file. Existing files are
+// backed up before the atomic write; newly created files need no backup.
 func (s *amendSession) writeAmendableJSON(relTarget, absTarget string, desired []byte) error {
 	existing, err := os.ReadFile(absTarget)
 	if err != nil {
@@ -241,7 +241,7 @@ const (
 	agentsGateEnd   = "<!-- ai-delivery:ui-contract-gate:end -->"
 )
 
-// writeAmendableAgentsMD 将 kit 门禁段落 upsert 进 AGENTS.md（Codex 官方指令入口）。
+// writeAmendableAgentsMD upserts the kit gate section into the Codex AGENTS.md entrypoint.
 func (s *amendSession) writeAmendableAgentsMD(relTarget, absTarget string, desired []byte) error {
 	existing, err := os.ReadFile(absTarget)
 	if err != nil {
@@ -301,7 +301,7 @@ func upsertAgentsMDSection(existing, desired []byte) []byte {
 	return out.Bytes()
 }
 
-// writeAmendableCodexConfig 确保项目 .codex/config.toml 开启 hooks。
+// writeAmendableCodexConfig ensures project hooks are enabled in .codex/config.toml.
 func (s *amendSession) writeAmendableCodexConfig(relTarget, absTarget string, desired []byte) error {
 	existing, err := os.ReadFile(absTarget)
 	if err != nil {
@@ -423,7 +423,7 @@ func pruneIDEGateBackups(repoRoot string, keep int) error {
 	return nil
 }
 
-// ListIDEGateBackups 返回备份时间戳，最新在前。
+// ListIDEGateBackups returns backup timestamps in newest-first order.
 func ListIDEGateBackups(repoRoot string) ([]string, error) {
 	root := filepath.Join(repoRoot, filepath.FromSlash(ideGateBackupRelRoot))
 	entries, err := os.ReadDir(root)
@@ -443,8 +443,8 @@ func ListIDEGateBackups(repoRoot string) ([]string, error) {
 	return stamps, nil
 }
 
-// RestoreIDEGateBackup 从指定时间戳恢复 amendable IDE 配置与 AGENTS.md。
-// 恢复前会先备份当前文件（再给一次回滚机会）。
+// RestoreIDEGateBackup restores amendable IDE settings and AGENTS.md from a timestamp.
+// Current files are backed up first to preserve another rollback point.
 func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendReport, error) {
 	report := AmendReport{}
 	if repoRoot == "" {

@@ -17,7 +17,7 @@
 
 - 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
 - 为每个子需求设置 `ui_bearing`：拥有页面/屏幕状态 → `true`；纯基础设施或无 UI → `false`。
-- 初始化 `status.json`：逐字复制 `templates/status-template.json`，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键。
+- 初始化 `status.json`：复制 `templates/status-template.json` 的结构，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键和机器值；其中人类可读的描述值改为用户当前对话语言。
 - 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。
 
 ## 轻量审计清单（inline — 不要执行 `design` 动作）

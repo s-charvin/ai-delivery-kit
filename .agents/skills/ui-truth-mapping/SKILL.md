@@ -33,7 +33,9 @@ Per independent unit, **production code** in the host tree + an official preview
 └── ui-truth-index.json        # pointers only — not paint
 ```
 
-`ui-truth-index.json` is a **pointer**, not a drawing. Use [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json) and persist at least:
+Write review notes, freeze packets, and necessary production/test code comments in the user's current conversation language. Preserve code symbols, test APIs, machine-readable keys and enum values, IDs, paths, commands, and literal protocol tokens exactly. Product UI copy still follows the product's localization requirements.
+
+`ui-truth-index.json` is a **pointer**, not a drawing. Use [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json), preserve its machine structure, and write human-readable `confirmation.note` values in the user's current conversation language. Persist at least:
 
 | Field | Meaning |
 |---|---|
@@ -64,7 +66,7 @@ templates/
 └── ui-truth-index-template.json
 ```
 
-The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per state, no system chrome, no in-widget state-switcher). **It is not a widget template.** Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
+The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per state, no system chrome, no in-widget state-switcher). **It is not a widget template.** Do not copy its instructional comments into project code; rewrite only necessary comments in the user's current conversation language. Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
 
 ## Quick Reference — Scenario → Unit split
 
@@ -174,7 +176,7 @@ TemPad hints (never copy `data-hint-*` into product code):
 | `get_code` | `data-hint-has-mask="true"` | SVG **already baked** the mask — do not stack another overlay |
 | `get_structure` | `"isMask": true` | Same as mask (field omitted when false) |
 
-Also run when names/CSS mention mask / 蒙版 / `mask-image` / blend ≠ src-over, or two fills share bounds, or a gradient only changes alpha.
+Also run when names/CSS mention mask / `mask-image` / blend != src-over, or two fills share bounds, or a gradient only changes alpha.
 
 | Role | Test | Freeze as |
 |---|---|---|
@@ -266,7 +268,7 @@ Stage 4 **wires** the already-written component (API, route, state, mount) in th
 
 ### 9. Replace or deprecate — sweep stale pointers in the same change
 
-When a unit is deleted, replaced, or rebuilt under a new id: redirect active pointers (`status.json` notes, visual-acceptance, progress/todo) in the same change. Historical "superseded / deleted / 已删除 / 取代" lines may remain.
+When a unit is deleted, replaced, or rebuilt under a new id: redirect active pointers (`status.json` notes, visual-acceptance, progress/todo) in the same change. Historical "superseded / deleted / removed / replaced" lines may remain.
 
 ## Anti-patterns (process failure)
 

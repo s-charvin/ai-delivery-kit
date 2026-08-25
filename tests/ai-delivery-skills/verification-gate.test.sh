@@ -49,51 +49,37 @@ fi
 grep -q 'requires verification.md' <<<"$output" \
   || fail "Expected a verification.md gate error, got: $output"
 
-# --- Case 2: verification.md present but missing a required section ----------
+# --- Case 2: localized verification.md missing a required marker -------------
 cat >"$NEW_SR/verification.md" <<'EOF'
-# Verification Evidence
+# Evidencia de verificacion
 
-## 1. Review Rounds
-- Round 1: clean
+<!-- ai-delivery-verification:review-rounds -->
+## 1. Rondas de revision
+- Ronda 1: clean
 
-## 2. Verification Commands and Results
-- `make test` -> passed
+<!-- ai-delivery-verification:commands-results -->
+## 2. Comandos y resultados
+- `make test` -> correcto
 EOF
 
 if output="$(run_validator "$NEW_ROOT")"; then
-  fail "verification.md missing the sign-off section must fail, got: $output"
+  fail "verification.md missing the sign-off marker must fail, got: $output"
 fi
-grep -q 'missing required section' <<<"$output" \
-  || fail "Expected a missing-section error, got: $output"
+grep -q 'missing required marker' <<<"$output" \
+  || fail "Expected a missing-marker error, got: $output"
 
-# --- Case 3: complete verification.md -> accepted ----------------------------
+# --- Case 3: complete localized verification.md -> accepted ------------------
 cat >>"$NEW_SR/verification.md" <<'EOF'
 
-## 4. Sign-off
-- Reviewer: orchestrator
+<!-- ai-delivery-verification:sign-off -->
+## 4. Aprobacion final
+- Revisor: orchestrator
 EOF
 
 output="$(run_validator "$NEW_ROOT")" \
   || fail "complete verification.md should validate clean, got: $output"
 
-# --- Case 4: existing Chinese evidence remains valid --------------------------
-cat >"$NEW_SR/verification.md" <<'EOF'
-# 验证记录
-
-## 评审轮次记录
-- 第 1 轮：clean
-
-## 验证命令与结果
-- `make test` -> 通过
-
-## 签署
-- 验证人：orchestrator
-EOF
-
-output="$(run_validator "$NEW_ROOT")" \
-  || fail "legacy Chinese verification.md should stay valid, got: $output"
-
-# --- Case 5: legacy layout at merged stays clean (backward compatibility) ----
+# --- Case 4: legacy layout at merged stays clean ------------------------------
 OLD_ROOT="$WORK/old"
 OLD_SR="$OLD_ROOT/sub-requirements/SR-001"
 mkdir -p "$OLD_SR"

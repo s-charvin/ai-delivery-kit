@@ -1,13 +1,16 @@
 # verification
 
-## 评审轮次记录
+<!-- ai-delivery-verification:review-rounds -->
+## Review Rounds
 
 - Round 1: approved.
 
-## 验证命令与结果
+<!-- ai-delivery-verification:commands-results -->
+## Verification Commands and Results
 
-- `echo ok` → ok
+- `echo ok` -> ok
 
-## 签署
+<!-- ai-delivery-verification:sign-off -->
+## Sign-off
 
 - reviewer: signed

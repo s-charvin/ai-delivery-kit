@@ -12,7 +12,7 @@ Stage 3 runs two abstract actions: `design` (approval-gated) and `spec` → `pla
 <HARD-GATE>
 Orchestrator design-mode: after the design session, do NOT write plan/spec artifacts of your own before the user approves the design.
 Do NOT write design docs into framework-owned directories.
-Write the design summary to `design.md` (template: `templates/design-template.md`); keep `notes` to a one-line pointer only. Set `design_approved=true` only after user approval; then proceed to the `spec` action.
+Write the design summary to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. Set `design_approved=true` only after user approval; then proceed to the `spec` action.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -35,7 +35,7 @@ Design session should produce:
 - Error/empty/loading handling plan
 - Key technical decisions and trade-offs
 
-Write the design summary to `design.md` (one-line pointer in `notes`). On user approval, set `design_approved: true`.
+Write the design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). On user approval, set `design_approved: true`.
 
 If design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
 
@@ -44,6 +44,8 @@ If design conflicts with the frozen component / confirmed preview or requirement
 ## Spec pipeline (framework-agnostic)
 
 When `design_approved: true`, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
+
+Write all human-readable content in `spec.md`, `plan.md`, and `tasks.md` in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
 
 1. `spec` → `spec.md` — audit against frozen component states (UI). For UI slices the Stage 2 component + confirmed preview set is the visual input, not a separate spec document.
 2. `plan` → `plan.md` — audit delivery slice ordering.

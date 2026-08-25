@@ -71,6 +71,8 @@ main() {
   need_cmd zsh
   run_step "go test ./..." env GOCACHE="$GOCACHE_DIR" go test ./...
   run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
+  run_step "English source policy" bash tests/ai-delivery-skills/english-source-policy.test.sh
+  run_step "artifact language policy" bash tests/ai-delivery-skills/artifact-language-policy.test.sh
   run_step "ui-truth-mapping skill markers" bash tests/ai-delivery-skills/ui-truth-mapping-skill-markers.test.sh
   run_step "orchestrator Stage 4 skill markers" bash tests/ai-delivery-skills/orchestrator-stage4-skill-markers.test.sh
   run_step "layout contract" bash tests/ai-delivery-skills/layout.test.sh
@@ -78,6 +80,7 @@ main() {
   run_step "verification gate" bash tests/ai-delivery-skills/verification-gate.test.sh
   run_step "reconcile delivery" zsh tests/ai-delivery-skills/reconcile-delivery.test.sh
   run_step "archive immutability" bash tests/ai-delivery-skills/archive-immutability.test.sh
+  run_step "delivery report language" bash tests/ai-delivery-skills/delivery-report-language.test.sh
   run_step "zero-based flow fixture" zsh tests/ai-delivery-contracts/zero-based-flow.test.sh
   run_step "ui composition guardrails" bash tests/ai-delivery-skills/ui-composition-guardrails.test.sh
   run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh

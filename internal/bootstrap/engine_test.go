@@ -39,7 +39,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		}
 	}
 
-	// admin 后台弃用后，日志/运行时看板脚手架不再播种。
+	// The deprecated admin dashboard no longer seeds log/runtime dashboard scaffolding.
 	for _, rel := range []string{".ai-delivery/logs", ".ai-delivery/runtime"} {
 		if _, err := os.Stat(filepath.Join(target, rel)); !os.IsNotExist(err) {
 			t.Fatalf("expected %s to be absent, got %v", rel, err)
@@ -62,14 +62,26 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, section := range []string{"Review Rounds", "Verification Commands and Results", "Sign-off"} {
-		if !strings.Contains(string(policy), section) {
-			t.Fatalf("expected English verification section %q in workflow policy, got %s", section, string(policy))
+	for _, marker := range []string{
+		"ai-delivery-verification:review-rounds",
+		"ai-delivery-verification:commands-results",
+		"ai-delivery-verification:sign-off",
+	} {
+		if !strings.Contains(string(policy), marker) {
+			t.Fatalf("expected verification marker %q in workflow policy, got %s", marker, string(policy))
 		}
 	}
 
 	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected bootstrap not to inject .agents/AGENTS.md, got %v", err)
+	}
+
+	agentsEntry, err := os.ReadFile(filepath.Join(target, "AGENTS.md"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(agentsEntry), "user's current conversation language") {
+		t.Fatalf("expected artifact language policy in AGENTS.md, got %s", string(agentsEntry))
 	}
 
 	for _, rel := range []string{
@@ -147,7 +159,7 @@ func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRequirementData(t *
 		t.Fatal(err)
 	}
 
-	// 需求产物属于交付真值，升级绝不能覆盖。
+	// Requirement artifacts are delivery truth and must never be overwritten during upgrade.
 	requirementPath := filepath.Join(target, ".ai-delivery/requirements/req-demo/status.json")
 	if err := os.MkdirAll(filepath.Dir(requirementPath), 0o755); err != nil {
 		t.Fatal(err)

@@ -163,5 +163,6 @@ bash scripts/rehearse-release.sh
 - `merged` = 代码已集成到开发分支
 - `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
 - CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
+- 归档最后一个子需求时，先用用户当前对话语言实例化 `delivery-report-template.md`，删除语言指令注释，再通过 `--delivery-report-template <path>` 传入
 
 若需多方协同，另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在业务仓运行 `coordination-cli init`；kit 本身不包含协同逻辑。

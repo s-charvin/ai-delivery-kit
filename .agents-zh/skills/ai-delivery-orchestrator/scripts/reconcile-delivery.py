@@ -365,8 +365,8 @@ def reconcile(
                 else:
                     ui_waiting.append(subreq_id)
             elif status == "tasks_ready":
-                # 进入开发必须经过 CP-001 门禁：tasks_ready 子需求先等待，
-                # 待 all_tasks_ready 与已记录的 CP-001 确认后再放行。
+                # Development is gated by CP-001. Hold tasks_ready slices until
+                # all_tasks_ready and a recorded CP-001 confirmation allow release.
                 dev_waiting.append(subreq_id)
             else:
                 runnable.append(f"{subreq_id}:{status}->{action}")
@@ -398,8 +398,8 @@ def reconcile(
         )
     )
 
-    # CP-001 凭证仅在“全部 tasks_ready 且用户确认已记录”时有效；
-    # 回退后残留的旧确认不得再次授权 implement。
+    # CP-001 is valid only while every slice is tasks_ready and user confirmation
+    # is recorded. A stale confirmation after rollback must not reauthorize implement.
     dev_authorized = recorded_checkpoint == "CP-001" and all_tasks_ready
     for subreq_id in dev_waiting:
         if dev_authorized:
@@ -430,9 +430,9 @@ def reconcile(
         checkpoint = checkpoint or "CP-002"
     else:
         runtime_mode = "resume"
-        # 检查点只是守卫满足时的凭证：门禁回退后残留的 CP-001 不再
-        # 授权 implement；设计待批则继续以 CP-DESIGN 提示，不阻塞其他
-        # 无依赖的可运行项。
+        # A checkpoint is evidence only while its guard holds. A stale CP-001
+        # after gate regression no longer authorizes implement; pending design
+        # continues to surface CP-DESIGN without blocking other runnable items.
         if ui_waiting:
             checkpoint = "CP-UI"
         elif design_pending:
@@ -451,7 +451,7 @@ def reconcile(
         next_subreq, next_action = design_pending[0]
     elif runtime_mode == "confirm_to_dev":
         next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
-        # 仅当用户确认已记录在 status.json（CP-001）时才放行 implement。
+        # Release implement only when status.json records user confirmation (CP-001).
         next_action = "implement" if recorded_checkpoint == "CP-001" else "none"
     elif runtime_mode == "confirm_ui":
         next_subreq = ui_waiting[0]

@@ -1,4 +1,7 @@
 <!-- ai-delivery-meta: {"version":1,"updated_at":"<ISO8601>","updated_by":"<agent>"} -->
+<!-- ai-delivery-template-language
+实例化本模板时，所有人类可读的标题、标签、说明和语义注释都使用用户当前对话语言。机器键、枚举值、ID、路径和占位符保持原样。完成产物前只删除本指令注释。
+-->
 
 # 需求切片
 

@@ -48,7 +48,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
 3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
 4. **视觉验收**（仅 UI）— 将实现与已确认官方预览（Flutter：golden PNG）及已合入组件对照；失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。
-5. **验证** — 合并前集成检查。
+5. **验证** — 合并前集成检查；在 `verification.md` 中使用用户当前对话语言记录人类可读证据（模板：`templates/verification-template.md`，删除其中的语言指令注释）。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
 
 每一步如何执行取决于档位（superpowers 技能、ECC 代理或原生纪律）：见 [frameworks/superpowers.md](frameworks/superpowers.md)、[frameworks/ecc.md](frameworks/ecc.md)、[frameworks/native.md](frameworks/native.md)。
@@ -68,7 +68,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 规则：
 
 - 评审者始终在新鲜上下文中运行（档位支持时用子代理），绝不允许实现者自评。
-- 每轮的 finding 与修复摘要记入 `progress.md` 以便追溯。
+- 每轮的 finding 与修复摘要记入 `progress.md` 以便追溯，并追加到 `verification.md` 中由稳定标记识别的评审轮次区域。
 - 迭代预算 `review_loop.max_rounds` 默认 3。解析优先级：子需求 `decisions.md` 覆盖 → `.ai-delivery/meta/workflow-policy.json` 的 `review_loop.max_rounds` → 默认 3。
 - 预算耗尽：暂停，把未解决的 finding 报告给用户，走 `blocked_verification_failure` 或按用户指示处理。**最新一轮评审不干净的工作绝不自动合并。**
 - 循环所有者是主编排会话；干净与否以评审者报告为准，而非实现者的声称。
@@ -105,6 +105,8 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 ## 下一 handoff
 
 切片完成 → `finish` 动作 → `merged`。见 [handoff-table.md](handoff-table.md)。
+
+所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `scripts/archive-subrequirement.py` 冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并推进到 `archived`；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
 
 ## 收尾 / PR
 

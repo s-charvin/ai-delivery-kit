@@ -1,3 +1,7 @@
+<!-- ai-delivery-template-language
+When instantiating this template, write every human-readable heading, label, and note in the user's current conversation language. Keep machine keys, enum values, IDs, paths, commands, and placeholders unchanged. Remove this comment from the finished artifact.
+-->
+
 # AI Delivery Orchestrator — Execution Panel
 
 > **Not source of truth.** If this file conflicts with `.ai-delivery/requirements/<req-id>/status.json`, trust `status.json` and rewrite this file's headers.

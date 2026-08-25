@@ -18,7 +18,7 @@ type Config struct {
 	RepoRoot           string
 	ProjectID          string
 	AllowManagedUpdate bool
-	// Report 若非 nil，Run 会填入本次 IDE gate amend/备份结果。
+	// Report, when non-nil, receives IDE gate amendment and backup results from this run.
 	Report *AmendReport
 }
 
@@ -74,30 +74,30 @@ func (e Engine) Run(cfg Config) error {
 		"project_root":     cfg.RepoRoot,
 		"ai_delivery_path": ".ai-delivery",
 		"layout": map[string]any{
-			"requirement_root": "requirements/{req_id}",
+			"requirement_root":    "requirements/{req_id}",
 			"sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
 			"requirement_artifacts": map[string]any{
-				"status":             "requirements/{req_id}/status.json",
-				"requirement":        "requirements/{req_id}/requirement.md",
-				"breakdown_summary":  "requirements/{req_id}/breakdown-summary.md",
-				"global_rules":       "requirements/{req_id}/global-rules.md",
-				"dependency_graph":    "requirements/{req_id}/dependency-graph.json",
-				"progress":           "requirements/{req_id}/progress.md",
-				"todo":               "requirements/{req_id}/todo.md",
-				"delivery_report":    "requirements/{req_id}/delivery-report.md",
+				"status":            "requirements/{req_id}/status.json",
+				"requirement":       "requirements/{req_id}/requirement.md",
+				"breakdown_summary": "requirements/{req_id}/breakdown-summary.md",
+				"global_rules":      "requirements/{req_id}/global-rules.md",
+				"dependency_graph":  "requirements/{req_id}/dependency-graph.json",
+				"progress":          "requirements/{req_id}/progress.md",
+				"todo":              "requirements/{req_id}/todo.md",
+				"delivery_report":   "requirements/{req_id}/delivery-report.md",
 			},
 			"sub_requirement_artifacts": map[string]any{
-				"requirement_slice":  "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",
-				"decisions":          "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
-				"readme":             "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
-				"traceability":       "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
-				"design":             "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
-				"verification":       "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
-				"spec":               "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
-				"plan":               "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
-				"tasks":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
-				"ui_truth_index":     "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
-				"manifest":           "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
+				"requirement_slice": "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",
+				"decisions":         "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
+				"readme":            "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
+				"traceability":      "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
+				"design":            "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
+				"verification":      "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
+				"spec":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
+				"plan":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
+				"tasks":             "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
+				"ui_truth_index":    "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
+				"manifest":          "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
 			},
 		},
 		"updated_at": timestamp,
@@ -160,14 +160,14 @@ func (e Engine) Run(cfg Config) error {
 			"max_rounds": 3,
 		},
 		"spec_persistence": map[string]any{
-			"_doc":     "spec-kit 持久化约定：活跃期 living（spec.md 唯一事实源，plan/tasks 原地再生），完结后 flow_forward（archive/ 冻结不可变，变更开新需求目录）",
+			"_doc":     "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work uses flow_forward with an immutable archive and a new requirement directory for changes",
 			"active":   "living",
 			"complete": "flow_forward",
 			"living": map[string]any{
 				"source_of_truth":   "spec/spec.md",
 				"derived":           []string{"spec/plan.md", "spec/tasks.md"},
 				"on_drift":          "downgrade_to_spec_ready",
-				"before_regenerate": "旧关键决策先落 decisions.md",
+				"before_regenerate": "Record prior key decisions in decisions.md before regeneration",
 			},
 			"flow_forward": map[string]any{
 				"immutable_root":  "archive",
@@ -175,15 +175,19 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"verification_policy": map[string]any{
-			"_doc":               "Verification discipline: merged/archived requires verification.md evidence; the validator checks only file presence and required section headings, not their semantics",
-			"required_at":        []string{"merged", "archived"},
-			"artifact":           "verification.md",
-			"required_sections":  []string{"Review Rounds", "Verification Commands and Results", "Sign-off"},
+			"_doc":        "Verification discipline: merged/archived requires verification.md evidence; language-neutral markers keep human-readable headings localizable",
+			"required_at": []string{"merged", "archived"},
+			"artifact":    "verification.md",
+			"required_markers": []string{
+				"ai-delivery-verification:review-rounds",
+				"ai-delivery-verification:commands-results",
+				"ai-delivery-verification:sign-off",
+			},
 		},
 		"archive": map[string]any{
-			"_doc":                "flow-forward 冻结：merged -> archived 经 CP-ARCHIVE 确认，archive/ 区不可变（MANIFEST.json sha256 校验）",
-			"require_checkpoint":  "CP-ARCHIVE",
-			"immutable":           true,
+			"_doc":               "Flow-forward freeze: merged -> archived requires CP-ARCHIVE confirmation; archive/ is immutable and verified by MANIFEST.json SHA-256",
+			"require_checkpoint": "CP-ARCHIVE",
+			"immutable":          true,
 		},
 		"updated_at": timestamp,
 		"updated_by": updatedBy,

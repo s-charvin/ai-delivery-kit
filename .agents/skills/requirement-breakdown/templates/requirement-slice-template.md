@@ -1,4 +1,7 @@
 <!-- ai-delivery-meta: {"version":1,"updated_at":"<ISO8601>","updated_by":"<agent>"} -->
+<!-- ai-delivery-template-language
+When instantiating this template, write every human-readable heading, label, explanation, and semantic comment in the user's current conversation language. Keep machine keys, enum values, IDs, paths, and placeholders unchanged. Remove only this instruction comment from the finished artifact.
+-->
 
 # Requirement Slice
 

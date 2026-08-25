@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# layout.py 单测：验证统一产物布局解析器的路径解析与 hash 规范化。
+# Tests path resolution and hash normalization in the unified artifact layout resolver.
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
