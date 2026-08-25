@@ -17,7 +17,9 @@ Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是�
 
 Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code`。Stage 2 混用会搞乱归属。**Stage 4 默认也不再跑** — 接线已经写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
 
-传入需求切片与设计源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden 测试）以及官方栈预览。v1 `contracts/ui-truth-index.json` 记录治理元数据：设计 revision、unit 类型/源节点/依赖、逐状态预览与确认/豁免、仓内相对路径及 SHA-256。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。
+传入需求切片与设计源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden/behavior tests），并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。
+
+v2 `contracts/ui-truth-index.json` 记录治理元数据：设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
@@ -27,17 +29,17 @@ Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code
 
 1. 组件能编过 / 宿主预览能打开。
 2. 官方预览文件存在；对话出示了其 **绝对路径**（Flutter：`flutter test --update-goldens` 产出的 golden PNG）。
-3. v1 `contracts/ui-truth-index.json` 校验通过：仓内相对路径不会逃出 **仓库根**、hash 与当前文件一致、id/type/stack/dependency 合法、每个可复审状态都有独立预览。
+3. v2 `contracts/ui-truth-index.json` 校验通过：仓内相对路径不会逃出 **仓库根**、hash 与当前文件一致、id/type/stack/dependency 合法、profile 与带来源的 state 完整、每个视觉 scenario 都有独立预览，且十个 coverage 维度全部解决。
 4. 范围匹配需求切片 **In Scope**（最小祖先；不是无关整页 dump）。
 5. 每个 icon/图片都有证据背书。手绘图形不达标。
-6. 每个状态都记录了明确用户确认，或带理由的明确豁免。官方预览就是复审媒介 — 不要用 `contract-preview-*.png` 代替。
+6. 每个视觉 scenario 都记录明确确认或带理由的明确豁免，且 `reviewed_preview_sha256` 与当前 preview hash 一致。官方预览就是复审媒介 — 不要用 `contract-preview-*.png` 代替。
 7. 若本轮 unit 集合变化，已完成陈旧指针清扫（`ui-truth-mapping` §9）。
-8. `ui-truth-mapping` 要求的动效 / 蒙版 / fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。
+8. `ui-truth-mapping` 要求的运行时 coverage、动效生命周期、资源/渲染、蒙版/合成、无障碍与 fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。
 9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；切片 worktree 证据已记录，供 Stage 4 复用。
 
 ## 完成后
 
-没有 HTML 校验器。Kit 状态校验检查 v1 schema、路径边界、文件类型、hash、依赖、状态与确认凭证：
+没有 HTML 校验器，也没有 v1 兼容分支。Kit 状态校验检查 v2 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、完整 coverage 与预览绑定确认凭证：
 
 ```bash
 python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \

@@ -22,7 +22,7 @@ Do not run `spec`, `plan`, or `tasks` actions until the design is presented and 
 Feed the design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
 
 - `requirement-slice.md`
-- each unit's Stage 2 component in the recorded slice worktree + valid v1 `ui-truth-index.json` preview/hash pointers (if UI-bearing)
+- each unit's Stage 2 component in the recorded slice worktree + valid v2 `ui-truth-index.json` profile/state/scenario/coverage and preview/hash pointers (if UI-bearing)
 - API docs (if available)
 - Dependency graph
 
@@ -32,7 +32,8 @@ Design session should produce:
 - Route/navigation design (multi-screen)
 - Component decomposition strategy
 - Data model sketch
-- Error/empty/loading handling plan
+- State machine and data-to-UI transitions, including applicable loading/refreshing/empty/partial/error/offline/auth/permission/disabled behavior
+- Runtime profile and scenario design covering responsive constraints, content/localization boundaries, input/focus/gesture behavior, themes, accessibility, platform behavior, assets, motion lifecycle, and performance
 - Key technical decisions and trade-offs
 
 Write the design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). On user approval, set `design_approved: true`.
@@ -47,9 +48,9 @@ When `design_approved: true`, execute the actions emitted by reconcile, using th
 
 Write all human-readable content in `spec.md`, `plan.md`, and `tasks.md` in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
 
-1. `spec` → `spec.md` — audit against frozen component states (UI). For UI slices the Stage 2 component + confirmed preview set is the visual input, not a separate spec document.
-2. `plan` → `plan.md` — audit delivery slice ordering.
-3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope.
+1. `spec` → `spec.md` — audit against every frozen unit/scenario id. For UI slices the Stage 2 component + confirmed preview set is the visual input, not a separate spec document. Preserve the distinction between Figma-origin fidelity and approved runtime behavior.
+2. `plan` → `plan.md` — audit delivery slice ordering and identify which task implements or verifies each scenario id.
+3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage.
 
 After each step:
 

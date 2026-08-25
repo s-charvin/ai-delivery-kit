@@ -26,6 +26,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/SKILL.md"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json"),
+		filepath.Join(target, ".agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-delivery-status.py"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
@@ -57,6 +58,9 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if !strings.Contains(string(binding), `"project_id": "demo-project"`) {
 		t.Fatalf("expected project id in binding json, got %s", string(binding))
 	}
+	if !strings.Contains(string(binding), `"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"`) {
+		t.Fatalf("expected visual acceptance layout in binding json, got %s", string(binding))
+	}
 
 	policy, err := os.ReadFile(filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"))
 	if err != nil {
@@ -82,6 +86,11 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	}
 	if !strings.Contains(string(agentsEntry), "user's current conversation language") {
 		t.Fatalf("expected artifact language policy in AGENTS.md, got %s", string(agentsEntry))
+	}
+	for _, marker := range []string{"v2 profiles", "runtime coverage", "visual-acceptance.json"} {
+		if !strings.Contains(string(agentsEntry), marker) {
+			t.Fatalf("expected UI runtime coverage marker %q in AGENTS.md, got %s", marker, string(agentsEntry))
+		}
 	}
 
 	for _, rel := range []string{

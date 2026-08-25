@@ -64,6 +64,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
 for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/frameworks/$guide" ]]
@@ -82,6 +83,9 @@ grep -Fq 'hooks = true' "$TARGET_REPO/.codex/config.toml"
 [[ -f "$TARGET_REPO/AGENTS.md" ]]
 grep -Fq 'ai-delivery:ui-contract-gate:start' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'CP-UI' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'v2 profiles' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'runtime coverage' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'visual-acceptance.json' "$TARGET_REPO/AGENTS.md"
 [[ ! -e "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
@@ -100,6 +104,7 @@ grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.jso
 grep -Fq '"ui_stage2_authorization"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"ui_stage2_reuses_worktree"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"review_loop"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"max_rounds"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 

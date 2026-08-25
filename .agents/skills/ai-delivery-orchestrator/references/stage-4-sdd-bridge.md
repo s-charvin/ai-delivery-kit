@@ -42,12 +42,11 @@ Both stages run through the [Review loop](stage-implementation.md#review-loop-ta
 
 ## Visual acceptance evidence (UI)
 
-Before setting `visual_acceptance_passed`, write one of:
+Before setting `visual_acceptance_passed`, instantiate `templates/visual-acceptance-template.json` as `sub-requirements/<subreq-id>/visual-acceptance.json`. Preserve machine keys/enums and write summaries/notes in the user's current conversation language.
 
-- `sub-requirements/<subreq-id>/visual-acceptance.md` (checklist + notes), or
-- `sub-requirements/<subreq-id>/visual-acceptance/*.png` (screenshots)
+The artifact must bind the current `ui-truth-index.json` SHA-256 and contain exactly one result for every indexed scenario id. `passed` scenarios need evidence appropriate to `review_mode`: preview/image-diff for visual, test/manual for behavior, and both categories for `both`. `waived` requires user identity, timestamp, and reason. Every file path is repo-relative and hash-verified.
 
-`validate-delivery-status.py` weak-checks file presence; it does not parse image content.
+When a stable Figma reference bitmap exists, image-diff evidence records reference/candidate/diff paths and hashes, metric, threshold, actual result, command, and summary. When no stable bitmap exists, use exact design-value mapping, deterministic preview, and user confirmation; do not claim automated pixel equivalence.
 
 ## Status chain
 

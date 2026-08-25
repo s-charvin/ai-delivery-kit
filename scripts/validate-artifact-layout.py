@@ -129,11 +129,10 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
         )
 
     if ui_bearing and status in {"visual_acceptance_passed", "merged", "archived"}:
-        if not (subreq_dir / "visual-acceptance.md").is_file() and not any(
-            (subreq_dir / "visual-acceptance").glob("*.png")
-        ):
-            warnings.append(
-                f"[LAYOUT] {subreq_id}: UI-bearing status={status} has no visual-acceptance evidence"
+        if not (subreq_dir / "visual-acceptance.json").is_file():
+            errors.append(
+                f"[LAYOUT] {subreq_id}: UI-bearing status={status} "
+                "requires visual-acceptance.json"
             )
 
     return errors, warnings

@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Upgraded `contracts/ui-truth-index.json` to breaking schema v2 with environment profiles, sourced states, concrete scenarios, preview-bound confirmations, and applicability-gated coverage for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Schema v1 is rejected.
+- Added the required Runtime Coverage Plan before Stage 2 component code. Figma remains 1:1 authority only for evidenced pixels/transitions; runtime gaps must cite the requirement, project rules, or an explicit user decision.
+- Replaced Markdown/screenshot-presence visual gates with structured `visual-acceptance.json`, bound to the current index hash and every scenario's visual/behavior evidence. Preview and evidence hash drift invalidate the gate.
+- Propagated unit/scenario traceability through design, spec, plan, tasks, implementation, verification, bootstrap layout, English sources, and the `.agents-zh` mirror.
+
 ## v0.3.7 — 2026-08-24
 
 ### Changed

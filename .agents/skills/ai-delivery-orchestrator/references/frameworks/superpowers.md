@@ -21,7 +21,7 @@ Never clone or symlink superpowers yourself.
 ## `design` usage advice
 
 - Feed the brainstorming flow: `requirement-slice.md`, each unit's host component + `ui-truth-index.json` (UI-bearing), API docs, dependency graph.
-- Produce architecture, component decomposition, data model sketch, error/empty/loading plan, key trade-offs.
+- Produce architecture, component decomposition, a state/transition model, and scenario-linked decisions for responsive layout, content, interaction, motion, assets, theme, accessibility, platform behavior, performance, and key trade-offs.
 - Store the summary in subreq `notes`; set `design_approved: true` only after explicit user approval. Do not write design docs into framework-owned directories.
 
 ## `implement` usage advice (per slice)
@@ -29,7 +29,7 @@ Never clone or symlink superpowers yourself.
 1. `using-git-worktrees` — locate and resume the Stage 2 worktree for UI slices; create one worktree per slice only when no recorded slice worktree exists.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
 3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
-4. Visual acceptance (UI only) — compare against the reviewed host component + `ui-truth-index.json` states; failures re-enter the same review loop.
+4. Visual/runtime acceptance (UI only) — execute every v2 profile/state/scenario entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write `visual-acceptance.json`; failures re-enter the same review loop.
 5. `verification-before-completion` — integration checks before merge.
 6. Full analyze + full test must pass clean before `finish`.
 

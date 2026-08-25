@@ -42,12 +42,11 @@ UI 切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-wo
 
 ## 视觉验收证据（UI）
 
-设置 `visual_acceptance_passed` 前须写入其一：
+设置 `visual_acceptance_passed` 前，使用 `templates/visual-acceptance-template.json` 实例化 `sub-requirements/<subreq-id>/visual-acceptance.json`。保持机器键/枚举不变，并用用户当前对话语言填写摘要和说明。
 
-- `sub-requirements/<subreq-id>/visual-acceptance.md`（清单 + 备注），或
-- `sub-requirements/<subreq-id>/visual-acceptance/*.png`（截图）
+该产物必须绑定当前 `ui-truth-index.json` 的 SHA-256，并恰好为每个已索引 scenario id 提供一条结果。`passed` scenario 需要与 `review_mode` 匹配的证据：visual 使用 preview/image-diff，behavior 使用 test/manual，`both` 同时需要两类。`waived` 必须记录用户身份、时间戳与理由。所有文件路径均为仓内相对路径并校验 hash。
 
-`validate-delivery-status.py` 弱校验文件存在；不解析图像内容。
+有稳定 Figma 参考位图时，image-diff 证据记录 reference/candidate/diff 的路径与 hash、metric、threshold、actual、命令和摘要。没有稳定位图时，使用精确设计数值映射、确定性预览与用户确认；不得声称做过自动像素等价比较。
 
 ## 状态链
 

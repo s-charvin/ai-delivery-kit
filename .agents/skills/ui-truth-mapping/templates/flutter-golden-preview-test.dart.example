@@ -9,7 +9,9 @@
 // - One reviewable unit per golden. Out-of-scope shell stays out.
 // - setSurfaceSize = PNG canvas (artboard snapshot), NOT a runtime width lock.
 //   fill / hug / fixed lives in the widget (§5b), not in a test SizedBox.
-// - One testWidgets + matchesGoldenFile per reviewable state.
+// - One testWidgets + matchesGoldenFile per reviewable visual scenario.
+//   Configure the scenario's recorded profile (surface, theme, locale,
+//   text scale, reduced motion, and input mode) in the host harness.
 //   Do not build a state-switcher or review panel into the widget
 //   (that was HTML preview chrome, not product UI).
 // - No status-bar / home-indicator / IME in the PNG unless those bars
@@ -18,7 +20,10 @@
 //   Motion table → widget comments / freeze chat, not a second paint file.
 //   Do not use pumpAndSettle() for shimmer/Lottie/other continuous animation:
 //   disable tickers or pump an explicit, named keyframe duration instead.
+//   Test trigger, interruption/reversal/cancel, reduced-motion fallback, and
+//   resource disposal with project-native behavior tests outside the PNG.
 // - No network. Reuse the host's ImageProvider / fixture override.
+//   Cover content-image loading/error/offline fallbacks when applicable.
 // - Do not add packages the host project does not already use.
 // - Follow host Theme / localizations / golden harness when neighbors have them.
 //   MaterialApp below is only the fallback.
@@ -26,7 +31,7 @@
 // Generate / refresh:
 //   flutter test test/path/to/unit_golden_test.dart --update-goldens
 // Then give the user the PNG absolute path (repo-relative path belongs in
-// contracts/ui-truth-index.json as the matching state's preview_path).
+// contracts/ui-truth-index.json as the matching scenario's preview_path).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,8 +39,8 @@ import 'package:flutter_test/flutter_test.dart';
 // import 'package:host_app/…/unit_widget.dart';
 
 void main() {
-  testWidgets('unit default state golden', (tester) async {
-    // Preview canvas for THIS state's PNG — artboard snapshot, not runtime layout.
+  testWidgets('unit default scenario golden', (tester) async {
+    // Preview canvas for THIS scenario — artboard snapshot, not runtime layout.
     const previewSize = Size(400, 200);
     await tester.binding.setSurfaceSize(previewSize);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -80,7 +85,9 @@ void main() {
     );
   });
 
-  // Extra reviewable states: copy the testWidgets above, change the widget
-  // configuration and the matchesGoldenFile name. Overlay / modal: pump that
-  // unit (or the host overlay harness) — do not nest it as a page tab.
+  // Extra visual scenarios: copy the testWidgets above, configure the recorded
+  // profile/state, and change the matchesGoldenFile name. Behavior-only
+  // scenarios use focused widget/semantics tests without inventing a PNG.
+  // Overlay / modal: pump that unit (or the host overlay harness) — do not nest
+  // it as a page tab.
 }

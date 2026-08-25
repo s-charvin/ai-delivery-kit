@@ -110,9 +110,9 @@ ai-delivery init --upgrade .
 
 ## 视觉冻结（无 HTML 契约 hook）
 
-CP-UI 授权后，Stage 2 在切片 worktree 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件** 与逐状态官方栈预览（Flutter：Widget + golden PNG）。`ai-delivery init` **不会** 安装 UI git hook。
+CP-UI 授权后，Stage 2 在切片 worktree 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件**，并为每个视觉场景生成官方栈预览（Flutter：Widget + golden PNG）。编写组件代码前，每个 unit 都必须按适用性解决覆盖 `state`、`layout`、`content`、`interaction`、`motion`、`assets`、`theme`、`accessibility`、`platform`、`performance` 的 Runtime Coverage Plan。`ai-delivery init` **不会** 安装 UI git hook。
 
-对话里给用户每份预览的 **绝对路径**。索引（`contracts/ui-truth-index.json`）存 v1 元数据、**仓内相对路径**、SHA-256 与确认/豁免凭证。Stage 4 复用同一个切片 worktree。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
+对话里给用户每份预览的 **绝对路径**。v2 `contracts/ui-truth-index.json` 保存组件/测试/预览的 **仓内相对路径**、环境 profile、带来源的 state、具体 scenario、完整 coverage、SHA-256，以及绑定当前预览哈希的确认。只有 Figma 实际展示的场景才可称为 1:1 真值；未展示的运行时行为必须来自需求、项目规范或用户明确决策。Stage 4 复用同一个切片 worktree，并写入 `visual-acceptance.json`，绑定当前 index 哈希与每个 scenario 对应模式的证据。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
 
 仓库根 `AGENTS.md` 带有简短 UI 真值提醒（升级时 amend）。旧 IDE JSON 可从 `.ai-delivery/backups/ide-gates/` 恢复。
 
@@ -152,7 +152,7 @@ bash scripts/rehearse-release.sh
 
 本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
 
-- `design.md`、`verification.md`、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`、`verification.md`、`visual-acceptance.json`、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
 - 框架目录（`.specify/`、`openspec/changes/`）为派生视图，产物须同步回 canonical
 

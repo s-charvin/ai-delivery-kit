@@ -1,4 +1,4 @@
 interface:
   display_name: "UI Truth Mapping"
   short_description: "Freeze governed Stage 2 UI components and previews"
-  default_prompt: "Use $ui-truth-mapping after CP-UI for a governed requirement slice: implement the real host component in the slice worktree, generate official per-state previews, validate the v1 index hashes, and show absolute preview paths. Do not generate ui-contract.html or translate HTML into Flutter."
+  default_prompt: "Use $ui-truth-mapping after CP-UI for a governed requirement slice: complete the applicability-gated runtime coverage plan, implement the real host component in the slice worktree, generate official visual-scenario previews, validate the v2 index provenance/profiles/scenarios/coverage/hashes, and show absolute preview paths. Do not generate ui-contract.html or translate HTML into Flutter."

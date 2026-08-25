@@ -22,11 +22,11 @@ One OpenSpec change per sub-requirement: `openspec/changes/<subreq-id-slug>/`.
 ## Usage advice
 
 - Name the change after the sub-requirement (e.g. `sr-001-friend-badge`) so the mapping stays obvious.
-- Seed the proposal from `requirement-slice.md`; for UI-bearing slices the frozen host component + confirmed preview remains the visual source of truth — the proposal describes behavior, not pixels.
+- Seed the proposal from `requirement-slice.md`; for UI-bearing slices the frozen host component + confirmed previews remain the visual source of truth. Reference every v2 unit/scenario id and its evidence origin; describe runtime behavior and acceptance without restating pixels.
 - Validate before advancing status: `openspec validate <name>` (when the CLI exists) plus a manual audit against the slice scope.
-  - proposal accepted → `spec_ready`
-  - `design.md` audited → `plan_ready`
-  - `tasks.md` audited (granularity, dependency order, file scope) → `tasks_ready`
+  - proposal accepted after all state/content/motion/assets/accessibility expectations map to unit/scenario ids → `spec_ready`
+  - `design.md` audited for scenario implementation and verification ownership → `plan_ready`
+  - `tasks.md` audited for granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage → `tasks_ready`
 - After the slice is merged, run the archive step (`openspec archive <name>`) so the delta lands in `openspec/specs/`. Archive only after `merged`; record the archived spec paths in `traceability.json` at that point.
 - The orchestrator's `archive` action additionally freezes the canonical three-piece spec set + `design.md` + `verification.md` into `.ai-delivery/requirements/<req>/sub-requirements/<SR>/archive/<ISO-ts>/` with a `MANIFEST.json` (sha256), independent of the OpenSpec-derived view. Run `openspec archive <name>` for the derived spec and the orchestrator archive for the canonical snapshot.
 - If the change conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch` instead of editing the delta until it "passes".

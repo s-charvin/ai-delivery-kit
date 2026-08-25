@@ -25,7 +25,7 @@
       verification.md            # 新增：verify-before-completion 证据
       spec/  spec.md plan.md tasks.md      # canonical 三件套
       contracts/  ui-truth-index.json
-      visual-acceptance.md | visual-acceptance/*.png
+      visual-acceptance.json      # 绑定当前 UI index 与逐 scenario 的结构化验收证据
       archive/<ISO-ts>/          # flow-forward 冻结区
         spec.md plan.md tasks.md design.md verification.md
         MANIFEST.json            # sha256 清单，不可变性的机器校验依据
@@ -65,7 +65,8 @@
 
 ## 5. 其他收敛规则
 
-- **ui-truth 索引**（已完成）：`contracts/ui-truth-index.json` 只存仓内相对指针（`component_path` / `preview_path` / Flutter `golden_test`）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`。
+- **ui-truth 索引**（已完成）：v2 `contracts/ui-truth-index.json` 只存仓内相对指针与治理信息（`component_path` / `preview_path` / Flutter `golden_test`、profile/state/scenario/coverage、SHA-256 与预览绑定确认）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`，也不保留 v1 兼容分支。
+- **UI 验收**：`visual-acceptance.json` 绑定当前 `ui-truth-index.json` 哈希，逐 scenario 保存 `passed | waived` 与模式对应的 preview/test/manual/image-diff 证据；旧 Markdown/截图目录存在性不再构成 gate。
 - **依赖数据收敛**（已完成）：`dependency-graph.json` 为唯一 canonical；缺失时 reconcile 才 fallback 读 per-subreq `dependency.json` 并输出 `[WARN]`。
 - **验证器去重**（已完成）：bootstrap 播种到 `.ai-delivery/scripts/`；reconcile 经 `layout.py` 的 `resolve_validator_script` 单一入口解析。
 - **UI git hook 已拆除**：不再注入 `validate-ui-contract.sh` 或 `ui-contract-gate` 规则。升级时从已有 IDE JSON **剥离**旧 hook 组。

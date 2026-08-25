@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "ui_truth_index_sha256": "<64-lowercase-hex-sha256>",
+  "generated_at": "<ISO8601-with-timezone>",
+  "scenarios": [
+    {
+      "scenario_id": "default-phone",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "preview",
+          "path": "test/goldens/profile-card-default.png",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<宿主项目原生预览或 golden 命令>",
+          "summary": "<使用用户当前对话语言填写结果摘要>"
+        },
+        {
+          "kind": "manual",
+          "reviewed_by": "<reviewer>",
+          "reviewed_at": "<ISO8601-with-timezone>",
+          "summary": "<使用用户当前对话语言填写人工检查摘要>"
+        }
+      ],
+      "note": "<使用用户当前对话语言填写 scenario 说明>"
+    }
+  ]
+}

@@ -41,6 +41,13 @@ require "$EN" "Consistency check (REQUIRED before writing component code)" "EN c
 require "$EN" "Coverage review after every prune (REQUIRED)" "EN coverage review"
 require "$EN" "User-named reference implementation" "EN user-named reference"
 
+# EN — runtime coverage
+require "$EN" "### 3c. Runtime Coverage Plan" "EN runtime coverage plan"
+require "$EN" 'figma` / `requirement` / `project` / `user-decision' "EN evidence origins"
+require "$EN" "all ten coverage dimensions" "EN complete coverage"
+require "$EN" 'reviewed_preview_sha256' "EN preview-bound confirmation"
+require "$EN" 'structured `visual-acceptance.json`' "EN structured Stage 4 acceptance"
+
 # EN — sizing
 require "$EN" "### 5b. Layout sizing classification" "EN §5b"
 require "$EN" "fill detection rule" "EN fill detection rule"
@@ -82,7 +89,7 @@ require "$EXAMPLE" "--update-goldens" "example update-goldens"
 require "$EXAMPLE" "PNG canvas" "example preview canvas ≠ runtime"
 require "$EXAMPLE" "state-switcher" "example bans in-widget switcher"
 require "$EXAMPLE" "viewPadding" "example strips system chrome"
-require "$EXAMPLE" "per reviewable state" "example one test per state"
+require "$EXAMPLE" "per reviewable visual scenario" "example one test per visual scenario"
 
 for f in "$EN" "$ZH"; do
   if grep -E '343|375[[:space:]]*artboard|343\.w' "$f" >/dev/null; then

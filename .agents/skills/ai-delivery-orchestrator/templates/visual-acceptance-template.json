@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "ui_truth_index_sha256": "<64-lowercase-hex-sha256>",
+  "generated_at": "<ISO8601-with-timezone>",
+  "scenarios": [
+    {
+      "scenario_id": "default-phone",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "preview",
+          "path": "test/goldens/profile-card-default.png",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<project-native preview or golden command>",
+          "summary": "<result summary in the user's current conversation language>"
+        },
+        {
+          "kind": "manual",
+          "reviewed_by": "<reviewer>",
+          "reviewed_at": "<ISO8601-with-timezone>",
+          "summary": "<manual review summary in the user's current conversation language>"
+        }
+      ],
+      "note": "<scenario note in the user's current conversation language>"
+    }
+  ]
+}

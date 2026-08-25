@@ -105,10 +105,10 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Do not let UI slices claim `merged` before `visual_acceptance_passed`.
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
-- Do not write design docs into framework-owned directories during orchestrator design mode; store design summary in subreq `notes`.
-- Do not set `acceptance_frozen` until each UI unit has a real host-stack component, an official-stack preview whose **absolute path** was shown to the user, a valid v1 `contracts/ui-truth-index.json` with matching SHA-256 hashes and per-state confirmation/waiver evidence, and a clean Stage 2 review. Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`.
+- Do not write design docs into framework-owned directories during orchestrator design mode; write the canonical design to subreq `design.md` and keep only a short pointer in `notes`.
+- Do not set `acceptance_frozen` until each UI unit has a real host-stack component, complete applicability-gated runtime coverage, an official-stack preview for every visual scenario whose **absolute path** was shown to the user, a valid v2 `contracts/ui-truth-index.json` with matching SHA-256 hashes and confirmation bound to current preview hashes, and a clean Stage 2 review. Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`.
 - Stage 4: reuse the Stage 2 slice worktree for UI slices; do not create a second worktree or re-draw the component. Do not re-query TemPad / run `figma-design-to-code` by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
-- Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid `ui-truth-index.json`.
+- Do not set `merged` for UI work without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid v2 `ui-truth-index.json` + structured `visual-acceptance.json` covering every indexed scenario.
 - Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
 - Edit one file at a time during implementation; rebase worktrees (no merge commits).
@@ -117,9 +117,9 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 
 | Target | Requirement |
 |--------|-------------|
-| `acceptance_frozen` | CP-UI recorded; slice worktree evidence recorded; real component compiles; Stage 2 TDD/review clean; official preview absolute path shown; v1 index paths and SHA-256 hashes validate; scope matches slice In Scope; icons evidence-backed; every state confirmed or explicitly waived |
-| `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; v1 index paths and hashes still validate |
-| `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + v1 index still valid |
+| `acceptance_frozen` | CP-UI recorded; slice worktree evidence recorded; real component compiles; Stage 2 TDD/review clean; all ten runtime dimensions are `covered` or reasoned `not_applicable`; visual scenario preview absolute paths shown; v2 index paths/hashes/provenance/profile/scenario coverage validate; every visual confirmation binds the current preview hash |
+| `spec/plan/tasks_ready` (UI) | Valid prior `acceptance_frozen`; v2 index paths, hashes, coverage, and confirmation bindings still validate |
+| `merged` (UI) | `acceptance_frozen` + `visual_acceptance_passed` + v2 index still valid + `visual-acceptance.json` binds the current index and passes/waives every scenario with evidence |
 | `archived` | Frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256; immutable (verified by `--verify-archive`) |
 
 ## Split decision
@@ -138,7 +138,7 @@ After `split_ready`, main session runs inline 4-check audit per subreq (gaps, co
 
 The `implement` action executes per the selected tier (see `references/frameworks/`): subagent-driven when superpowers is present, agent-driven with ECC, inline disciplined on the native tier. Default discipline regardless of tier: sequential tasks, TDD inside, code review before completion claims. Never parallel implementers on the same slice files.
 
-Chain: reuse the Stage 2 slice workspace for UI (create one here for non-UI) → task execution (TDD) → code review → visual acceptance (UI) → verification before completion → full test → merge.
+Chain: reuse the Stage 2 slice workspace for UI (create one here for non-UI) → task execution (TDD) → code review → scenario-complete visual/runtime acceptance recorded in `visual-acceptance.json` (UI) → verification before completion → full test → merge.
 
 UI slices: wire the already-written component (API / route / state / mount); do not re-query TemPad / run `figma-design-to-code` by default.
 

@@ -46,10 +46,11 @@ cat > "$TMP/status.json" <<'JSON'
 }
 JSON
 
+NOW="2026-07-10T00:00:00+00:00"
 TS="2026-07-10T000000Z"
 
 # 1) Freeze the merged sub-req into the immutable archive.
-python3 "$ARCHIVE" --req-root "$TMP" --subreq SR-001 --now "$TS" --no-delivery-report \
+python3 "$ARCHIVE" --req-root "$TMP" --subreq SR-001 --now "$NOW" --no-delivery-report \
   || fail "archive-subrequirement.py failed to freeze SR-001"
 
 # 2) A fresh, untampered snapshot must validate cleanly (exit 0).

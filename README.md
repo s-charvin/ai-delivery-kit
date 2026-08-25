@@ -116,9 +116,9 @@ Per-framework usage guidance ships with the orchestrator skill: `references/fram
 
 ## Visual freeze (no HTML contract hooks)
 
-After CP-UI authorization, Stage 2 implements and freezes **real host-stack components** plus official per-state previews in the slice worktree (Flutter: widget + golden PNG), with TDD and fresh-context review. `ai-delivery init` does **not** install UI git hooks.
+After CP-UI authorization, Stage 2 implements and freezes **real host-stack components** plus official previews for visual scenarios in the slice worktree (Flutter: widget + golden PNG), with TDD and fresh-context review. Before component code, each unit must resolve an applicability-gated Runtime Coverage Plan for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. `ai-delivery init` does **not** install UI git hooks.
 
-Give the user each preview **absolute path**. Store v1 metadata, **repo-relative** paths, SHA-256 hashes, and confirmation/waiver evidence in `contracts/ui-truth-index.json`. Stage 4 reuses the same slice worktree. Codex still needs `[features] hooks = true` in `.codex/config.toml` if you use other Codex hooks.
+Give the user each preview **absolute path**. The v2 `contracts/ui-truth-index.json` stores **repo-relative** component/test/preview paths, environment profiles, sourced states, concrete scenarios, complete coverage, SHA-256 hashes, and confirmation bound to the current preview hash. Figma is 1:1 truth only for scenarios it actually evidences; runtime behavior comes from the requirement, project rules, or an explicit user decision. Stage 4 reuses the same slice worktree and writes `visual-acceptance.json`, binding the current index hash and every scenario's mode-appropriate evidence. Codex still needs `[features] hooks = true` in `.codex/config.toml` if you use other Codex hooks.
 
 Project `AGENTS.md` carries a short UI-truth reminder (amend-on-upgrade). Restore older IDE JSON from `.ai-delivery/backups/ide-gates/` if needed.
 
@@ -156,7 +156,7 @@ If `goreleaser` or `pwsh` are available locally, it includes those checks too.
 
 Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
 
-- `design.md`, `verification.md`, `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`, `verification.md`, `visual-acceptance.json`, `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
 - Framework dirs (`.specify/`, `openspec/changes/`) are derived views synced back to canonical artifacts
 

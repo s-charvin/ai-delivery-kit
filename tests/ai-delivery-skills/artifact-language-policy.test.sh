@@ -43,8 +43,11 @@ done
 
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'status-template.json'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'human-readable descriptive values'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-4-sdd-bridge.md" 'visual-acceptance-template.json'
 require_contains "$ROOT/.agents/skills/ui-truth-mapping/SKILL.md" 'ui-truth-index-template.json'
 require_contains "$ROOT/.agents/skills/ui-truth-mapping/SKILL.md" 'confirmation.note'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json" "user's current conversation language"
+require_contains "$ROOT/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" "user's current conversation language"
 
 for marker in \
   ai-delivery-verification:review-rounds \

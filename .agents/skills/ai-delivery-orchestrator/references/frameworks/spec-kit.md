@@ -20,11 +20,11 @@ If `.specify/` exists but the CLI is missing or broken, degrade to the native ti
 ## Usage advice
 
 - Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each unit's frozen host component + `ui-truth-index.json` (UI-bearing), API docs if available, and the dependency graph.
-- For UI-bearing slices, spec-kit's input is the reviewed host component + `ui-truth-index.json`; do not author a second visual description that could drift from the contract.
+- For UI-bearing slices, spec-kit's input is the reviewed host component + v2 `ui-truth-index.json`; reference each unit/scenario id and its evidence origin instead of authoring a second visual description that could drift from the contract.
 - Audit each output before advancing status:
-  - `spec.md` → audit against the frozen component states (UI) → `spec_ready`
-  - `plan.md` → audit delivery slice ordering → `plan_ready`
-  - `tasks.md` → audit granularity, dependency order, file scope → `tasks_ready`
+  - `spec.md` → audit state transitions, content policies, motion, assets, accessibility, and acceptance criteria against every frozen unit/scenario id (UI) → `spec_ready`
+  - `plan.md` → audit delivery slice ordering and scenario implementation/verification ownership → `plan_ready`
+  - `tasks.md` → audit granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage → `tasks_ready`
 - If a generated output conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch`; do not silently edit the contract to match.
 
 ## Constitution handling

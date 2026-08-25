@@ -46,6 +46,7 @@ DEFAULT_LAYOUT: dict = {
         "traceability": "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
         "design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
         "verification": "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
+        "visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
         "spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
         "plan": "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
         "tasks": "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
@@ -425,6 +426,8 @@ def _selftest() -> int:
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "status.json", p
         p = artifact_path(root, "spec", "REQ-1", sr_id="SR-001")
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "spec" / "spec.md", p
+        p = artifact_path(root, "visual_acceptance", "REQ-1", sr_id="SR-001")
+        assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "visual-acceptance.json", p
         # ts placeholder
         m = artifact_path(root, "manifest", "REQ-1", sr_id="SR-001", ts="2026-08-11T000000Z")
         assert m.name == "MANIFEST.json" and "2026-08-11T000000Z" in str(m), m

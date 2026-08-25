@@ -22,7 +22,7 @@
 向设计会话（原生流程或已安装框架的设计流程，见 [framework-adaptation.md](framework-adaptation.md)）提供：
 
 - `requirement-slice.md`
-- 各 unit 在记录的切片 worktree 中由 Stage 2 产出的组件 + 有效 v1 `ui-truth-index.json` 预览/hash 指针（若 UI）
+- 各 unit 在记录的切片 worktree 中由 Stage 2 产出的组件 + 有效 v2 `ui-truth-index.json` 的 profile/state/scenario/coverage 与预览/hash 指针（若 UI）
 - API 文档（若有）
 - 依赖图
 
@@ -32,7 +32,8 @@
 - 路由/导航设计（多屏）
 - 组件分解策略
 - 数据模型草图
-- error/empty/loading 处理方案
+- 状态机与数据到 UI 的转换，包括适用的 loading/refreshing/empty/partial/error/offline/auth/permission/disabled 行为
+- 运行时 profile 与 scenario 设计，覆盖响应式约束、内容/本地化边界、输入/焦点/手势、主题、无障碍、平台行为、资源、动效生命周期与性能
 - 关键技术决策与权衡
 
 用用户当前对话语言把设计摘要写入 `design.md`，`notes` 只保留单行指针。用户批准后设 `design_approved: true`。
@@ -47,9 +48,9 @@
 
 `spec.md`、`plan.md` 和 `tasks.md` 的所有人类可读内容都使用用户当前对话语言。机器键、ID、路径、命令、代码符号和协议字面量保持原样。
 
-1. `spec` → `spec.md` — 对照冻结组件状态审计（UI）。UI 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份 spec 文档。
-2. `plan` → `plan.md` — 对照交付切片顺序审计。
-3. `tasks` → `tasks.md` — 审计粒度、依赖顺序、文件范围。
+1. `spec` → `spec.md` — 对照每个已冻结 unit/scenario id 审计。UI 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份 spec 文档；保留 Figma 来源视觉保真与已批准运行时行为之间的区别。
+2. `plan` → `plan.md` — 审计交付切片顺序，并标出由哪个任务实现或验证每个 scenario id。
+3. `tasks` → `tasks.md` — 审计粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖。
 
 每步完成后：
 

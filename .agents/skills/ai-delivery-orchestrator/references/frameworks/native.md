@@ -9,7 +9,7 @@ All native artifacts live beside the slice: `.ai-delivery/requirements/<req-id>/
 Inline in the main session (no separate tool):
 
 1. Read `requirement-slice.md`, frozen host component / `ui-truth-index.json` (UI-bearing), API docs, dependency graph.
-2. Produce: architecture sketch, component decomposition, data model, error/empty/loading plan, key trade-offs.
+2. Produce: architecture sketch, component decomposition, data/state-transition model, scenario-linked responsive/content/interaction/motion/assets/theme/accessibility/platform/performance decisions, and key trade-offs.
 3. Write the design to `design.md` (canonical design file — see `docs/artifact-layout.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
 4. CP-DESIGN: set `design_approved: true` only after explicit user approval.
 
@@ -35,7 +35,7 @@ Create `spec/spec.md` with exactly four sections:
 - [ ] testable criterion 2
 ```
 
-Audit against the frozen host component / `ui-truth-index.json` states for UI-bearing slices, then set `spec_ready`.
+Audit against every frozen unit/scenario id and preserve its evidence origin for UI-bearing slices, then set `spec_ready`.
 
 ## `plan` action — `spec/plan.md`
 
@@ -81,7 +81,7 @@ No subagent framework is required, but the discipline is non-negotiable:
 ## `finish` action — built-in merge checklist
 
 1. Full analyze + full test pass clean.
-2. Visual acceptance evidence written (UI only): `visual-acceptance.md` or `visual-acceptance/*.png`.
+2. Structured visual/runtime acceptance written (UI only): `visual-acceptance.json` binds the current v2 index and passes or explicitly waives every scenario with mode-appropriate evidence.
 3. Rebase onto the development branch (no merge commits); resolve conflicts, re-run tests.
 4. Open/merge the PR, then set `merged` only after `verification.md` is written in the user's current conversation language and signed. Preserve the three `ai-delivery-verification:*` markers from `templates/verification-template.md`; the status validator rejects `merged` without them.
 

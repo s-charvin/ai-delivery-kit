@@ -188,7 +188,9 @@ bootstrap 完成后，目标仓库至少具备：
 
 要求：
 - 基于结构化 node payload 完成映射
-- 每个独立 unit 在切片 worktree 的宿主项目里写真实组件（Flutter：Widget + golden PNG），按 v1 schema 将 unit/state、依赖、路径、SHA-256 与确认/豁免证据写入 `contracts/ui-truth-index.json`
+- 每个独立 unit 在切片 worktree 的宿主项目里写真实组件（Flutter：Widget + golden/behavior tests），并在写组件代码前完成 Runtime Coverage Plan
+- v2 `contracts/ui-truth-index.json` 记录 profile、带来源的 state、具体 scenario、十个维度的适用性 coverage、依赖、仓内路径、SHA-256，以及绑定当前预览哈希的确认/豁免证据
+- 只有 Figma 实际展示的视觉场景可称为 1:1；未展示的响应式、内容、交互、动效、资源、主题、无障碍、平台与性能行为必须来自 requirement、project 或 user-decision
 - 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter
 - 更新 traceability.json
 - 不允许根据截图或记忆脑补 UI
@@ -200,7 +202,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 ### 第 3 步：Design + Spec 管道（框架无关）
 
-设计阶段（`design` 动作）：基于 `requirement-slice.md`、已冻结的宿主组件与 `ui-truth-index.json` 预览指针（如有）与 API 文档做设计探索，产出架构、组件分解、数据模型与关键取舍，摘要记入子需求 `notes`，**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
+设计阶段（`design` 动作）：基于 `requirement-slice.md`、已冻结的宿主组件、v2 `ui-truth-index.json` 与 API 文档做设计探索。`design.md` 必须引用 unit/scenario ID，并明确状态机、内容策略、动效、资源、无障碍、平台/性能取舍及验证路径；`notes` 只保留短指针。**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
 
 spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
@@ -217,6 +219,7 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 要求：
 
 - 不要重新发明需求
+- UI 的 spec/plan/tasks 必须引用 unit/scenario ID，并把每个 scenario 映射到实现与验证任务
 - 产物要保留 requirement_id=req-project-rename 和 subreq_id=SR-001 的反向追踪信息
 - 产物路径记入 `traceability.json` 的 `spec_refs`
 - 这一阶段只产出规格，不直接开始实现
@@ -231,8 +234,9 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
 执行约束（与框架无关）：
 
-- 基于主开发分支创建独立 worktree/分支
+- UI 切片复用 Stage 2 的 worktree；仅尚无记录 worktree 的非 UI 切片才新建
 - 严格按 tasks 与上游 .ai-delivery 产物实现
+- UI 切片逐 scenario 执行宿主项目原生验证，并写入绑定当前 index 哈希的 `visual-acceptance.json`；旧 Markdown/截图存在性不构成验收
 - 不允许跳过测试、review 和完成前验证
 - 切片完成并验收后走 `finish` 动作：rebase 合并（无 merge commit），设置 `merged`
 

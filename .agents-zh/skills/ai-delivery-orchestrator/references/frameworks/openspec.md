@@ -22,11 +22,11 @@
 ## 使用意见
 
 - change 以子需求命名（如 `sr-001-friend-badge`），保持映射一目了然。
-- 以 `requirement-slice.md` 为种子起草 proposal；含 UI 的切片中冻结宿主组件 / `ui-truth-index.json` 仍是视觉真值 —— proposal 描述行为，不描述像素。
+- 以 `requirement-slice.md` 为种子起草 proposal；含 UI 的切片中，冻结宿主组件 + 已确认 previews 仍是视觉真值。引用每个 v2 unit/scenario id 及其证据来源；描述运行时行为与验收，不重复描述像素。
 - 推进状态前先验证：`openspec validate <name>`（CLI 存在时）+ 人工对照切片范围审计。
-  - proposal 被接受 → `spec_ready`
-  - `design.md` 审计通过 → `plan_ready`
-  - `tasks.md` 审计通过（粒度、依赖顺序、文件范围）→ `tasks_ready`
+  - proposal 在全部 state/content/motion/assets/accessibility 预期均映射到 unit/scenario id 后被接受 → `spec_ready`
+  - `design.md` 对 scenario 实现与验证归属审计通过 → `plan_ready`
+  - `tasks.md` 对粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖审计通过 → `tasks_ready`
 - 切片合并后执行归档步骤（`openspec archive <name>`），让 delta 落入 `openspec/specs/`。只在 `merged` 之后归档，并在那时把归档后的规格路径记入 `traceability.json`。
 - change 与冻结契约或需求冲突时，开启 `blocked_spec_mismatch`，而不是反复改 delta 直到"通过"。
 

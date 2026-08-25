@@ -13,7 +13,7 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 
 | 动作 | ECC 用法 |
 |------|----------|
-| `design` | ECC 规划/架构代理或 plan 命令 —— 以 `requirement-slice.md`、冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、API 文档为种子 |
+| `design` | ECC 规划/架构代理或 plan 命令 —— 以 `requirement-slice.md`、冻结宿主组件 / v2 profile-state-scenario `ui-truth-index.json`（含 UI 时）、API 文档为种子 |
 | `implement` | ECC 任务执行代理，由其 rules/hooks 强制约定；把其评审代理作为每任务评审步骤 |
 | `finish` | 变基合并前先跑 ECC 评审/验证命令 |
 
@@ -21,6 +21,7 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 
 - 保持编排器 loop 完整：每个 ECC 命令只服务一个抽象动作；状态推进、门禁、阻塞器留在主会话。
 - 每任务[评审循环](../stage-implementation.md#评审循环任务级闭环)优先用 ECC 评审代理：实现 → ECC 评审代理 → finding 交回实现者 → 复审，直到干净或 `review_loop.max_rounds` 预算耗尽（然后升级给用户；绝不自动合并）。
+- 对含 UI 的切片，ECC 执行/评审必须以模式对应的证据覆盖每个已索引 scenario，并写结构化 `visual-acceptance.json`；只检查 state 或截图文件存在不构成验收。
 - ECC hooks 强制格式/lint 规则时就让它跑；hook 失败即验证失败（经评审循环修复一轮后仍失败则 `blocked_verification_failure`），不是绕过 hook 的理由。
 - ECC 与另一个框架同时安装时，ECC 通常与规格类档位（spec-kit/OpenSpec）搭配良好：ECC 负责 design/implement/finish，规格档位负责 `spec`/`plan`/`tasks`。
 - 进入 `merged` 前须用用户当前对话语言写 `verification.md`。保留 `templates/verification-template.md` 中三个 `ai-delivery-verification:*` 标记；缺少这些标记时状态验证器拒绝 `merged`。

@@ -8,7 +8,7 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 需求 → 实现的唯一入口。Leaf 技能（`requirement-breakdown`、`ui-truth-mapping`）为纯工具，不感知管道。本技能拥有状态、门禁、阻塞与 handoff。
 
 ```
-需求 → [拆分？] → UI 真值 → 设计 → Spec → Plan → Tasks → 实现 → 合并
+需求 → [拆分？] → UI 真值 → 设计 → Spec → Plan → Tasks → 实现 → 合并 → 归档
 ```
 
 编排器是**框架无关**的：它输出抽象阶段动作，并适配用户已安装的任何 AI 开发框架。绝不要求用户安装任何东西。
@@ -40,13 +40,14 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 | 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
 | 4 | `implement` | `visual_acceptance_passed` → `merged` |
 | 5 | `finish` | `merged` |
+| 6 | `archive` | `archived`（全部子需求） |
 
 阶段细节：[references/stage-breakdown.md](references/stage-breakdown.md)、[stage-ui-truth.md](references/stage-ui-truth.md)、[stage-design-and-spec.md](references/stage-design-and-spec.md)、[stage-4-sdd-bridge.md](references/stage-4-sdd-bridge.md)、[stage-implementation.md](references/stage-implementation.md)。
 
 ## 状态模型
 
 ```
-draft → split_ready → acceptance_frozen → spec_ready → plan_ready → tasks_ready → in_dev → visual_acceptance_passed → merged
+draft → split_ready → acceptance_frozen → spec_ready → plan_ready → tasks_ready → in_dev → visual_acceptance_passed → merged → archived
 ```
 
 非 UI 子需求跳过 `acceptance_frozen` 与 `visual_acceptance_passed`。
@@ -104,10 +105,11 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 - UI 切片未 `visual_acceptance_passed` 不得声称 `merged`。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
-- 编排器设计模式不要把设计文档写进框架自有目录；设计摘要存入子需求 `notes`。
-- 每个 UI unit 尚未具备真实宿主组件、未向用户出示官方预览 **绝对路径**、v1 `contracts/ui-truth-index.json` 的 SHA-256 与逐状态确认/豁免证据无效、Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
+- 编排器设计模式不要把设计文档写进框架自有目录；规范设计写入子需求 `design.md`，`notes` 只保留短指针。
+- 每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**、有效 v2 `contracts/ui-truth-index.json`（路径/hash/来源/profile/scenario/coverage 与当前预览 hash 绑定确认），或 Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
 - Stage 4：UI 切片复用 Stage 2 的切片 worktree；不得创建第二个 worktree 或重画组件。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
-- UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且 `ui-truth-index.json` 仍有效时，不得 `merged`。
+- UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v2 `ui-truth-index.json`，以及覆盖全部已索引 scenario 的结构化 `visual-acceptance.json` 时，不得 `merged`。
+- 未生成冻结的 `archive/<ISO-ts>/` 快照及带 sha256 的 `MANIFEST.json` 前，不得设为 `archived`；归档不可原地修改。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
 
@@ -115,9 +117,10 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | CP-UI 已记录；切片 worktree 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；官方预览绝对路径已出示；v1 索引路径与 SHA-256 校验通过；scope 对齐；icon 有证据；每个状态已确认或明确豁免 |
-| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；v1 索引路径与 hash 仍有效 |
-| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + v1 索引仍有效 |
+| `acceptance_frozen` | CP-UI 已记录；切片 worktree 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；视觉 scenario 预览绝对路径已出示；v2 index 的路径/hash/来源/profile/scenario/coverage 与预览绑定确认均有效 |
+| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；v2 index 的路径、hash、coverage 与确认绑定仍有效 |
+| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + v2 index 仍有效 + `visual-acceptance.json` 绑定当前 index，并以证据通过或明确豁免每个 scenario |
+| `archived` | 冻结的 `archive/<ISO-ts>/` 快照 + 带 sha256 的 `MANIFEST.json`，且不可变（经 `--verify-archive` 校验） |
 
 ## 拆分决策
 
@@ -135,7 +138,7 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 `implement` 动作按所选档位执行（见 `references/frameworks/`）：有 superpowers 时子代理驱动，有 ECC 时代理驱动，原生档走内联纪律。无论哪个档位，默认纪律一致：顺序任务、内部 TDD、声称完成前先评审。禁止同一切片文件并行实现者。
 
-链路：UI 复用 Stage 2 切片工作区（非 UI 在此创建）→ 任务执行（TDD）→ 代码评审 → 视觉验收（UI）→ 完成前验证 → 全量测试 → 合并。
+链路：UI 复用 Stage 2 切片工作区（非 UI 在此创建）→ 任务执行（TDD）→ 代码评审 → 在 `visual-acceptance.json` 记录 scenario 完整的视觉/运行时验收（UI）→ 完成前验证 → 全量测试 → 合并。
 
 UI 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
 

@@ -20,7 +20,10 @@
 - 测试：`<命令>` → `<结果>`
 
 ## 3. 视觉验收
-- 指针：`<visual-acceptance.md 或 contracts 截图路径>`
+- 结构化证据：`visual-acceptance.json`
+- 绑定的 UI truth index SHA-256：`<64-lowercase-hex-sha256>`
+- Scenario 覆盖：`<所有已索引 scenario id 均 passed 或明确 waived>`
+- 稳定 Figma 位图比较：`<reference/candidate/diff 与 threshold，或不可用>`
 - 结论：通过 / 不通过
 
 <!-- ai-delivery-verification:sign-off -->

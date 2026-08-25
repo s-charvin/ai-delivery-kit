@@ -9,13 +9,13 @@
 在主会话内联完成（无需单独工具）：
 
 1. 读取 `requirement-slice.md`、冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、API 文档、依赖图。
-2. 产出：架构草图、组件分解、数据模型、错误/空/加载态方案、关键取舍。
-3. 把精简摘要追加到子需求 `notes` 字段并向用户展示。
+2. 产出：架构草图、组件分解、数据/状态转换模型、关联 scenario 的响应式/内容/交互/动效/资源/主题/无障碍/平台/性能决策，以及关键取舍。
+3. 将设计写入 `design.md`（规范设计文件，见 `docs/artifact-layout.md`）并向用户展示精简摘要；`notes` 只保留短状态标记。
 4. CP-DESIGN：只有用户明确批准后才设置 `design_approved: true`。
 
-## `spec` 动作 — `spec.md`
+## `spec` 动作 — `spec/spec.md`
 
-创建 `sub-requirements/<subreq-id>/spec.md`，固定四段：
+创建 `spec/spec.md`，固定四段：
 
 ```markdown
 # <subreq-id> Spec
@@ -35,17 +35,25 @@
 - [ ] 可测试的标准 2
 ```
 
-含 UI 的切片先对照冻结宿主组件 / `ui-truth-index.json` 各状态审计，再设置 `spec_ready`。
+含 UI 的切片先对照每个已冻结 unit/scenario id 审计并保留其证据来源，再设置 `spec_ready`。
 
-## `plan` + `tasks` 动作 — `tasks.md`
+## `plan` 动作 — `spec/plan.md`
 
-原生档把 plan 与 tasks 合并进一个文件以保持轻量。创建 `sub-requirements/<subreq-id>/tasks.md`：
+创建带 `## Plan` 段的 `spec/plan.md`：
 
 ```markdown
-# <subreq-id> Tasks
+# <subreq-id> Plan
 
 ## Plan
 <2-5 句：方案、关键文件/组件、排序理由>
+```
+
+## `tasks` 动作 — `spec/tasks.md`
+
+创建带 `## Tasks` 段的 `spec/tasks.md`：
+
+```markdown
+# <subreq-id> Tasks
 
 ## Tasks
 - [ ] T1 <任务> — files: <编辑面> — test: <测试指针或验证方式>
@@ -58,7 +66,7 @@
 - 按依赖排序；共享组件先于使用方。
 - 设置 `tasks_ready` 前审计粒度与文件范围。
 
-原生档下，`traceability.json` 的 `spec_refs.plan_path` 也指向 `tasks.md`（其中的 Plan 段即 plan 产物）。
+原生档保持 plan 与 tasks 为独立规范文件（`spec/plan.md`、`spec/tasks.md`），确保所有档位归档的 spec/plan/tasks 三件套一致。
 
 ## `implement` 动作 — 内置纪律
 
@@ -73,18 +81,19 @@
 ## `finish` 动作 — 内置合并清单
 
 1. 完整静态分析 + 完整测试干净通过。
-2. 视觉验收证据已落档（仅 UI）：`visual-acceptance.md` 或 `visual-acceptance/*.png`。
+2. 结构化视觉/运行时验收已落档（仅 UI）：`visual-acceptance.json` 绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
 3. 变基到开发分支（无 merge commit）；解决冲突后重跑测试。
-4. 开/合并 PR，然后设置 `merged`。
+4. 开/合并 PR；只有使用用户当前对话语言写完并签署 `verification.md` 后才设置 `merged`。保留 `templates/verification-template.md` 的三个 `ai-delivery-verification:*` 标记；缺少时状态 validator 会拒绝 `merged`。
 
 ## 可追溯性记录
 
 子需求 `traceability.json`：
 
 - `spec_refs.tier`：`"native"`
-- `spec_refs.spec_path`：`sub-requirements/<subreq-id>/spec.md`（实际使用相对仓库根的路径）
-- `spec_refs.plan_path` / `tasks_path`：`sub-requirements/<subreq-id>/tasks.md`
-- `source_index.spec`：`ref_type` 为 `spec` / `tasks` 的条目
+- `spec_refs.spec_path`：`sub-requirements/<subreq-id>/spec/spec.md`
+- `spec_refs.plan_path`：`sub-requirements/<subreq-id>/spec/plan.md`
+- `spec_refs.tasks_path`：`sub-requirements/<subreq-id>/spec/tasks.md`
+- `source_index.spec`：`ref_type` 为 `spec` / `plan` / `tasks` 的条目
 
 ## 边界
 

@@ -76,6 +76,7 @@ for template in \
   design-template.md \
   status-template.json \
   todo-template.md \
+  visual-acceptance-template.json \
   verification-template.md
 do
   source_template="$SRC/ai-delivery-orchestrator/templates/$template"

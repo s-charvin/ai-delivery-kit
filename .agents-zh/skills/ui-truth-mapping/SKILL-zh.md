@@ -11,7 +11,9 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 2 — 官方预览。** Flutter：`flutter test --update-goldens` 产出的 golden PNG。Web：该仓已有的组件预览方式。对话里给用户 **绝对路径**。交付索引里只存 **仓内相对路径**。
 
-此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用**同一个切片 worktree**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值冻在那里，出示预览路径，并记录 v1 指针/治理索引。它不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
+**原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
+
+此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用**同一个切片 worktree**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值与已批准的运行时 coverage 冻在那里，出示每个视觉 scenario 的预览路径，并记录 v2 指针/治理索引。它不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
 
 ## 输入
 
@@ -35,18 +37,21 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 审阅说明、冻结包以及生产/测试代码中的必要注释，都使用用户当前对话语言。代码符号、测试 API、机器可读键与枚举值、ID、路径、命令和协议字面量必须保持原样。产品 UI 文案仍遵守产品自身的本地化要求。
 
-`ui-truth-index.json` 是 **指针**，不是图纸。使用 [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json)，保持机器结构不变，并用用户当前对话语言填写人类可读的 `confirmation.note`；至少持久化：
+`ui-truth-index.json` 是 **指针与覆盖台账**，不是图纸。使用 [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json)，保持机器结构不变，并用用户当前对话语言填写人类可读的 `confirmation.note` 与 `coverage[].note`；至少持久化：
 
 | 字段 | 含义 |
 |---|---|
-| `schema_version` | 整数 `1` |
+| `schema_version` | 整数 `2` |
 | `design_source` | Figma file key、根节点、revision、采集时间 |
 | `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component`、`flutter`/`web` |
 | `source_node` / `dependencies` | Figma 源节点与 unit 依赖 id |
 | `component_path` / `component_sha256` | 真实组件仓内相对路径与当前内容 hash |
 | `golden_test` / `golden_test_sha256` | Flutter golden 测试与当前内容 hash |
-| `states[]` | `state_id`、`source_node`、`preview_path`、`preview_sha256`、确认凭证 |
-| `confirmation` | `confirmed` 或 `waived`、时间/人员；豁免必须有 note |
+| `profiles[]` | 测试 surface、尺寸、orientation、theme、locale、text scale、reduced motion 与 input mode |
+| `states[]` | `state_id`、`evidence_origin`、`source_ref`；Figma 来源 state 还必须有 `source_node` |
+| `scenarios[]` | State + profile + coverage dimensions + review mode + 来源；视觉 scenario 指向确定性 preview |
+| `coverage[]` | 每个必需运行时维度恰好一条适用性记录 |
+| `confirmation` | `confirmed` 或 `waived`、时间/人员；视觉确认绑定 `reviewed_preview_sha256` |
 
 **禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 把 HTML 翻译成 Flutter。
 
@@ -66,7 +71,7 @@ templates/
 └── ui-truth-index-template.json
 ```
 
-示例只教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`，以及注释里的预览规则（PNG 画布 ≠ 运行时尺寸、每个状态一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。**它不是 Widget 模板。** 不要把其中的教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
+示例只教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`，以及注释里的预览规则（PNG 画布 ≠ 运行时尺寸、每个视觉 scenario 一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。**它不是 Widget 模板。** 不要把其中的教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
 
 ## 快速参考 — 场景 → 单元拆分
 
@@ -85,20 +90,22 @@ templates/
 
 ## 硬边界
 
-- 仅能由受治理 Stage 2 且已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v1 索引，不是无实现的前置检查。
+- 仅能由受治理 Stage 2 且已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
-- **不要发明视觉真值。** 不得有 Figma 证据（`get_code` / `get_structure`）之外的单元、状态、绘制或图标。
+- **不要发明视觉真值。** 不得有 Figma 证据（`get_code` / `get_structure`）之外的 Figma 来源单元、state、绘制、图标或转场。缺失运行时行为只能来自 requirement、project 或明确 user-decision 证据，并须正确标记来源。
 - **不要发明布局。** 把几何机械迁入宿主布局系统（Flutter 约束、CSS 等）。不要手写语义化整页而丢掉证据。
 - 预览 px 是画板快照，不是运行时尺寸。分类 **fill / hug / fixed**（§5b）。可变文案是 hug 或 fill 加 overflow / min / max — 禁止按样品写成 fixed。
 - 禁止把 TemPad `data-hint-*` 拷进产品代码或索引。
 - Figma 蒙版 / 仅 alpha 渐变 **不是第二层可见罩色**。跑 §3b。
 - 不要把系统 UI（状态栏、手势条、输入法、设备铬）当组件内容 — 用安全区处理。
-- 未经用户对预览（绝对路径）的 **逐单元显式确认** 不得宣称冻结。仅当用户豁免复审时可跳过。
+- 未向用户出示预览绝对路径并取得 **每个视觉 scenario 的显式确认** 不得宣称冻结。仅当用户豁免该具体 scenario 的复审时可跳过。
 - 不要在组件旁再造第二份视觉真值文件（禁止把伴生 YAML/JSON/markdown 当绘制）。`ui-truth-index.json` 只做指针。
 - 不要扫描仓库里每一份历史文件来找匹配。用需求 id、路由/Widget 语义、已知关系或显式路径定位。
 - 不要凭记忆写未经核实的 `delivery.implemented.target`（或等价字段）。
+- 任一适用运行时维度未解决时不得冻结。合法 coverage status 只有 `covered` 与带理由的 `not_applicable`。
+- 不得为修复可见的无障碍、平台或性能冲突而静默修改 Figma 已展示像素。优先实现不改变像素的语义与命中区域修复；否则停下取得明确设计/用户决策。
 
 ## 定位
 
@@ -146,13 +153,13 @@ templates/
 0. **文本提示扫描** — 作用域子树 **以及** 父级 SECTION 兄弟里的 TEXT / 便签 / 标注。关键词：motion、animation、transition、typewriter、shimmer、Lottie、GIF、skeleton、placeholder、API-returned、pulse、loading（以及设计师语言的等价说法）。
 1. 在 `source_node` 上做 **候选扫描**（INSTANCE/COMPONENT、图片填充、动效命名图层）。
 2. 有工具时做 **动效探测**（`get_node_motion` / 等价）。缺工具时文本提示仍然算数。
-3. **资产** — 有字节则持久化 Lottie/GIF/视频；否则 `pending-user`，只留海报帧 — 不要发明文件。
+3. **资产** — 有字节则持久化 Lottie/GIF/视频；否则 `pending-user`，只留海报帧 — 不要发明文件。记录 trigger、播放/循环策略、中断行为、离屏策略与 reduced-motion fallback。
 4. **分类**（`content-bound`、`component-variant`、`motion-preset`、`design-animation-asset`、`prototype-transition`）。
 5. **映射** 到状态 / golden / 占位。**用户点名的参考实现：** 若用户指向现有代码，**先读它**；预览力学必须匹配该参考（get_code 的 packing 不得悄悄反转生长/显现）。
 6. **一致性检查（写组件代码前必做）：** 跨状态/实例的同一铬不能在没有显式证据时得到不均的动效覆盖。不均覆盖是异常 — 停下询问。
 7. **每次裁剪后的覆盖复查（必做）：** 把剩余源条款对照剩余目标再读一遍。多条款 SECTION 备注按 unit 拆分。
 
-给用户记一份 **动效与转场** 表（用用户的语言）：状态 | 位置 | 效果 | 参考。动效 ≠ 数据绑定。放进 golden/Widget 注释或对话冻结包 — 不要当成第二份绘制文件。
+给用户记一份 **动效与转场** 表（用用户的语言）：Scenario | Trigger | From | To/keyframes | Duration | Easing | Delay | Repeat | Interrupt/reverse/cancel | Reduced-motion fallback | Performance strategy | Reference。动效 ≠ 数据绑定。缺失生命周期证据表示 coverage 未解决，不代表可以自选通用动画。放进 golden/Widget 注释或对话冻结包 — 不要当成第二份绘制文件。
 
 ### 2d. 缺失资源升级
 
@@ -186,6 +193,46 @@ TemPad 提示（永远不要把 `data-hint-*` 拷进产品代码）：
 
 同边界不透明 RGB + 渐隐 alpha 的默认 → **一个** 合成效果。实现用 `Mask` / `dstIn` / `ShaderMask` / `mask-image`，不要两层叠填充。着色 vs 蒙版含糊 → 停下询问。
 
+### 3c. Runtime Coverage Plan（写组件代码前必做）
+
+Figma 常只展示一个最终样例，但生产代码必须承受真实的 state、环境、内容与输入变化。收集设计证据后、编写组件代码前，为每个 unit 公布一份 plan。
+
+每个 scenario 使用以下来源顺序：
+
+1. **Figma** — 只对实际展示的像素与转场有权威性。
+2. **Requirement** — 对产品行为与验收边界有权威性。
+3. **Project** — 对已有设计系统、平台、本地化、无障碍、资源与测试约定有权威性。
+4. **User decision** — 前三者无法解决关键行为或可见结果时必须取得。
+
+每个 state 与 scenario 都记录 `evidence_origin`（`figma` / `requirement` / `project` / `user-decision`）及具体 `source_ref`；Figma 来源 state 还记录 `source_node`。来源冲突是 blocker，不得靠猜测合并。
+
+每个 unit 必须把下列每个维度标为带 scenario ids 的 `covered`，或带理由的 `not_applicable`。适用但未解决的行阻止冻结。
+
+| 维度 | 适用性扫描 |
+|---|---|
+| `state` | 数据/交互模型可达的 initial、loading、refreshing、populated、empty、partial、error、offline、authentication、permission、disabled |
+| `layout` | 最小/目标/最大约束、container/viewport breakpoint、orientation、安全区、fixed/sticky 共存、overlay、IME、scroll、z-order、clip、hit testing |
+| `content` | 空/短/长/多行/不可断字符串、列表数量、大数字与本地格式、RTL、locale 切换、text scaling/browser zoom、wrap/truncation/expand |
+| `interaction` | idle、hover、focus、pressed、selected、expanded、keyboard、pointer/touch、drag/swipe 替代、快速重复、重入、focus trap/return、disabled 行为 |
+| `motion` | trigger、from/to 或 keyframes、timing、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
+| `assets` | static/content-bound/motion 角色、来源/所有权、vector palette/themeability、fit/crop/focal point、aspect ratio、density、loading/error/empty/offline fallback、cache、semantics |
+| `theme` | Figma variable modes、宿主 semantic tokens、支持的 light/dark/high-contrast、contrast 与交互态一致性 |
+| `accessibility` | 原生 semantics、name/role/state/value、reading/focus order、可见 focus、screen-reader 更新、平台点击热区、非颜色提示、Web WCAG AA、reduced motion/text scaling |
+| `platform` | 支持的平台与输入模式、系统栏/安全区、返回/导航、IME、pointer/touch 惯例、平台原生组件 |
+| `performance` | 稳定 loading layout、适用时列表虚拟化、正确图片尺寸、animation/repaint 隔离、controller/资源释放、离屏暂停、项目原生预算 |
+
+只创建产品实际支持的 profile；不得生成通用笛卡尔矩阵。每个 profile 记录 `surface.kind`（`viewport` 或 `container`）、测试宽高、可选 device-pixel ratio、orientation、theme、locale、text scale、reduced-motion 与 input mode。Profile 尺寸配置证据与测试，不得转成运行时固定尺寸。
+
+每个 scenario 绑定一个 state 与一个 profile，并列出它证明的 dimensions。像素复审使用 `review_mode: visual`；语义/交互/生命周期检查使用 `behavior`；两者兼有用 `both`。Visual 与 `both` scenario 需要确定性 preview 与明确确认；behavior scenario 需要已批准来源及后续宿主项目原生验证方式。
+
+没有 Figma frame 的运行时 scenario，只能在语义匹配时复用现有项目组件与 token。它们是已批准技术行为，绝不是「1:1 还原 Figma」。若可见无障碍或平台修正与 Figma 冲突，先实现不改变视觉的 semantics/hit-area 修复；否则停下取得设计/用户决策。
+
+### 3d. 资源与渲染计划（`assets` 为 covered 时必做）
+
+对每个图片、SVG、icon、animation、gradient、blur、shadow、mask 或 blend effect 记录：角色、证据/来源、持久化交付路径、尺寸类别、fit/crop/focal point、aspect ratio、density 或 vector scaling、token/theme 行为、loading/error/offline fallback、cache policy、semantics 与 test fixture。
+
+选择能保留证据的最低复杂度宿主原生路径：已有/原生 primitive → 项目既有依赖 → custom painter/shader → 仅对缩放、主题、无障碍仍正确的真正静态输出使用预渲染资源。缺失字体、字重、vector semantics、effect 或运行时资源时阻止冻结；不得静默替换成近似实现。
+
 ### 4. 写真实组件（Flutter 优先）
 
 **创建：** 把 Widget 加在邻接文件旁。对齐它们的构造函数风格、主题、间距助手和目录布局。**不要** 拷一份 Dart 模板再填空。
@@ -197,7 +244,11 @@ TemPad 提示（永远不要把 `data-hint-*` 拷进产品代码）：
 - Flutter：按几何需要用 `Row`/`Column`/`Stack`/`Positioned`/`Expanded`/`Flexible`/`Wrap`/`SizedBox`/`AspectRatio`。图片：测试里用项目已有的 fixture/`ImageProvider` 惯例 — **golden 测试禁止打真网**。
 - Web：在该仓组件里遵守同一纪律。
 
-把审阅说明（范围内/外、动效表、资产、尺寸、合成）写成 Widget/golden 注释和冻结对话。那是审计文案，不是产品 UI。
+通过组件真实 API 实现每个 covered scenario。优先使用原生交互 primitive 与项目既有组件；保留 semantic role/name/state、键盘或手势替代、focus order/trap/return、平台点击热区与 screen-reader 播报。宿主已有能力时补聚焦的 behavior/semantics 测试。不得仅为满足本技能新增依赖。
+
+Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line metrics、letter spacing、filter、shadow、gradient、blur、mask、blend mode、clip、opacity 与 stacking。缺字体/effect 或与宿主 renderer 冲突是 blocker，不是允许近似。requirement/project/user-decision 来源 scenario 遵守记录来源并复用宿主设计系统。
+
+把审阅说明（范围内/外、运行时 coverage、动效表、资源、尺寸、合成、无障碍）写成 Widget/golden 注释和冻结对话。那是审计文案，不是产品 UI。
 
 状态 id：kebab-case ASCII（`^[a-z][a-z0-9-]*$`），可当 golden 文件名（`loading`、`empty-state`）。
 
@@ -229,12 +280,12 @@ TemPad 提示（永远不要把 `data-hint-*` 拷进产品代码）：
 flutter test <golden_test.dart> --update-goldens
 ```
 
-然后把 PNG 的 **绝对路径** 打印给用户。多状态 → 多个 golden（或宿主已有写法）。
+然后把每个视觉 scenario PNG 的 **绝对路径** 打印给用户。多个 state/profile 组合 → 多个 golden（或宿主已有写法）。
 
 骨架注释是约束，不是可选装饰。特别是：
 
 - `setSurfaceSize` 是 **PNG 画布**（画板快照），不是运行时宽度锁。fill / hug / fixed 写在 Widget 里。
-- 每个可审阅状态一个 `testWidgets`。**禁止** 在 Widget 里做状态切换器或审阅面板（那是已退役的 HTML 预览铬）。
+- 每个可审阅视觉 scenario 一个 `testWidgets`。测试按记录的 profile 配置环境，但不得把画布尺寸变成 Widget 运行时锁定。**禁止** 在 Widget 里做状态切换器或审阅面板（那是已退役的 HTML 预览铬）。
 - **禁止** 画状态栏 / 手势条 / 输入法，除非它们是范围内的产品 UI。`MediaQuery` padding / `viewPadding` 置零。
 - 动效 = 具名 **关键帧** PNG。golden 里循环播放是错的。动效表留在注释 / 冻结对话。
 - 邻接 golden 已有宿主 Theme / 本地化 / 图片夹具 / golden 脚手架时，跟它们。
@@ -245,24 +296,27 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 1. 组件能编过 / 宿主预览能打开。
 2. 官方预览文件存在；对话出示了其 **绝对路径**。
-3. v1 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖及每个可审阅状态的 `states[]` 校验；每个状态都有确认或有理由的豁免。
-4. 范围匹配切片；图标/图片有证据；有动态时有动效表；尺寸已分类；§3b 触发时记录了合成。
-5. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录切片 worktree/分支供 Stage 4 复用。
-6. 若单元集合变了，在同一次变更里清扫需求目录中的陈旧指针。
+3. v2 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖、profile、带来源 state、scenario 与十个 coverage 维度校验。
+4. 每个视觉 scenario 都有确定性 preview，以及绑定当前 `preview_sha256` 的确认/豁免；behavior scenario 有已批准来源与明确 Stage 4 验证方式。
+5. 范围匹配切片；图标/图片有证据；运行时 coverage 已解决；适用时有动效/资源计划；尺寸已分类；§3b 触发时记录了合成。
+6. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录切片 worktree/分支供 Stage 4 复用。
+7. 若单元集合变了，在同一次变更里清扫需求目录中的陈旧指针。
 
 **不要** 在没有预览路径时凭「Widget 看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方 golden。
 
 ### 7. 索引与状态
 
-按 v1 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针与治理 hash/确认元数据，绝不存绘制。
+按 v2 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针、环境 profile、coverage、治理 hash/来源/确认元数据，绝不存绘制。
 
 仅在冻结条满足后设置 `acceptance_frozen`。失败 → `blocked_verification_failure`。
 
-没有 HTML 校验器。Kit 状态校验检查索引存在，且列出的相对路径能从 **仓库根** 解析。
+没有 HTML 校验器，也没有 v1 兼容路径。Kit 状态校验检查完整 v2 矩阵、confirmation 与 preview hash 绑定，以及列出的相对路径能从 **仓库根** 解析。
 
 ### 8. 实现之后（Stage 4 消费者）
 
 Stage 4 在同一个切片 worktree **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 worktree；默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
+
+Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scenario，然后写结构化 `visual-acceptance.json`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
 
 **引用核实：** 写任何「实现于」声明之前跑引用/用法搜索。只查定义不够。
 
@@ -295,5 +349,12 @@ Stage 4 在同一个切片 worktree **接线** 已经写好的组件（API、路
 - 没有绝对预览路径和用户显式确认就宣称冻结。
 - 在 CP-UI 前 dispatch 本技能、在记录的切片 worktree 外写生产代码，或在 Stage 4 为同一切片创建第二个 worktree。
 - 把 `ui-truth-index.json` 的路径写成文件系统绝对路径（索引必须是仓内相对路径）。
-- 缺少 `schema_version`、逐状态预览/确认或内容 hash；冻结后接受 hash 漂移。
+- 缺少 `schema_version`、profile、带来源 state、scenario preview/确认、coverage 或内容 hash；冻结后接受 hash 漂移。
+- 漏掉运行时 coverage 维度；把 `unresolved` 当作合法冻结状态；将适用场景标为没有理由的 `not_applicable`。
+- 把 requirement/project/user-decision 来源运行时 state 称为「1:1 还原 Figma」；没有 source node 却标为 `figma` 来源。
+- `reviewed_preview_sha256` 不再匹配 scenario preview 后仍复用旧确认。
+- 把单个画板当作所有 container 尺寸、orientation、theme、locale、text scale、input mode 或 reduced-motion 行为的证据。
+- 为修复无障碍/平台冲突而静默改变有证据的像素，没有升级可见冲突。
+- 动效只记录 keyframe，却漏掉 trigger、中断、reduced-motion 或资源/性能行为。
+- 对适用的内容图片漏掉 loading/error/offline、crop/focal point、density/scaling、cache、fixture 与 semantics 决策。
 - 扫描每一个历史单元来「找」匹配；为了小需求重写整个已匹配 Widget。

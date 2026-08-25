@@ -238,6 +238,8 @@ validate_ui_truth_mapping_skill() {
   require_contains "$skill_file" 'Anti-patterns'
   require_contains "$skill_file" 'ui-truth-index.json'
   require_contains "$skill_file" 'fill detection rule'
+  require_contains "$skill_file" 'Runtime Coverage Plan'
+  require_contains "$skill_file" 'There is no HTML validator and no v1 compatibility path'
   require_contains "$skill_file" '--update-goldens'
 }
 
@@ -249,6 +251,7 @@ validate_orchestrator_skill() {
     ai-delivery-orchestrator \
     templates/status-template.json \
     templates/todo-template.md \
+    templates/visual-acceptance-template.json \
     references/handoff-table.md \
     references/reconcile-rules.md \
     scripts/reconcile-delivery.py
@@ -265,6 +268,7 @@ validate_orchestrator_skill() {
   require_contains "$skill_file" 'blocker_scope'
   require_contains "$skill_file" 'runnable'
   require_contains "$skill_file" 'ui-truth-index.json'
+  require_contains "$skill_file" 'structured `visual-acceptance.json`'
   require_contains "$skill_file" 'blocked_verification_failure'
   require_contains "$skill_file" 'framework-adaptation.md'
 

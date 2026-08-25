@@ -20,7 +20,10 @@ When instantiating this template, write every human-readable heading, label, res
 - Tests: `<command>` -> `<result>`
 
 ## 3. Visual Acceptance
-- Evidence: `<visual-acceptance.md or contracts screenshot path>`
+- Structured evidence: `visual-acceptance.json`
+- Bound UI truth index SHA-256: `<64-lowercase-hex-sha256>`
+- Scenario coverage: `<all indexed scenario ids passed or explicitly waived>`
+- Stable Figma bitmap comparison: `<reference/candidate/diff and threshold, or not available>`
 - Result: passed / failed
 
 <!-- ai-delivery-verification:sign-off -->

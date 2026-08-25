@@ -93,6 +93,7 @@ func (e Engine) Run(cfg Config) error {
 				"traceability":      "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
 				"design":            "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
 				"verification":      "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
+				"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
 				"spec":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
 				"plan":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
 				"tasks":             "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",

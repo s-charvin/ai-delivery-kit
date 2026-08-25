@@ -5,12 +5,12 @@
   "_status_meanings": {
     "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
     "split_ready": "Complete source_ref coverage, normalized statements, explicit scope, and dependencies - ready to enter the next stage",
-    "acceptance_frozen": "A CP-UI-authorized real host component and official-stack preview are frozen in the slice worktree; paths, SHA-256 hashes, and per-state confirmation evidence in v1 contracts/ui-truth-index.json are valid (UI sub-requirements only; non-UI sub-requirements skip this state)",
+    "acceptance_frozen": "A CP-UI-authorized real host component, runtime coverage matrix, and official visual-scenario previews are frozen in the slice worktree; v2 contracts/ui-truth-index.json provenance, profiles, scenarios, coverage, paths, SHA-256 hashes, and preview-bound confirmations are valid (UI sub-requirements only; non-UI sub-requirements skip this state)",
     "spec_ready": "spec.md has been generated and audited against the contract",
     "plan_ready": "plan.md has been generated and audited against delivery-slice ordering",
     "tasks_ready": "tasks.md has been generated with suitable task granularity, dependency ordering, and file-level scope - awaiting user confirmation to enter the remaining development work",
     "in_dev": "Remaining implementation work is in progress - UI slices reuse the Stage 2 worktree and the TDD loop is active",
-    "visual_acceptance_passed": "The implementation passed visual acceptance against the frozen component and confirmed preview (UI slices only; non-UI slices skip this state)",
+    "visual_acceptance_passed": "The implementation passed every indexed visual/runtime scenario and structured visual-acceptance.json binds the current UI truth index (UI slices only; non-UI slices skip this state)",
     "merged": "Code has been rebased and integrated into the development branch without a merge commit",
     "archived": "Frozen archive - artifacts are snapshotted under archive/ with a MANIFEST.json and are immutable; requirement changes require a new <req-id>",
 

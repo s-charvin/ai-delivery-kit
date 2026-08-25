@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "design_source": {
     "file_key": "<figma-file-key>",
     "root_node": "<figma-root-node>",
@@ -17,30 +17,196 @@
       "component_sha256": "<64-lowercase-hex-sha256>",
       "golden_test": "test/features/profile/profile_card_golden_test.dart",
       "golden_test_sha256": "<64-lowercase-hex-sha256>",
+      "profiles": [
+        {
+          "profile_id": "phone-portrait-light",
+          "surface": {
+            "kind": "viewport",
+            "width": 390,
+            "height": 844,
+            "device_pixel_ratio": 3
+          },
+          "orientation": "portrait",
+          "theme": "light",
+          "locale": "en-US",
+          "text_scale": 1.0,
+          "reduced_motion": false,
+          "input_mode": "touch"
+        },
+        {
+          "profile_id": "phone-reduced-motion",
+          "surface": {
+            "kind": "viewport",
+            "width": 390,
+            "height": 844,
+            "device_pixel_ratio": 3
+          },
+          "orientation": "portrait",
+          "theme": "light",
+          "locale": "en-US",
+          "text_scale": 1.0,
+          "reduced_motion": true,
+          "input_mode": "touch"
+        }
+      ],
       "states": [
         {
           "state_id": "default",
-          "source_node": "<figma-default-state-node>",
+          "evidence_origin": "figma",
+          "source_ref": "figma:<default-state-node>",
+          "source_node": "<figma-default-state-node>"
+        },
+        {
+          "state_id": "loading",
+          "evidence_origin": "requirement",
+          "source_ref": "requirement-slice.md#<source-ref>"
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario_id": "default-phone",
+          "state_id": "default",
+          "profile_id": "phone-portrait-light",
+          "dimensions": [
+            "state",
+            "layout",
+            "content",
+            "theme",
+            "accessibility",
+            "platform"
+          ],
+          "review_mode": "visual",
+          "evidence_origin": "figma",
+          "source_ref": "figma:<default-state-node>",
           "preview_path": "test/goldens/profile-card-default.png",
-          "preview_sha256": "<64-lowercase-hex-sha256>",
+          "preview_sha256": "<default-preview-sha256>",
           "confirmation": {
             "status": "confirmed",
             "confirmed_at": "<ISO8601-with-timezone>",
             "confirmed_by": "user",
-            "note": "<review note>"
+            "reviewed_preview_sha256": "<default-preview-sha256>",
+            "note": "<review note in the user's current conversation language>"
           }
         },
         {
+          "scenario_id": "loading-phone",
           "state_id": "loading",
-          "source_node": "<figma-loading-state-node>",
+          "profile_id": "phone-portrait-light",
+          "dimensions": [
+            "state",
+            "interaction",
+            "assets"
+          ],
+          "review_mode": "both",
+          "evidence_origin": "requirement",
+          "source_ref": "requirement-slice.md#<source-ref>",
           "preview_path": "test/goldens/profile-card-loading.png",
-          "preview_sha256": "<64-lowercase-hex-sha256>",
+          "preview_sha256": "<loading-preview-sha256>",
           "confirmation": {
-            "status": "waived",
+            "status": "confirmed",
             "confirmed_at": "<ISO8601-with-timezone>",
             "confirmed_by": "user",
-            "note": "<explicit waiver reason>"
+            "reviewed_preview_sha256": "<loading-preview-sha256>",
+            "note": "<review note in the user's current conversation language>"
           }
+        },
+        {
+          "scenario_id": "reduced-motion",
+          "state_id": "default",
+          "profile_id": "phone-reduced-motion",
+          "dimensions": [
+            "motion"
+          ],
+          "review_mode": "behavior",
+          "evidence_origin": "project",
+          "source_ref": "<project accessibility or motion policy path>",
+          "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "<ISO8601-with-timezone>",
+            "confirmed_by": "user",
+            "note": "<review note in the user's current conversation language>"
+          }
+        }
+      ],
+      "coverage": [
+        {
+          "dimension": "state",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone",
+            "loading-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "layout",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "content",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "interaction",
+          "status": "covered",
+          "scenario_ids": [
+            "loading-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "motion",
+          "status": "covered",
+          "scenario_ids": [
+            "reduced-motion"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "assets",
+          "status": "covered",
+          "scenario_ids": [
+            "loading-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "theme",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "accessibility",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "platform",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "<coverage note in the user's current conversation language>"
+        },
+        {
+          "dimension": "performance",
+          "status": "not_applicable",
+          "scenario_ids": [],
+          "note": "<reason in the user's current conversation language>"
         }
       ]
     }

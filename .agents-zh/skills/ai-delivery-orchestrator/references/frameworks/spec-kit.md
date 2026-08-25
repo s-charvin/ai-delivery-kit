@@ -20,11 +20,11 @@
 ## 使用意见
 
 - 喂给 spec-kit 的是治理输入而非自由文本：`requirement-slice.md`、每个单元的冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、可用时的 API 文档，以及依赖图。
-- 含 UI 的切片，spec-kit 的输入就是已评审的冻结宿主组件 / `ui-truth-index.json`；不要再写第二份可能与契约漂移的视觉描述。
+- 含 UI 的切片，spec-kit 的输入就是已评审的冻结宿主组件 + v2 `ui-truth-index.json`；引用每个 unit/scenario id 及其证据来源，不要再写第二份可能与契约漂移的视觉描述。
 - 推进状态前逐一审计输出：
-  - `spec.md` → 对照冻结组件的状态审计（UI）→ `spec_ready`
-  - `plan.md` → 审计交付切片顺序 → `plan_ready`
-  - `tasks.md` → 审计粒度、依赖顺序、文件范围 → `tasks_ready`
+  - `spec.md` → 对照每个已冻结 unit/scenario id 审计状态转换、内容策略、动效、资源、无障碍与验收标准（UI）→ `spec_ready`
+  - `plan.md` → 审计交付切片顺序与 scenario 的实现/验证归属 → `plan_ready`
+  - `tasks.md` → 审计粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖 → `tasks_ready`
 - 生成产物与冻结契约或需求冲突时，开启 `blocked_spec_mismatch`；不要悄悄改契约去迁就。
 
 ## Constitution 处理

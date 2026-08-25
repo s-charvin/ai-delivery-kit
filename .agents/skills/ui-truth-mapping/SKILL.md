@@ -11,7 +11,9 @@ Extract structured UI truth from a design source (Figma) and freeze it as **real
 
 **Principle 2 — official preview.** Flutter: golden PNG from `flutter test --update-goldens`. Web: whatever that repo already uses to preview a component. In chat, give the user the **absolute path**. In the delivery index, store **repo-relative** paths only.
 
-This skill does one thing: after CP-UI authorization, use the **same slice worktree** throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth there, show the preview path, and record a v1 pointer/governance index. It does not own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
+**Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
+
+This skill does one thing: after CP-UI authorization, use the **same slice worktree** throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth and approved runtime coverage there, show each visual scenario preview path, and record a v2 pointer/governance index. It does not own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
 
 ## Input
 
@@ -35,18 +37,21 @@ Per independent unit, **production code** in the host tree + an official preview
 
 Write review notes, freeze packets, and necessary production/test code comments in the user's current conversation language. Preserve code symbols, test APIs, machine-readable keys and enum values, IDs, paths, commands, and literal protocol tokens exactly. Product UI copy still follows the product's localization requirements.
 
-`ui-truth-index.json` is a **pointer**, not a drawing. Use [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json), preserve its machine structure, and write human-readable `confirmation.note` values in the user's current conversation language. Persist at least:
+`ui-truth-index.json` is a **pointer and coverage ledger**, not a drawing. Use [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json), preserve its machine structure, and write human-readable `confirmation.note` and `coverage[].note` values in the user's current conversation language. Persist at least:
 
 | Field | Meaning |
 |---|---|
-| `schema_version` | Integer `1` |
+| `schema_version` | Integer `2` |
 | `design_source` | Figma file key, root node, revision, capture timestamp |
 | `unit_id` / `type` / `stack` | Kebab-case id, `page`/`component`/`modal`/`shared-component`, `flutter`/`web` |
 | `source_node` / `dependencies` | Figma source node and unit dependency ids |
 | `component_path` / `component_sha256` | Repo-relative real component and current content hash |
 | `golden_test` / `golden_test_sha256` | Flutter golden test and current content hash |
-| `states[]` | `state_id`, `source_node`, `preview_path`, `preview_sha256`, and confirmation evidence |
-| `confirmation` | `confirmed` or `waived`, timestamp/by; waiver requires a note |
+| `profiles[]` | Test surface, size, orientation, theme, locale, text scale, reduced motion, and input mode |
+| `states[]` | `state_id`, `evidence_origin`, `source_ref`; Figma-origin states also require `source_node` |
+| `scenarios[]` | State + profile + coverage dimensions + review mode + source; visual scenarios point to a deterministic preview |
+| `coverage[]` | Exactly one applicability row for every required runtime dimension |
+| `confirmation` | `confirmed` or `waived`, timestamp/by; visual confirmation binds `reviewed_preview_sha256` |
 
 Do **not** generate `ui-contract.html`. Do **not** copy `ui-contract-template.html` (removed). Do **not** translate HTML into Flutter.
 
@@ -66,7 +71,7 @@ templates/
 └── ui-truth-index-template.json
 ```
 
-The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per state, no system chrome, no in-widget state-switcher). **It is not a widget template.** Do not copy its instructional comments into project code; rewrite only necessary comments in the user's current conversation language. Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
+The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per visual scenario, no system chrome, no in-widget state-switcher). **It is not a widget template.** Do not copy its instructional comments into project code; rewrite only necessary comments in the user's current conversation language. Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
 
 ## Quick Reference — Scenario → Unit split
 
@@ -85,20 +90,22 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 
 ## Hard Boundary
 
-- Invoke only from a governed Stage 2 slice after CP-UI is recorded. This skill writes production code, golden tests, previews, and the v1 index inside the recorded slice worktree; it is not an implementation-free preflight.
+- Invoke only from a governed Stage 2 slice after CP-UI is recorded. This skill writes production code, golden tests, previews, and the v2 index inside the recorded slice worktree; it is not an implementation-free preflight.
 - **Requirement-scoped extract:** In Scope artifacts decide the root — smallest ancestor covering artifacts that belong to **one** unit. Disconnected artifacts → split units. Never dump the full page.
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
-- **Do not invent visual truth.** No units, states, paints, or icons beyond Figma evidence (`get_code` / `get_structure`).
+- **Do not invent visual truth.** No Figma-origin unit, state, paint, icon, or transition beyond Figma evidence (`get_code` / `get_structure`). Missing runtime behavior may come only from requirement, project, or explicit user-decision evidence and must be labeled accordingly.
 - **Do not invent layout.** Transfer geometry mechanically into the host layout system (Flutter constraints, CSS, etc.). Do not rewrite into a hand-authored semantic page that drops evidence.
 - Preview px is an artboard snapshot, not runtime sizing. Classify **fill / hug / fixed** (§5b). Variable copy is hug or fill plus overflow / min / max — never fixed from the sample.
 - Never copy TemPad `data-hint-*` into product code or the index.
 - A Figma mask / alpha-only gradient is **not a second visible wash**. Run §3b.
 - Do not model system UI (status bar, gesture bar, IME, device chrome) as component content — use safe-area handling.
-- Do not declare a unit frozen without **explicit per-unit user confirmation** of the preview (absolute path). Skip only when the user waives re-review.
+- Do not declare a unit frozen without **explicit confirmation for every visual scenario** after showing its preview absolute path. Skip only when the user waives that exact scenario review.
 - Do not create a second visual-truth file beside the component (no companion mapping YAML/JSON/markdown used as paint). `ui-truth-index.json` is pointers only.
 - Do not scan every historical file in the repo to find a match. Locate via requirement id, route/widget semantics, a known relationship, or an explicit path.
 - Do not write an unverified `delivery.implemented.target` (or equivalent) from memory.
+- Do not freeze while any applicable runtime dimension is unresolved. `covered` and reasoned `not_applicable` are the only legal coverage statuses.
+- Do not silently fix a visible accessibility, platform, or performance conflict by changing evidenced Figma pixels. Preserve non-visual improvements where possible; otherwise stop for an explicit design/user decision.
 
 ## Locate
 
@@ -146,13 +153,13 @@ Classify each frame: `page` / `component` / `*-state` / `modal` / `shared-compon
 0. **Text-hint sweep** — TEXT / sticky / callout in the scoped subtree **and** parent SECTION siblings. Keywords: motion, animation, transition, typewriter, shimmer, Lottie, GIF, skeleton, placeholder, API-returned, pulse, loading (and the designer's language equivalents).
 1. **Candidate sweep** on `source_node` (INSTANCE/COMPONENT, image fills, motion-named layers).
 2. **Motion probe** when available (`get_node_motion` / equivalent). Text hints still count if tools are missing.
-3. **Assets** — persist Lottie/GIF/video when bytes exist; otherwise `pending-user`, poster frame only — do not invent the file.
+3. **Assets** — persist Lottie/GIF/video when bytes exist; otherwise `pending-user`, poster frame only — do not invent the file. Record trigger, playback/loop policy, interruption behavior, off-screen policy, and reduced-motion fallback.
 4. **Classify** (`content-bound`, `component-variant`, `motion-preset`, `design-animation-asset`, `prototype-transition`).
 5. **Map** to states / goldens / placeholders. **User-named reference implementation:** if the user points at existing code, **read it first**; preview mechanics must match that reference (get_code packing must not silently invert growth/reveal).
 6. **Consistency check (REQUIRED before writing component code):** same chrome across states/instances must not get uneven motion coverage without explicit evidence. Uneven coverage is an anomaly — stop and ask.
 7. **Coverage review after every prune (REQUIRED):** re-read remaining source clauses against remaining targets. Split a multi-clause SECTION note per unit.
 
-Record a **Motion and transitions** table for the user (in their language): State | Where | Effect | Reference. Motion ≠ data binding. Put this in golden/widget comments or the chat freeze packet — not as a second paint file.
+Record a **Motion and transitions** table for the user (in their language): Scenario | Trigger | From | To/keyframes | Duration | Easing | Delay | Repeat | Interrupt/reverse/cancel | Reduced-motion fallback | Performance strategy | Reference. Motion ≠ data binding. Missing lifecycle evidence is unresolved coverage, not permission to choose a generic animation. Put this in golden/widget comments or the chat freeze packet — not as a second paint file.
 
 ### 2d. Missing-resource escalation
 
@@ -186,6 +193,46 @@ Also run when names/CSS mention mask / `mask-image` / blend != src-over, or two 
 
 Default for same-bounds opaque RGB + fading alpha → **one** composited effect. Implement as `Mask` / `dstIn` / `ShaderMask` / `mask-image`, not two stacked fills. Ambiguous tint-vs-mask → stop and ask.
 
+### 3c. Runtime Coverage Plan (REQUIRED before component code)
+
+Figma commonly shows one finished sample, while production code must survive real state, environment, content, and input changes. Publish one plan per unit after design evidence is gathered and before component code is written.
+
+Use this source order for every scenario:
+
+1. **Figma** — authoritative only for visible pixels and transitions that are actually evidenced.
+2. **Requirement** — authoritative for product behavior and acceptance boundaries.
+3. **Project** — established design-system, platform, localization, accessibility, asset, and testing conventions.
+4. **User decision** — required when the first three sources do not resolve a material behavior or visible result.
+
+Record each state and scenario with `evidence_origin` (`figma` / `requirement` / `project` / `user-decision`) and a concrete `source_ref`. Figma-origin states also record `source_node`. A conflict between sources is a blocker; do not merge them by guesswork.
+
+For each unit, classify every dimension below as `covered` with scenario ids or `not_applicable` with a reason. Any applicable but unresolved row blocks freeze.
+
+| Dimension | Applicability scan |
+|---|---|
+| `state` | Initial, loading, refreshing, populated, empty, partial, error, offline, authentication, permission, and disabled states that the data/interaction model can reach |
+| `layout` | Minimum/target/maximum constraints, container or viewport breakpoints, orientation, safe areas, fixed/sticky coexistence, overlays, IME, scroll behavior, z-order, clipping, and hit testing |
+| `content` | Empty/short/long/multiline/unbroken strings, list counts, large numbers and localized formats, RTL, locale changes, text scaling or browser zoom, wrapping/truncation/expand behavior |
+| `interaction` | Idle, hover, focus, pressed, selected, expanded, keyboard, pointer/touch, drag/swipe alternatives, rapid repeat, re-entry, focus trap/return, and disabled behavior |
+| `motion` | Trigger, from/to or keyframes, timing, easing, delay, repeat, interruption/reversal/cancel, reduced-motion result, deterministic test keyframe, and repaint/resource lifecycle |
+| `assets` | Static vs content-bound vs motion, source/ownership, vector palette/themeability, fit/crop/focal point, aspect ratio, density, loading/error/empty/offline fallback, cache, and semantics |
+| `theme` | Figma variable modes, host semantic tokens, supported light/dark/high-contrast modes, contrast, and interaction-state parity |
+| `accessibility` | Native semantics, name/role/state/value, reading/focus order, visible focus, screen-reader updates, platform touch targets, non-color cues, WCAG AA on web, and reduced motion/text scaling |
+| `platform` | Supported platforms and input modes, system bars/safe areas, back/navigation behavior, IME, pointer vs touch conventions, and platform-specific primitives |
+| `performance` | Stable loading layout, list virtualization when applicable, correctly sized images, animation/repaint isolation, controller/resource disposal, off-screen pausing, and project-native budgets |
+
+Create only profiles the product actually supports; do not generate a universal Cartesian matrix. Each profile records `surface.kind` (`viewport` or `container`), test width/height, optional device-pixel ratio, orientation, theme, locale, text scale, reduced-motion preference, and input mode. Profile dimensions configure evidence and tests — they are not runtime size constants.
+
+Each scenario binds one state to one profile and lists the dimensions it proves. Use `review_mode: visual` for pixel review, `behavior` for semantics/interaction/lifecycle checks, or `both`. Visual and `both` scenarios require deterministic previews and explicit confirmation. Behavior scenarios require an approved source and later project-native verification evidence.
+
+Runtime scenarios without Figma frames may use existing project primitives and tokens only when their semantics match. They are approved technical behavior, never "1:1 to Figma". If a visible accessibility or platform correction conflicts with Figma, implement non-visual semantics/hit-area fixes first; otherwise stop for a design/user decision.
+
+### 3d. Asset and rendering plan (REQUIRED when `assets` is covered)
+
+Record for each image, SVG, icon, animation, gradient, blur, shadow, mask, or blend effect: role, evidence/source, persisted delivery path, sizing class, fit/crop/focal point, aspect ratio, density or vector scaling, token/theme behavior, loading/error/offline fallback, cache policy, semantics, and test fixture.
+
+Use the least complex host-native path that preserves the evidence: existing/native primitive → established project dependency → custom painter/shader → pre-rendered asset only for truly static output whose scaling, theme, and accessibility behavior remain correct. Missing fonts, weights, vector semantics, effects, or runtime assets block freeze; do not silently substitute a close-enough implementation.
+
 ### 4. Write the real component (Flutter first)
 
 **Create:** add the widget next to neighbors. Match their constructor style, theme, spacing helpers, and folder layout. **Do not** copy a Dart template and fill blanks.
@@ -197,7 +244,11 @@ Map evidence into the host layout system:
 - Flutter: `Row`/`Column`/`Stack`/`Positioned`/`Expanded`/`Flexible`/`Wrap`/`SizedBox`/`AspectRatio` as the geometry requires. Images: use the project's existing fixture/`ImageProvider` pattern in tests — **golden tests must not hit the network**.
 - Web: the same discipline in that repo's components.
 
-Encode review notes (in/out scope, motion table, assets, sizing, compositing) as comments on the widget/golden and in the freeze chat. They are audit copy, not product UI.
+Implement every covered scenario through the component's real API. Prefer native interactive primitives and established project components; preserve semantic role/name/state, keyboard or gesture alternatives, focus order/trap/return, platform touch targets, and screen-reader announcements. Add focused behavior/semantics tests where the host already supports them. Do not add a dependency solely to satisfy this skill.
+
+Figma-origin scenarios preserve evidenced values exactly, including font family/available weight, line metrics, letter spacing, filters, shadows, gradients, blur, masks, blend mode, clip, opacity, and stacking. A missing font/effect or a conflict with the host renderer is a blocker, not permission to approximate. Requirement/project/user-decision scenarios follow their recorded source while reusing the host design system.
+
+Encode review notes (in/out scope, runtime coverage, motion table, assets, sizing, compositing, accessibility) as comments on the widget/golden and in the freeze chat. They are audit copy, not product UI.
 
 State ids: kebab-case ASCII (`^[a-z][a-z0-9-]*$`), usable as golden filenames (`loading`, `empty-state`).
 
@@ -229,12 +280,12 @@ Use `templates/flutter-golden-preview-test.dart.example` as a **skeleton** only.
 flutter test <golden_test.dart> --update-goldens
 ```
 
-Then print the PNG **absolute path** to the user. Multiple states → multiple goldens (or the host's existing pattern).
+Then print each visual scenario PNG **absolute path** to the user. Multiple state/profile combinations → multiple goldens (or the host's existing pattern).
 
 Skeleton comments are binding, not optional color. In particular:
 
 - `setSurfaceSize` is the **PNG canvas** (artboard snapshot), not a runtime width lock. fill / hug / fixed lives in the widget.
-- One `testWidgets` per reviewable state. Do **not** bake a state-switcher or review panel into the widget (retired HTML preview chrome).
+- One `testWidgets` per reviewable visual scenario. The test configures its recorded profile without turning canvas dimensions into widget locks. Do **not** bake a state-switcher or review panel into the widget (retired HTML preview chrome).
 - Do **not** paint status-bar / home-indicator / IME unless those bars are in-scope product UI. Zero `MediaQuery` padding / `viewPadding`.
 - Motion = named **keyframe** PNG. A looping animation inside the golden is wrong. Motion table stays in comments / freeze chat.
 - Use the host Theme / localizations / image-fixture / golden harness when neighbors already do.
@@ -245,24 +296,27 @@ Web: open/build the component the way that repo already previews (Storybook, a l
 
 1. Component compiles / the host preview opens.
 2. Official preview file exists; chat showed its **absolute path**.
-3. The v1 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, and one `states[]` entry per reviewable state; each state has confirmation or a reasoned waiver.
-4. Scope matches the slice; icons/images are evidence-backed; motion table present when dynamics exist; sizing classified; compositing recorded when §3b fired.
-5. Stage 2 tests pass and the latest fresh-context review is clean; record the slice worktree/branch for Stage 4 reuse.
-6. If the unit set changed, sweep stale pointers in the requirement directory in the same change.
+3. The v2 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, profiles, sourced states, scenarios, and all ten coverage dimensions.
+4. Every visual scenario has a deterministic preview plus confirmation/waiver bound to its current `preview_sha256`; behavior scenarios have approved sources and an explicit Stage 4 verification mode.
+5. Scope matches the slice; icons/images are evidence-backed; runtime coverage is resolved; motion/asset plans are present when applicable; sizing is classified; compositing is recorded when §3b fired.
+6. Stage 2 tests pass and the latest fresh-context review is clean; record the slice worktree/branch for Stage 4 reuse.
+7. If the unit set changed, sweep stale pointers in the requirement directory in the same change.
 
 Do **not** claim freeze from "the widget looks right" without a preview path. Do **not** generate `contract-preview-*.png` as a substitute for the official golden.
 
 ### 7. Index and status
 
-Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v1 template. It stores pointers and governance hashes/confirmation metadata, never paint.
+Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v2 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, and confirmation metadata, never paint.
 
 Set `acceptance_frozen` only after the freeze bar. On failure → `blocked_verification_failure`.
 
-There is no HTML validator. Kit status validation checks that the index exists and listed relative paths resolve from the **repository root**.
+There is no HTML validator and no v1 compatibility path. Kit status validation checks the complete v2 matrix, confirmation-to-preview hash binding, and that listed relative paths resolve from the **repository root**.
 
 ### 8. After implementation (Stage 4 consumers)
 
 Stage 4 **wires** the already-written component (API, route, state, mount) in the same slice worktree. It must not create a second worktree, re-draw Flutter from HTML, or re-query TemPad by default.
+
+Stage 4 verifies every indexed scenario using the recorded profile and project-native tools, then writes structured `visual-acceptance.json`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
 
 **Reference check:** run a reference/usage search before writing any "implemented at" claim. Definition-only is not enough.
 
@@ -295,5 +349,12 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Declaring freeze without an absolute preview path and explicit user confirmation.
 - Dispatching this skill before CP-UI, writing production code outside the recorded slice worktree, or creating a second Stage 4 worktree for the same slice.
 - Leaving `ui-truth-index.json` paths as absolute filesystem paths (index is repo-relative).
-- Omitting `schema_version`, per-state previews/confirmation, or content hashes; accepting hash drift after freeze.
+- Omitting `schema_version`, profiles, sourced states, scenario previews/confirmation, coverage, or content hashes; accepting hash drift after freeze.
+- Omitting a runtime coverage dimension; using `unresolved` as if it were a legal frozen status; marking an applicable case `not_applicable` without a reason.
+- Calling a requirement/project/user-decision runtime state "1:1 to Figma"; assigning `figma` origin without a source node.
+- Reusing a confirmation after its `reviewed_preview_sha256` no longer matches the scenario preview.
+- Treating one artboard as proof of all container sizes, orientations, themes, locales, text scales, input modes, or reduced-motion behavior.
+- Silently changing evidenced pixels to repair accessibility/platform conflicts instead of escalating the visible conflict.
+- Recording only animation keyframes while omitting trigger, interruption, reduced-motion, or resource/performance behavior.
+- Recording a content image without loading/error/offline, crop/focal point, density/scaling, cache, fixture, and semantics decisions when those cases apply.
 - Scanning every historical unit to "find" a match; rewriting an entire matched widget for a small requirement.
