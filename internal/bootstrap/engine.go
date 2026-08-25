@@ -175,10 +175,10 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"verification_policy": map[string]any{
-			"_doc":               "superpowers 验证纪律：merged/archived 必须有 verification.md 硬证据；验证器只查存在性与必备小节标题，不做语义判断",
+			"_doc":               "Verification discipline: merged/archived requires verification.md evidence; the validator checks only file presence and required section headings, not their semantics",
 			"required_at":        []string{"merged", "archived"},
 			"artifact":           "verification.md",
-			"required_sections":  []string{"评审轮次记录", "验证命令与结果", "签署"},
+			"required_sections":  []string{"Review Rounds", "Verification Commands and Results", "Sign-off"},
 		},
 		"archive": map[string]any{
 			"_doc":                "flow-forward 冻结：merged -> archived 经 CP-ARCHIVE 确认，archive/ 区不可变（MANIFEST.json sha256 校验）",

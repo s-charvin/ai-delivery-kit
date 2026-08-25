@@ -1,23 +1,23 @@
-# 设计文档：{{subreq_id}}
+# Design Document: {{subreq_id}}
 
-> 本文件是子需求 `{subreq_id}` 的**规范设计记录**，替代原先塞在 `status.json` `notes` 中的设计碎片。
-> - 活跃开发期（status < archived）：本文件为**派生产物**，可随 spec 再生（living spec 模式）。
-> - 归档后（archived）：冻结为不可变快照，变更需求请开新需求目录。
+> This file is the **canonical design record** for sub-requirement `{subreq_id}`. It replaces the design fragments previously stored in `status.json` `notes`.
+> - During active development (`status < archived`), this file is a **derived artifact** that may be regenerated with the spec in living-spec mode.
+> - After archival (`archived`), it is frozen as an immutable snapshot. Create a new requirement directory for subsequent changes.
 
-## 1. 背景与目标
-（为什么这样做，约束与边界是什么）
+## 1. Context and Goals
+(Why this work is needed, including its constraints and boundaries.)
 
-## 2. 关键决策
-- 决策点 A：选择 X，理由…
-- 决策点 B：…
+## 2. Key Decisions
+- Decision A: Choose X because ...
+- Decision B: ...
 
-## 3. 方案概述
-（技术选型、模块划分、交互流程；可用文字 / 伪代码 / 图表链接）
+## 3. Solution Overview
+(Technology choices, module boundaries, and interaction flows. Use prose, pseudocode, or links to diagrams.)
 
-## 4. 风险与缓解
-| 风险 | 影响 | 缓解 |
-|---|---|---|
-| … | … | … |
+## 4. Risks and Mitigations
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| ... | ... | ... |
 
-## 5. 待决问题 / 开放项
-- …
+## 5. Open Questions
+- ...

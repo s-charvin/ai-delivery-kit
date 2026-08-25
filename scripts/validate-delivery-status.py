@@ -65,7 +65,16 @@ VISUAL_ACCEPTANCE_STATUSES = frozenset(
 )
 VERIFICATION_REQUIRED_STATUSES = frozenset({"merged", "archived"})
 VERIFICATION_ARTIFACT = "verification.md"
-DEFAULT_VERIFICATION_SECTIONS = ("评审轮次记录", "验证命令与结果", "签署")
+DEFAULT_VERIFICATION_SECTIONS = (
+    "Review Rounds",
+    "Verification Commands and Results",
+    "Sign-off",
+)
+VERIFICATION_SECTION_ALIASES = (
+    frozenset({"Review Rounds", "评审轮次记录"}),
+    frozenset({"Verification Commands and Results", "验证命令与结果"}),
+    frozenset({"Sign-off", "签署"}),
+)
 
 
 def find_repo_root(start: Path) -> Path:
@@ -139,6 +148,13 @@ def verification_required_sections(req_root: Path) -> tuple[str, ...]:
     return DEFAULT_VERIFICATION_SECTIONS
 
 
+def verification_section_markers(section: str) -> frozenset[str]:
+    for aliases in VERIFICATION_SECTION_ALIASES:
+        if section in aliases:
+            return aliases
+    return frozenset({section})
+
+
 def check_verification_evidence(
     subreq_id: str, subreq_dir: Path, status: str, sections: tuple[str, ...]
 ) -> list[str]:
@@ -154,7 +170,11 @@ def check_verification_evidence(
         raw = evidence.read_text(encoding="utf-8")
     except (OSError, UnicodeDecodeError) as exc:
         return [f"[GATE] {subreq_id} cannot read {VERIFICATION_ARTIFACT}: {exc}"]
-    missing = [section for section in sections if section not in raw]
+    missing = [
+        section
+        for section in sections
+        if not any(marker in raw for marker in verification_section_markers(section))
+    ]
     if missing:
         return [
             f"[GATE] {subreq_id} status={status} {VERIFICATION_ARTIFACT} is missing "

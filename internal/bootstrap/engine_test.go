@@ -58,6 +58,16 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		t.Fatalf("expected project id in binding json, got %s", string(binding))
 	}
 
+	policy, err := os.ReadFile(filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, section := range []string{"Review Rounds", "Verification Commands and Results", "Sign-off"} {
+		if !strings.Contains(string(policy), section) {
+			t.Fatalf("expected English verification section %q in workflow policy, got %s", section, string(policy))
+		}
+	}
+
 	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
 		t.Fatalf("expected bootstrap not to inject .agents/AGENTS.md, got %v", err)
 	}

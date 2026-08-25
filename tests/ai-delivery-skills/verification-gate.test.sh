@@ -51,13 +51,13 @@ grep -q 'requires verification.md' <<<"$output" \
 
 # --- Case 2: verification.md present but missing a required section ----------
 cat >"$NEW_SR/verification.md" <<'EOF'
-# 验证记录
+# Verification Evidence
 
-## 评审轮次记录
-- 第 1 轮：clean
+## 1. Review Rounds
+- Round 1: clean
 
-## 验证命令与结果
-- `make test` -> 通过
+## 2. Verification Commands and Results
+- `make test` -> passed
 EOF
 
 if output="$(run_validator "$NEW_ROOT")"; then
@@ -69,14 +69,31 @@ grep -q 'missing required section' <<<"$output" \
 # --- Case 3: complete verification.md -> accepted ----------------------------
 cat >>"$NEW_SR/verification.md" <<'EOF'
 
-## 签署
-- 验证人：orchestrator
+## 4. Sign-off
+- Reviewer: orchestrator
 EOF
 
 output="$(run_validator "$NEW_ROOT")" \
   || fail "complete verification.md should validate clean, got: $output"
 
-# --- Case 4: legacy layout at merged stays clean (backward compatibility) ----
+# --- Case 4: existing Chinese evidence remains valid --------------------------
+cat >"$NEW_SR/verification.md" <<'EOF'
+# 验证记录
+
+## 评审轮次记录
+- 第 1 轮：clean
+
+## 验证命令与结果
+- `make test` -> 通过
+
+## 签署
+- 验证人：orchestrator
+EOF
+
+output="$(run_validator "$NEW_ROOT")" \
+  || fail "legacy Chinese verification.md should stay valid, got: $output"
+
+# --- Case 5: legacy layout at merged stays clean (backward compatibility) ----
 OLD_ROOT="$WORK/old"
 OLD_SR="$OLD_ROOT/sub-requirements/SR-001"
 mkdir -p "$OLD_SR"

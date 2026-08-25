@@ -1,6 +1,6 @@
 #!/bin/zsh
 # Sync non-localized assets from .agents/skills to .agents-zh/skills.
-# Language-specific files (SKILL.md, *-zh.md templates, translated references) are maintained separately.
+# Language-specific skill entrypoints, references, and human-readable templates are maintained separately.
 
 set -euo pipefail
 
@@ -23,10 +23,6 @@ done
 
 copy_identical "ai-delivery-orchestrator/scripts/reconcile-delivery.py"
 copy_identical "ai-delivery-orchestrator/scripts/layout.py"
-copy_identical "ai-delivery-orchestrator/templates/status-template.json"
-copy_identical "ai-delivery-orchestrator/templates/design-template.md"
-copy_identical "ai-delivery-orchestrator/templates/verification-template.md"
-copy_identical "ai-delivery-orchestrator/templates/delivery-report-template.md"
 copy_identical "ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
 copy_identical "ui-truth-mapping/templates/ui-truth-index-template.json"
 

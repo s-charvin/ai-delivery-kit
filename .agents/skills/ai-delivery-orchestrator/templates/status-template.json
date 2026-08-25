@@ -1,56 +1,56 @@
 {
   "_schema": "1.0",
-  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪自身状态、阻塞详情和恢复目标。",
+  "_description": "Requirement-level state tracking in a single file. Each sub-requirement independently tracks its status, blocker details, and resume target.",
 
   "_status_meanings": {
-    "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
-    "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
-    "acceptance_frozen": "CP-UI 授权的真实宿主组件与官方栈预览已在切片 worktree 中冻结；v1 contracts/ui-truth-index.json 的路径、SHA-256 与逐状态确认凭证有效（仅 UI 子需求；非 UI 子需求跳过此状态）",
-    "spec_ready": "spec.md 已生成并对照契约审计通过",
-    "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
-    "tasks_ready": "tasks.md 已生成，任务粒度合适、按依赖排序且文件级范围 — 等待用户确认进入剩余开发工作",
-    "in_dev": "剩余实现进行中 — UI 切片复用 Stage 2 worktree，TDD 循环活跃",
-    "visual_acceptance_passed": "实现对照已冻结组件与已确认预览通过视觉验收（仅 UI 切片；非 UI 切片直接跳过此状态）",
-    "merged": "代码已变基合并到开发分支（无合并提交）",
-    "archived": "冻结归档 — 产物已快照至 archive/ 区并写入 MANIFEST.json，不可变；需求变更须开新 <req-id>",
+    "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
+    "split_ready": "Complete source_ref coverage, normalized statements, explicit scope, and dependencies - ready to enter the next stage",
+    "acceptance_frozen": "A CP-UI-authorized real host component and official-stack preview are frozen in the slice worktree; paths, SHA-256 hashes, and per-state confirmation evidence in v1 contracts/ui-truth-index.json are valid (UI sub-requirements only; non-UI sub-requirements skip this state)",
+    "spec_ready": "spec.md has been generated and audited against the contract",
+    "plan_ready": "plan.md has been generated and audited against delivery-slice ordering",
+    "tasks_ready": "tasks.md has been generated with suitable task granularity, dependency ordering, and file-level scope - awaiting user confirmation to enter the remaining development work",
+    "in_dev": "Remaining implementation work is in progress - UI slices reuse the Stage 2 worktree and the TDD loop is active",
+    "visual_acceptance_passed": "The implementation passed visual acceptance against the frozen component and confirmed preview (UI slices only; non-UI slices skip this state)",
+    "merged": "Code has been rebased and integrated into the development branch without a merge commit",
+    "archived": "Frozen archive - artifacts are snapshotted under archive/ with a MANIFEST.json and are immutable; requirement changes require a new <req-id>",
 
-    "blocked_missing_requirement": "源中缺少关键业务事实",
-    "blocked_requirement_conflict": "两个已批准的来源互相矛盾",
-    "blocked_dependency": "上游子需求尚未就绪",
-    "blocked_missing_design": "设计证据中缺少所需视觉载体",
-    "blocked_requirement_figma_conflict": "需求与视觉真值不可调和地矛盾",
-    "blocked_figma_conflict": "不同提供方的设计证据互相矛盾",
-    "blocked_missing_state_code": "最终屏幕状态缺少结构化框架证据",
-    "blocked_missing_visual_truth": "缺少默认状态、行组合、父外壳或关键资源",
-    "blocked_spec_mismatch": "官方 spec 输出与治理真值冲突",
-    "blocked_dependency_slice": "上游切片尚未合并",
-    "blocked_merge_conflict": "变基/集成失败",
-    "blocked_verification_failure": "测试、评审或视觉验收在自动修复后仍失败"
+    "blocked_missing_requirement": "The source lacks critical business facts",
+    "blocked_requirement_conflict": "Two approved sources conflict with each other",
+    "blocked_dependency": "An upstream sub-requirement is not ready",
+    "blocked_missing_design": "Required visual evidence is missing from the design",
+    "blocked_requirement_figma_conflict": "The requirement and visual truth conflict irreconcilably",
+    "blocked_figma_conflict": "Design evidence from different providers conflicts",
+    "blocked_missing_state_code": "The final screen state lacks structured framework evidence",
+    "blocked_missing_visual_truth": "The default state, row combinations, parent shell, or key assets are missing",
+    "blocked_spec_mismatch": "Official spec output conflicts with governance truth",
+    "blocked_dependency_slice": "An upstream slice has not been merged",
+    "blocked_merge_conflict": "Rebase or integration failed",
+    "blocked_verification_failure": "Tests, review, or visual acceptance still fail after automated fixes"
   },
 
   "_blocker_scope_meanings": {
-    "slice_local": "仅阻止一个切片、一个阶段或一个能力面的阻塞。默认不得阻止不相关的切片或阶段。",
-    "action_level_integration": "仅阻止一个操作的真实 API 连线或最终语义关闭。不阻止视觉映射、外壳工作、本地状态工作、导航骨架或安全的只读路径。",
-    "requirement_global": "仅当当前所有可推导的队列项都不可运行时才允许搁置整个需求。只要还有一个安全的可运行项存在，阻塞器就还不是需求全局的。"
+    "slice_local": "A blocker limited to one slice, stage, or capability surface. By default it must not block unrelated slices or stages.",
+    "action_level_integration": "A blocker limited to real API wiring or final semantic closure for one action. It does not block visual mapping, shell work, local state work, navigation scaffolding, or safe read-only paths.",
+    "requirement_global": "Pausing the entire requirement is allowed only when every currently derivable queue item is unrunnable. If any safe runnable item exists, the blocker is not requirement-global."
   },
 
   "_checkpoints": {
-    "CP-UI": "ui_visual_implementation_authorization — split_ready UI 切片等待用户授权在隔离 worktree 中写生产组件、golden 与预览",
-    "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
-    "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
-    "CP-DESIGN": "design_approval — 方案设计已通过设计评审并获得用户批准，方可进入 spec 阶段",
-    "CP-ARCHIVE": "archive_confirmation — 所有切片均已 merged，等待用户确认冻结归档（archive/ 不可变快照）"
+    "CP-UI": "ui_visual_implementation_authorization - a split_ready UI slice awaits user authorization to write the production component, golden tests, and preview in an isolated worktree",
+    "CP-001": "tasks_ready_user_confirmation - all executable slices have reached tasks_ready and await user confirmation to enter development",
+    "CP-002": "hard_blocker_pause - no safe runnable queue items remain for the current requirement; this checkpoint is allowed only when no runnable item exists",
+    "CP-DESIGN": "design_approval - the solution design must pass design review and receive user approval before entering the spec stage",
+    "CP-ARCHIVE": "archive_confirmation - all slices are merged and await user confirmation to freeze the immutable archive/ snapshots"
   },
 
   "_runtime_modes": {
-    "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
-    "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
-    "confirm_ui": "current_checkpoint=CP-UI，split_ready UI 切片等待用户授权受控视觉实现；确认前 NEXT_ACTION=none",
-    "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需设计批准后方可进入 spec 阶段",
-    "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
-    "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
-    "closing": "current_checkpoint=CP-ARCHIVE，所有可执行切片均已 merged，等待用户确认冻结归档",
-    "completed": "所有可执行 sub_requirements 均已 archived"
+    "bootstrap": "status.json is missing or incomplete, or the queue cannot be derived safely - start from the first governed stage",
+    "resume": "At least one unresolved or runnable queue item remains after reconciliation, and no checkpoint actively prevents execution",
+    "confirm_ui": "current_checkpoint=CP-UI; a split_ready UI slice awaits user authorization for controlled visual implementation; NEXT_ACTION=none until confirmed",
+    "confirm_design": "current_checkpoint=CP-DESIGN; runnable slices require design approval before entering the spec stage",
+    "confirm_to_dev": "current_checkpoint=CP-001; all executable slices are tasks_ready and await user confirmation to enter development",
+    "blocker_recovery": "current_checkpoint=CP-002; the user supplied the missing decision or the external blocker has cleared",
+    "closing": "current_checkpoint=CP-ARCHIVE; all executable slices are merged and await user confirmation to freeze the archive",
+    "completed": "All executable sub_requirements are archived"
   },
 
   "requirement_id": "<req-id>",

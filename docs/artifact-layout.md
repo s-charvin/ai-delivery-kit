@@ -77,7 +77,7 @@
 `merged`（以及 Phase 3 后的 `archived`）状态必须有 `verification.md` 硬证据，否则 `validate-delivery-status.py` 拒绝该状态：
 
 - 策略声明于 `.ai-delivery/meta/workflow-policy.json` 的 `verification_policy` 段（新布局仓库由 Go bootstrap 播种，见 `internal/bootstrap/engine.go`）。
-- `verification.md` 必备三小节（仅查存在性与标题，不做语义判断）：`评审轮次记录`、`验证命令与结果`、`签署`。
+- `verification.md` 必备三小节（仅查存在性与标题，不做语义判断）：`Review Rounds`、`Verification Commands and Results`、`Sign-off`；已有中文标题 `评审轮次记录`、`验证命令与结果`、`签署` 继续兼容。
 - 向后兼容：仅当子需求目录是新布局（存在 `spec/` 目录）时才强制；旧布局 `merged` 不受影响。
 
 ## 7. spec 持久化策略（spec_persistence）

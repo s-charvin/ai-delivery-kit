@@ -68,7 +68,7 @@ implementer finishes the task
 Rules:
 
 - The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself.
-- Each round's findings and fix summary are appended to `progress.md` for traceability and to the `评审轮次记录` section of `verification.md` (the verification artifact).
+- Each round's findings and fix summary are appended to `progress.md` for traceability and to the `Review Rounds` section of `verification.md` (the verification artifact).
 - Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3.
 - Budget exhausted: pause, report the outstanding findings to the user, and either open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest review round is not clean.**
 - The loop owner is the main orchestrator session; it decides clean/not-clean from the reviewer report, not from the implementer's claim.

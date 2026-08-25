@@ -287,7 +287,11 @@ DEFAULT_WORKFLOW_POLICY: dict = {
     "verification_policy": {
         "required_at": ["merged", "archived"],
         "artifact": "verification.md",
-        "required_sections": ["评审轮次记录", "验证命令与结果", "签署"],
+        "required_sections": [
+            "Review Rounds",
+            "Verification Commands and Results",
+            "Sign-off",
+        ],
     },
 }
 

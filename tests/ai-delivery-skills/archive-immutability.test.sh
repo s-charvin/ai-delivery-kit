@@ -28,7 +28,7 @@ printf '# spec\nfrozen content\n' > "$SUB/spec/spec.md"
 printf '# plan\n' > "$SUB/spec/plan.md"
 printf '# tasks\n' > "$SUB/spec/tasks.md"
 printf '# design\n' > "$SUB/design.md"
-printf '# verification\n\n## 评审轮次记录\n\n- Round 1: approved.\n\n## 验证命令与结果\n\n- echo ok -> ok\n\n## 签署\n\n- reviewer: signed\n' > "$SUB/verification.md"
+printf '# verification\n\n## Review Rounds\n\n- Round 1: approved.\n\n## Verification Commands and Results\n\n- echo ok -> ok\n\n## Sign-off\n\n- reviewer: signed\n' > "$SUB/verification.md"
 
 cat > "$TMP/status.json" <<'JSON'
 {

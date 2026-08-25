@@ -1,23 +1,23 @@
-# 验收证据：{{subreq_id}}
+# Verification Evidence: {{subreq_id}}
 
-> 本文件是 `verify-before-completion` 的**硬证据**。缺少必备小节时，验证器将判定 `merged` / `archived` 不合法。
-> 每条评审轮次追加到 §1 末尾；预算耗尽仍未通过 → 升级人工（**永不自动合并**）。
+> This file is the **required evidence** for `verify-before-completion`. The validator rejects `merged` or `archived` when required sections are missing.
+> Append every review round to the end of section 1. If the review budget is exhausted without a clean result, escalate to the user and **never auto-merge**.
 
-## 1. 评审轮次记录
-### Round 1 — <日期>
-- 评审人：
-- 结论：clean / 需修改
-- 摘要：
+## 1. Review Rounds
+### Round 1 - <date>
+- Reviewer:
+- Result: clean / changes required
+- Summary:
 
-## 2. 验证命令与结果
-- 静态分析：`<命令>` → `<结果>`
-- 测试：`<命令>` → `<结果>`
+## 2. Verification Commands and Results
+- Static analysis: `<command>` -> `<result>`
+- Tests: `<command>` -> `<result>`
 
-## 3. 视觉验收
-- 指针：`<visual-acceptance.md 或 contracts 截图路径>`
-- 结论：通过 / 不通过
+## 3. Visual Acceptance
+- Evidence: `<visual-acceptance.md or contracts screenshot path>`
+- Result: passed / failed
 
-## 4. 签署
-- 实现者：
-- 评审者：
-- 日期：
+## 4. Sign-off
+- Implementer:
+- Reviewer:
+- Date:
