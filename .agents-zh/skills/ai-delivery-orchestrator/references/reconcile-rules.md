@@ -28,6 +28,7 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 |------|------|
 | `completed` | 所有可执行子需求均为 `merged` |
 | `bootstrap` | `status.json` 缺失/不完整或无 `sub_requirements` |
+| `confirm_ui` | `split_ready` UI 切片需要 Stage 2 生产代码授权且无其他可运行项 → `CHECKPOINT=CP-UI`、`NEXT_ACTION=none` |
 | `confirm_design` | 可运行子需求需设计批准且无其他可运行项 → `CHECKPOINT=CP-DESIGN` |
 | `confirm_to_dev` | 所有可执行子需求均为 `tasks_ready` → `CHECKPOINT=CP-001` |
 | `blocker_recovery` | `current_checkpoint=CP-002` 或仅剩阻塞项 |
@@ -37,6 +38,7 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 
 检查点是凭证，不是历史记录。已记录的检查点只在其守卫仍成立时有效：
 
+- `NEXT_ACTION=ui-truth-mapping` 要求当前存在 `split_ready` UI 切片，且用户明确授权已记录为 `current_checkpoint=CP-UI`。首次到达时输出 `confirm_ui` 与 `NEXT_ACTION=none`；守卫不再成立后，陈旧 CP-UI 失效。
 - `confirm_to_dev` 要求当前所有可执行子需求都处于 `tasks_ready`。回退（如某子需求回到 `spec_ready`）后残留的旧 `current_checkpoint=CP-001` 不授权 `implement`。
 - `NEXT_ACTION=implement` 额外要求用户确认已记录在 `status.json`（全部 `tasks_ready` 之上叠加 `current_checkpoint=CP-001`）。首次到达全部 `tasks_ready` 时输出 `NEXT_ACTION=none`，直到用户确认。
 - 不得把已记录的检查点当作绕过失败守卫的捷径；一律从当前治理真值重新推导。
@@ -53,11 +55,12 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 |----------|------|
 | 新需求 + 素材 | 对账 → `bootstrap` 或 `resume` |
 | 继续编排 | 对账 → `resume`（除非检查点激活）|
+| split_ready UI，授权视觉实现 | 对账 → 要求 CP-UI → `confirm_ui`；确认后 dispatch `ui-truth-mapping` |
 | tasks_ready，继续开发 | 对账 → 要求 CP-001 + 全部 `tasks_ready` → `confirm_to_dev` |
 | 阻塞已解决 | 对账 → CP-002 → `blocker_recovery` |
 
 ## 可运行队列
 
-可运行项指在当前治理真值下可安全推进、无需编造事实的工作。例如：Figma 证据采集、页面外壳、本地状态骨架、导航流、mock 接线、只读路径。
+可运行项指在当前治理真值下可安全推进、无需编造事实的工作。CP-UI 前，UI 工作仅限只读 Figma 证据与治理产物；页面外壳、本地状态骨架、导航流、mock 接线及其他生产代码改动，只有进入已授权切片 worktree 后才可运行。
 
 仅有 API 缺口不足以触发 CP-002，若 UI 真值采集或安全局部开发仍可继续。

@@ -26,7 +26,7 @@ Never clone or symlink superpowers yourself.
 
 ## `implement` usage advice (per slice)
 
-1. `using-git-worktrees` — one worktree per slice.
+1. `using-git-worktrees` — locate and resume the Stage 2 worktree for UI slices; create one worktree per slice only when no recorded slice worktree exists.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
 3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
 4. Visual acceptance (UI only) — compare against the reviewed host component + `ui-truth-index.json` states; failures re-enter the same review loop.

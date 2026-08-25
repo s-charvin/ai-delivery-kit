@@ -1,4 +1,4 @@
 interface:
   display_name: "UI Truth Mapping"
-  short_description: "Map Figma to a real host-stack component plus preview"
-  default_prompt: "Use $ui-truth-mapping to freeze a real project component per unit (Flutter: widget + flutter test --update-goldens). Show the user the preview PNG absolute path. Do not generate ui-contract.html. Do not translate HTML into Flutter."
+  short_description: "Freeze governed Stage 2 UI components and previews"
+  default_prompt: "Use $ui-truth-mapping after CP-UI for a governed requirement slice: implement the real host component in the slice worktree, generate official per-state previews, validate the v1 index hashes, and show absolute preview paths. Do not generate ui-contract.html or translate HTML into Flutter."

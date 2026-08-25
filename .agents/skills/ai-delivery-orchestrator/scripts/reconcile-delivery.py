@@ -293,6 +293,8 @@ def reconcile(
     blocked: list[str] = []
     blocker_scopes: list[str] = []
     actionable: list[tuple[str, str]] = []
+    ui_waiting: list[str] = []
+    ui_authorized: list[str] = []
     design_pending: list[tuple[str, str]] = []
     dev_waiting: list[str] = []
     archive_pending: list[str] = []
@@ -353,6 +355,15 @@ def reconcile(
                 # resolves to `closing` rather than `resume`).
                 archive_pending.append(subreq_id)
                 runnable.append(f"{subreq_id}:{status}->{action}")
+            elif action == "ui-truth-mapping":
+                # Stage 2 writes production code. Require the explicit CP-UI
+                # credential before exposing it as a runnable action.
+                if recorded_checkpoint == "CP-UI":
+                    ui_authorized.append(subreq_id)
+                    runnable.append(f"{subreq_id}:{status}->{action}")
+                    actionable.append((subreq_id, action))
+                else:
+                    ui_waiting.append(subreq_id)
             elif status == "tasks_ready":
                 # 进入开发必须经过 CP-001 门禁：tasks_ready 子需求先等待，
                 # 待 all_tasks_ready 与已记录的 CP-001 确认后再放行。
@@ -408,6 +419,9 @@ def reconcile(
     elif all_tasks_ready:
         runtime_mode = "confirm_to_dev"
         checkpoint = "CP-001"
+    elif ui_waiting and not actionable:
+        runtime_mode = "confirm_ui"
+        checkpoint = "CP-UI"
     elif design_pending and not actionable:
         runtime_mode = "confirm_design"
         checkpoint = "CP-DESIGN"
@@ -419,7 +433,14 @@ def reconcile(
         # 检查点只是守卫满足时的凭证：门禁回退后残留的 CP-001 不再
         # 授权 implement；设计待批则继续以 CP-DESIGN 提示，不阻塞其他
         # 无依赖的可运行项。
-        checkpoint = "CP-DESIGN" if design_pending else None
+        if ui_waiting:
+            checkpoint = "CP-UI"
+        elif design_pending:
+            checkpoint = "CP-DESIGN"
+        elif ui_authorized:
+            checkpoint = "CP-UI"
+        else:
+            checkpoint = None
 
     if runtime_mode == "completed":
         next_action = "none"
@@ -432,6 +453,9 @@ def reconcile(
         next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
         # 仅当用户确认已记录在 status.json（CP-001）时才放行 implement。
         next_action = "implement" if recorded_checkpoint == "CP-001" else "none"
+    elif runtime_mode == "confirm_ui":
+        next_subreq = ui_waiting[0]
+        next_action = "none"
     elif runtime_mode == "blocker_recovery":
         next_action = "none"
         next_subreq = blocked[0].split(":", 1)[0] if blocked else None

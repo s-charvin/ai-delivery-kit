@@ -28,6 +28,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 
 ## 检查点
 
+- [ ] CP-UI | checkpoint=ui_visual_implementation_authorization | condition=split_ready UI 切片轻量审计通过 | action=写生产组件/golden 前暂停
 - [ ] CP-DESIGN | checkpoint=design_approval | condition=各子需求设计会话已批准 | action=暂停等待用户批准
 - [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=所有可执行子需求已达 tasks_ready | action=开发前暂停
 - [ ] CP-002 | checkpoint=hard_blocker_pause | condition=无安全可运行队列项剩余 | action=暂停并呈现阻塞

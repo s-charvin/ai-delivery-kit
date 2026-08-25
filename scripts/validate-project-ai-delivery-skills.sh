@@ -227,7 +227,8 @@ validate_ui_truth_mapping_skill() {
 
   validate_skill_local_assets \
     ui-truth-mapping \
-    templates/flutter-golden-preview-test.dart.example
+    templates/flutter-golden-preview-test.dart.example \
+    templates/ui-truth-index-template.json
 
   require_contains "$skill_file" 'requirement-slice'
   require_contains "$skill_file" 'Figma'

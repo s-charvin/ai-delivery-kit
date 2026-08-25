@@ -25,6 +25,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".agents/skills/requirement-breakdown/SKILL.md"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/SKILL.md"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"),
+		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-delivery-status.py"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),

@@ -145,6 +145,7 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"gate_requirements": map[string]any{
+			"ui_stage2_authorization": []string{"CP-UI"},
 			"ui_bearing_before_spec":  []string{"acceptance_frozen"},
 			"ui_bearing_before_plan":  []string{"acceptance_frozen"},
 			"ui_bearing_before_tasks": []string{"acceptance_frozen"},
@@ -153,6 +154,7 @@ func (e Engine) Run(cfg Config) error {
 		"worktree_policy": map[string]any{
 			"require_isolated_worktree":           true,
 			"allow_precreate_before_dependencies": false,
+			"ui_stage2_reuses_worktree":           true,
 		},
 		"review_loop": map[string]any{
 			"max_rounds": 3,

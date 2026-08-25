@@ -4,13 +4,23 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import re
 import sys
-from pathlib import Path
+from datetime import datetime
+from pathlib import Path, PureWindowsPath
 from typing import Any
 
 LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
 UI_TRUTH_INDEX = Path("contracts") / "ui-truth-index.json"
+UI_TRUTH_SCHEMA_VERSION = 1
+KEBAB_CASE_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
+SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
+UNIT_TYPES = frozenset({"page", "component", "modal", "shared-component"})
+STACKS = frozenset({"flutter", "web"})
+CONFIRMATION_STATUSES = frozenset({"confirmed", "waived"})
+WEB_PREVIEW_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".html"})
 
 
 def _locate_layout_dir() -> Path | None:
@@ -153,17 +163,80 @@ def check_verification_evidence(
     return []
 
 
-def _check_repo_relative_file(
-    repo_root: Path, rel: Any, *, field: str, subreq_id: str, unit_id: str
+def _is_non_empty_string(value: Any) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _is_iso8601_timestamp(value: Any) -> bool:
+    if not _is_non_empty_string(value):
+        return False
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    return parsed.tzinfo is not None
+
+
+def _resolve_repo_relative_file(
+    repo_root: Path,
+    rel: Any,
+    *,
+    field: str,
+    subreq_id: str,
+    unit_id: str,
+    allowed_suffixes: frozenset[str] | None = None,
+) -> tuple[Path | None, list[str]]:
+    prefix = f"[GATE] {subreq_id} unit {unit_id} {field}"
+    if not _is_non_empty_string(rel):
+        return None, [f"{prefix} must be a repo-relative path"]
+
+    rel_path = Path(rel)
+    windows_path = PureWindowsPath(rel)
+    if rel_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+        return None, [f"{prefix} must be a repo-relative path"]
+    if ".." in rel_path.parts or ".." in windows_path.parts:
+        return None, [
+            f"{prefix} must stay within repository root ('..' is forbidden): {rel}"
+        ]
+
+    try:
+        resolved_root = repo_root.resolve(strict=True)
+        resolved = (resolved_root / rel_path).resolve(strict=True)
+    except (OSError, RuntimeError) as exc:
+        return None, [f"{prefix} missing or unreadable at repo root: {rel} ({exc})"]
+
+    try:
+        resolved.relative_to(resolved_root)
+    except ValueError:
+        return None, [f"{prefix} resolves outside repository root: {rel}"]
+
+    if not resolved.is_file():
+        return None, [f"{prefix} is not a file at repo root: {rel}"]
+    if allowed_suffixes is not None and resolved.suffix.lower() not in allowed_suffixes:
+        expected = " or ".join(sorted(allowed_suffixes))
+        return None, [f"{prefix} must end with {expected}: {rel}"]
+    return resolved, []
+
+
+def _check_content_hash(
+    path: Path | None,
+    expected: Any,
+    *,
+    field: str,
+    subreq_id: str,
+    unit_id: str,
 ) -> list[str]:
-    if not isinstance(rel, str) or not rel.strip() or Path(rel).is_absolute():
-        return [
-            f"[GATE] {subreq_id} unit {unit_id} {field} must be a repo-relative path"
-        ]
-    if not (repo_root / rel).is_file():
-        return [
-            f"[GATE] {subreq_id} unit {unit_id} {field} missing at repo root: {rel}"
-        ]
+    prefix = f"[GATE] {subreq_id} unit {unit_id} {field}"
+    if not isinstance(expected, str) or not SHA256_RE.fullmatch(expected):
+        return [f"{prefix} must be a lowercase 64-character SHA-256"]
+    if path is None:
+        return []
+    try:
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        return [f"{prefix} cannot hash file: {exc}"]
+    if actual != expected:
+        return [f"{prefix} mismatch: expected {expected}, got {actual}"]
     return []
 
 
@@ -178,35 +251,232 @@ def check_ui_truth_index(
     data = load_ui_truth_index(subreq_dir)
     if data is None:
         return [f"[GATE] {subreq_id} cannot parse {UI_TRUTH_INDEX.as_posix()}"]
-    units = index_units(subreq_dir)
-    if not units:
-        return [
-            f"[GATE] {subreq_id} status={status} {UI_TRUTH_INDEX.as_posix()} "
-            f"has no units[]"
-        ]
+
     errors: list[str] = []
+    if type(data.get("schema_version")) is not int or data["schema_version"] != UI_TRUTH_SCHEMA_VERSION:
+        errors.append(
+            f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} schema_version "
+            f"must equal {UI_TRUTH_SCHEMA_VERSION}"
+        )
+
+    design_source = data.get("design_source")
+    if not isinstance(design_source, dict):
+        errors.append(f"[GATE] {subreq_id} design_source must be an object")
+    else:
+        for field in ("file_key", "root_node", "revision"):
+            if not _is_non_empty_string(design_source.get(field)):
+                errors.append(f"[GATE] {subreq_id} design_source.{field} is required")
+        if not _is_iso8601_timestamp(design_source.get("captured_at")):
+            errors.append(
+                f"[GATE] {subreq_id} design_source.captured_at must be an ISO-8601 timestamp with timezone"
+            )
+
+    units = data.get("units")
+    if not isinstance(units, list) or not units:
+        errors.append(
+            f"[GATE] {subreq_id} status={status} {UI_TRUTH_INDEX.as_posix()} has no units[]"
+        )
+        return errors
+
+    seen_unit_ids: set[str] = set()
+    dependency_records: list[tuple[str, list[str]]] = []
+
     for i, unit in enumerate(units):
-        unit_id = unit.get("unit_id") or f"units[{i}]"
-        for field in ("component_path", "preview_path"):
+        fallback_id = f"units[{i}]"
+        if not isinstance(unit, dict):
+            errors.append(f"[GATE] {subreq_id} unit {fallback_id} must be an object")
+            continue
+
+        raw_unit_id = unit.get("unit_id")
+        unit_id = raw_unit_id if _is_non_empty_string(raw_unit_id) else fallback_id
+        if not isinstance(raw_unit_id, str) or not KEBAB_CASE_RE.fullmatch(raw_unit_id):
+            errors.append(
+                f"[GATE] {subreq_id} unit {fallback_id} unit_id must be kebab-case"
+            )
+        elif raw_unit_id in seen_unit_ids:
+            errors.append(f"[GATE] {subreq_id} duplicate unit_id: {raw_unit_id}")
+        else:
+            seen_unit_ids.add(raw_unit_id)
+
+        unit_type = unit.get("type")
+        if unit_type not in UNIT_TYPES:
+            errors.append(
+                f"[GATE] {subreq_id} unit {unit_id} type must be one of: "
+                f"{', '.join(sorted(UNIT_TYPES))}"
+            )
+
+        stack = unit.get("stack")
+        if stack not in STACKS:
+            errors.append(
+                f"[GATE] {subreq_id} unit {unit_id} stack must be one of: "
+                f"{', '.join(sorted(STACKS))}"
+            )
+
+        if not _is_non_empty_string(unit.get("source_node")):
+            errors.append(f"[GATE] {subreq_id} unit {unit_id} source_node is required")
+
+        dependencies = unit.get("dependencies")
+        valid_dependencies: list[str] = []
+        if not isinstance(dependencies, list):
+            errors.append(
+                f"[GATE] {subreq_id} unit {unit_id} dependencies must be an array"
+            )
+        else:
+            seen_dependencies: set[str] = set()
+            for dependency in dependencies:
+                if not isinstance(dependency, str) or not KEBAB_CASE_RE.fullmatch(dependency):
+                    errors.append(
+                        f"[GATE] {subreq_id} unit {unit_id} dependency ids must be kebab-case"
+                    )
+                    continue
+                if dependency == raw_unit_id:
+                    errors.append(
+                        f"[GATE] {subreq_id} unit {unit_id} cannot depend on itself"
+                    )
+                if dependency in seen_dependencies:
+                    errors.append(
+                        f"[GATE] {subreq_id} unit {unit_id} duplicate dependency: {dependency}"
+                    )
+                    continue
+                seen_dependencies.add(dependency)
+                valid_dependencies.append(dependency)
+            if isinstance(raw_unit_id, str):
+                dependency_records.append((raw_unit_id, valid_dependencies))
+
+        component_suffixes = frozenset({".dart"}) if stack == "flutter" else None
+        component_file, file_errors = _resolve_repo_relative_file(
+            repo_root,
+            unit.get("component_path"),
+            field="component_path",
+            subreq_id=subreq_id,
+            unit_id=str(unit_id),
+            allowed_suffixes=component_suffixes,
+        )
+        errors.extend(file_errors)
+        errors.extend(
+            _check_content_hash(
+                component_file,
+                unit.get("component_sha256"),
+                field="component_sha256",
+                subreq_id=subreq_id,
+                unit_id=str(unit_id),
+            )
+        )
+
+        if stack == "flutter" or "golden_test" in unit or "golden_test_sha256" in unit:
+            test_suffixes = (
+                frozenset({".dart"})
+                if stack == "flutter"
+                else frozenset({".js", ".jsx", ".ts", ".tsx"})
+            )
+            golden_file, file_errors = _resolve_repo_relative_file(
+                repo_root,
+                unit.get("golden_test"),
+                field="golden_test",
+                subreq_id=subreq_id,
+                unit_id=str(unit_id),
+                allowed_suffixes=test_suffixes,
+            )
+            errors.extend(file_errors)
             errors.extend(
-                _check_repo_relative_file(
-                    repo_root,
-                    unit.get(field),
-                    field=field,
+                _check_content_hash(
+                    golden_file,
+                    unit.get("golden_test_sha256"),
+                    field="golden_test_sha256",
                     subreq_id=subreq_id,
                     unit_id=str(unit_id),
                 )
             )
-        if unit.get("stack") == "flutter":
+
+        states = unit.get("states")
+        if not isinstance(states, list) or not states:
+            errors.append(f"[GATE] {subreq_id} unit {unit_id} has no states[]")
+            continue
+
+        seen_state_ids: set[str] = set()
+        for state_index, state in enumerate(states):
+            fallback_state = f"states[{state_index}]"
+            if not isinstance(state, dict):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} {fallback_state} must be an object"
+                )
+                continue
+
+            raw_state_id = state.get("state_id")
+            state_id = raw_state_id if _is_non_empty_string(raw_state_id) else fallback_state
+            if not isinstance(raw_state_id, str) or not KEBAB_CASE_RE.fullmatch(raw_state_id):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} {fallback_state} state_id must be kebab-case"
+                )
+            elif raw_state_id in seen_state_ids:
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} duplicate state_id: {raw_state_id}"
+                )
+            else:
+                seen_state_ids.add(raw_state_id)
+
+            if not _is_non_empty_string(state.get("source_node")):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} source_node is required"
+                )
+
+            preview_suffixes = (
+                frozenset({".png"}) if stack == "flutter" else WEB_PREVIEW_SUFFIXES
+            )
+            preview_file, file_errors = _resolve_repo_relative_file(
+                repo_root,
+                state.get("preview_path"),
+                field="preview_path",
+                subreq_id=subreq_id,
+                unit_id=f"{unit_id} state {state_id}",
+                allowed_suffixes=preview_suffixes,
+            )
+            errors.extend(file_errors)
             errors.extend(
-                _check_repo_relative_file(
-                    repo_root,
-                    unit.get("golden_test"),
-                    field="golden_test",
+                _check_content_hash(
+                    preview_file,
+                    state.get("preview_sha256"),
+                    field="preview_sha256",
                     subreq_id=subreq_id,
-                    unit_id=str(unit_id),
+                    unit_id=f"{unit_id} state {state_id}",
                 )
             )
+
+            confirmation = state.get("confirmation")
+            if not isinstance(confirmation, dict):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} confirmation must be an object"
+                )
+                continue
+            confirmation_status = confirmation.get("status")
+            if confirmation_status not in CONFIRMATION_STATUSES:
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} confirmation.status "
+                    f"must be one of: {', '.join(sorted(CONFIRMATION_STATUSES))}"
+                )
+            if not _is_iso8601_timestamp(confirmation.get("confirmed_at")):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} "
+                    "confirmation.confirmed_at must be an ISO-8601 timestamp with timezone"
+                )
+            if not _is_non_empty_string(confirmation.get("confirmed_by")):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} "
+                    "confirmation.confirmed_by is required"
+                )
+            if confirmation_status == "waived" and not _is_non_empty_string(
+                confirmation.get("note")
+            ):
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} state {state_id} waiver note is required"
+                )
+
+    for unit_id, dependencies in dependency_records:
+        for dependency in dependencies:
+            if dependency not in seen_unit_ids:
+                errors.append(
+                    f"[GATE] {subreq_id} unit {unit_id} references unknown dependency {dependency}"
+                )
     return errors
 
 
@@ -247,11 +517,10 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
                     f"or visual-acceptance/*.png"
                 )
 
-        if status in POST_FREEZE_STATUSES:
-            if status in UI_IMPLIES_UI_STATUSES and ui_bearing:
-                errors.extend(
-                    check_ui_truth_index(subreq_id, subreq_dir, repo_root, status)
-                )
+        if status in POST_FREEZE_STATUSES and ui_bearing:
+            errors.extend(
+                check_ui_truth_index(subreq_id, subreq_dir, repo_root, status)
+            )
 
         if status in VERIFICATION_REQUIRED_STATUSES:
             errors.extend(

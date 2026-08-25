@@ -56,8 +56,10 @@ zsh "$VALIDATE_SCRIPT"
 if [[ -f "$ROOT/managedassets.go" ]]; then
   RECONCILE_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/reconcile-delivery.test.sh")
   SYNC_ZH_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/sync-agents-zh.test.sh")
+  UI_INDEX_TEST=$(resolve_project_asset_path "tests/ai-delivery-skills/ui-truth-index-validator.test.sh")
   zsh "$RECONCILE_TEST"
   zsh "$SYNC_ZH_TEST"
+  bash "$UI_INDEX_TEST"
 fi
 
 [[ -d "$SKILL_ROOT" ]] || fail "Missing source skill root: $SKILL_ROOT"
@@ -66,6 +68,7 @@ require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 require_file "$SKILL_ROOT/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
+require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-truth-index-template.json"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"
 

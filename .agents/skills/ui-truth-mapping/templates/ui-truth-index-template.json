@@ -1,0 +1,48 @@
+{
+  "schema_version": 1,
+  "design_source": {
+    "file_key": "<figma-file-key>",
+    "root_node": "<figma-root-node>",
+    "revision": "<figma-revision>",
+    "captured_at": "<ISO8601-with-timezone>"
+  },
+  "units": [
+    {
+      "unit_id": "profile-card",
+      "type": "component",
+      "stack": "flutter",
+      "source_node": "<figma-unit-node>",
+      "dependencies": [],
+      "component_path": "lib/features/profile/profile_card.dart",
+      "component_sha256": "<64-lowercase-hex-sha256>",
+      "golden_test": "test/features/profile/profile_card_golden_test.dart",
+      "golden_test_sha256": "<64-lowercase-hex-sha256>",
+      "states": [
+        {
+          "state_id": "default",
+          "source_node": "<figma-default-state-node>",
+          "preview_path": "test/goldens/profile-card-default.png",
+          "preview_sha256": "<64-lowercase-hex-sha256>",
+          "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "<ISO8601-with-timezone>",
+            "confirmed_by": "user",
+            "note": "<review note>"
+          }
+        },
+        {
+          "state_id": "loading",
+          "source_node": "<figma-loading-state-node>",
+          "preview_path": "test/goldens/profile-card-loading.png",
+          "preview_sha256": "<64-lowercase-hex-sha256>",
+          "confirmation": {
+            "status": "waived",
+            "confirmed_at": "<ISO8601-with-timezone>",
+            "confirmed_by": "user",
+            "note": "<explicit waiver reason>"
+          }
+        }
+      ]
+    }
+  ]
+}

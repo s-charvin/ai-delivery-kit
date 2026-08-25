@@ -8,9 +8,9 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile 
 
 ## Slice execution order
 
-Follow the sub-requirement dependency graph and each unit's type/dependencies recorded in the requirement-slice: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are `merged`.
+Follow the sub-requirement dependency graph and each UI unit's type/dependencies persisted in `ui-truth-index.json`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are complete in the slice workspace.
 
-For UI-bearing slices, implement against an already-frozen **host-stack component** plus the confirmed official preview recorded in `ui-truth-index.json`. **That landed component + preview is the only visual source of truth for Stage 4.** Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
+For UI-bearing slices, continue in the **same slice worktree created during Stage 2** and implement against the frozen host-stack component plus confirmed per-state previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring and remaining tasks; it does not create a second worktree or re-draw the component. Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
 
 ### Visual truth — do not re-query Figma by default
 
@@ -44,7 +44,7 @@ Tests and visual acceptance for `fill`/`hug` boxes assert constraint behavior (s
 
 The `implement` action always follows this chain, regardless of framework tier:
 
-1. **Isolate** — one worktree/branch per slice.
+1. **Isolate** — reuse the recorded Stage 2 worktree/branch for UI slices; create one worktree/branch here only for slices that do not already have one.
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
 4. **Visual acceptance** (UI only) — compare implementation against the confirmed official preview (Flutter: golden PNG) and the landed component; failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes.

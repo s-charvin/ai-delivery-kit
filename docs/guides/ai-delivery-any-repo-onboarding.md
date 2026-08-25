@@ -178,6 +178,8 @@ bootstrap 完成后，目标仓库至少具备：
 ```text
 使用 $ui-truth-mapping 处理子需求 SR-001。
 
+前置条件：编排器已确认这是 governed Stage 2 UI 切片，并在 `status.json` 记录用户的 `current_checkpoint=CP-UI`。Stage 2 会写生产代码，因此须在记录的切片 worktree 中执行。
+
 输入：
 - requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
 - requirement-slice: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md
@@ -186,11 +188,12 @@ bootstrap 完成后，目标仓库至少具备：
 
 要求：
 - 基于结构化 node payload 完成映射
-- 每个独立 unit 在宿主项目里写真实组件（Flutter：Widget + golden PNG），指针写入 `contracts/ui-truth-index.json`
+- 每个独立 unit 在切片 worktree 的宿主项目里写真实组件（Flutter：Widget + golden PNG），按 v1 schema 将 unit/state、依赖、路径、SHA-256 与确认/豁免证据写入 `contracts/ui-truth-index.json`
 - 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter
 - 更新 traceability.json
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
+- Stage 4 复用该 worktree，不要重新创建工作区或重画组件
 ```
 
 如果当前没有 Figma 设计，或需求不含 UI，可以跳过这一步。非 UI 子需求直接进入设计阶段。

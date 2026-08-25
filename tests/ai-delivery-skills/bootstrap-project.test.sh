@@ -61,6 +61,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
@@ -80,6 +81,7 @@ done
 grep -Fq 'hooks = true' "$TARGET_REPO/.codex/config.toml"
 [[ -f "$TARGET_REPO/AGENTS.md" ]]
 grep -Fq 'ai-delivery:ui-contract-gate:start' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'CP-UI' "$TARGET_REPO/AGENTS.md"
 [[ ! -e "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
@@ -95,6 +97,8 @@ grep -Fq 'ai-delivery:ui-contract-gate:start' "$TARGET_REPO/AGENTS.md"
 [[ ! -e "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"ui_stage2_authorization"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"ui_stage2_reuses_worktree"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"review_loop"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"max_rounds"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"

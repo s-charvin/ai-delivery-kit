@@ -73,7 +73,13 @@ require_next_action "$FIXTURE_ROOT/merged-pending-archive/status.json" "archive"
 require_runtime_mode "$FIXTURE_ROOT/all-archived/status.json" "completed"
 require_next_action "$FIXTURE_ROOT/all-archived/status.json" "none"
 
-require_next_action "$FIXTURE_ROOT/split-ready-ui/status.json" "ui-truth-mapping"
+require_runtime_mode "$FIXTURE_ROOT/split-ready-ui/status.json" "confirm_ui"
+require_output_contains "$FIXTURE_ROOT/split-ready-ui/status.json" "CHECKPOINT=CP-UI"
+require_next_action "$FIXTURE_ROOT/split-ready-ui/status.json" "none"
+
+require_runtime_mode "$FIXTURE_ROOT/cp-ui-confirmed/status.json" "resume"
+require_output_contains "$FIXTURE_ROOT/cp-ui-confirmed/status.json" "CHECKPOINT=CP-UI"
+require_next_action "$FIXTURE_ROOT/cp-ui-confirmed/status.json" "ui-truth-mapping"
 
 require_next_action "$FIXTURE_ROOT/no-design-client-ui/status.json" "design"
 require_next_action "$FIXTURE_ROOT/no-design-client-ui-exempt/status.json" "spec"

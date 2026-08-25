@@ -28,6 +28,7 @@ Run reconcile before trusting this panel on every resume or continue.
 
 ## Checkpoints
 
+- [ ] CP-UI | checkpoint=ui_visual_implementation_authorization | condition=split_ready UI slice passed light audit | action=pause before production component/golden work
 - [ ] CP-DESIGN | checkpoint=design_approval | condition=design session approved per subreq | action=pause for user approval
 - [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=all executable subreqs at tasks_ready | action=pause before development
 - [ ] CP-002 | checkpoint=hard_blocker_pause | condition=no safe runnable queue item remains | action=pause and surface blocker

@@ -5,7 +5,8 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 | Current completion state | Unique next action | Forbidden |
 |--------------------------|--------------------|-----------|
 | Split decision pending | User confirms → `requirement-breakdown` or skip single-slice package | `ui-truth-mapping`, `spec`/`plan`/`tasks` |
-| `split_ready` + light audit OK (UI-bearing) | `ui-truth-mapping` | `spec`/`plan`/`tasks`, implementation |
+| `split_ready` + light audit OK (UI-bearing) | CP-UI pause → user authorizes controlled visual implementation | Production edits or `ui-truth-mapping` dispatch before approval |
+| CP-UI confirmed | `ui-truth-mapping` in the slice worktree (TDD + golden + review) | Treat Stage 2 as implementation-free mapping |
 | `split_ready` + light audit OK (non-UI) | `design` | Skip design approval |
 | `acceptance_frozen` (validator OK) | `design` | `spec` before design approval |
 | Design approved (`design_approved: true`) | `spec` → `plan` → `tasks` | Business code before `tasks_ready` |
@@ -19,7 +20,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 | Subreq status | ui_bearing | design_approved | Next action |
 |---------------|------------|-----------------|-------------|
 | `draft` | any | any | `requirement-breakdown` |
-| `split_ready` | true | any | `ui-truth-mapping` |
+| `split_ready` | true | any | Await CP-UI; after confirmation → `ui-truth-mapping` |
 | `split_ready` | false | false | `design` |
 | `split_ready` | false | true | `spec` |
 | `acceptance_frozen` | true | false | `design` |

@@ -93,7 +93,7 @@ Everything else should default to AI-driven progression through the orchestrated
 
 ## Exception Path
 
-Lower-level skills such as `requirement-breakdown` and `ui-truth-mapping` can still be used directly when their prerequisites are already satisfied. `ai-delivery-orchestrator` remains the default entry for new requirements.
+Lower-level skills such as `requirement-breakdown` and `ui-truth-mapping` can still be used directly when their prerequisites are already satisfied. For `ui-truth-mapping`, that includes a governed Stage 2 slice and recorded CP-UI authorization. `ai-delivery-orchestrator` remains the default entry for new requirements.
 
 That path is for surgical recovery or expert use. It is not the normal entry for new requirements.
 
@@ -116,9 +116,9 @@ Per-framework usage guidance ships with the orchestrator skill: `references/fram
 
 ## Visual freeze (no HTML contract hooks)
 
-Stage 2 freezes **real host-stack components** plus an official-stack preview (Flutter: widget + golden PNG). `ai-delivery init` does **not** install UI git hooks.
+After CP-UI authorization, Stage 2 implements and freezes **real host-stack components** plus official per-state previews in the slice worktree (Flutter: widget + golden PNG), with TDD and fresh-context review. `ai-delivery init` does **not** install UI git hooks.
 
-Give the user the preview **absolute path**. Store **repo-relative** paths in `contracts/ui-truth-index.json`. Codex still needs `[features] hooks = true` in `.codex/config.toml` if you use other Codex hooks.
+Give the user each preview **absolute path**. Store v1 metadata, **repo-relative** paths, SHA-256 hashes, and confirmation/waiver evidence in `contracts/ui-truth-index.json`. Stage 4 reuses the same slice worktree. Codex still needs `[features] hooks = true` in `.codex/config.toml` if you use other Codex hooks.
 
 Project `AGENTS.md` carries a short UI-truth reminder (amend-on-upgrade). Restore older IDE JSON from `.ai-delivery/backups/ide-gates/` if needed.
 

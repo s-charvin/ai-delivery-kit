@@ -37,6 +37,7 @@
     ]
   },
   "gate_requirements": {
+    "ui_stage2_authorization": ["CP-UI"],
     "ui_bearing_before_spec": ["acceptance_frozen"],
     "ui_bearing_before_plan": ["acceptance_frozen"],
     "ui_bearing_before_tasks": ["acceptance_frozen"],
@@ -44,7 +45,8 @@
   },
   "worktree_policy": {
     "require_isolated_worktree": true,
-    "allow_precreate_before_dependencies": false
+    "allow_precreate_before_dependencies": false,
+    "ui_stage2_reuses_worktree": true
   },
   "review_loop": {
     "max_rounds": 3

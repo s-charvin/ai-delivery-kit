@@ -8,6 +8,8 @@ CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT
 
 **CP-001 确认前禁止 dispatch 实现工作。**
 
+UI 切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-worktrees` 为同一切片创建第二个工作区。
+
 ## tasks.md → 任务简报
 
 对 `tasks.md` 中每个任务行：

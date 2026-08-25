@@ -22,7 +22,7 @@
 向设计会话（原生流程或已安装框架的设计流程，见 [framework-adaptation.md](framework-adaptation.md)）提供：
 
 - `requirement-slice.md`
-- 各 unit 已合入的组件 + `ui-truth-index.json` 预览指针（若 UI）
+- 各 unit 在记录的切片 worktree 中由 Stage 2 产出的组件 + 有效 v1 `ui-truth-index.json` 预览/hash 指针（若 UI）
 - API 文档（若有）
 - 依赖图
 
@@ -45,7 +45,7 @@
 
 当 `design_approved: true`，按 reconcile 输出的动作执行，使用 [frameworks/](frameworks/) 下所选档位的指南：
 
-1. `spec` → `spec.md` — 对照冻结组件状态审计（UI）。UI 切片的视觉输入是已合入组件 + 已确认预览，不是另一份 spec 文档。
+1. `spec` → `spec.md` — 对照冻结组件状态审计（UI）。UI 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份 spec 文档。
 2. `plan` → `plan.md` — 对照交付切片顺序审计。
 3. `tasks` → `tasks.md` — 审计粒度、依赖顺序、文件范围。
 
@@ -63,7 +63,7 @@
 
 ## API 策略
 
-API 文档直接传给 spec 管道与实现。无独立 API 映射阶段。缺口在 `notes` 记为 `integration_deferred`；不阻塞 UI 映射或外壳工作。
+API 文档直接传给 spec 管道与实现。无独立 API 映射阶段。缺口在 `notes` 记为 `integration_deferred`；不阻塞只读 UI 证据，但生产外壳工作仍等待 CP-UI。
 
 ## 非 UI 子需求
 

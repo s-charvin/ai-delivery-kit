@@ -9,15 +9,15 @@ reconcile 为每个子需求输出以下动作之一：
 | 动作 | 含义 | 典型触发状态 |
 |------|------|--------------|
 | `requirement-breakdown` | kit 自有技能：拆分需求 | `draft` |
-| `ui-truth-mapping` | kit 自有技能：冻结 UI 契约 | `split_ready`（含 UI） |
+| `ui-truth-mapping` | kit 自有技能：在切片 worktree 中执行受控视觉实现 | CP-UI 之后的 `split_ready`（含 UI） |
 | `design` | 探索并提出设计方案；需用户批准（CP-DESIGN） | `split_ready`（非 UI）/ `acceptance_frozen` 且 `design_approved: false` |
 | `spec` | 产出子需求规格 | `design_approved` 之后 |
 | `plan` | 产出技术方案 | `spec_ready` |
 | `tasks` | 产出任务拆分 | `plan_ready` |
-| `implement` | 实现任务（工作树 + TDD + 评审纪律） | CP-001 之后的 `tasks_ready` / `in_dev` |
+| `implement` | 实现剩余任务（UI 复用 Stage 2 worktree；TDD + 评审纪律） | CP-001 之后的 `tasks_ready` / `in_dev` |
 | `finish` | 变基合并并关闭切片 | `visual_acceptance_passed` |
 
-`requirement-breakdown` 与 `ui-truth-mapping` 是 kit 技能，直接调用。其余动作一律通过下文选定的框架档位分发。
+`requirement-breakdown` 与 `ui-truth-mapping` 是 kit 技能，直接调用；但 `ui-truth-mapping` 会写生产代码，仍受 CP-UI 门禁。其余动作一律通过下文选定的框架档位分发。
 
 ## 第 0 步 — 环境自查（每次 run 执行一次）
 

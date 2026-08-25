@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: Use when a Figma design must become a real project component (Flutter first) plus an official-stack preview before implementation — especially when evidence is a whole page but the requirement only hits a subtree, when multiple states need reviewable previews, when motion/Spine/Lottie/shimmer must be audited, when overlapping fills/gradients or Figma masks might be alpha compositing rather than independent overlays, or when a previous pass dumped a full screen / used an HTML contract as a translation layer / failed to show a preview path.
+description: Use only when the ai-delivery orchestrator has a governed `.ai-delivery` requirement slice in Stage 2, CP-UI is confirmed, and a Figma design must be frozen as a real host-stack component (Flutter first) plus an official-stack preview for acceptance. Use for scoped subtrees, multiple reviewable states, motion/Spine/Lottie/shimmer, mask/alpha compositing, or repairing a prior HTML-contract/full-screen dump. Do not use for a generic Figma implementation request; use the host project's normal UI workflow or `figma-design-to-code` instead.
 ---
 
 # UI Truth Mapping
@@ -11,7 +11,7 @@ Extract structured UI truth from a design source (Figma) and freeze it as **real
 
 **Principle 2 — official preview.** Flutter: golden PNG from `flutter test --update-goldens`. Web: whatever that repo already uses to preview a component. In chat, give the user the **absolute path**. In the delivery index, store **repo-relative** paths only.
 
-This skill does one thing: given a requirement-slice + design source, locate or create the matching unit in the **project source tree**, freeze visual truth there, show the preview path, and record a pointer index. It does not own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
+This skill does one thing: after CP-UI authorization, use the **same slice worktree** throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth there, show the preview path, and record a v1 pointer/governance index. It does not own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
 
 ## Input
 
@@ -33,15 +33,18 @@ Per independent unit, **production code** in the host tree + an official preview
 └── ui-truth-index.json        # pointers only — not paint
 ```
 
-`ui-truth-index.json` is a **pointer**, not a drawing. Each row:
+`ui-truth-index.json` is a **pointer**, not a drawing. Use [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json) and persist at least:
 
 | Field | Meaning |
 |---|---|
-| `unit_id` | Stable unit id (kebab-case) |
-| `stack` | `flutter` \| `web` |
-| `component_path` | Repo-relative path to the real component |
-| `preview_path` | Repo-relative preview (Flutter = golden PNG) |
-| `golden_test` | Flutter only: repo-relative golden test path |
+| `schema_version` | Integer `1` |
+| `design_source` | Figma file key, root node, revision, capture timestamp |
+| `unit_id` / `type` / `stack` | Kebab-case id, `page`/`component`/`modal`/`shared-component`, `flutter`/`web` |
+| `source_node` / `dependencies` | Figma source node and unit dependency ids |
+| `component_path` / `component_sha256` | Repo-relative real component and current content hash |
+| `golden_test` / `golden_test_sha256` | Flutter golden test and current content hash |
+| `states[]` | `state_id`, `source_node`, `preview_path`, `preview_sha256`, and confirmation evidence |
+| `confirmation` | `confirmed` or `waived`, timestamp/by; waiver requires a note |
 
 Do **not** generate `ui-contract.html`. Do **not** copy `ui-contract-template.html` (removed). Do **not** translate HTML into Flutter.
 
@@ -57,7 +60,8 @@ Judge from the repo. Do not run a heavy probe.
 
 ```
 templates/
-└── flutter-golden-preview-test.dart.example
+├── flutter-golden-preview-test.dart.example
+└── ui-truth-index-template.json
 ```
 
 The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per state, no system chrome, no in-widget state-switcher). **It is not a widget template.** Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
@@ -79,6 +83,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 
 ## Hard Boundary
 
+- Invoke only from a governed Stage 2 slice after CP-UI is recorded. This skill writes production code, golden tests, previews, and the v1 index inside the recorded slice worktree; it is not an implementation-free preflight.
 - **Requirement-scoped extract:** In Scope artifacts decide the root — smallest ancestor covering artifacts that belong to **one** unit. Disconnected artifacts → split units. Never dump the full page.
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
@@ -238,16 +243,16 @@ Web: open/build the component the way that repo already previews (Storybook, a l
 
 1. Component compiles / the host preview opens.
 2. Official preview file exists; chat showed its **absolute path**.
-3. `contracts/ui-truth-index.json` lists repo-relative `component_path` + `preview_path` (Flutter: `golden_test` too) and those files exist.
+3. The v1 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, and one `states[]` entry per reviewable state; each state has confirmation or a reasoned waiver.
 4. Scope matches the slice; icons/images are evidence-backed; motion table present when dynamics exist; sizing classified; compositing recorded when §3b fired.
-5. User confirmed the preview (unless waived).
+5. Stage 2 tests pass and the latest fresh-context review is clean; record the slice worktree/branch for Stage 4 reuse.
 6. If the unit set changed, sweep stale pointers in the requirement directory in the same change.
 
 Do **not** claim freeze from "the widget looks right" without a preview path. Do **not** generate `contract-preview-*.png` as a substitute for the official golden.
 
 ### 7. Index and status
 
-Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`. Pointers only.
+Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v1 template. It stores pointers and governance hashes/confirmation metadata, never paint.
 
 Set `acceptance_frozen` only after the freeze bar. On failure → `blocked_verification_failure`.
 
@@ -255,7 +260,7 @@ There is no HTML validator. Kit status validation checks that the index exists a
 
 ### 8. After implementation (Stage 4 consumers)
 
-Stage 4 **wires** the already-written component (API, route, state, mount). It must **not** re-draw Flutter from HTML or re-query TemPad by default.
+Stage 4 **wires** the already-written component (API, route, state, mount) in the same slice worktree. It must not create a second worktree, re-draw Flutter from HTML, or re-query TemPad by default.
 
 **Reference check:** run a reference/usage search before writing any "implemented at" claim. Definition-only is not enough.
 
@@ -286,5 +291,7 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Hitting the network inside a golden test.
 - Adding Flutter/web dependencies the host project does not already use.
 - Declaring freeze without an absolute preview path and explicit user confirmation.
+- Dispatching this skill before CP-UI, writing production code outside the recorded slice worktree, or creating a second Stage 4 worktree for the same slice.
 - Leaving `ui-truth-index.json` paths as absolute filesystem paths (index is repo-relative).
+- Omitting `schema_version`, per-state previews/confirmation, or content hashes; accepting hash drift after freeze.
 - Scanning every historical unit to "find" a match; rewriting an entire matched widget for a small requirement.

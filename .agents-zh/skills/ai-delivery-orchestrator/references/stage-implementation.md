@@ -8,9 +8,9 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输
 
 ## 切片执行顺序
 
-按子需求依赖图以及 requirement-slice 记录的 unit 类型/依赖执行：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当列出的依赖 unit 均已 `merged`，该 unit 才能启动。
+按子需求依赖图以及 `ui-truth-index.json` 持久化的 UI unit 类型/依赖执行：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当列出的依赖 unit 已在切片工作区完成，该 unit 才能启动。
 
-UI 切片必须对照已冻结的 **宿主栈组件** 以及 `ui-truth-index.json` 记录的已确认官方预览实现。**已合入组件 + 预览是 Stage 4 唯一的视觉真值。** 绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
+UI 切片必须继续使用 **Stage 2 创建的同一个切片 worktree**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的逐状态已确认官方预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线与剩余任务；不得创建第二个 worktree 或重画组件。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
 
 ### 视觉真值 — 默认不要再查 Figma
 
@@ -44,7 +44,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 
 无论哪个框架档位，`implement` 动作都遵循这条链路：
 
-1. **隔离** — 每切片一个 worktree/分支。
+1. **隔离** — UI 切片复用已记录的 Stage 2 worktree/分支；只有尚无工作区的切片才在此创建一个 worktree/分支。
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
 3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
 4. **视觉验收**（仅 UI）— 将实现与已确认官方预览（Flutter：golden PNG）及已合入组件对照；失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。

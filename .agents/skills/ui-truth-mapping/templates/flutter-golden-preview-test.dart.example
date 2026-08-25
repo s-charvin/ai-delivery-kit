@@ -13,6 +13,8 @@
 //   are in-scope product chrome. Zero MediaQuery padding / viewPadding.
 // - Motion: named keyframe PNG. Do not loop an animation in the golden.
 //   Motion table → widget comments / freeze chat, not a second paint file.
+//   Do not use pumpAndSettle() for shimmer/Lottie/other continuous animation:
+//   disable tickers or pump an explicit, named keyframe duration instead.
 // - No network. Reuse the host's ImageProvider / fixture override.
 // - Do not add packages the host project does not already use.
 // - Follow host Theme / localizations / golden harness when neighbors have them.
@@ -21,7 +23,7 @@
 // Generate / refresh:
 //   flutter test test/path/to/unit_golden_test.dart --update-goldens
 // Then give the user the PNG absolute path (repo-relative path belongs in
-// contracts/ui-truth-index.json as preview_path).
+// contracts/ui-truth-index.json as the matching state's preview_path).
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -53,6 +55,7 @@ void main() {
             child: Align(
               alignment: Alignment.topLeft,
               child: RepaintBoundary(
+                key: const ValueKey<String>('ui-truth-preview'),
                 // Replace with the real unit. Do not wrap it in snapshot-px
                 // SizedBox to "match the artboard".
                 child: SizedBox.shrink(),
@@ -64,10 +67,12 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    // One frame keeps continuous motion deterministic. For a motion state,
+    // use a separate testWidgets and an explicit pump(Duration) keyframe.
+    await tester.pump();
 
     await expectLater(
-      find.byType(RepaintBoundary),
+      find.byKey(const ValueKey<String>('ui-truth-preview')),
       matchesGoldenFile('goldens/unit_default.png'),
     );
   });

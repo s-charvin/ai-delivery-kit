@@ -87,7 +87,7 @@ ai-delivery init --upgrade .
 
 ## 例外路径
 
-底层技能如 `requirement-breakdown`、`ui-truth-mapping`，在前置条件已满足时仍可直接使用。新需求的默认入口仍是 `ai-delivery-orchestrator`。
+底层技能如 `requirement-breakdown`、`ui-truth-mapping`，在前置条件已满足时仍可直接使用；`ui-truth-mapping` 还要求受治理的 Stage 2 切片与已记录的 CP-UI 授权。新需求的默认入口仍是 `ai-delivery-orchestrator`。
 
 该路径用于定点恢复或专家操作，不是新需求的常规入口。
 
@@ -110,9 +110,9 @@ ai-delivery init --upgrade .
 
 ## 视觉冻结（无 HTML 契约 hook）
 
-Stage 2 冻结 **真实宿主栈组件** 与官方栈预览（Flutter：Widget + golden PNG）。`ai-delivery init` **不会** 安装 UI git hook。
+CP-UI 授权后，Stage 2 在切片 worktree 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件** 与逐状态官方栈预览（Flutter：Widget + golden PNG）。`ai-delivery init` **不会** 安装 UI git hook。
 
-对话里给用户预览的 **绝对路径**。索引里只存 **仓内相对路径**（`contracts/ui-truth-index.json`）。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
+对话里给用户每份预览的 **绝对路径**。索引（`contracts/ui-truth-index.json`）存 v1 元数据、**仓内相对路径**、SHA-256 与确认/豁免凭证。Stage 4 复用同一个切片 worktree。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
 
 仓库根 `AGENTS.md` 带有简短 UI 真值提醒（升级时 amend）。旧 IDE JSON 可从 `.ai-delivery/backups/ide-gates/` 恢复。
 

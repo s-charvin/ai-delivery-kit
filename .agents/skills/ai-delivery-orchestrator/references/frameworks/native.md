@@ -72,7 +72,7 @@ The native tier keeps plan and tasks as separate canonical files (`spec/plan.md`
 
 No subagent framework is required, but the discipline is non-negotiable:
 
-1. **Isolate** — one branch per slice; use a worktree when the repo supports it.
+1. **Isolate** — resume the recorded Stage 2 worktree/branch for UI slices; create one branch per slice (and a worktree when supported) only when no slice workspace exists.
 2. **TDD first** — write a failing test for the task before production code; keep the loop red → green → refactor.
 3. **Small steps** — one file at a time, small commits prefixed with the subreq id.
 4. **Review loop** — after each task, run review as a separate pass through the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): re-read the diff against the task's acceptance notes and the spec's acceptance criteria as if reviewing someone else's work; findings become a fix list, then fix and re-review until clean or the `review_loop.max_rounds` budget (default 3) is exhausted — then escalate to the user, never auto-merge.

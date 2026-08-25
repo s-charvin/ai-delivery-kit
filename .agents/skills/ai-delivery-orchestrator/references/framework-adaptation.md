@@ -9,15 +9,15 @@ reconcile emits one of these actions per sub-requirement:
 | Action | Meaning | Typical trigger status |
 |--------|---------|------------------------|
 | `requirement-breakdown` | Kit-owned skill: split the requirement | `draft` |
-| `ui-truth-mapping` | Kit-owned skill: freeze UI contracts | `split_ready` (UI-bearing) |
+| `ui-truth-mapping` | Kit-owned skill: controlled visual implementation in the slice worktree | `split_ready` (UI-bearing) after CP-UI |
 | `design` | Explore and propose a design; needs user approval (CP-DESIGN) | `split_ready` (non-UI) / `acceptance_frozen` with `design_approved: false` |
 | `spec` | Produce the sub-requirement specification | after `design_approved` |
 | `plan` | Produce the technical plan | `spec_ready` |
 | `tasks` | Produce the task breakdown | `plan_ready` |
-| `implement` | Implement tasks (worktree + TDD + review discipline) | `tasks_ready` after CP-001 / `in_dev` |
+| `implement` | Implement remaining tasks (reuse Stage 2 worktree for UI; TDD + review discipline) | `tasks_ready` after CP-001 / `in_dev` |
 | `finish` | Rebase-merge and close the slice | `visual_acceptance_passed` |
 
-`requirement-breakdown` and `ui-truth-mapping` are kit skills and are invoked directly. All other actions are dispatched through the selected framework tier below.
+`requirement-breakdown` and `ui-truth-mapping` are kit skills and are invoked directly; `ui-truth-mapping` is still gated by CP-UI because it writes production code. All other actions are dispatched through the selected framework tier below.
 
 ## Step 0 — Environment self-check (once per run)
 

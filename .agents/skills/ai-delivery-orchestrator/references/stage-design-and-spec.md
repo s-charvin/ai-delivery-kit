@@ -22,7 +22,7 @@ Do not run `spec`, `plan`, or `tasks` actions until the design is presented and 
 Feed the design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
 
 - `requirement-slice.md`
-- each unit's landed component + `ui-truth-index.json` preview pointer (if UI-bearing)
+- each unit's Stage 2 component in the recorded slice worktree + valid v1 `ui-truth-index.json` preview/hash pointers (if UI-bearing)
 - API docs (if available)
 - Dependency graph
 
@@ -45,7 +45,7 @@ If design conflicts with the frozen component / confirmed preview or requirement
 
 When `design_approved: true`, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
 
-1. `spec` → `spec.md` — audit against frozen component states (UI). For UI slices the landed component + confirmed preview is the visual input, not a separate spec document.
+1. `spec` → `spec.md` — audit against frozen component states (UI). For UI slices the Stage 2 component + confirmed preview set is the visual input, not a separate spec document.
 2. `plan` → `plan.md` — audit delivery slice ordering.
 3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope.
 
@@ -75,7 +75,7 @@ After all executable subreqs reach `tasks_ready`, enter CP-001 and confirm with 
 
 ## API policy
 
-API docs pass directly to the spec pipeline and implementation. No separate API mapping stage. Gaps → `integration_deferred` in notes; they do not block UI mapping or shell work.
+API docs pass directly to the spec pipeline and implementation. No separate API mapping stage. Gaps → `integration_deferred` in notes; they do not block read-only UI evidence, while production shell work still waits for CP-UI.
 
 ## Non-UI sub-requirements
 

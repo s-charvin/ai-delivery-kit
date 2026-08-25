@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: 当 Figma 设计需要在实现前变成项目里的真实组件（优先 Flutter）并给出官方栈预览时使用 — 尤其证据是整页但需求只命中子树、需要多状态可审阅预览、必须审计动效/Spine/Lottie/shimmer、重叠填充/渐变或 Figma 蒙版可能是 alpha 合成而非独立覆盖层、或先前整页 dump / 用 HTML 契约当翻译层 / 没有出示预览路径时。
+description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需求切片处于 Stage 2、CP-UI 已确认，且必须把 Figma 设计冻结为真实宿主栈组件（优先 Flutter）与官方栈验收预览时使用。适用于作用域子树、多状态、Spine/Lottie/shimmer 动效、蒙版/alpha 合成，或修复先前 HTML 契约/整页 dump。泛化 Figma 实现请求不要触发本技能，使用宿主项目惯例或 `figma-design-to-code`。
 ---
 
 # UI 真值映射
@@ -11,7 +11,7 @@ description: 当 Figma 设计需要在实现前变成项目里的真实组件（
 
 **原则 2 — 官方预览。** Flutter：`flutter test --update-goldens` 产出的 golden PNG。Web：该仓已有的组件预览方式。对话里给用户 **绝对路径**。交付索引里只存 **仓内相对路径**。
 
-此技能只做一件事：给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值冻在那里，出示预览路径，并记录指针索引。它不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
+此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用**同一个切片 worktree**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值冻在那里，出示预览路径，并记录 v1 指针/治理索引。它不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
 
 ## 输入
 
@@ -33,15 +33,18 @@ description: 当 Figma 设计需要在实现前变成项目里的真实组件（
 └── ui-truth-index.json        # 只做指针 — 不是绘制
 ```
 
-`ui-truth-index.json` 是 **指针**，不是图纸。每行：
+`ui-truth-index.json` 是 **指针**，不是图纸。使用 [templates/ui-truth-index-template.json](templates/ui-truth-index-template.json)，至少持久化：
 
 | 字段 | 含义 |
 |---|---|
-| `unit_id` | 稳定单元 id（kebab-case） |
-| `stack` | `flutter` \| `web` |
-| `component_path` | 真实组件相对仓库根的路径 |
-| `preview_path` | 预览文件相对仓库根（Flutter = golden PNG） |
-| `golden_test` | 仅 Flutter：golden 测试相对路径 |
+| `schema_version` | 整数 `1` |
+| `design_source` | Figma file key、根节点、revision、采集时间 |
+| `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component`、`flutter`/`web` |
+| `source_node` / `dependencies` | Figma 源节点与 unit 依赖 id |
+| `component_path` / `component_sha256` | 真实组件仓内相对路径与当前内容 hash |
+| `golden_test` / `golden_test_sha256` | Flutter golden 测试与当前内容 hash |
+| `states[]` | `state_id`、`source_node`、`preview_path`、`preview_sha256`、确认凭证 |
+| `confirmation` | `confirmed` 或 `waived`、时间/人员；豁免必须有 note |
 
 **禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 把 HTML 翻译成 Flutter。
 
@@ -57,7 +60,8 @@ description: 当 Figma 设计需要在实现前变成项目里的真实组件（
 
 ```
 templates/
-└── flutter-golden-preview-test.dart.example
+├── flutter-golden-preview-test.dart.example
+└── ui-truth-index-template.json
 ```
 
 示例只教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`，以及注释里的预览规则（PNG 画布 ≠ 运行时尺寸、每个状态一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。**它不是 Widget 模板。** Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
@@ -79,6 +83,7 @@ templates/
 
 ## 硬边界
 
+- 仅能由受治理 Stage 2 且已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v1 索引，不是无实现的前置检查。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
@@ -238,16 +243,16 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 1. 组件能编过 / 宿主预览能打开。
 2. 官方预览文件存在；对话出示了其 **绝对路径**。
-3. `contracts/ui-truth-index.json` 列出仓内相对的 `component_path` + `preview_path`（Flutter 另加 `golden_test`）且这些文件存在。
+3. v1 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖及每个可审阅状态的 `states[]` 校验；每个状态都有确认或有理由的豁免。
 4. 范围匹配切片；图标/图片有证据；有动态时有动效表；尺寸已分类；§3b 触发时记录了合成。
-5. 用户确认了预览（除非豁免）。
+5. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录切片 worktree/分支供 Stage 4 复用。
 6. 若单元集合变了，在同一次变更里清扫需求目录中的陈旧指针。
 
 **不要** 在没有预览路径时凭「Widget 看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方 golden。
 
 ### 7. 索引与状态
 
-写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。只做指针。
+按 v1 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针与治理 hash/确认元数据，绝不存绘制。
 
 仅在冻结条满足后设置 `acceptance_frozen`。失败 → `blocked_verification_failure`。
 
@@ -255,7 +260,7 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 ### 8. 实现之后（Stage 4 消费者）
 
-Stage 4 **接线** 已经写好的组件（API、路由、状态、挂载）。默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
+Stage 4 在同一个切片 worktree **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 worktree；默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
 
 **引用核实：** 写任何「实现于」声明之前跑引用/用法搜索。只查定义不够。
 
@@ -286,5 +291,7 @@ Stage 4 **接线** 已经写好的组件（API、路由、状态、挂载）。�
 - golden 测试里打真网。
 - 添加宿主项目没有的 Flutter/Web 依赖。
 - 没有绝对预览路径和用户显式确认就宣称冻结。
+- 在 CP-UI 前 dispatch 本技能、在记录的切片 worktree 外写生产代码，或在 Stage 4 为同一切片创建第二个 worktree。
 - 把 `ui-truth-index.json` 的路径写成文件系统绝对路径（索引必须是仓内相对路径）。
+- 缺少 `schema_version`、逐状态预览/确认或内容 hash；冻结后接受 hash 漂移。
 - 扫描每一个历史单元来「找」匹配；为了小需求重写整个已匹配 Widget。

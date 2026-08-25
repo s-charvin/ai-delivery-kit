@@ -5,7 +5,8 @@
 | 当前完成态 | 唯一下一站 | 禁止 |
 |------------|-----------|------|
 | 拆分决策待定 | 用户确认后 → `requirement-breakdown` 或跳过单切片包 | `ui-truth-mapping`、`spec`/`plan`/`tasks` |
-| `split_ready` + 轻量审计通过（UI） | `ui-truth-mapping` | `spec`/`plan`/`tasks`、实现 |
+| `split_ready` + 轻量审计通过（UI） | CP-UI 暂停 → 用户授权受控视觉实现 | 批准前改生产代码或 dispatch `ui-truth-mapping` |
+| CP-UI 已确认 | 在切片 worktree 中运行 `ui-truth-mapping`（TDD + golden + 评审） | 把 Stage 2 当成不含实现的 mapping |
 | `split_ready` + 轻量审计通过（非 UI） | `design` | 跳过设计批准 |
 | `acceptance_frozen`（校验器 OK） | `design` | 设计批准前 `spec` |
 | 设计已批准（`design_approved: true`） | `spec` → `plan` → `tasks` | `tasks_ready` 前写业务代码 |
@@ -18,7 +19,7 @@
 | 子需求状态 | ui_bearing | design_approved | 下一站 |
 |------------|------------|-----------------|--------|
 | `draft` | 任意 | 任意 | `requirement-breakdown` |
-| `split_ready` | true | 任意 | `ui-truth-mapping` |
+| `split_ready` | true | 任意 | 等待 CP-UI；确认后 → `ui-truth-mapping` |
 | `split_ready` | false | false | `design` |
 | `split_ready` | false | true | `spec` |
 | `acceptance_frozen` | true | false | `design` |

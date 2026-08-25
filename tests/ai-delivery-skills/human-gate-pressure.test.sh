@@ -254,4 +254,29 @@ fi
 echo "$VALIDATOR_OUT" | grep -Fq "visual-acceptance" \
   || fail "forged-visual-acceptance: expected visual-acceptance evidence gate, got:\n$VALIDATOR_OUT"
 
+# Scenario 8: split_ready UI work is production code and must pause for CP-UI
+# before ui-truth-mapping can be dispatched.
+S8=$(new_scenario "ui-implementation-without-approval")
+cat > "$S8/status.json" <<'EOF'
+{
+  "requirement_id": "ui-implementation-without-approval",
+  "updated_at": "2026-08-25T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "split_ready",
+      "ui_bearing": true,
+      "design_approved": false,
+      "notes": "light audit passed"
+    }
+  }
+}
+EOF
+OUT8=$(reconcile_output "$S8")
+require_line "ui-implementation-without-approval" "$OUT8" "RUNTIME_MODE=confirm_ui"
+require_line "ui-implementation-without-approval" "$OUT8" "CHECKPOINT=CP-UI"
+require_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=none"
+refute_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=ui-truth-mapping"
+
 echo 'PASS: human-review gate pressure scenarios rejected as expected.'

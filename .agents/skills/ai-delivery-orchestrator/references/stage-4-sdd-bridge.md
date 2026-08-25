@@ -8,6 +8,8 @@ After CP-001 user confirmation, when reconcile emits `RUNTIME_MODE=confirm_to_de
 
 **Do not dispatch implementation work before CP-001 is confirmed.**
 
+For UI slices, resume the branch/worktree recorded by Stage 2. Do not run `using-git-worktrees` to create a second workspace for the same slice.
+
 ## tasks.md → task brief
 
 For each task row in `tasks.md`:

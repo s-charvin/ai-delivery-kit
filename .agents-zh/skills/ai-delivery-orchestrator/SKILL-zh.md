@@ -28,7 +28,7 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 | 阶段 | 抽象动作 | 门禁 |
 |------|----------|------|
 | 1 | `requirement-breakdown` + 轻量审计 | `split_ready` |
-| 2 | `ui-truth-mapping`（仅 UI） | `acceptance_frozen` |
+| 2 | CP-UI → 受控的 `ui-truth-mapping` 视觉实现（仅 UI） | `acceptance_frozen` |
 | 3a | `design` | `design_approved` |
 | 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
 | 4 | `implement` | `visual_acceptance_passed` → `merged` |
@@ -72,31 +72,34 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 | 完成态 | 下一站 |
 |--------|--------|
-| `split_ready` + 审计（UI） | `ui-truth-mapping` |
+| `split_ready` + 审计（UI） | CP-UI → `ui-truth-mapping` |
 | `split_ready` + 审计（非 UI） | `design` |
 | `acceptance_frozen` | `design` |
 | `design_approved` | `spec` |
 | 全部 `tasks_ready` + CP-001 | Stage 4 `implement` |
 | 切片完成 | `finish` |
 
-## 暂停点（4 个）
+## 暂停点（6 个）
 
 1. 拆分/跳过决策后 — 与用户确认
-2. 设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
-3. `tasks_ready` 后 — CP-001，进入开发前确认
-4. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
+2. Stage 2 写生产代码前 — CP-UI，授权受控视觉实现与切片 worktree
+3. 设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
+4. `tasks_ready` 后 — CP-001，进入剩余开发工作前确认
+5. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
+6. 所有子需求 `merged` 后 — CP-ARCHIVE，标记 `archived` 前确认冻结不可变归档
 
 ## 硬边界
 
 - 不要把工作流真相移出 `.ai-delivery`。
 - 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
 - UI 子需求未 `acceptance_frozen` 不得进入 `spec`。
+- `split_ready` UI 切片未明确确认并记录 CP-UI 前，不得 dispatch `ui-truth-mapping`。Stage 2 会写生产代码，必须创建或复用切片 worktree，执行 TDD/golden 测试并完成新鲜上下文评审闭环。
 - UI 切片未 `visual_acceptance_passed` 不得声称 `merged`。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
 - 编排器设计模式不要把设计文档写进框架自有目录；设计摘要存入子需求 `notes`。
-- 每个 UI unit 尚未具备真实宿主组件、未向用户出示官方预览 **绝对路径**、`contracts/ui-truth-index.json` 的仓内相对路径无法从仓库根解析、用户未确认预览（除非明确豁免）之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
-- Stage 4：默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已合入组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
+- 每个 UI unit 尚未具备真实宿主组件、未向用户出示官方预览 **绝对路径**、v1 `contracts/ui-truth-index.json` 的 SHA-256 与逐状态确认/豁免证据无效、Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
+- Stage 4：UI 切片复用 Stage 2 的切片 worktree；不得创建第二个 worktree 或重画组件。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
 - UI 工作未先 `acceptance_frozen` + `visual_acceptance_passed` 且 `ui-truth-index.json` 仍有效时，不得 `merged`。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
@@ -105,9 +108,9 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | 真实组件能编过；官方预览绝对路径已出示；`ui-truth-index.json` 仓内相对路径存在；scope 对齐切片 In Scope；icon 有证据背书（禁手绘图形）；用户确认每份预览（除非豁免） |
-| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；索引路径仍能解析 |
-| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + 索引仍有效 |
+| `acceptance_frozen` | CP-UI 已记录；切片 worktree 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；官方预览绝对路径已出示；v1 索引路径与 SHA-256 校验通过；scope 对齐；icon 有证据；每个状态已确认或明确豁免 |
+| `spec/plan/tasks_ready`（UI） | 曾有效 `acceptance_frozen`；v1 索引路径与 hash 仍有效 |
+| `merged`（UI） | `acceptance_frozen` + `visual_acceptance_passed` + v1 索引仍有效 |
 
 ## 拆分决策
 
@@ -125,7 +128,7 @@ reconcile 输出抽象动作（`design` / `spec` / `plan` / `tasks` / `implement
 
 `implement` 动作按所选档位执行（见 `references/frameworks/`）：有 superpowers 时子代理驱动，有 ECC 时代理驱动，原生档走内联纪律。无论哪个档位，默认纪律一致：顺序任务、内部 TDD、声称完成前先评审。禁止同一切片文件并行实现者。
 
-链路：隔离工作区 → 任务执行（TDD）→ 代码评审 → 视觉验收（UI）→ 完成前验证 → 全量测试 → 合并。
+链路：UI 复用 Stage 2 切片工作区（非 UI 在此创建）→ 任务执行（TDD）→ 代码评审 → 视觉验收（UI）→ 完成前验证 → 全量测试 → 合并。
 
 UI 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
 
@@ -149,15 +152,16 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 |------|------|
 | 新需求 + 素材 | `bootstrap` 或 `resume` |
 | 继续编排 | `resume` |
+| split_ready UI，授权视觉实现 | `confirm_ui`（CP-UI） |
 | tasks_ready，进入开发 | `confirm_to_dev`（CP-001） |
 | 设计待批准 | `confirm_design`（CP-DESIGN） |
 | 阻塞已解决 | `blocker_recovery`（CP-002） |
 
 ## 运行时模式
 
-`bootstrap` | `resume` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
+`bootstrap` | `resume` | `confirm_ui` | `confirm_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
 
-检查点：CP-DESIGN（设计批准）、CP-001（开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（冻结前，所有子需求均已 merged）。
+检查点：CP-UI（Stage 2 生产代码前）、CP-DESIGN（设计批准）、CP-001（剩余开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（冻结前，所有子需求均已 merged）。
 
 ## 完成
 
