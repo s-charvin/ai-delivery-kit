@@ -18,6 +18,13 @@ Never clone or symlink superpowers yourself.
 | `implement` | `using-git-worktrees`, `subagent-driven-development`, `test-driven-development`, `requesting-code-review`, `verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
+## Artifact containment
+
+- Before invoking a superpowers skill, pass the current requirement/sub-requirement canonical root and an explicit output map. Superpowers supplies the reasoning, TDD, review, worktree, and completion discipline; the orchestrator owns every persisted artifact.
+- Disable framework defaults such as `docs/superpowers/**` or `.superpowers/**`. Resolve every destination from the current binding: `brainstorming` writes its approved result to layout key `solution_design`; plan content writes to layout key `plan`; review findings, fix briefs, checklists, and agent/session metadata write to the applicable `progress`, `decisions`, or `verification` key.
+- If a superpowers step requires a framework-owned file and cannot accept the canonical map, do not run that persistence step. Execute the method in-session and write the equivalent canonical artifact directly. Never create the framework file and move it afterward.
+- Host-tree writes remain limited to production source, project-native tests, goldens/official previews, and runtime assets. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before any gate advances.
+
 ## `solution-design` usage advice
 
 - Feed the brainstorming flow: `requirement-slice.md`, each enabled UI truth unit's host component + `ui-truth-index.json`, API docs, and the dependency graph.
@@ -49,3 +56,4 @@ superpowers produces no spec artifacts of its own; `spec_refs.tier` keeps the sp
 
 - Gate / blocker / status / merge decisions always stay in the main orchestrator session; superpowers skills run inside the dispatched work.
 - Do not invoke the brainstorming flow as a substitute for the Stage 1 light audit.
+- Do not let any superpowers skill persist process/governance artifacts outside `.ai-delivery/`, even when its own default instructions require another path.

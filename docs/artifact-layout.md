@@ -31,27 +31,32 @@
         MANIFEST.json            # sha256 清单，不可变性的机器校验依据
 ```
 
-## 2. 派生视图（Derived Views）
+## 2. 框架隔离（无派生治理视图）
 
-框架目录只承载**同步副本**，不得作为真值：
+外部框架只提供方法与执行纪律，不拥有产物目录。所有流程/治理产物直接写入上面的 canonical `.ai-delivery` 路径；`.specify/`、`openspec/`、`docs/superpowers/`、`.superpowers/` 等目录在编排动作期间只能作为既有只读输入，不能承载同步副本。
 
-- `.specify/`：spec-kit 产物视图
-- `openspec/changes/<change>/`：OpenSpec 产物视图
+调用外部 skill 或命令前必须传入明确 canonical 输出映射。若它不能覆盖默认路径，则跳过该持久化步骤，在当前会话应用其方法并直接写 canonical 产物。禁止先生成到框架目录再复制或搬运。
 
-同步方向固定为：**框架执行 → 产物落框架目录 → 动作收尾拷回 canonical 并记 hash → 后续 gate 只读 canonical**。不用 symlink（Windows 兼容风险）。`traceability.json.spec_refs` 每项扩展为：
+宿主树只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。`traceability.json.spec_refs` 记录使用的框架方法和 canonical hash；兼容字段 `derived_paths` 恒为空：
 
 ```json
 {
-  "kind": "spec",
-  "tier": "openspec",
-  "canonical_path": ".ai-delivery/requirements/<req>/sub-requirements/<SR>/spec/spec.md",
-  "derived_paths": ["openspec/changes/<change>/specs/.../spec.md"],
-  "content_sha256": "<sha256 of canonical>",
-  "sync_state": "synced"
+  "spec_refs": {
+    "tier": "openspec",
+    "artifacts": [
+      {
+        "kind": "spec",
+        "canonical_path": ".ai-delivery/requirements/<req>/sub-requirements/<SR>/spec/spec.md",
+        "derived_paths": [],
+        "content_sha256": "<sha256 of canonical>",
+        "sync_state": "synced"
+      }
+    ]
+  }
 }
 ```
 
-## 3. spec 演进约定（spec-kit 视角）
+## 3. spec 演进约定
 
 - **活跃开发期**（status < `archived`）= **living spec**：`spec/spec.md` 唯一事实源，`plan.md`/`tasks.md` 是派生物，可随 spec 再生。再生前，被推翻的关键决策必须先落入 `decisions.md`（防 rationale 丢失）。
 - **完结后**（status = `archived`）= **flow-forward**：`archive/` 区冻结不可变（由 `MANIFEST.json` 的 sha256 校验）；需求变更→开新 `<req-id>/`，旧目录只读引用。

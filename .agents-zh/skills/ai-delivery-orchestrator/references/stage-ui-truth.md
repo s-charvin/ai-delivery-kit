@@ -36,6 +36,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 7. 若本轮 unit 集合变化，已完成陈旧指针清扫（`ui-truth-mapping` §9）。
 8. `ui-truth-mapping` 要求的运行时 coverage、动效生命周期、资源/渲染、蒙版/合成、无障碍与 fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。
 9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；切片 worktree 证据已记录，供 Stage 4 复用。
+10. Stage 2 产物边界路径审计已对比边界协议要求的入口/出口 Git 状态/内容指纹账本与独立文件系统指纹。目录指纹包含 ignored 文件，并覆盖外部 skill 声明的每个默认输出根，至少包括 `docs/superpowers/**`、`.superpowers/**`、`.specify/**` 与 `openspec/**`；因此能捕获被 `.gitignore` 隐藏的写入，以及进入动作前已 dirty 路径上的再次写入。`.ai-delivery/` 外只允许新增或修改生产源码、项目原生测试、golden/官方预览和运行时资源。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`；不得冻结或推进状态。在 canonical `progress.md` 记录审计结论与精确越界路径，不删除用户既有文件。
 
 ## 完成后
 

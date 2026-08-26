@@ -101,6 +101,8 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 ## 硬边界
 
 - 不要把工作流真相移出 `.ai-delivery`。
+- 外部 skill 的默认设置绝不授权框架自有产物路径。外部 skill 只提供方法与执行纪律：调用前传入 canonical `.ai-delivery` 输出路径；持久化步骤无法遵守时，跳过该步骤并直接写等价 canonical 产物。禁止先在 `docs/superpowers/**`、`.superpowers/**`、`.specify/**`、`openspec/**` 或其他宿主树框架目录生成流程/治理产物再搬运。
+- `.ai-delivery/` 外只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。推进任何门禁前，对比入口/出口 Git 状态/内容指纹账本，并为外部 skill 声明的每个默认输出根建立包含 ignored 文件的独立文件系统指纹，至少覆盖上述四个禁写根。路径、状态、类型、符号链接目标或 SHA-256 漂移能捕获动作前已 dirty 或 ignored 路径上的再次写入。发现新增或修改且位于 `.ai-delivery/` 外的流程/治理产物时，设置 `blocked_verification_failure`。
 - 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的子需求未 `acceptance_frozen` 不得进入 `spec`；`none` 与 `existing` 跳过该 gate。
 - 只有模式启用且明确确认、记录 CP-UI 后，才能 dispatch `ui-truth-mapping`。Stage 2 会写生产代码，必须创建或复用切片 worktree，执行 TDD/golden 测试并完成新鲜上下文评审闭环。

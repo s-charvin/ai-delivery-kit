@@ -2,6 +2,8 @@
 
 Stage 3 runs the `solution-design` action when `design_mode` is `light` or `full`, followed by `spec` → `plan` → `tasks`. `design_mode=none` skips the solution-design artifact and gate. Concrete tooling depends on the framework tier chosen per [framework-adaptation.md](framework-adaptation.md).
 
+Before dispatching any framework action, apply the [artifact containment protocol](framework-adaptation.md#artifact-containment-protocol-required): pass canonical `.ai-delivery` output paths, treat framework directories as read-only inputs, and skip any persistence step that cannot honor the map.
+
 ## When to run
 
 - `solution-design`: each sub-requirement at `acceptance_frozen` (when UI truth is enabled) or `split_ready` (otherwise) with `design_mode=light`, or with `design_mode=full` and `design_approved: false`.
@@ -46,7 +48,7 @@ If the solution design conflicts with the frozen component / confirmed preview o
 
 When the design mode gate is satisfied, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
 
-Write all human-readable content in `spec.md`, `plan.md`, and `tasks.md` in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
+Before dispatch, resolve the canonical outputs through the binding layout keys `spec`, `plan`, and `tasks`; `spec/spec.md`, `spec/plan.md`, and `spec/tasks.md` are default-layout examples only. Write all human-readable content in the three resolved artifacts in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
 
 1. `spec` → `spec.md` — audit against every frozen unit/scenario id. For UI truth slices the Stage 2 component + confirmed preview set is the visual input, not a separate visual spec document. Preserve the distinction between Figma-origin fidelity and approved runtime behavior.
 2. `plan` → `plan.md` — audit delivery slice ordering and identify which task implements or verifies each scenario id.
@@ -58,13 +60,13 @@ After each step:
 - `plan.md` → `plan_ready`
 - `tasks.md` → `tasks_ready`
 
-Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Each entry of the three-piece set (`spec/spec.md`, `spec/plan.md`, `spec/tasks.md`) MUST record its `content_sha256` so the artifact-layout validator can detect drift. Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
+Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Each `artifacts[]` entry for `spec`, `plan`, and `tasks` MUST record its resolved repo-relative `canonical_path` and current `content_sha256` so the artifact-layout validator can detect drift. Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
 
 ## Spec persistence (living ↔ flow-forward)
 
 While the sub-requirement is not yet `archived`, the spec is **living**:
 
-- `spec/spec.md` is the single source of truth; `spec/plan.md` and `spec/tasks.md` are derived artifacts that may be regenerated as the spec evolves.
+- The artifact resolved from layout key `spec` is the single source of truth; artifacts resolved from `plan` and `tasks` are derived and may be regenerated as the spec evolves.
 - Before regenerating any derived artifact, move the key decisions being overturned into `decisions.md` first (prevents rationale loss).
 
 Once the sub-requirement reaches `archived`, the spec is **flow-forward**:

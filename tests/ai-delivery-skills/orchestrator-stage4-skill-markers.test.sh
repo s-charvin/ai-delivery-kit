@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pressure markers for Stage 4 visual-truth rules.
+# Pressure markers for Stage 4 visual-truth and framework-artifact rules.
 #
 # Observed failures without these rules:
 # 1. Agents re-called TemPad get_code/get_structure during implement because
@@ -9,6 +9,8 @@ set -euo pipefail
 #    creating a second visual truth that can disagree with the frozen HTML.
 # 2. Agents copied contract/get_code pixel widths as runtime constants
 #    instead of fill + parent insets.
+# 3. External frameworks persisted plans, reviews, and session state in their
+#    own repository-root directories instead of the governed sub-requirement.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EN="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-implementation.md"
@@ -17,7 +19,27 @@ EN_UI="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-ui-truth.m
 EN_SKILL="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
 EN_BRIDGE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-4-sdd-bridge.md"
 EN_DESIGN_STAGE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md"
+ZH_DESIGN_STAGE="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md"
 EN_DESIGN_TEMPLATE="$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md"
+EN_ADAPT="$ROOT/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md"
+ZH_ADAPT="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/framework-adaptation.md"
+ZH_UI="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-ui-truth.md"
+ZH_SKILL="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/SKILL-zh.md"
+EN_FRAMEWORKS="$ROOT/.agents/skills/ai-delivery-orchestrator/references/frameworks"
+ZH_FRAMEWORKS="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/frameworks"
+ARTIFACT_LAYOUT="$ROOT/docs/artifact-layout.md"
+ZH_PROTOCOL_HEADING="$(python3 -c 'print("## \u4ea7\u7269\u8fb9\u754c\u534f\u8bae\uff08\u5fc5\u987b\uff09")')"
+ZH_METHOD_ONLY="$(python3 -c 'print("\u5916\u90e8 skill \u53ea\u63d0\u4f9b\u65b9\u6cd5\u4e0e\u6267\u884c\u7eaa\u5f8b")')"
+ZH_NO_MOVE="$(python3 -c 'print("\u7981\u6b62\u5148\u5728\u5176\u4ed6\u4f4d\u7f6e\u751f\u6210\u518d\u642c\u8fd0")')"
+ZH_BOUNDARY_HEADING="$(python3 -c 'print("## \u4ea7\u7269\u8fb9\u754c")')"
+ZH_LAYOUT_HEADING="$(python3 -c 'print("## 2. \u6846\u67b6\u9694\u79bb\uff08\u65e0\u6d3e\u751f\u6cbb\u7406\u89c6\u56fe\uff09")')"
+ZH_FRAMEWORK_FIRST="$(python3 -c 'print("\u4ea7\u7269\u843d\u6846\u67b6\u76ee\u5f55")')"
+ZH_FINGERPRINT="$(python3 -c 'print("\u72b6\u6001/\u5185\u5bb9\u6307\u7eb9\u8d26\u672c")')"
+ZH_IGNORED_FINGERPRINT="$(python3 -c 'print("\u72ec\u7acb\u6587\u4ef6\u7cfb\u7edf\u6307\u7eb9")')"
+ZH_SKIP_PERSISTENCE="$(python3 -c 'print("\u4e0d\u8c03\u7528\u8be5\u6301\u4e45\u5316\u6b65\u9aa4")')"
+ZH_SESSION_METADATA="$(python3 -c 'print("\u4f1a\u8bdd\u5143\u6570\u636e")')"
+ZH_HOST_ALLOWLIST="$(python3 -c 'print("\u5bbf\u4e3b\u6811\u53ea\u5141\u8bb8\u5199\u751f\u4ea7\u6e90\u7801")')"
+ZH_STAGE2_AUDIT="$(python3 -c 'print("Stage 2 \u4ea7\u7269\u8fb9\u754c\u8def\u5f84\u5ba1\u8ba1")')"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -67,6 +89,84 @@ for forbidden in "Responsive" "Reduced motion" "Figma source"; do
 done
 require "$EN_DESIGN_TEMPLATE" "does not duplicate their Runtime Coverage Plan" "EN design template delegates runtime coverage"
 require "$EN_DESIGN_TEMPLATE" "State and Transition Model" "EN design state model"
+
+# Frameworks contribute methods only. Every process/governance artifact stays
+# in the current sub-requirement's canonical .ai-delivery tree.
+require "$EN_ADAPT" "## Artifact containment protocol (REQUIRED)" "EN artifact containment protocol"
+require "$EN_ADAPT" "External skills provide methods and execution discipline only" "EN external skills are method-only"
+require "$EN_ADAPT" "Do not create an artifact elsewhere and move it afterward" "EN no create-then-move"
+require "$EN_ADAPT" 'docs/superpowers/**`, `.superpowers/**`, `.specify/**`, or `openspec/**' "EN forbidden framework roots"
+require "$EN_ADAPT" "blocked_verification_failure" "EN containment failure status"
+require "$EN_ADAPT" "status/content fingerprint ledger" "EN dirty-path fingerprint audit"
+require "$EN_ADAPT" "independent filesystem fingerprint" "EN ignored-path fingerprint audit"
+require "$EN_ADAPT" "including ignored files" "EN ignored paths are auditable"
+require "$ZH_ADAPT" "$ZH_PROTOCOL_HEADING" "ZH artifact containment protocol"
+require "$ZH_ADAPT" "$ZH_METHOD_ONLY" "ZH external skills are method-only"
+require "$ZH_ADAPT" "$ZH_NO_MOVE" "ZH no create-then-move"
+require "$ZH_ADAPT" "blocked_verification_failure" "ZH containment failure status"
+require "$ZH_ADAPT" "$ZH_FINGERPRINT" "ZH dirty-path fingerprint audit"
+require "$ZH_ADAPT" "$ZH_IGNORED_FINGERPRINT" "ZH ignored-path fingerprint audit"
+
+for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
+  require "$EN_FRAMEWORKS/$guide" "## Artifact containment" "EN framework containment ($guide)"
+  require "$ZH_FRAMEWORKS/$guide" "$ZH_BOUNDARY_HEADING" "ZH framework containment ($guide)"
+done
+
+require "$EN_FRAMEWORKS/spec-kit.md" "do not invoke that persistence step" "EN spec-kit persistence override"
+require "$EN_FRAMEWORKS/openspec.md" 'Do not run `openspec archive`' "EN OpenSpec external archive ban"
+require "$EN_FRAMEWORKS/superpowers.md" 'docs/superpowers/**` or `.superpowers/**' "EN superpowers roots forbidden"
+require "$EN_FRAMEWORKS/superpowers.md" 'layout key `solution_design`' "EN superpowers design canonical resolver"
+require "$EN_FRAMEWORKS/superpowers.md" 'layout key `plan`' "EN superpowers plan canonical resolver"
+require "$EN_FRAMEWORKS/ecc.md" "session metadata" "EN ECC metadata containment"
+require "$EN_FRAMEWORKS/ecc.md" 'layout keys `solution_design`, `decisions`, `progress`, and `verification`' "EN ECC canonical resolvers"
+require "$EN_FRAMEWORKS/native.md" "Host-tree writes are limited to production source" "EN native host allowlist"
+require "$ZH_FRAMEWORKS/spec-kit.md" "$ZH_SKIP_PERSISTENCE" "ZH spec-kit persistence override"
+require "$ZH_FRAMEWORKS/openspec.md" "$ZH_SKIP_PERSISTENCE" "ZH OpenSpec persistence override"
+require "$ZH_FRAMEWORKS/superpowers.md" 'docs/superpowers/**' "ZH superpowers roots forbidden"
+require "$ZH_FRAMEWORKS/superpowers.md" 'layout key `solution_design`' "ZH superpowers design canonical resolver"
+require "$ZH_FRAMEWORKS/superpowers.md" 'layout key `plan`' "ZH superpowers plan canonical resolver"
+require "$ZH_FRAMEWORKS/ecc.md" "$ZH_SESSION_METADATA" "ZH ECC metadata containment"
+for key in solution_design decisions progress verification; do
+  require "$ZH_FRAMEWORKS/ecc.md" "layout key \`$key\`" "ZH ECC canonical resolver ($key)"
+done
+require "$ZH_FRAMEWORKS/native.md" "$ZH_HOST_ALLOWLIST" "ZH native host allowlist"
+for guide in spec-kit.md openspec.md native.md; do
+  require "$EN_FRAMEWORKS/$guide" 'layout keys `spec`, `plan`, and `tasks`' "EN dynamic canonical outputs ($guide)"
+  for key in spec plan tasks; do
+    require "$ZH_FRAMEWORKS/$guide" "layout key \`$key\`" "ZH dynamic canonical output ($guide: $key)"
+  done
+  for field in kind canonical_path derived_paths content_sha256 sync_state; do
+    require "$EN_FRAMEWORKS/$guide" "\"$field\"" "EN complete traceability field ($guide: $field)"
+    require "$ZH_FRAMEWORKS/$guide" "\"$field\"" "ZH complete traceability field ($guide: $field)"
+  done
+  require "$EN_FRAMEWORKS/$guide" '"spec_refs"' "EN traceability wrapper ($guide)"
+  require "$ZH_FRAMEWORKS/$guide" '"spec_refs"' "ZH traceability wrapper ($guide)"
+  forbid "$EN_FRAMEWORKS/$guide" 'spec_refs.spec_path' "EN legacy traceability shape ($guide)"
+  forbid "$ZH_FRAMEWORKS/$guide" 'spec_refs.spec_path' "ZH legacy traceability shape ($guide)"
+done
+
+require "$EN_UI" "artifact-boundary path audit" "EN Stage 2 path audit"
+require "$EN_UI" "status/content fingerprint ledger" "EN Stage 2 dirty-path fingerprint"
+require "$EN_UI" 'new or modified process/governance artifact outside `.ai-delivery/`' "EN Stage 2 escape detection"
+require "$EN_UI" "blocked_verification_failure" "EN Stage 2 containment failure"
+require "$ZH_UI" "$ZH_STAGE2_AUDIT" "ZH Stage 2 path audit"
+require "$ZH_UI" "$ZH_FINGERPRINT" "ZH Stage 2 dirty-path fingerprint"
+require "$ZH_UI" "blocked_verification_failure" "ZH Stage 2 containment failure"
+require "$EN_SKILL" "External skill defaults never authorize framework-owned artifact paths" "EN orchestrator external path override"
+require "$EN_SKILL" "status/content fingerprint" "EN orchestrator dirty-path fingerprint"
+require "$ZH_SKILL" 'docs/superpowers/**' "ZH orchestrator external path override"
+require "$ZH_SKILL" "$ZH_FINGERPRINT" "ZH orchestrator dirty-path fingerprint"
+require "$ZH_DESIGN_STAGE" "content_sha256" "ZH traceability hash requirement"
+require "$EN_DESIGN_STAGE" 'layout keys `spec`, `plan`, and `tasks`' "EN Stage 3 dynamic canonical paths"
+for key in spec plan tasks; do
+  require "$ZH_DESIGN_STAGE" "layout key \`$key\`" "ZH Stage 3 dynamic canonical path ($key)"
+done
+require "$ARTIFACT_LAYOUT" "$ZH_LAYOUT_HEADING" "artifact layout forbids derived views"
+
+forbid "$EN_ADAPT" "framework tooling writes there first" "EN framework-first persistence"
+forbid "$ARTIFACT_LAYOUT" "$ZH_FRAMEWORK_FIRST" "artifact layout framework-first persistence"
+forbid "$EN_FRAMEWORKS/spec-kit.md" 'spec-kit feature branch area (`.specify/`)' "EN spec-kit external output"
+forbid "$EN_FRAMEWORKS/openspec.md" 'One OpenSpec change per sub-requirement: `openspec/changes/' "EN OpenSpec external output"
 
 # Kit skills must stay framework-agnostic — no host-app size tokens or live-node anecdotes.
 for f in "$EN" "$ZH"; do

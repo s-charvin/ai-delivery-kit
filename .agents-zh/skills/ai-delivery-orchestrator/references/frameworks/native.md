@@ -2,7 +2,15 @@
 
 **未安装**任何外部框架（spec-kit / OpenSpec / superpowers / ECC）时使用本档位。它是编排器的质量下限：子需求目录内的轻量产物 + 内置纪律规则。原生档产出必须与框架档同等可追溯。
 
-所有原生产物都放在切片旁：`.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`。
+原生流程/治理产物使用当前 binding 声明的 canonical `.ai-delivery` 路径。默认布局把子需求产物放在切片旁：`.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`。
+
+## 产物边界
+
+- 所有流程/治理产物使用 `.ai-delivery/meta/project-binding.json` 声明的 canonical 路径；需求级 status、todo、progress 和交付报告仍保留在各自声明的需求级路径。
+- 宿主树只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。不得创建仓库根级设计、plan、review、report、checklist 或 session 文件。
+- 推进任何门禁前，执行 [../framework-adaptation.md](../framework-adaptation.md) 的产物边界审计。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`。
+
+进入 spec 管道前，解析 binding 的 layout key `spec`、layout key `plan` 与 layout key `tasks`。下文文件名都只是默认布局示例。
 
 ## `solution-design` 动作（原生方案设计流程）
 
@@ -10,12 +18,12 @@
 
 1. 读取 `requirement-slice.md`、启用时的 UI truth 产物、API 文档与依赖图。
 2. 产出：架构草图、组件分解、数据/状态转换模型、scenario ID 引用与关键取舍。Runtime Coverage 细节留在 `contracts/ui-truth-index.json`。
-3. 将方案设计写入 `design.md`（规范产物路径，见 `docs/artifact-layout.md`）并向用户展示精简摘要；`notes` 只保留短状态标记。
+3. 将方案设计写入 layout key `solution_design` 解析出的路径（默认 `design.md`），并向用户展示精简摘要；`notes` 只保留短状态标记。
 4. 完成所需评审后设置 `design_approved: true`：`design_mode=full` 仅经 CP-DESIGN 用户明确批准后设置；`design_mode=light` 完成短方案并通过 AI 自审后设置，不触发 CP-DESIGN。`design_mode=none` 保持 `false`。
 
-## `spec` 动作 — `spec/spec.md`
+## `spec` 动作
 
-创建 `spec/spec.md`，固定四段：
+在 layout key `spec` 解析出的产物中固定写四段：
 
 ```markdown
 # <subreq-id> Spec
@@ -37,9 +45,9 @@
 
 含 UI 的切片先对照每个已冻结 unit/scenario id 审计并保留其证据来源，再设置 `spec_ready`。
 
-## `plan` 动作 — `spec/plan.md`
+## `plan` 动作
 
-创建带 `## Plan` 段的 `spec/plan.md`：
+在 layout key `plan` 解析出的产物中写 `## Plan` 段：
 
 ```markdown
 # <subreq-id> Plan
@@ -48,9 +56,9 @@
 <2-5 句：方案、关键文件/组件、排序理由>
 ```
 
-## `tasks` 动作 — `spec/tasks.md`
+## `tasks` 动作
 
-创建带 `## Tasks` 段的 `spec/tasks.md`：
+在 layout key `tasks` 解析出的产物中写 `## Tasks` 段：
 
 ```markdown
 # <subreq-id> Tasks
@@ -66,7 +74,7 @@
 - 按依赖排序；共享组件先于使用方。
 - 设置 `tasks_ready` 前审计粒度与文件范围。
 
-原生档保持 plan 与 tasks 为独立规范文件（`spec/plan.md`、`spec/tasks.md`），确保所有档位归档的 spec/plan/tasks 三件套一致。
+原生档保持由 `plan` 与 `tasks` 解析出的产物彼此独立，确保所有档位归档的 spec/plan/tasks 三件套一致。
 
 ## `implement` 动作 — 内置纪律
 
@@ -81,21 +89,34 @@
 ## `finish` 动作 — 内置合并清单
 
 1. 完整静态分析 + 完整测试干净通过。
-2. 结构化视觉/运行时验收已落档（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）：`visual-acceptance.json` 绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
+2. 结构化视觉/运行时验收已落档（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）：layout key `visual_acceptance` 解析出的产物绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
 3. 变基到开发分支（无 merge commit）；解决冲突后重跑测试。
-4. 开/合并 PR；只有使用用户当前对话语言写完并签署 `verification.md` 后才设置 `merged`。保留 `templates/verification-template.md` 的三个 `ai-delivery-verification:*` 标记；缺少时状态 validator 会拒绝 `merged`。
+4. 开/合并 PR；只有使用用户当前对话语言写完并签署 layout key `verification` 解析出的产物后才设置 `merged`。保留 `templates/verification-template.md` 的三个 `ai-delivery-verification:*` 标记；缺少时状态 validator 会拒绝 `merged`。
 
 ## 可追溯性记录
 
-子需求 `traceability.json`：
+子需求 `traceability.json` 只使用 canonical `artifacts[]` 结构。为每个 `kind`（`spec`、`plan`、`tasks`）添加一个字段完整的对象：
 
-- `spec_refs.tier`：`"native"`
-- `spec_refs.spec_path`：`sub-requirements/<subreq-id>/spec/spec.md`
-- `spec_refs.plan_path`：`sub-requirements/<subreq-id>/spec/plan.md`
-- `spec_refs.tasks_path`：`sub-requirements/<subreq-id>/spec/tasks.md`
-- `source_index.spec`：`ref_type` 为 `spec` / `plan` / `tasks` 的条目
+```json
+{
+  "spec_refs": {
+    "tier": "native",
+    "artifacts": [
+      {
+        "kind": "spec",
+        "canonical_path": "<由 layout key spec 解析出的仓库相对路径>",
+        "derived_paths": [],
+        "content_sha256": "<canonical 内容的 sha256>",
+        "sync_state": "synced"
+      }
+    ]
+  }
+}
+```
+
+另为每个产物添加一条 `source_index.spec` 记录，`ref_type` 为 `spec` / `plan` / `tasks`。不得发出或混入旧版的按 kind 独立 path 字段。
 
 ## 边界
 
-- 原生产物绝不离开子需求目录；不要发明全仓库的 `specs/` 树。
+- 原生流程/治理产物绝不离开 canonical `.ai-delivery` 路径；不要发明全仓库的 `specs/` 树。
 - 用户之后安装了框架，新的子需求可以切换档位（记入 `decisions.md`）；已推进的子需求保持原档位。

@@ -165,7 +165,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 - `design.md` (canonical solution-design artifact when `design_mode` is `light` or `full`), `verification.md`, `visual-acceptance.json` (UI truth modes only), `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json` (UI truth modes only), `archive/<ISO-ts>/` + `MANIFEST.json`
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
-- Framework dirs (`.specify/`, `openspec/changes/`) are derived views synced back to canonical artifacts
+- External frameworks provide methods only; their process/governance artifacts write directly to canonical `.ai-delivery` paths, never to framework-owned derived views
 
 **No automatic migration** for older repos — only new `ai-delivery init` seeds the layout.
 

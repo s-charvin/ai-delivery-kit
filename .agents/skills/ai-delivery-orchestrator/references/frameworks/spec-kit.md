@@ -13,9 +13,16 @@ If `.specify/` exists but the CLI is missing or broken, degrade to the native ti
 
 | Action | spec-kit usage | Output artifact |
 |--------|----------------|-----------------|
-| `spec` | `/speckit-specify` seeded from `requirement-slice.md` (and reviewed host component + `ui-truth-index.json` for UI slices) | `spec.md` under the spec-kit feature branch area (`.specify/`) |
-| `plan` | `/speckit-plan` | `plan.md` |
-| `tasks` | `/speckit-tasks` | `tasks.md` |
+| `spec` | Apply `/speckit-specify` reasoning to `requirement-slice.md` (and reviewed host component + `ui-truth-index.json` for UI slices) | path resolved from layout key `spec` (default `spec/spec.md`) |
+| `plan` | Apply `/speckit-plan` reasoning | path resolved from layout key `plan` (default `spec/plan.md`) |
+| `tasks` | Apply `/speckit-tasks` reasoning | path resolved from layout key `tasks` (default `spec/tasks.md`) |
+
+## Artifact containment
+
+- Before using a `speckit-*` skill or command, resolve the layout keys `spec`, `plan`, and `tasks` from `.ai-delivery/meta/project-binding.json` via the orchestrator layout resolver, then pass those exact repo-relative canonical paths. The default suffixes are `spec/spec.md`, `spec/plan.md`, and `spec/tasks.md`; never substitute them for a customized binding.
+- `.specify/**` is detection/configuration input only. Do not create or update feature specs, plans, tasks, checklists, state, or agent metadata there.
+- If a `speckit-*` command insists on persisting under `.specify/**` and cannot accept the canonical map, do not invoke that persistence step. Apply the same workflow in the current session and write its result directly to `.ai-delivery`.
+- Do not generate under `.specify/**` and copy back afterward. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before advancing status.
 
 ## Usage advice
 
@@ -33,14 +40,30 @@ spec-kit projects may define a constitution. Respect it where it does not confli
 
 ## Traceability recording
 
-In the sub-requirement `traceability.json`:
+Use only the canonical `artifacts[]` shape in the sub-requirement `traceability.json`. Add one complete object for each `kind` (`spec`, `plan`, `tasks`); do not emit legacy path fields:
 
-- `spec_refs.tier`: `"spec-kit"`
-- `spec_refs.spec_path` / `plan_path` / `tasks_path`: paths of the generated `spec.md` / `plan.md` / `tasks.md`
-- `source_index.spec`: one entry per artifact with `ref_type` `spec` / `plan` / `tasks`
+```json
+{
+  "spec_refs": {
+    "tier": "spec-kit",
+    "artifacts": [
+      {
+        "kind": "spec",
+        "canonical_path": "<repo-relative path resolved from layout key spec>",
+        "derived_paths": [],
+        "content_sha256": "<sha256 of canonical content>",
+        "sync_state": "synced"
+      }
+    ]
+  }
+}
+```
+
+Also add one `source_index.spec` entry per artifact with `ref_type` `spec` / `plan` / `tasks`.
 
 ## Boundaries
 
 - Do not fork or restate official `speckit-*` skills inside the repo.
+- Do not let spec-kit create process/governance artifacts outside `.ai-delivery/`.
 - Do not start `speckit-*` steps while a `design_mode=full` approval is pending (`design_approved: false`); UI truth slices additionally require `acceptance_frozen`.
 - spec-kit covers spec-producing actions only; `implement` / `finish` dispatch to superpowers, ECC, or the native tier per [../framework-adaptation.md](../framework-adaptation.md).

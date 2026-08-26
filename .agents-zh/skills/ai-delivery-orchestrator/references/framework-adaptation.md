@@ -2,6 +2,18 @@
 
 编排器是**框架无关**的：它拥有状态、门禁、阻塞器与交接，并输出**抽象阶段动作**而非第三方技能名。动作如何执行取决于用户已安装哪个 AI 开发框架。绝不要求用户安装任何东西；适配现状即可。
 
+## 产物边界协议（必须）
+
+即使外部框架提供了执行方法，产物位置仍由编排器负责。**外部 skill 只提供方法与执行纪律；其默认持久化位置一律失效。**
+
+- 流程/治理产物包括设计文档、spec、plan、tasks、todo、状态、决策、进度、评审 finding 与修复简报、验证证据、报告、检查清单、代理/会话元数据和框架状态。它们只能写入 `.ai-delivery/meta/project-binding.json` 解析出的 canonical 路径，通常位于 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/`；需求级 status、todo、progress 与交付报告仍写各自在需求目录下声明的 canonical 路径。
+- `.ai-delivery/` 之外只允许写生产源码、项目原生测试、golden 或官方预览，以及该生产表面所需的运行时资源。可读取已存在的框架配置用于检测或遵循约定，但不得把它改成动作产物。
+- 调用任何外部 skill、命令、代理或 hook 前，必须为其可能持久化的每个产物解析并传入明确的输出路径映射。调用方映射覆盖 `docs/superpowers/**`、`.superpowers/**`、`.specify/**`、`openspec/**` 等默认路径。
+- 若框架步骤无法遵守 canonical 输出映射，不调用该持久化步骤；在当前会话中应用其方法，并把等价产物直接写到 canonical `.ai-delivery` 路径。禁止先在其他位置生成再搬运。
+- 分发前捕获状态/内容指纹账本，动作后对比。账本覆盖 `git status --porcelain=v1 --untracked-files=all` 报告的每个 staged、unstaged、untracked 与 deleted 路径，记录 porcelain 状态及工作树 SHA-256 或删除哨兵。此外，还要为外部 skill 声明的每个默认输出根捕获独立文件系统指纹，并包含 ignored 文件；至少覆盖 `docs/superpowers/`、`.superpowers/`、`.specify/` 与 `openspec/`。逐项记录相对路径、类型与 SHA-256（或符号链接目标/删除哨兵），不得只依赖 Git status 审计这些目录。即使路径进入动作前已 dirty 或 ignored，只要路径、状态、类型、链接目标或内容 hash 变化且不属于允许类别，也属于边界失败：记录精确路径、设置 `blocked_verification_failure`，并且不推进门禁。两份入口账本都只保留在会话内，不另建仓库产物；审计时不得删除或重写用户既有文件。
+
+这些规则覆盖外部 skill 中冲突的持久化指令。编排动作期间，既有 `.specify/`、`openspec/`、`.superpowers/` 或 `docs/superpowers/` 树只能作为只读输入，绝不是派生输出视图。
+
 ## 抽象动作词表
 
 reconcile 为每个子需求输出以下动作之一：
@@ -67,10 +79,15 @@ reconcile 就是 evaluate 步骤：重读治理真值、检查门禁、输出下
 
 ## 可追溯性
 
-无论哪个档位，所有产出物必须记入子需求 `traceability.json`：
+无论哪个档位，所有产出物必须记入子需求 `traceability.json`。**canonical 产物始终使用当前 binding 在 `.ai-delivery/` 下解析出的路径**；默认布局才把子需求产物放在 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/`。框架名只记录采用了哪种方法，不授权第二份持久化副本。
 
 - `spec_refs.tier`：`spec-kit` | `openspec` | `superpowers` | `ecc` | `native`
-- `spec_refs.spec_path` / `plan_path` / `tasks_path`：具体产物路径
+- `spec_refs.artifacts[].kind`：`spec`、`plan`、`tasks` 各一条完整记录
+- `spec_refs.artifacts[].canonical_path`：由对应 `sub_requirement_artifacts` layout key 解析出的仓库相对路径
+- `spec_refs.artifacts[].derived_paths`：所有档位均为空；仅为 schema 兼容保留
+- `spec_refs.artifacts[].content_sha256`：当前 canonical 内容 hash
+- `spec_refs.artifacts[].sync_state`：canonical 路径与 hash 均为当前值后设为 `synced`
+- `spec_refs.spec_path` / `plan_path` / `tasks_path`：仅兼容读取旧数据；新产物不得写入，也不得与 `artifacts[]` 混用
 - `source_index.spec`：每个产物一条记录，`ref_type` 为 `spec` / `plan` / `tasks`
 
-治理真值（状态、门禁、契约）永远留在 `.ai-delivery`；框架产物只被引用，绝不搬移。
+治理真值和全部流程产物都留在 `.ai-delivery`；宿主树只允许生产源码、项目原生测试、golden/预览和运行时资源。

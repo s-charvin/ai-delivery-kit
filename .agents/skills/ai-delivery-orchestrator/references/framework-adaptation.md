@@ -2,6 +2,18 @@
 
 The orchestrator is **framework-agnostic**: it owns state, gates, blockers, and handoffs, and emits **abstract stage actions** instead of third-party skill names. How an action is executed depends on which AI development framework the user has installed. Never require the user to install anything; adapt to what exists.
 
+## Artifact containment protocol (REQUIRED)
+
+The orchestrator owns artifact placement even when an external framework supplies the method. **External skills provide methods and execution discipline only; their default persistence locations are disabled.**
+
+- Process/governance artifacts include design documents, specs, plans, tasks, todos, status, decisions, progress, review findings and fix briefs, verification evidence, reports, checklists, agent/session metadata, and framework state. Write them only to the canonical path resolved from `.ai-delivery/meta/project-binding.json`, normally under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/`; requirement-wide status, todo, progress, and delivery reports stay at their declared requirement-level canonical paths.
+- Writes outside `.ai-delivery/` are limited to production source, project-native tests, goldens or official previews, and runtime assets required by that production surface. Framework configuration that already exists may be read for detection or conventions, but must not be modified as action output.
+- Before invoking any external skill, command, agent, or hook, resolve and pass an explicit output map for every artifact it may persist. This caller-provided map overrides paths such as `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, or `openspec/**`.
+- If a framework step cannot honor the canonical output map, do not invoke that persistence step. Apply its method in the current session and write the equivalent artifact directly to the canonical `.ai-delivery` path. Do not create an artifact elsewhere and move it afterward.
+- Capture a status/content fingerprint ledger before dispatch and compare it after the action. Include every staged, unstaged, untracked, and deleted path reported by `git status --porcelain=v1 --untracked-files=all`, its porcelain status, and its working-tree SHA-256 or a deletion sentinel. In addition, capture an independent filesystem fingerprint for every declared external default output root, including ignored files; cover at least `docs/superpowers/`, `.superpowers/`, `.specify/`, and `openspec/`. Record each entry's relative path, type, and SHA-256 (or symlink target/deletion sentinel). Never rely on Git status alone for those roots. A new path, changed status, changed type, changed target, or changed content hash outside the allowed categories is a containment failure even when that path was already dirty or ignored at entry: record the exact path, set `blocked_verification_failure`, and do not advance the gate. Keep both entry ledgers in session rather than creating another repository artifact; do not delete or rewrite pre-existing user files while auditing.
+
+These rules override conflicting persistence instructions in external skills. Existing `.specify/`, `openspec/`, `.superpowers/`, or `docs/superpowers/` trees are read-only inputs during an orchestrated action, never derived output views.
+
 ## Abstract action vocabulary
 
 reconcile emits one of these actions per sub-requirement:
@@ -67,26 +79,36 @@ reconcile is the evaluate step: it re-reads governed truth, checks guards, and e
 
 ## Traceability
 
-Regardless of tier, every produced artifact must be recorded in the sub-requirement `traceability.json`. The **canonical artifact always lives under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/`** (see `docs/artifact-layout.md` for the full contract). Framework directories (`.specify/`, `openspec/`) are **derived/synced views only** — framework tooling writes there first, then the action copies the result back to the canonical path and records its hash.
+Regardless of tier, every produced artifact must be recorded in the sub-requirement `traceability.json`. The **canonical artifact always uses the current binding's resolved path under `.ai-delivery/`**; the default layout places sub-requirement artifacts under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/` (see `docs/artifact-layout.md` for the full contract). Framework names record which method was used; they do not authorize a second persisted copy.
 
-Extended `spec_refs` schema (one entry per produced artifact):
+Extended `spec_refs` schema (one entry per produced artifact). The example uses the default layout; `canonical_path` must use the repo-relative path resolved from the current binding's `spec` layout key:
 
 ```json
 {
-  "kind": "spec",
-  "tier": "spec-kit",
-  "canonical_path": "sub-requirements/<SR-xxx>/spec/spec.md",
-  "derived_paths": ["<framework-dir>/.../spec.md"],
-  "content_sha256": "<sha256 of canonical content>",
-  "sync_state": "synced"
+  "spec_refs": {
+    "tier": "spec-kit",
+    "artifacts": [
+      {
+        "kind": "spec",
+        "canonical_path": ".ai-delivery/requirements/<req-id>/sub-requirements/<SR-xxx>/spec/spec.md",
+        "derived_paths": [],
+        "content_sha256": "<sha256 of canonical content>",
+        "sync_state": "synced"
+      }
+    ]
+  }
 }
 ```
 
 Canonical path fields:
 
 - `spec_refs.tier`: `spec-kit` | `openspec` | `superpowers` | `ecc` | `native`
-- `spec_refs.spec_path` / `plan_path` / `tasks_path`: canonical paths under `spec/` (`spec/spec.md`, `spec/plan.md`, `spec/tasks.md`)
-- `spec_refs.derived_paths`: framework-dir copies (empty for native)
+- `spec_refs.artifacts[].kind`: exactly one complete entry for each of `spec`, `plan`, and `tasks`
+- `spec_refs.artifacts[].canonical_path`: repo-relative path resolved from the corresponding `sub_requirement_artifacts` layout key
+- `spec_refs.artifacts[].derived_paths`: empty for every tier; retained only for schema compatibility
+- `spec_refs.artifacts[].content_sha256`: current canonical content hash
+- `spec_refs.artifacts[].sync_state`: `synced` after the canonical path and hash are current
+- `spec_refs.spec_path` / `plan_path` / `tasks_path`: legacy read compatibility only; never emit or combine them with `artifacts[]`
 - `source_index.spec`: one entry per artifact with `ref_type` `spec` / `plan` / `tasks`
 
-Governed truth (status, gates, contracts) always stays in `.ai-delivery`; framework artifacts are referenced, never moved, and never treated as the source of truth.
+Governed truth and every process artifact stay in `.ai-delivery`; only production source, project-native tests, goldens/previews, and runtime assets may be written in the host tree.

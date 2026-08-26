@@ -161,7 +161,7 @@ bash scripts/rehearse-release.sh
 
 - `design.md`（`design_mode` 为 `light` 或 `full` 时的规范方案设计产物）、`verification.md`、`visual-acceptance.json`（仅 UI truth 模式）、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`（仅 UI truth 模式）、`archive/<ISO-ts>/` + `MANIFEST.json`
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
-- 框架目录（`.specify/`、`openspec/changes/`）为派生视图，产物须同步回 canonical
+- 外部框架只提供方法；其流程/治理产物直接写入 canonical `.ai-delivery` 路径，绝不写入框架自有派生视图
 
 **不做旧布局自动迁移** — 仅新 `ai-delivery init` 播种新布局。
 

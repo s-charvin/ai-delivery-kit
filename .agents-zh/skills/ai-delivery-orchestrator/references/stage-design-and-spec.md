@@ -2,6 +2,8 @@
 
 阶段 3 在 `design_mode` 为 `light` 或 `full` 时执行 `solution-design`，随后执行 `spec` → `plan` → `tasks`。`design_mode=none` 跳过方案设计产物与门禁。具体工具取决于按 [framework-adaptation.md](framework-adaptation.md) 选定的框架档位。
 
+分发任何框架动作前，先应用[产物边界协议](framework-adaptation.md#产物边界协议必须)：传入 canonical `.ai-delivery` 输出路径，把框架目录当作只读输入，并跳过任何无法遵守该映射的持久化步骤。
+
 ## 何时运行
 
 - `solution-design`：启用 UI truth 时处于 `acceptance_frozen`、否则处于 `split_ready`，且 `design_mode=light`，或 `design_mode=full` 且 `design_approved: false` 的子需求。
@@ -46,7 +48,7 @@
 
 当设计模式门禁满足后，按 reconcile 输出的动作执行，使用 [frameworks/](frameworks/) 下所选档位的指南：
 
-`spec.md`、`plan.md` 和 `tasks.md` 的所有人类可读内容都使用用户当前对话语言。机器键、ID、路径、命令、代码符号和协议字面量保持原样。
+分发前，分别通过 binding 的 layout key `spec`、layout key `plan` 与 layout key `tasks` 解析 canonical 输出；`spec/spec.md`、`spec/plan.md` 和 `spec/tasks.md` 只是默认布局示例。三个已解析产物的所有人类可读内容都使用用户当前对话语言。机器键、ID、路径、命令、代码符号和协议字面量保持原样。
 
 1. `spec` → `spec.md` — 对照每个已冻结 unit/scenario id 审计。UI truth 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份视觉 spec 文档；保留 Figma 来源视觉保真与已批准运行时行为之间的区别。
 2. `plan` → `plan.md` — 审计交付切片顺序，并标出由哪个任务实现或验证每个 scenario id。
@@ -58,7 +60,7 @@
 - `plan.md` → `plan_ready`
 - `tasks.md` → `tasks_ready`
 
-无论哪个档位，产物都要记入 `traceability.json` `spec_refs`（见 [framework-adaptation.md](framework-adaptation.md) → 可追溯性）。不要 fork 或复述框架管道技能来重述仓库本地契约。
+无论哪个档位，产物都要记入 `traceability.json` `spec_refs`（见 [framework-adaptation.md](framework-adaptation.md) → 可追溯性）。`spec`、`plan` 与 `tasks` 的每个 `artifacts[]` 条目都必须记录解析后的仓库相对 `canonical_path` 和当前 `content_sha256`，供 artifact-layout validator 检测 drift。不要 fork 或复述框架管道技能来重述仓库本地契约。
 
 ## 暂停
 

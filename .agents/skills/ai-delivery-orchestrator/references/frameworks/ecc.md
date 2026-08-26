@@ -17,6 +17,13 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 | `implement` | ECC task-execution agents with its rules/hooks enforcing conventions; treat its review agents as the per-task review step |
 | `finish` | ECC review/verification commands before rebase-merge |
 
+## Artifact containment
+
+- Before invoking an ECC command or agent, pass the current requirement/sub-requirement canonical root and an explicit output map. ECC supplies design, execution, and review methods only.
+- Resolve the binding layout keys `solution_design`, `decisions`, `progress`, and `verification`. Write design output and review findings, fix briefs, reports, checklists, and session metadata to the applicable resolved path. Never persist them in ECC-owned project or user directories.
+- If an ECC agent/hook cannot honor the canonical map, do not invoke its persistence step. Run the equivalent method in-session and write directly to `.ai-delivery`; never create elsewhere and move afterward.
+- Host-tree writes remain limited to production source, project-native tests, goldens/official previews, and runtime assets. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before any gate advances.
+
 ## Usage advice
 
 - Keep the orchestrator loop intact: ECC commands serve a single abstract action each; status transitions, gates, and blockers stay in the main session.
@@ -34,3 +41,4 @@ ECC produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-produ
 
 - Never install or configure ECC yourself.
 - Do not let ECC agents decide gate/status/merge outcomes; they only execute the dispatched action.
+- Do not let ECC persist process/governance artifacts outside `.ai-delivery/`.

@@ -544,6 +544,65 @@ def _selftest() -> int:
         )
         assert not any(e.startswith("[DRIFT]") for e in validate_requirement(root))
 
+    # A customized binding may place spec artifacts outside sub_requirement_dir.
+    # Drift checks must resolve the recorded repo-relative canonical path.
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        ai_delivery = repo / ".ai-delivery"
+        meta = ai_delivery / "meta"
+        meta.mkdir(parents=True)
+        (meta / "project-binding.json").write_text(
+            json.dumps(
+                {
+                    "ai_delivery_path": ".ai-delivery",
+                    "layout": {
+                        "requirement_root": "requirements/{req_id}",
+                        "sub_requirement_dir": (
+                            "requirements/{req_id}/sub-requirements/{sr_id}"
+                        ),
+                        "requirement_artifacts": {},
+                        "sub_requirement_artifacts": {
+                            "spec": (
+                                "requirements/{req_id}/custom-artifacts/"
+                                "{sr_id}/spec.md"
+                            )
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        sr = ai_delivery / "requirements" / "REQ-C" / "sub-requirements" / "SR-C"
+        sr.mkdir(parents=True)
+        custom_spec = (
+            ai_delivery / "requirements" / "REQ-C" / "custom-artifacts" / "SR-C" / "spec.md"
+        )
+        custom_spec.parent.mkdir(parents=True)
+        custom_spec.write_text("# custom spec\n", encoding="utf-8")
+        (sr / "traceability.json").write_text(
+            json.dumps(
+                {
+                    "spec_refs": {
+                        "tier": "native",
+                        "artifacts": [
+                            {
+                                "kind": "spec",
+                                "canonical_path": (
+                                    ".ai-delivery/requirements/REQ-C/"
+                                    "custom-artifacts/SR-C/spec.md"
+                                ),
+                                "derived_paths": [],
+                                "content_sha256": canonical_sha256("# custom spec\n"),
+                                "sync_state": "synced",
+                            }
+                        ],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert spec_drift(sr) == [], spec_drift(sr)
+
     # policy is readable and carries the spec_persistence contract
     policy = load_workflow_policy(Path(__file__).resolve().parents[1])
     assert policy.get("spec_persistence", {}).get("active") == "living", policy.get("spec_persistence")

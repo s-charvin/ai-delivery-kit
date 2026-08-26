@@ -390,17 +390,51 @@ def iter_spec_artifacts(traceability: dict | None) -> list[dict]:
     return legacy
 
 
-def _resolve_canonical(subreq_dir: Path, rel: str) -> Path:
-    """Resolve a recorded canonical_path against the sub-requirement dir.
+def _repo_root_from_ai_delivery_dir(ad_dir: Path) -> Path:
+    """Resolve the repository root from an ai_delivery_path binding."""
+    try:
+        data = json.loads(
+            (ad_dir / "meta" / "project-binding.json").read_text(encoding="utf-8")
+        )
+    except (OSError, json.JSONDecodeError):
+        return ad_dir.parent
+    configured = data.get("ai_delivery_path") if isinstance(data, dict) else None
+    if not isinstance(configured, str) or not configured:
+        return ad_dir.parent
+    configured_path = Path(configured)
+    if configured_path.is_absolute() or ".." in configured_path.parts:
+        return ad_dir.parent
+    repo_root = ad_dir
+    for part in configured_path.parts:
+        if part not in {"", "."}:
+            repo_root = repo_root.parent
+    try:
+        if (repo_root / configured_path).resolve() == ad_dir.resolve():
+            return repo_root
+    except OSError:
+        pass
+    return ad_dir.parent
 
-    Recorded paths may be written relative to the sub-requirement itself
-    (``spec/spec.md``) or include the ``sub-requirements/<SR>/`` prefix; both
-    resolve to the same file.
+
+def _resolve_canonical(subreq_dir: Path, rel: str) -> Path:
+    """Resolve every supported recorded canonical_path form.
+
+    Records may be relative to the sub-requirement, relative to the governed
+    ai_delivery_path, or relative to the repository. The latter two forms are
+    required when a binding places an artifact outside ``sub_requirement_dir``.
     """
     p = Path(rel)
     direct = subreq_dir / p
     if direct.is_file():
         return direct
+    ad_dir = find_ai_delivery_dir(subreq_dir)
+    if ad_dir is not None and not p.is_absolute():
+        governed_relative = ad_dir / p
+        if governed_relative.is_file():
+            return governed_relative
+        repo_relative = _repo_root_from_ai_delivery_dir(ad_dir) / p
+        if repo_relative.is_file():
+            return repo_relative
     marker = "sub-requirements/"
     posix = p.as_posix()
     if marker in posix:

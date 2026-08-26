@@ -18,6 +18,13 @@
 | `implement` | `using-git-worktrees`、`subagent-driven-development`、`test-driven-development`、`requesting-code-review`、`verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
+## 产物边界
+
+- 调用 superpowers skill 前，传入当前需求/子需求 canonical 根目录和明确的输出映射。superpowers 只提供推理、TDD、评审、worktree 与收尾纪律；所有持久化产物都由编排器决定位置。
+- 禁用 `docs/superpowers/**`、`.superpowers/**` 等框架默认路径，并从当前 binding 解析每个目标。`brainstorming` 的已批准结果写入 layout key `solution_design`；plan 内容写入 layout key `plan`；评审 finding、修复简报、检查清单与代理/会话元数据写入适用的 `progress`、`decisions` 或 `verification` key。
+- 若 superpowers 步骤必须写框架自有文件且不接受 canonical 映射，则不运行该持久化步骤；在会话内执行其方法并直接写等价 canonical 产物。禁止先生成框架文件再搬运。
+- 宿主树只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。任何门禁推进前，执行 [../framework-adaptation.md](../framework-adaptation.md) 的产物边界审计。
+
 ## `solution-design` 使用意见
 
 - 喂给 brainstorming 流程：`requirement-slice.md`、每个启用 UI truth 的单元的冻结宿主组件 / `ui-truth-index.json`、API 文档和依赖图。
@@ -49,3 +56,4 @@ superpowers 本身不产出规格产物；`spec_refs.tier` 保持规格类档位
 
 - 门禁/阻塞器/状态/合并决策永远留在编排器主会话；superpowers 技能只在被派发的工作内运行。
 - 不要用 brainstorming 流程替代 Stage 1 的轻量审计。
+- 即使 superpowers 自身默认指令要求其他路径，也不得让它在 `.ai-delivery/` 外持久化流程/治理产物。

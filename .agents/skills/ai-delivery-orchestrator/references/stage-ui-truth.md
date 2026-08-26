@@ -36,6 +36,7 @@ Within the slice worktree, use the Stage 4 implementation discipline for the vis
 7. If the unit set changed in this run, the stale-pointer sweep (`ui-truth-mapping` §9) is done.
 8. Runtime coverage, motion lifecycle, asset/rendering, mask/compositing, accessibility, and fill-hug-fixed notes required by `ui-truth-mapping` are recorded (comments or freeze chat), not as a second paint file.
 9. Stage 2 tests pass and the latest fresh-context review is clean; the slice worktree evidence is recorded for Stage 4 reuse.
+10. The Stage 2 artifact-boundary path audit compares the entry/exit Git status/content fingerprint ledger and the independent filesystem fingerprints required by the containment protocol. The root fingerprints include ignored files and cover every declared external default output root, at least `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, and `openspec/**`; this catches writes hidden by `.gitignore` and repeated writes to paths already dirty at entry. Outside `.ai-delivery/`, only production source, project-native tests, goldens/official previews, and runtime assets may be new or modified. Any new or modified process/governance artifact outside `.ai-delivery/` sets `blocked_verification_failure`; do not freeze or advance status. Record the audit result and exact offending paths in canonical `progress.md`, without deleting pre-existing user files.
 
 ## After completion
 
