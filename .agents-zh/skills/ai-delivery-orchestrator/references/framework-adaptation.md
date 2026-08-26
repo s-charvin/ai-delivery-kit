@@ -14,6 +14,12 @@
 
 这些规则覆盖外部 skill 中冲突的持久化指令。编排动作期间，既有 `.specify/`、`openspec/`、`.superpowers/` 或 `docs/superpowers/` 树只能作为只读输入，绝不是派生输出视图。
 
+## Workspace 选择（必须）
+
+[Workspace 与 Worktree 策略](workspace-policy.md) 是所有框架档位的唯一权威。默认使用当前 checkout。创建或复用 worktree 必须取得当前子需求的明确确认，准确路径必须为 `<project-root>/.worktrees/<req-id>-<sr-id>`。checkpoint 与旧的强制隔离字段都不构成用户同意。
+
+调用外部 skill 前，必须同时传入 canonical 产物输出映射与准确的用户已批准 workspace。自动创建、自动复用或把 worktree 放到项目外的框架指令一律失效。如果会话已处于外部 worktree，停止生产编辑并按该策略进入用户决策门禁。
+
 ## 抽象动作词表
 
 reconcile 为每个子需求输出以下动作之一：
@@ -21,12 +27,12 @@ reconcile 为每个子需求输出以下动作之一：
 | 动作 | 含义 | 典型触发状态 |
 |------|------|--------------|
 | `requirement-breakdown` | kit 自有技能：拆分需求 | `draft` |
-| `ui-truth-mapping` | kit 自有能力：在切片 worktree 中执行受控视觉实现 | `ui_truth_mode=figma` 或 `runtime-baseline` 的 `split_ready`，且 CP-UI 之后 |
+| `ui-truth-mapping` | kit 自有能力：在用户已批准 workspace 中执行受控视觉实现 | `ui_truth_mode=figma` 或 `runtime-baseline` 的 `split_ready`，且 CP-UI 之后 |
 | `solution-design` | 探索并提出方案设计；是否审批由 `design_mode` 决定 | `design_mode` 非 `none` 的 `split_ready` / `acceptance_frozen` |
 | `spec` | 产出子需求规格 | `design_mode` 门禁满足后 |
 | `plan` | 产出技术方案 | `spec_ready` |
 | `tasks` | 产出任务拆分 | `plan_ready` |
-| `implement` | 实现剩余任务（UI 复用 Stage 2 worktree；TDD + 评审纪律） | CP-001 之后的 `tasks_ready` / `in_dev` |
+| `implement` | 实现剩余任务（UI 复用 Stage 2 已批准 workspace；TDD + 评审纪律） | CP-001 之后的 `tasks_ready` / `in_dev` |
 | `finish` | 变基合并并关闭切片 | `visual_acceptance_passed` |
 
 `requirement-breakdown` 与 `ui-truth-mapping` 是 kit 技能，能力启用时直接调用；`ui-truth-mapping` 会写生产代码，仍受 CP-UI 门禁。`solution-design` 是由 `design_mode` 决定审批行为的编排器动作；其余动作一律通过下文选定的框架档位分发。

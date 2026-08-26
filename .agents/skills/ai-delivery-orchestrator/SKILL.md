@@ -92,7 +92,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 ## Pause points (6)
 
 1. After split/skip decision — confirm with user
-2. Before enabled UI truth production-code work — CP-UI, authorize the controlled visual implementation and slice worktree
+2. Before enabled UI truth production-code work — CP-UI, authorize the controlled visual implementation (workspace choice is a separate user decision)
 3. After a `design_mode=full` solution-design session — CP-DESIGN, explicit approval before `spec`
 4. After `tasks_ready` — CP-001, confirm before the remaining development work
 5. Review-loop budget exhausted — the task-level review loop (implement → review → fix → re-review) stopped without a clean round; report outstanding findings and wait for the user
@@ -101,27 +101,28 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 ## Hard boundary
 
 - Do not move workflow truth out of `.ai-delivery`.
+- Workspace selection follows [references/workspace-policy.md](references/workspace-policy.md). The current checkout is the default; creating or reusing a worktree requires separate explicit confirmation for the current sub-requirement, and an approved worktree must be at `<project-root>/.worktrees/<req-id>-<sr-id>`. CP-UI, CP-001, framework defaults, and legacy `require_isolated_worktree` values are not consent. When already in an external worktree, stop production edits and ask the user to switch to the project checkout or the exact project-local worktree. Leave the external worktree unchanged; switching does not authorize migration or deletion.
 - External skill defaults never authorize framework-owned artifact paths. External skills provide methods and execution discipline only: pass canonical `.ai-delivery` output paths before invocation; if a persistence step cannot honor them, skip that step and write the equivalent canonical artifact directly. Never create process/governance artifacts under `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, `openspec/**`, or another host-tree framework directory and move them afterward.
 - Outside `.ai-delivery/`, writes are limited to production source, project-native tests, goldens/official previews, and runtime assets. Before advancing any gate, compare the entry/exit Git status/content fingerprint and independent filesystem fingerprints for every declared external default output root, including ignored files and at least the four forbidden roots above. Path, status, type, symlink-target, or SHA-256 drift catches writes even when a path was already dirty or ignored. A new or modified process/governance artifact outside `.ai-delivery/` sets `blocked_verification_failure`.
 - Do not require the user to install or pick frameworks/skills on the normal path; adapt to what is already installed.
 - Do not let `ui_truth_mode=figma` or `runtime-baseline` subreqs enter `spec` before `acceptance_frozen`; `none` and `existing` bypass that gate.
-- Do not dispatch `ui-truth-mapping` unless the mode enables the capability and CP-UI is explicitly confirmed and recorded. Stage 2 writes production code, so it must create or reuse the slice worktree, use TDD/golden tests, and close a fresh-context review loop.
+- Do not dispatch `ui-truth-mapping` unless the mode enables the capability and CP-UI is explicitly confirmed and recorded. Stage 2 writes production code in the user-approved workspace, uses TDD/golden tests, and closes a fresh-context review loop.
 - Do not let UI truth slices claim `merged` before `visual_acceptance_passed`; `none` and `existing` use ordinary behavior/semantic verification.
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
 - Do not write solution-design docs into framework-owned directories during orchestrator solution-design mode; write the canonical artifact to subreq `design.md` and keep only a short pointer in `notes`.
 - For `ui_truth_mode=figma` or `runtime-baseline`, do not set `acceptance_frozen` until each UI unit has a real host-stack component, complete applicability-gated runtime coverage, an official-stack preview for every visual scenario whose **absolute path** was shown to the user, a valid v2 `contracts/ui-truth-index.json` with matching SHA-256 hashes and confirmation bound to current preview hashes, and a clean Stage 2 review. Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`.
-- Stage 4: for `ui_truth_mode=figma` or `runtime-baseline`, reuse the Stage 2 slice worktree; do not create a second worktree or re-draw the component. `existing` uses the existing component and ordinary behavior/semantic checks; `none` has no UI truth artifact. Do not re-query TemPad / run `figma-design-to-code` by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
+- Stage 4: for `ui_truth_mode=figma` or `runtime-baseline`, reuse the Stage 2 user-approved workspace; do not create a second workspace or re-draw the component. `existing` uses the existing component and ordinary behavior/semantic checks; `none` has no UI truth artifact. Do not re-query TemPad / run `figma-design-to-code` by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
 - Do not set `merged` for `ui_truth_mode=figma` or `runtime-baseline` without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid v2 `ui-truth-index.json` + structured `visual-acceptance.json` covering every indexed scenario. `none` and `existing` close through ordinary verification.
 - Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
-- Edit one file at a time during implementation; rebase worktrees (no merge commits).
+- Edit one file at a time during implementation; rebase branches (no merge commits).
 
 ## Status transition gates
 
 | Target | Requirement |
 |--------|-------------|
-| `acceptance_frozen` | Required only for `ui_truth_mode=figma` or `runtime-baseline`: CP-UI recorded; slice worktree evidence recorded; real component compiles; Stage 2 TDD/review clean; all ten runtime dimensions are `covered` or reasoned `not_applicable`; preview paths, v2 index hashes/provenance/profile/scenario coverage, and preview-bound confirmations validate |
+| `acceptance_frozen` | Required only for `ui_truth_mode=figma` or `runtime-baseline`: CP-UI recorded; user-approved workspace evidence recorded; real component compiles; Stage 2 TDD/review clean; all ten runtime dimensions are `covered` or reasoned `not_applicable`; preview paths, v2 index hashes/provenance/profile/scenario coverage, and preview-bound confirmations validate |
 | `spec/plan/tasks_ready` (UI truth) | Valid prior `acceptance_frozen`; v2 index paths, hashes, coverage, and confirmation bindings still validate |
 | `merged` (UI truth) | UI truth mode has prior `acceptance_frozen` + `visual_acceptance_passed` + valid v2 index + structured `visual-acceptance.json`; `existing` uses ordinary behavior/semantic evidence, and `none` skips visual acceptance |
 | `archived` | Frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256; immutable (verified by `--verify-archive`) |
@@ -142,7 +143,7 @@ After `split_ready`, main session runs inline 4-check audit per subreq (gaps, co
 
 The `implement` action executes per the selected tier (see `references/frameworks/`): subagent-driven when superpowers is present, agent-driven with ECC, inline disciplined on the native tier. Default discipline regardless of tier: sequential tasks, TDD inside, code review before completion claims. Never parallel implementers on the same slice files.
 
-Chain: reuse the Stage 2 slice workspace for UI truth modes that enable it (create one here for other slices) → task execution (TDD) → code review → scenario-complete visual/runtime acceptance recorded in `visual-acceptance.json` when required → verification before completion → full test → merge.
+Chain: resolve the user-approved workspace under `references/workspace-policy.md` and reuse the Stage 2 choice for enabled UI truth modes → task execution (TDD) → code review → scenario-complete visual/runtime acceptance recorded in `visual-acceptance.json` when required → verification before completion → full test → merge.
 
 UI truth slices: wire the already-written component (API / route / state / mount); do not re-query TemPad / run `figma-design-to-code` by default. `existing` UI slices do not enter Stage 2; they use normal project behavior and semantic checks.
 

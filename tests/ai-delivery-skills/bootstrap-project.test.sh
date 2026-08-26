@@ -66,6 +66,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/workspace-policy.md" ]]
 for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/frameworks/$guide" ]]
 done
@@ -91,6 +92,9 @@ grep -Fq 'design_mode' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'solution-design' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'capability' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'confirm_solution_design' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'Worktrees are optional' "$TARGET_REPO/AGENTS.md"
+grep -Fq '<project-root>/.worktrees/<req-id>-<sr-id>' "$TARGET_REPO/AGENTS.md"
+grep -Fq '/private/tmp' "$TARGET_REPO/AGENTS.md"
 if grep -R -Fq 'ui_contract_exempt' "$TARGET_REPO/.agents/skills" "$TARGET_REPO/.ai-delivery/meta" \
   --exclude='reconcile-delivery.py'; then
   echo "legacy ui_contract_exempt bypass leaked into bootstrap output" >&2
@@ -122,7 +126,17 @@ if grep -Fq '"ui_truth_mapping"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy
   echo "ui truth must be capability-gated, not a fixed workflow gate" >&2
   exit 1
 fi
-grep -Fq '"ui_stage2_reuses_worktree"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"mode": "current_checkout_unless_user_confirmed"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"require_explicit_user_confirmation": true' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"project_local_root": ".worktrees"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"path_template": ".worktrees/{req_id}-{sr_id}"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"external_worktree_behavior": "stop_and_ask"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"native_tool_requires_exact_path": true' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"ui_stages_reuse_approved_workspace": true' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+if grep -Fq '"require_isolated_worktree"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"; then
+  echo "legacy mandatory worktree policy leaked into bootstrap output" >&2
+  exit 1
+fi
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"review_loop"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"

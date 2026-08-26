@@ -27,6 +27,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"),
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json"),
 		filepath.Join(target, ".agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json"),
+		filepath.Join(target, ".agents/skills/ai-delivery-orchestrator/references/workspace-policy.md"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
 		filepath.Join(target, ".ai-delivery/scripts/validate-delivery-status.py"),
 		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
@@ -70,10 +71,20 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		"ai-delivery-verification:review-rounds",
 		"ai-delivery-verification:commands-results",
 		"ai-delivery-verification:sign-off",
+		`"mode": "current_checkout_unless_user_confirmed"`,
+		`"require_explicit_user_confirmation": true`,
+		`"project_local_root": ".worktrees"`,
+		`"path_template": ".worktrees/{req_id}-{sr_id}"`,
+		`"external_worktree_behavior": "stop_and_ask"`,
+		`"native_tool_requires_exact_path": true`,
+		`"ui_stages_reuse_approved_workspace": true`,
 	} {
 		if !strings.Contains(string(policy), marker) {
 			t.Fatalf("expected verification marker %q in workflow policy, got %s", marker, string(policy))
 		}
+	}
+	if strings.Contains(string(policy), `"require_isolated_worktree"`) {
+		t.Fatalf("legacy mandatory worktree policy must not be seeded, got %s", string(policy))
 	}
 
 	if _, err := os.Stat(filepath.Join(target, ".agents/AGENTS.md")); !os.IsNotExist(err) {
@@ -87,7 +98,14 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if !strings.Contains(string(agentsEntry), "user's current conversation language") {
 		t.Fatalf("expected artifact language policy in AGENTS.md, got %s", string(agentsEntry))
 	}
-	for _, marker := range []string{"v2 profiles", "runtime coverage", "visual-acceptance.json"} {
+	for _, marker := range []string{
+		"v2 profiles",
+		"runtime coverage",
+		"visual-acceptance.json",
+		"Worktrees are optional",
+		"<project-root>/.worktrees/<req-id>-<sr-id>",
+		"/private/tmp",
+	} {
 		if !strings.Contains(string(agentsEntry), marker) {
 			t.Fatalf("expected UI runtime coverage marker %q in AGENTS.md, got %s", marker, string(agentsEntry))
 		}

@@ -11,6 +11,8 @@ set -euo pipefail
 #    instead of fill + parent insets.
 # 3. External frameworks persisted plans, reviews, and session state in their
 #    own repository-root directories instead of the governed sub-requirement.
+# 4. Agents treated CP-UI as worktree consent and accepted a native tool's
+#    only placement under /private/tmp without asking the user.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EN="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-implementation.md"
@@ -23,6 +25,8 @@ ZH_DESIGN_STAGE="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/sta
 EN_DESIGN_TEMPLATE="$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md"
 EN_ADAPT="$ROOT/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md"
 ZH_ADAPT="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/framework-adaptation.md"
+EN_WORKSPACE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/workspace-policy.md"
+ZH_WORKSPACE="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/workspace-policy.md"
 ZH_UI="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-ui-truth.md"
 ZH_SKILL="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/SKILL-zh.md"
 EN_FRAMEWORKS="$ROOT/.agents/skills/ai-delivery-orchestrator/references/frameworks"
@@ -40,6 +44,13 @@ ZH_SKIP_PERSISTENCE="$(python3 -c 'print("\u4e0d\u8c03\u7528\u8be5\u6301\u4e45\u
 ZH_SESSION_METADATA="$(python3 -c 'print("\u4f1a\u8bdd\u5143\u6570\u636e")')"
 ZH_HOST_ALLOWLIST="$(python3 -c 'print("\u5bbf\u4e3b\u6811\u53ea\u5141\u8bb8\u5199\u751f\u4ea7\u6e90\u7801")')"
 ZH_STAGE2_AUDIT="$(python3 -c 'print("Stage 2 \u4ea7\u7269\u8fb9\u754c\u8def\u5f84\u5ba1\u8ba1")')"
+ZH_WORKTREE_OPTIONAL="$(python3 -c 'print("worktree \u662f\u53ef\u9009\u7684")')"
+ZH_WORKTREE_CONFIRM="$(python3 -c 'print("\u5f53\u524d\u5b50\u9700\u6c42\u7684\u7528\u6237\u660e\u786e\u786e\u8ba4")')"
+ZH_EXTERNAL_WORKTREE="$(python3 -c 'print("\u5916\u90e8 worktree")')"
+ZH_EXTERNAL_ROOTS="$(python3 -c 'print("\u7981\u6b62 `/private/tmp`\u3001`/tmp`")')"
+ZH_ONLY_WORKTREE_PATH="$(python3 -c 'print("\u552f\u4e00\u5141\u8bb8\u7684 worktree \u8def\u5f84")')"
+ZH_SWITCH_NOT_DESTRUCTIVE="$(python3 -c 'print("\u5207\u6362 workspace \u4e0d\u6388\u6743\u8fc1\u79fb\u3001\u91cd\u5efa\u6216\u5220\u9664")')"
+ZH_LEAVE_EXTERNAL_UNCHANGED="$(python3 -c 'print("\u4fdd\u6301\u5916\u90e8 worktree \u539f\u6837")')"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -162,6 +173,38 @@ for key in spec plan tasks; do
   require "$ZH_DESIGN_STAGE" "layout key \`$key\`" "ZH Stage 3 dynamic canonical path ($key)"
 done
 require "$ARTIFACT_LAYOUT" "$ZH_LAYOUT_HEADING" "artifact layout forbids derived views"
+
+# A worktree is an optional, user-owned workspace choice. CP-UI/CP-001 and
+# legacy policy flags never count as consent, and external temp roots are invalid.
+require "$EN_WORKSPACE" "Worktrees are optional" "EN optional worktree policy"
+require "$EN_WORKSPACE" "explicit user confirmation for the current sub-requirement" "EN per-slice worktree confirmation"
+require "$EN_WORKSPACE" '.worktrees/<req-id>-<sr-id>' "EN project-local worktree path"
+require "$EN_WORKSPACE" 'The only allowed worktree path is' "EN exact worktree template is mandatory"
+forbid "$EN_WORKSPACE" 'preferred path is' "EN worktree path must not be optional"
+require "$EN_WORKSPACE" "CP-UI and CP-001 do not authorize a worktree" "EN checkpoints are not worktree consent"
+require "$EN_WORKSPACE" "stop production edits and ask the user" "EN external worktree stop-and-ask"
+require "$EN_WORKSPACE" '`/private/tmp`, `/tmp`' "EN external temporary roots"
+require "$EN_WORKSPACE" 'every other external location are forbidden' "EN external worktree roots forbidden"
+require "$EN_WORKSPACE" 'must accept the exact project-local path' "EN native tool exact-path constraint"
+require "$EN_WORKSPACE" 'ignore legacy `require_isolated_worktree`' "EN legacy mandatory policy ignored"
+require "$EN_WORKSPACE" 'Switching workspaces does not authorize migrating, recreating, or deleting' "EN switch choice is not destructive consent"
+require "$EN_WORKSPACE" 'Leave the external worktree unchanged' "EN preserve external worktree"
+require "$EN_WORKSPACE" 'separate explicit confirmation that names the exact action and target' "EN destructive action requires scoped consent"
+require "$ZH_WORKSPACE" "$ZH_WORKTREE_OPTIONAL" "ZH optional worktree policy"
+require "$ZH_WORKSPACE" "$ZH_WORKTREE_CONFIRM" "ZH per-slice worktree confirmation"
+require "$ZH_WORKSPACE" '.worktrees/<req-id>-<sr-id>' "ZH project-local worktree path"
+require "$ZH_WORKSPACE" "$ZH_ONLY_WORKTREE_PATH" "ZH exact worktree template is mandatory"
+require "$ZH_WORKSPACE" "$ZH_EXTERNAL_WORKTREE" "ZH external worktree stop-and-ask"
+require "$ZH_WORKSPACE" "$ZH_EXTERNAL_ROOTS" "ZH external worktree roots forbidden"
+require "$ZH_WORKSPACE" "$ZH_SWITCH_NOT_DESTRUCTIVE" "ZH switch choice is not destructive consent"
+require "$ZH_WORKSPACE" "$ZH_LEAVE_EXTERNAL_UNCHANGED" "ZH preserve external worktree"
+require "$EN_ADAPT" "workspace-policy.md" "EN framework adaptation workspace policy"
+require "$ZH_ADAPT" "workspace-policy.md" "ZH framework adaptation workspace policy"
+forbid "$EN_SKILL" "must create or reuse the slice worktree" "EN mandatory Stage 2 worktree"
+forbid "$EN_UI" "Create or reuse one isolated worktree/branch" "EN mandatory Stage 2 isolation"
+forbid "$EN" "create one worktree/branch here" "EN mandatory Stage 4 worktree creation"
+forbid "$EN_FRAMEWORKS/superpowers.md" "create one worktree per slice only when no recorded slice worktree exists" "EN superpowers auto-worktree creation"
+forbid "$EN_FRAMEWORKS/native.md" "create one branch per slice (and a worktree when supported) only when no slice workspace exists" "EN native auto-worktree creation"
 
 forbid "$EN_ADAPT" "framework tooling writes there first" "EN framework-first persistence"
 forbid "$ARTIFACT_LAYOUT" "$ZH_FRAMEWORK_FIRST" "artifact layout framework-first persistence"

@@ -6,7 +6,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 |--------------------------|--------------------|-----------|
 | Split decision pending | User confirms → `requirement-breakdown` or skip single-slice package | `ui-truth-mapping`, `spec`/`plan`/`tasks` |
 | `split_ready` + light audit with `ui_truth_mode=figma` or `runtime-baseline` | CP-UI pause → user authorizes controlled visual implementation | Production edits or `ui-truth-mapping` dispatch before approval |
-| CP-UI confirmed | `ui-truth-mapping` in the slice worktree (TDD + golden + review) | Treat Stage 2 as implementation-free mapping |
+| CP-UI confirmed | Resolve the user-approved workspace, then run `ui-truth-mapping` (TDD + golden + review) | Treat Stage 2 as implementation-free mapping, or treat CP-UI as worktree consent |
 | `split_ready` + light audit with `ui_truth_mode=none` or `existing` | `solution-design` when `design_mode=light` or `full`; otherwise `spec` | Require a UI gate for an existing/no-truth slice |
 | `acceptance_frozen` (validator OK) | `solution-design` according to `design_mode` | `spec` before the solution-design gate is satisfied |
 | Solution design gate satisfied (`design_mode=none`, or `design_approved: true` for `light`/`full`) | `spec` → `plan` → `tasks` | Business code before `tasks_ready` |

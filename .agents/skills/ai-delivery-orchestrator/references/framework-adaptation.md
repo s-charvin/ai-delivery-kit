@@ -14,6 +14,12 @@ The orchestrator owns artifact placement even when an external framework supplie
 
 These rules override conflicting persistence instructions in external skills. Existing `.specify/`, `openspec/`, `.superpowers/`, or `docs/superpowers/` trees are read-only inputs during an orchestrated action, never derived output views.
 
+## Workspace selection (REQUIRED)
+
+[Workspace and Worktree Policy](workspace-policy.md) is the single authority for all framework tiers. The current checkout is the default. Creating or reusing a worktree requires explicit confirmation for the current sub-requirement and the exact path must be `<project-root>/.worktrees/<req-id>-<sr-id>`. Checkpoints and legacy mandatory-isolation flags are not consent.
+
+Before invoking an external skill, pass both the canonical artifact output map and the exact user-approved workspace. Framework instructions that auto-create, auto-reuse, or place a worktree outside the project are disabled. If the session is already in an external worktree, stop production edits and follow the policy's user decision gate.
+
 ## Abstract action vocabulary
 
 reconcile emits one of these actions per sub-requirement:
@@ -21,12 +27,12 @@ reconcile emits one of these actions per sub-requirement:
 | Action | Meaning | Typical trigger status |
 |--------|---------|------------------------|
 | `requirement-breakdown` | Kit-owned skill: split the requirement | `draft` |
-| `ui-truth-mapping` | Kit-owned capability: controlled visual implementation in the slice worktree | `split_ready` when `ui_truth_mode=figma` or `runtime-baseline`, after CP-UI |
+| `ui-truth-mapping` | Kit-owned capability: controlled visual implementation in the user-approved workspace | `split_ready` when `ui_truth_mode=figma` or `runtime-baseline`, after CP-UI |
 | `solution-design` | Explore and propose a solution design; approval depends on `design_mode` | `split_ready` or `acceptance_frozen` when `design_mode` is not `none` |
 | `spec` | Produce the sub-requirement specification | after the `design_mode` gate is satisfied |
 | `plan` | Produce the technical plan | `spec_ready` |
 | `tasks` | Produce the task breakdown | `plan_ready` |
-| `implement` | Implement remaining tasks (reuse Stage 2 worktree for UI; TDD + review discipline) | `tasks_ready` after CP-001 / `in_dev` |
+| `implement` | Implement remaining tasks (reuse the Stage 2 approved workspace for UI; TDD + review discipline) | `tasks_ready` after CP-001 / `in_dev` |
 | `finish` | Rebase-merge and close the slice | `visual_acceptance_passed` |
 
 `requirement-breakdown` and `ui-truth-mapping` are kit skills and are invoked directly when their capabilities are enabled; `ui-truth-mapping` is gated by CP-UI because it writes production code. `solution-design` is an orchestrator action whose approval behavior follows `design_mode`; all other actions are dispatched through the selected framework tier below.

@@ -9,6 +9,7 @@ Native process/governance artifacts use the current binding's canonical `.ai-del
 - All process/governance artifacts use the canonical paths declared by `.ai-delivery/meta/project-binding.json`; requirement-wide status, todo, progress, and delivery reports remain at their declared requirement-level paths.
 - Host-tree writes are limited to production source, project-native tests, goldens/official previews, and runtime assets. Do not create repository-root design, plan, review, report, checklist, or session files.
 - Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before advancing any gate. Any new or modified process/governance artifact outside `.ai-delivery/` sets `blocked_verification_failure`.
+- Resolve the execution workspace through [../workspace-policy.md](../workspace-policy.md). The native tier cannot infer worktree consent from isolation preferences or checkpoints.
 
 Before the spec pipeline, resolve the binding layout keys `spec`, `plan`, and `tasks`. The filenames below are default-layout examples only.
 
@@ -80,7 +81,7 @@ The native tier keeps the artifacts resolved from `plan` and `tasks` separate so
 
 No subagent framework is required, but the discipline is non-negotiable:
 
-1. **Isolate** — resume the recorded Stage 2 worktree/branch for UI slices; create one branch per slice (and a worktree when supported) only when no slice workspace exists.
+1. **Resolve workspace** — use the current checkout by default and reuse the Stage 2 user-approved workspace for UI slices. Creating or reusing a worktree requires explicit confirmation for this sub-requirement and the exact project-local path; external paths and automatic tool placement are forbidden.
 2. **TDD first** — write a failing test for the task before production code; keep the loop red → green → refactor.
 3. **Small steps** — one file at a time, small commits prefixed with the subreq id.
 4. **Review loop** — after each task, run review as a separate pass through the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): re-read the diff against the task's acceptance notes and the spec's acceptance criteria as if reviewing someone else's work; findings become a fix list, then fix and re-review until clean or the `review_loop.max_rounds` budget (default 3) is exhausted — then escalate to the user, never auto-merge.

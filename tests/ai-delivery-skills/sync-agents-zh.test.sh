@@ -87,10 +87,15 @@ require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
 
 # Orchestrator reference parity (same filenames, zh tree translated)
-for ref in handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
+for ref in framework-adaptation.md workspace-policy.md handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md; do
   require_file "$SRC/ai-delivery-orchestrator/references/$ref"
   require_file "$DST/ai-delivery-orchestrator/references/$ref"
   require_han_content "$DST/ai-delivery-orchestrator/references/$ref"
+done
+for framework in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
+  require_file "$SRC/ai-delivery-orchestrator/references/frameworks/$framework"
+  require_file "$DST/ai-delivery-orchestrator/references/frameworks/$framework"
+  require_han_content "$DST/ai-delivery-orchestrator/references/frameworks/$framework"
 done
 
 # Human-readable orchestrator templates are localized in both trees.

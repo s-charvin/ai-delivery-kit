@@ -62,6 +62,6 @@ Checkpoints are credentials, not history. A recorded checkpoint is only valid wh
 
 ## Runnable queue
 
-A runnable item can advance safely under current governed truth without inventing facts. Before CP-UI, UI truth work is limited to read-only evidence and governance artifacts. Page shells, local state skeletons, navigation flow, mock wiring, and any other production edits for an enabled UI truth capability become runnable only inside the authorized slice worktree. `ui_truth_mode=existing` may proceed with ordinary behavior and semantic work without CP-UI.
+A runnable item can advance safely under current governed truth without inventing facts. Before CP-UI, UI truth work is limited to read-only evidence and governance artifacts. Page shells, local state skeletons, navigation flow, mock wiring, and any other production edits for an enabled UI truth capability become runnable only inside the user-approved workspace resolved through [workspace-policy.md](workspace-policy.md). CP-UI authorizes the controlled UI work, not a worktree. `ui_truth_mode=existing` may proceed with ordinary behavior and semantic work without CP-UI.
 
 API gaps alone do not trigger CP-002 if UI truth capture or safe partial development can continue.

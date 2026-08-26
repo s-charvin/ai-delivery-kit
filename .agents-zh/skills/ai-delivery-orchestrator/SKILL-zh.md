@@ -92,7 +92,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 ## 暂停点（6 个）
 
 1. 拆分/跳过决策后 — 与用户确认
-2. 启用 UI truth 能力写生产代码前 — CP-UI，授权受控视觉实现与切片 worktree
+2. 启用 UI truth 能力写生产代码前 — CP-UI，授权受控视觉实现（workspace 选择是独立的用户决策）
 3. `design_mode=full` 方案设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
 4. `tasks_ready` 后 — CP-001，进入剩余开发工作前确认
 5. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
@@ -101,27 +101,28 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 ## 硬边界
 
 - 不要把工作流真相移出 `.ai-delivery`。
+- Workspace 选择遵循 [references/workspace-policy.md](references/workspace-policy.md)。默认使用当前 checkout；创建或复用 worktree 必须另外取得当前子需求的用户明确确认，批准的 worktree 必须位于 `<project-root>/.worktrees/<req-id>-<sr-id>`。CP-UI、CP-001、框架默认值和旧 `require_isolated_worktree` 都不构成同意。如果已经处于外部 worktree，停止生产编辑，并询问用户切换到项目 checkout 或准确的项目内 worktree。保持外部 worktree 原样；切换不授权迁移或删除。
 - 外部 skill 的默认设置绝不授权框架自有产物路径。外部 skill 只提供方法与执行纪律：调用前传入 canonical `.ai-delivery` 输出路径；持久化步骤无法遵守时，跳过该步骤并直接写等价 canonical 产物。禁止先在 `docs/superpowers/**`、`.superpowers/**`、`.specify/**`、`openspec/**` 或其他宿主树框架目录生成流程/治理产物再搬运。
 - `.ai-delivery/` 外只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。推进任何门禁前，对比入口/出口 Git 状态/内容指纹账本，并为外部 skill 声明的每个默认输出根建立包含 ignored 文件的独立文件系统指纹，至少覆盖上述四个禁写根。路径、状态、类型、符号链接目标或 SHA-256 漂移能捕获动作前已 dirty 或 ignored 路径上的再次写入。发现新增或修改且位于 `.ai-delivery/` 外的流程/治理产物时，设置 `blocked_verification_failure`。
 - 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的子需求未 `acceptance_frozen` 不得进入 `spec`；`none` 与 `existing` 跳过该 gate。
-- 只有模式启用且明确确认、记录 CP-UI 后，才能 dispatch `ui-truth-mapping`。Stage 2 会写生产代码，必须创建或复用切片 worktree，执行 TDD/golden 测试并完成新鲜上下文评审闭环。
+- 只有模式启用且明确确认、记录 CP-UI 后，才能 dispatch `ui-truth-mapping`。Stage 2 在用户已批准 workspace 中写生产代码，执行 TDD/golden 测试并完成新鲜上下文评审闭环。
 - UI truth 切片未 `visual_acceptance_passed` 不得声称 `merged`；`none` 与 `existing` 使用普通行为/语义证据。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
 - 编排器方案设计模式不要把文档写进框架自有目录；规范方案设计写入子需求 `design.md`，`notes` 只保留短指针。
 - 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**、有效 v2 `contracts/ui-truth-index.json`（路径/hash/来源/profile/scenario/coverage 与当前预览 hash 绑定确认），或 Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。
-- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 worktree；不得创建第二个 worktree 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
+- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v2 `ui-truth-index.json`，以及覆盖全部已索引 scenario 的结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
 - 未生成冻结的 `archive/<ISO-ts>/` 快照及带 sha256 的 `MANIFEST.json` 前，不得设为 `archived`；归档不可原地修改。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
-- 实现阶段一次只改一个文件；worktree 用 rebase 合并（禁止 merge commit）。
+- 实现阶段一次只改一个文件；分支用 rebase 合并（禁止 merge commit）。
 
 ## 状态转换门禁
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；切片 worktree 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v2 index 路径/hash/来源/profile/scenario/coverage 与预览绑定确认均有效 |
+| `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；用户已批准 workspace 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v2 index 路径/hash/来源/profile/scenario/coverage 与预览绑定确认均有效 |
 | `spec/plan/tasks_ready`（UI truth） | 曾有效 `acceptance_frozen`；v2 index 的路径、hash、coverage 与确认绑定仍有效 |
 | `merged`（UI truth） | UI truth 模式已有 `acceptance_frozen` + `visual_acceptance_passed` + 有效 v2 index + 结构化验收；`existing` 使用普通行为/语义证据，`none` 跳过视觉验收 |
 | `archived` | 冻结的 `archive/<ISO-ts>/` 快照 + 带 sha256 的 `MANIFEST.json`，且不可变（经 `--verify-archive` 校验） |
@@ -142,7 +143,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 
 `implement` 动作按所选档位执行（见 `references/frameworks/`）：有 superpowers 时子代理驱动，有 ECC 时代理驱动，原生档走内联纪律。无论哪个档位，默认纪律一致：顺序任务、内部 TDD、声称完成前先评审。禁止同一切片文件并行实现者。
 
-链路：启用 UI truth 的切片复用 Stage 2 工作区（其他切片在此创建）→ 任务执行（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录 scenario 完整视觉/运行时验收 → 完成前验证 → 全量测试 → 合并。
+链路：按 `references/workspace-policy.md` 解析用户已批准 workspace，启用 UI truth 的切片复用 Stage 2 选择 → 任务执行（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录 scenario 完整视觉/运行时验收 → 完成前验证 → 全量测试 → 合并。
 
 UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；`existing` UI 只做普通行为/语义验证；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
 

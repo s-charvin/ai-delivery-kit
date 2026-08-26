@@ -15,7 +15,7 @@ The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual eviden
 
 **Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
 
-This skill does one thing: after CP-UI authorization, use the **same slice worktree** throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth and approved runtime coverage there, show each visual scenario preview path, and record a v2 pointer/governance index. It does not own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
+This skill does one thing: after CP-UI authorization, use the **user-approved workspace** supplied by the orchestrator throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth and approved runtime coverage there, show each visual scenario preview path, and record a v2 pointer/governance index. It does not choose or create a workspace, own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
 
 ## Input
 
@@ -93,7 +93,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 
 ## Hard Boundary
 
-- Invoke only from a governed Stage 2 slice after CP-UI is recorded for `ui_truth_mode=figma` or `runtime-baseline`. This skill writes production code, golden tests, previews, and the v2 index inside the recorded slice worktree; it is not an implementation-free preflight.
+- Invoke only from a governed Stage 2 slice after CP-UI is recorded for `ui_truth_mode=figma` or `runtime-baseline`. This skill writes production code, golden tests, previews, and the v2 index inside the recorded user-approved workspace; it is not an implementation-free preflight. Workspace choice remains owned by the orchestrator's `workspace-policy.md`.
 - **Requirement-scoped extract:** In Scope artifacts decide the root — smallest ancestor covering artifacts that belong to **one** unit. Disconnected artifacts → split units. Never dump the full page.
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
@@ -302,7 +302,7 @@ Web: open/build the component the way that repo already previews (Storybook, a l
 3. The v2 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, profiles, sourced states, scenarios, and all ten coverage dimensions.
 4. Every visual scenario has a deterministic preview plus confirmation/waiver bound to its current `preview_sha256`; behavior scenarios have approved sources and an explicit Stage 4 verification mode.
 5. Scope matches the slice; icons/images are evidence-backed; runtime coverage is resolved; motion/asset plans are present when applicable; sizing is classified; compositing is recorded when §3b fired.
-6. Stage 2 tests pass and the latest fresh-context review is clean; record the slice worktree/branch for Stage 4 reuse.
+6. Stage 2 tests pass and the latest fresh-context review is clean; record the user-approved workspace and optional branch for Stage 4 reuse.
 7. If the unit set changed, sweep stale pointers in the requirement directory in the same change.
 
 Do **not** claim freeze from "the widget looks right" without a preview path. Do **not** generate `contract-preview-*.png` as a substitute for the official golden.
@@ -319,7 +319,7 @@ There is no HTML validator and no v1 compatibility path. Kit status validation c
 
 ### 8. After implementation (Stage 4 consumers)
 
-Stage 4 **wires** the already-written component (API, route, state, mount) in the same slice worktree. It must not create a second worktree, re-draw Flutter from HTML, or re-query TemPad by default.
+Stage 4 **wires** the already-written component (API, route, state, mount) in the same user-approved workspace. It must not create a second workspace, re-draw Flutter from HTML, or re-query TemPad by default.
 
 Stage 4 verifies every indexed scenario using the recorded profile and project-native tools, then writes structured `visual-acceptance.json`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
 
@@ -352,7 +352,7 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Hitting the network inside a golden test.
 - Adding Flutter/web dependencies the host project does not already use.
 - Declaring freeze without an absolute preview path and explicit user confirmation.
-- Dispatching this skill before CP-UI, writing production code outside the recorded slice worktree, or creating a second Stage 4 worktree for the same slice.
+- Dispatching this skill before CP-UI, writing production code outside the recorded user-approved workspace, or creating a second Stage 4 workspace for the same slice.
 - Leaving `ui-truth-index.json` paths as absolute filesystem paths (index is repo-relative).
 - Omitting `schema_version`, profiles, sourced states, scenario previews/confirmation, coverage, or content hashes; accepting hash drift after freeze.
 - Omitting a runtime coverage dimension; using `unresolved` as if it were a legal frozen status; marking an applicable case `not_applicable` without a reason.

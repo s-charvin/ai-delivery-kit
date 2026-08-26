@@ -61,6 +61,6 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 
 ## 可运行队列
 
-可运行项指在当前治理真值下可安全推进、无需编造事实的工作。CP-UI 前，启用 UI truth 的工作仅限只读证据与治理产物；页面外壳、本地状态骨架、导航流、mock 接线及其他生产代码改动，只有进入已授权切片 worktree 后才可运行。`ui_truth_mode=existing` 可在无 CP-UI 下进行普通行为和语义工作。
+可运行项指在当前治理真值下可安全推进、无需编造事实的工作。CP-UI 前，启用 UI truth 的工作仅限只读证据与治理产物；页面外壳、本地状态骨架、导航流、mock 接线及其他生产代码改动，只有进入按 [workspace-policy.md](workspace-policy.md) 解析的用户已批准 workspace 后才可运行。CP-UI 授权受控 UI 工作，不授权 worktree。`ui_truth_mode=existing` 可在无 CP-UI 下进行普通行为和语义工作。
 
 仅有 API 缺口不足以触发 CP-002，若 UI 真值采集或安全局部开发仍可继续。

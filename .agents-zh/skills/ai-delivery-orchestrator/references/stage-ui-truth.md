@@ -11,7 +11,7 @@ Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是�
 - 阅读 `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/requirement-slice.md`。
 - `figma` 模式收集 Figma file key 与目标 node id；`runtime-baseline` 模式收集定义运行时基线的 requirement、project 或 user-decision 来源，不得伪造 Figma 来源。
 - 从仓库判断宿主栈（优先 Flutter）。拿不准就停下问用户。
-- 每切片创建或复用一个隔离 worktree/分支，并在 `decisions.md` 或 `progress.md` 记录分支与路径；同一 worktree 贯穿 Stage 3 与 Stage 4。
+- 按 [workspace-policy.md](workspace-policy.md) 解析用户已批准 workspace。除非用户为当前子需求明确批准了准确的项目内 worktree，否则使用当前 checkout；在 `decisions.md` 或 `progress.md` 记录选择，并贯穿 Stage 3 与 Stage 4 复用。
 
 ## 仅运行受控的 `ui-truth-mapping`（Stage 2）
 
@@ -23,7 +23,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
-在切片 worktree 内，对视觉表面沿用 Stage 4 实现纪律：适用时先写聚焦测试，执行红 → 绿 → 重构，生成确定性 golden，并把完成的 unit 交给新鲜上下文代码评审。finding 修复并复审干净后才能冻结。测试命令与评审结论记入 `progress.md`。
+在用户已批准 workspace 内，对视觉表面沿用 Stage 4 实现纪律：适用时先写聚焦测试，执行红 → 绿 → 重构，生成确定性 golden，并把完成的 unit 交给新鲜上下文代码评审。finding 修复并复审干净后才能冻结。测试命令与评审结论记入 `progress.md`。
 
 **冻结门槛（全部满足）：**
 
@@ -35,7 +35,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 6. 每个视觉 scenario 都记录明确确认或带理由的明确豁免，且 `reviewed_preview_sha256` 与当前 preview hash 一致。官方预览就是复审媒介 — 不要用 `contract-preview-*.png` 代替。
 7. 若本轮 unit 集合变化，已完成陈旧指针清扫（`ui-truth-mapping` §9）。
 8. `ui-truth-mapping` 要求的运行时 coverage、动效生命周期、资源/渲染、蒙版/合成、无障碍与 fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。
-9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；切片 worktree 证据已记录，供 Stage 4 复用。
+9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；用户已批准 workspace 证据已记录，供 Stage 4 复用。
 10. Stage 2 产物边界路径审计已对比边界协议要求的入口/出口 Git 状态/内容指纹账本与独立文件系统指纹。目录指纹包含 ignored 文件，并覆盖外部 skill 声明的每个默认输出根，至少包括 `docs/superpowers/**`、`.superpowers/**`、`.specify/**` 与 `openspec/**`；因此能捕获被 `.gitignore` 隐藏的写入，以及进入动作前已 dirty 路径上的再次写入。`.ai-delivery/` 外只允许新增或修改生产源码、项目原生测试、golden/官方预览和运行时资源。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`；不得冻结或推进状态。在 canonical `progress.md` 记录审计结论与精确越界路径，不删除用户既有文件。
 
 ## 完成后

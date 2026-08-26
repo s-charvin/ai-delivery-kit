@@ -8,7 +8,7 @@ After CP-001 user confirmation, when reconcile emits `RUNTIME_MODE=confirm_to_de
 
 **Do not dispatch implementation work before CP-001 is confirmed.**
 
-For `ui_truth_mode=figma` or `runtime-baseline`, resume the branch/worktree recorded by Stage 2. Do not run `using-git-worktrees` to create a second workspace for the same slice. `none` and `existing` slices use their normal project workspace.
+For `ui_truth_mode=figma` or `runtime-baseline`, resume the user-approved workspace recorded by Stage 2. Do not run `using-git-worktrees` to create a second workspace for the same slice. `none` and `existing` slices follow [workspace-policy.md](workspace-policy.md), defaulting to the current checkout.
 
 ## tasks.md → task brief
 

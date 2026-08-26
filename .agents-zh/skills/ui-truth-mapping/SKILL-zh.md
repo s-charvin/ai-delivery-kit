@@ -15,7 +15,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
 
-此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用**同一个切片 worktree**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值与已批准的运行时 coverage 冻在那里，出示每个视觉 scenario 的预览路径，并记录 v2 指针/治理索引。它不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
+此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用编排器传入的**用户已批准 workspace**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值与已批准的运行时 coverage 冻在那里，出示每个视觉 scenario 的预览路径，并记录 v2 指针/治理索引。它不选择或创建 workspace、不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
 
 ## 输入
 
@@ -93,7 +93,7 @@ templates/
 
 ## 硬边界
 
-- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。
+- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。本技能会在记录的用户已批准 workspace 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。Workspace 选择仍归编排器 `workspace-policy.md` 所有。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
@@ -302,7 +302,7 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 3. v2 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖、profile、带来源 state、scenario 与十个 coverage 维度校验。
 4. 每个视觉 scenario 都有确定性 preview，以及绑定当前 `preview_sha256` 的确认/豁免；behavior scenario 有已批准来源与明确 Stage 4 验证方式。
 5. 范围匹配切片；图标/图片有证据；运行时 coverage 已解决；适用时有动效/资源计划；尺寸已分类；§3b 触发时记录了合成。
-6. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录切片 worktree/分支供 Stage 4 复用。
+6. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录用户已批准 workspace 与可选分支供 Stage 4 复用。
 7. 若单元集合变了，在同一次变更里清扫需求目录中的陈旧指针。
 
 **不要** 在没有预览路径时凭「Widget 看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方 golden。
@@ -319,7 +319,7 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 ### 8. 实现之后（Stage 4 消费者）
 
-Stage 4 在同一个切片 worktree **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 worktree；默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
+Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
 
 Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scenario，然后写结构化 `visual-acceptance.json`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
 
@@ -352,7 +352,7 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 - golden 测试里打真网。
 - 添加宿主项目没有的 Flutter/Web 依赖。
 - 没有绝对预览路径和用户显式确认就宣称冻结。
-- 在 CP-UI 前 dispatch 本技能、在记录的切片 worktree 外写生产代码，或在 Stage 4 为同一切片创建第二个 worktree。
+- 在 CP-UI 前 dispatch 本技能、在记录的用户已批准 workspace 外写生产代码，或在 Stage 4 为同一切片创建第二个 workspace。
 - 把 `ui-truth-index.json` 的路径写成文件系统绝对路径（索引必须是仓内相对路径）。
 - 缺少 `schema_version`、profile、带来源 state、scenario preview/确认、coverage 或内容 hash；冻结后接受 hash 漂移。
 - 漏掉运行时 coverage 维度；把 `unresolved` 当作合法冻结状态；将适用场景标为没有理由的 `not_applicable`。

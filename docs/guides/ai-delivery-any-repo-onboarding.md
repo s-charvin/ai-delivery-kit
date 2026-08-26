@@ -28,7 +28,7 @@
 - `Requirement` 是功能真相
 - `Figma` 是视觉真相
 - 规格类产物（spec / plan / tasks）由已安装的 spec 框架产出；未安装时走内置原生档
-- 执行纪律（worktree / TDD / review / verification）由已安装的执行框架承担；未安装时用内置纪律
+- 执行纪律（workspace 选择 / TDD / review / verification）由编排器统一治理，已安装框架只提供执行方法；未安装时用内置纪律
 - `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、依赖和追踪等重要产物存放
 
 编排器本身**框架无关**：它只输出抽象阶段动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并在运行时适配你已安装的框架。绝不要求你安装任何东西。canonical 方案设计仍使用 `design.md` 路径。
@@ -180,7 +180,7 @@ bootstrap 完成后，目标仓库至少具备：
 ```text
 使用 $ui-truth-mapping 处理子需求 SR-001。
 
-前置条件：编排器已确认这是 governed Stage 2 UI 切片，并在 `status.json` 记录用户的 `current_checkpoint=CP-UI`。Stage 2 会写生产代码，因此须在记录的切片 worktree 中执行。
+前置条件：编排器已确认这是 governed Stage 2 UI 切片，并在 `status.json` 记录用户的 `current_checkpoint=CP-UI`。Stage 2 会写生产代码，因此须在用户已批准 workspace 中执行；默认使用当前 checkout。创建或复用 worktree 需要当前子需求另行确认，路径只能是 `<project-root>/.worktrees/<req-id>-<sr-id>`。
 
 输入：
 - requirement root: .ai-delivery/requirements/req-project-rename/sub-requirements/SR-001
@@ -190,14 +190,14 @@ bootstrap 完成后，目标仓库至少具备：
 
 要求：
 - 基于结构化 node payload 完成映射
-- 每个独立 unit 在切片 worktree 的宿主项目里写真实组件（Flutter：Widget + golden/behavior tests），并在写组件代码前完成 Runtime Coverage Plan
+- 每个独立 unit 在用户已批准 workspace 的宿主项目里写真实组件（Flutter：Widget + golden/behavior tests），并在写组件代码前完成 Runtime Coverage Plan
 - v2 `contracts/ui-truth-index.json` 记录 profile、带来源的 state、具体 scenario、十个维度的适用性 coverage、依赖、仓内路径、SHA-256，以及绑定当前预览哈希的确认/豁免证据
 - 只有 Figma 实际展示的视觉场景可称为 1:1；未展示的响应式、内容、交互、动效、资源、主题、无障碍、平台与性能行为必须来自 requirement、project 或 user-decision
 - 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter
 - 更新 traceability.json
 - 不允许根据截图或记忆脑补 UI
 - 如果设计缺失或与 requirement 冲突，就明确阻塞
-- Stage 4 复用该 worktree，不要重新创建工作区或重画组件
+- Stage 4 复用该用户已批准 workspace，不要重新创建工作区或重画组件
 ```
 
 如果 `ui_truth_mode=none` 或 `existing`，跳过这一步；既有 UI 只做行为/语义验证，非 UI 切片按 `design_mode` 直接进入方案设计或 spec。
@@ -230,13 +230,13 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
 所有可执行子需求达到 `tasks_ready` 后，经 CP-001 用户确认进入实现（`implement` 动作）。执行方式按已安装框架：
 
-- 已装 superpowers：worktree 隔离 + 子代理驱动 + TDD + 评审（详见 frameworks/superpowers.md）
+- 已装 superpowers：可选且经用户确认的项目内 worktree 操作 + 子代理驱动 + TDD + 评审（详见 frameworks/superpowers.md）
 - 已装 ECC：ECC 任务执行代理 + 其 rules/hooks（详见 frameworks/ecc.md）
 - 都没装：原生纪律 — 分支隔离、TDD 先行、小步提交、完成前自验（详见 frameworks/native.md）
 
 执行约束（与框架无关）：
 
-- `ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 的 worktree；`none`/`existing` 使用正常项目工作区
+- `ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；`none`/`existing` 默认使用当前 checkout
 - 严格按 tasks 与上游 .ai-delivery 产物实现
 - 启用 UI truth 的切片逐 scenario 执行宿主项目原生验证，并写入绑定当前 index 哈希的 `visual-acceptance.json`；`existing` 只做行为/语义验证，旧 Markdown/截图存在性不构成验收
 - 不允许跳过测试、review 和完成前验证

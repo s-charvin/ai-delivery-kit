@@ -6,7 +6,7 @@
 |------------|-----------|------|
 | 拆分决策待定 | 用户确认后 → `requirement-breakdown` 或跳过单切片包 | `ui-truth-mapping`、`spec`/`plan`/`tasks` |
 | `split_ready` + 轻量审计通过（`ui_truth_mode=figma` 或 `runtime-baseline`） | CP-UI 暂停 → 用户授权受控视觉实现 | 批准前改生产代码或 dispatch `ui-truth-mapping` |
-| CP-UI 已确认 | 在切片 worktree 中运行 `ui-truth-mapping`（TDD + golden + 评审） | 把 Stage 2 当成不含实现的 mapping |
+| CP-UI 已确认 | 解析用户已批准 workspace，再运行 `ui-truth-mapping`（TDD + golden + 评审） | 把 Stage 2 当成不含实现的 mapping，或把 CP-UI 当作 worktree 同意 |
 | `split_ready` + 轻量审计通过（`ui_truth_mode=none` 或 `existing`） | `design_mode` 为 `light` 或 `full` 时进入 `solution-design`，否则进入 `spec` | 不应为无 UI truth 切片强制 UI gate |
 | `acceptance_frozen`（校验器 OK） | 按 `design_mode` 进入 `solution-design` | 方案设计门禁满足前进入 `spec` |
 | 方案设计门禁满足（`design_mode=none`，或 `light`/`full` 且 `design_approved: true`） | `spec` → `plan` → `tasks` | `tasks_ready` 前写业务代码 |

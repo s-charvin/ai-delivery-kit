@@ -198,9 +198,16 @@ func (e Engine) Run(cfg Config) error {
 			"archive_confirmation":     []string{"CP-ARCHIVE"},
 		},
 		"worktree_policy": map[string]any{
-			"require_isolated_worktree":           true,
+			"mode":                                "current_checkout_unless_user_confirmed",
+			"require_explicit_user_confirmation":  true,
+			"confirmation_scope":                  "current_sub_requirement",
+			"project_local_root":                  ".worktrees",
+			"path_template":                       ".worktrees/{req_id}-{sr_id}",
+			"project_local_only":                  true,
+			"external_worktree_behavior":          "stop_and_ask",
+			"native_tool_requires_exact_path":     true,
 			"allow_precreate_before_dependencies": false,
-			"ui_stage2_reuses_worktree":           true,
+			"ui_stages_reuse_approved_workspace":  true,
 		},
 		"review_loop": map[string]any{
 			"max_rounds": 3,

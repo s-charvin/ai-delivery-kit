@@ -9,6 +9,7 @@
 - 所有流程/治理产物使用 `.ai-delivery/meta/project-binding.json` 声明的 canonical 路径；需求级 status、todo、progress 和交付报告仍保留在各自声明的需求级路径。
 - 宿主树只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。不得创建仓库根级设计、plan、review、report、checklist 或 session 文件。
 - 推进任何门禁前，执行 [../framework-adaptation.md](../framework-adaptation.md) 的产物边界审计。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`。
+- 按 [../workspace-policy.md](../workspace-policy.md) 解析执行 workspace。原生档不得从隔离偏好或 checkpoint 推导 worktree 同意。
 
 进入 spec 管道前，解析 binding 的 layout key `spec`、layout key `plan` 与 layout key `tasks`。下文文件名都只是默认布局示例。
 
@@ -80,7 +81,7 @@
 
 不需要子代理框架，但纪律不可妥协：
 
-1. **隔离** —— UI 切片恢复已记录的 Stage 2 worktree/分支；仅当切片尚无工作区时，才创建一个切片分支（仓库支持时用 worktree）。
+1. **解析 workspace** —— 默认使用当前 checkout，UI 切片复用 Stage 2 用户已批准 workspace。创建或复用 worktree 必须取得当前子需求的明确确认并使用准确的项目内路径；禁止外部路径与工具自动选址。
 2. **TDD 先行** —— 生产代码前先写失败测试；保持 红 → 绿 → 重构 的循环。
 3. **小步走** —— 一次一个文件，小提交并以子需求 id 作前缀。
 4. **评审循环** —— 每任务完成后，把评审作为独立一遍走[评审循环](../stage-implementation.md#评审循环任务级闭环)：像在评审别人的代码一样，对照任务验收说明与 spec 验收标准重读 diff；finding 成为修复清单，修复后复审，直到干净或 `review_loop.max_rounds` 预算（默认 3）耗尽 —— 然后升级给用户，绝不自动合并。

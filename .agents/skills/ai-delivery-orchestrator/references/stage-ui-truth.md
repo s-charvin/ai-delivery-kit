@@ -11,7 +11,7 @@ Stage 2 is a **controlled visual implementation stage** because it writes produc
 - Read `requirement-slice.md` from `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`.
 - For `figma`, gather the Figma file key and target node id. For `runtime-baseline`, gather the requirement, project, or user-decision source that defines the runtime baseline; do not invent Figma provenance.
 - Judge the host stack from the repo (Flutter first). If unsure, stop and ask.
-- Create or reuse one isolated worktree/branch for the slice. Record its branch and path in `decisions.md` or `progress.md`; this same worktree continues through Stages 3 and 4.
+- Resolve the user-approved workspace under [workspace-policy.md](workspace-policy.md). Use the current checkout unless the user explicitly approved the exact project-local worktree for this sub-requirement; record the choice in `decisions.md` or `progress.md` and reuse it through Stages 3 and 4.
 
 ## Run controlled `ui-truth-mapping` only (Stage 2)
 
@@ -23,7 +23,7 @@ Record governance metadata in the v2 `contracts/ui-truth-index.json`: truth mode
 
 `ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.
 
-Within the slice worktree, use the Stage 4 implementation discipline for the visual surface: write focused tests first where applicable, run red → green → refactor, generate deterministic goldens, and send the completed unit to a fresh-context code review. Findings must be fixed and re-reviewed before freeze. Record test commands and review outcomes in `progress.md`.
+Within the user-approved workspace, use the Stage 4 implementation discipline for the visual surface: write focused tests first where applicable, run red → green → refactor, generate deterministic goldens, and send the completed unit to a fresh-context code review. Findings must be fixed and re-reviewed before freeze. Record test commands and review outcomes in `progress.md`.
 
 **Freeze bar (all required):**
 
@@ -35,7 +35,7 @@ Within the slice worktree, use the Stage 4 implementation discipline for the vis
 6. Every visual scenario records explicit confirmation or an explicit waiver with a reason, and `reviewed_preview_sha256` matches its current preview hash. The official preview is the review medium — do not substitute `contract-preview-*.png`.
 7. If the unit set changed in this run, the stale-pointer sweep (`ui-truth-mapping` §9) is done.
 8. Runtime coverage, motion lifecycle, asset/rendering, mask/compositing, accessibility, and fill-hug-fixed notes required by `ui-truth-mapping` are recorded (comments or freeze chat), not as a second paint file.
-9. Stage 2 tests pass and the latest fresh-context review is clean; the slice worktree evidence is recorded for Stage 4 reuse.
+9. Stage 2 tests pass and the latest fresh-context review is clean; the user-approved workspace evidence is recorded for Stage 4 reuse.
 10. The Stage 2 artifact-boundary path audit compares the entry/exit Git status/content fingerprint ledger and the independent filesystem fingerprints required by the containment protocol. The root fingerprints include ignored files and cover every declared external default output root, at least `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, and `openspec/**`; this catches writes hidden by `.gitignore` and repeated writes to paths already dirty at entry. Outside `.ai-delivery/`, only production source, project-native tests, goldens/official previews, and runtime assets may be new or modified. Any new or modified process/governance artifact outside `.ai-delivery/` sets `blocked_verification_failure`; do not freeze or advance status. Record the audit result and exact offending paths in canonical `progress.md`, without deleting pre-existing user files.
 
 ## After completion

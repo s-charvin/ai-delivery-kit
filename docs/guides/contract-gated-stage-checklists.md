@@ -22,7 +22,7 @@
 
 ## UI Truth Mapping Gate Notes
 
-- After CP-UI, `ui-truth-mapping` writes a real host-stack component per independent unit in the slice worktree (Flutter: widget + golden/behavior tests) and records a v2 profile/state/scenario matrix in `contracts/ui-truth-index.json`. Do not generate `ui-contract.html`. `ui_truth_mode=existing` does not enter this gate.
+- After CP-UI, `ui-truth-mapping` writes a real host-stack component per independent unit in the user-approved workspace (Flutter: widget + golden/behavior tests) and records a v2 profile/state/scenario matrix in `contracts/ui-truth-index.json`. The current checkout is the default; any worktree requires separate per-slice confirmation and an exact project-local path. Do not generate `ui-contract.html`. `ui_truth_mode=existing` does not enter this gate.
 - Each unit must resolve all ten applicability-gated runtime dimensions: `state`, `layout`, `content`, `interaction`, `motion`, `assets`, `theme`, `accessibility`, `platform`, and `performance`. Applicable but unresolved coverage blocks `acceptance_frozen`.
 - State and scenario evidence comes only from `figma`, `requirement`, `project`, or `user-decision`. Only Figma-evidenced scenarios carry a 1:1 Figma claim.
 - Each unit's v2 `type` (`page` / `component` / `modal` / `shared-component`) and `dependencies` define delivery ordering (`shared-component` → `page` → `modal`).

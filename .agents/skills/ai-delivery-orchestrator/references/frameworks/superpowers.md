@@ -15,12 +15,13 @@ Never clone or symlink superpowers yourself.
 | Action | superpowers skill(s) |
 |--------|----------------------|
 | `solution-design` | brainstorming flow (solution-design exploration; CP-DESIGN only for `design_mode=full`) |
-| `implement` | `using-git-worktrees`, `subagent-driven-development`, `test-driven-development`, `requesting-code-review`, `verification-before-completion` |
+| `implement` | optional `using-git-worktrees` mechanics after workspace confirmation, then `subagent-driven-development`, `test-driven-development`, `requesting-code-review`, `verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
 ## Artifact containment
 
 - Before invoking a superpowers skill, pass the current requirement/sub-requirement canonical root and an explicit output map. Superpowers supplies the reasoning, TDD, review, worktree, and completion discipline; the orchestrator owns every persisted artifact.
+- Also pass the exact user-approved workspace from [../workspace-policy.md](../workspace-policy.md). Superpowers does not own workspace selection: mandatory isolation, native-tool-first placement, automatic reuse, and external/temp fallback are disabled. Invoke `using-git-worktrees` only after the user approves the exact `<project-root>/.worktrees/<req-id>-<sr-id>` path and only if the tool must honor that path; otherwise use controlled Git mechanics after approval.
 - Disable framework defaults such as `docs/superpowers/**` or `.superpowers/**`. Resolve every destination from the current binding: `brainstorming` writes its approved result to layout key `solution_design`; plan content writes to layout key `plan`; review findings, fix briefs, checklists, and agent/session metadata write to the applicable `progress`, `decisions`, or `verification` key.
 - If a superpowers step requires a framework-owned file and cannot accept the canonical map, do not run that persistence step. Execute the method in-session and write the equivalent canonical artifact directly. Never create the framework file and move it afterward.
 - Host-tree writes remain limited to production source, project-native tests, goldens/official previews, and runtime assets. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before any gate advances.
@@ -33,7 +34,7 @@ Never clone or symlink superpowers yourself.
 
 ## `implement` usage advice (per slice)
 
-1. `using-git-worktrees` — locate and resume the Stage 2 worktree for UI slices; create one worktree per slice only when no recorded slice worktree exists.
+1. **Workspace** — use the current checkout by default. Reuse the Stage 2 user-approved workspace for UI slices. If this slice has no approved choice and a worktree is proposed, stop and ask with the exact project-local path; do not invoke `using-git-worktrees` before approval.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
 3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
 4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 profile/state/scenario entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write `visual-acceptance.json`; failures re-enter the same review loop.
@@ -50,7 +51,7 @@ Edit one file at a time during implementation.
 
 ## Traceability recording
 
-superpowers produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-producing tier (spec-kit / openspec / native). Record worktree branch names and review outcomes in the subreq `notes` or `progress.md`.
+superpowers produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-producing tier (spec-kit / openspec / native). Record the approved workspace, an optional worktree branch name, and review outcomes in the subreq `notes` or `progress.md`.
 
 ## Boundaries
 
