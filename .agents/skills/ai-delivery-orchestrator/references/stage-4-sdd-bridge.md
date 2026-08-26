@@ -8,7 +8,7 @@ After CP-001 user confirmation, when reconcile emits `RUNTIME_MODE=confirm_to_de
 
 **Do not dispatch implementation work before CP-001 is confirmed.**
 
-For UI slices, resume the branch/worktree recorded by Stage 2. Do not run `using-git-worktrees` to create a second workspace for the same slice.
+For `ui_truth_mode=figma` or `runtime-baseline`, resume the branch/worktree recorded by Stage 2. Do not run `using-git-worktrees` to create a second workspace for the same slice. `none` and `existing` slices use their normal project workspace.
 
 ## tasks.md → task brief
 
@@ -38,9 +38,9 @@ Append to `.ai-delivery/requirements/<req-id>/progress.md`:
 Both stages run through the [Review loop](stage-implementation.md#review-loop-task-level-closed-loop): implement → fresh-context review → findings become a fix brief → re-review, until clean or the `review_loop.max_rounds` budget is exhausted (then escalate to the user; never auto-merge).
 
 1. **Per-task review** — after each task; append every round's findings and fix summary to `progress.md`.
-2. **Pre-merge review** — full slice review after all tasks; then visual acceptance (UI) and the verification step.
+2. **Pre-merge review** — full slice review after all tasks; then visual acceptance when the UI truth capability is enabled and the verification step.
 
-## Visual acceptance evidence (UI)
+## Visual acceptance evidence (UI truth capability)
 
 Before setting `visual_acceptance_passed`, instantiate `templates/visual-acceptance-template.json` as `sub-requirements/<subreq-id>/visual-acceptance.json`. Preserve machine keys/enums and write summaries/notes in the user's current conversation language.
 
@@ -51,10 +51,10 @@ When a stable Figma reference bitmap exists, image-diff evidence records referen
 ## Status chain
 
 ```
-tasks_ready → (CP-001) → in_dev → visual_acceptance_passed (UI) → merged
+tasks_ready → (CP-001) → in_dev → visual_acceptance_passed (UI truth capability) → merged
 ```
 
-Non-UI subreqs skip `visual_acceptance_passed`.
+`ui_truth_mode=none` and `existing` subreqs skip `visual_acceptance_passed`; existing UI changes use ordinary behavior and semantic evidence.
 
 ## Handoff after slice
 

@@ -8,6 +8,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EN="$ROOT/.agents/skills/ui-truth-mapping/SKILL.md"
 ZH="$ROOT/.agents-zh/skills/ui-truth-mapping/SKILL-zh.md"
+ORCH="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -43,6 +44,8 @@ require "$EN" "User-named reference implementation" "EN user-named reference"
 
 # EN — runtime coverage
 require "$EN" "### 3c. Runtime Coverage Plan" "EN runtime coverage plan"
+require "$ORCH" "ui_truth_mode" "EN capability mode"
+require "$ORCH" "Capability-gated" "EN capability-gated UI truth"
 require "$EN" 'figma` / `requirement` / `project` / `user-decision' "EN evidence origins"
 require "$EN" "all ten coverage dimensions" "EN complete coverage"
 require "$EN" 'reviewed_preview_sha256' "EN preview-bound confirmation"

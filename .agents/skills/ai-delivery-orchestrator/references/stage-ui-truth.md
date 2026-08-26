@@ -2,14 +2,14 @@
 
 ## When to run
 
-For each `split_ready` sub-requirement where `ui_bearing: true`, a Figma design source is available, and CP-UI user authorization is recorded.
+For each `split_ready` sub-requirement where `ui_truth_mode=figma` or `ui_truth_mode=runtime-baseline`, and CP-UI user authorization is recorded. `ui_truth_mode=none` and `existing` do not enter this stage.
 
 Stage 2 is a **controlled visual implementation stage** because it writes production code. It is not implementation-free mapping.
 
 ## Prepare inputs
 
 - Read `requirement-slice.md` from `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`.
-- Gather Figma file key and target node id.
+- For `figma`, gather the Figma file key and target node id. For `runtime-baseline`, gather the requirement, project, or user-decision source that defines the runtime baseline; do not invent Figma provenance.
 - Judge the host stack from the repo (Flutter first). If unsure, stop and ask.
 - Create or reuse one isolated worktree/branch for the slice. Record its branch and path in `decisions.md` or `progress.md`; this same worktree continues through Stages 3 and 4.
 
@@ -17,9 +17,9 @@ Stage 2 is a **controlled visual implementation stage** because it writes produc
 
 Stage 2 runs **`ui-truth-mapping` alone**. Do **not** run `figma-design-to-code` here — that skill is not a contract author. Mixing them in Stage 2 confuses authorship. **Stage 4 does not re-run it by default** — wire the already-written component (see [stage-implementation.md](stage-implementation.md)).
 
-Feed requirement-slice and design source. Produce a **real host-stack component** per independent unit (Flutter: widget beside neighbors + golden/behavior tests) plus an official-stack preview for every visual scenario. Before component code, complete `ui-truth-mapping`'s Runtime Coverage Plan across state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Applicable gaps require requirement/project/user-decision evidence; unresolved gaps block freeze.
+Feed the requirement slice and the mode-appropriate truth source. Produce a **real host-stack component** per independent unit (Flutter: widget beside neighbors + golden/behavior tests) plus an official-stack preview for every visual scenario. Before component code, complete `ui-truth-mapping`'s Runtime Coverage Plan across state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Applicable gaps require requirement/project/user-decision evidence; unresolved gaps block freeze.
 
-Record governance metadata in the v2 `contracts/ui-truth-index.json`: design revision, unit type/source/dependencies, environment profiles, sourced states, concrete scenarios, complete applicability coverage, repo-relative paths, SHA-256 hashes, and preview-hash-bound confirmation. This metadata is not a second paint truth. Do not generate `ui-contract.html`. Do not translate HTML into Flutter. Figma-origin scenarios preserve evidenced pixels; runtime scenarios from other sources must not be described as 1:1 to Figma.
+Record governance metadata in the v2 `contracts/ui-truth-index.json`: truth mode and source, design revision when applicable, unit type/source/dependencies, environment profiles, sourced states, concrete scenarios, complete applicability coverage, repo-relative paths, SHA-256 hashes, and preview-hash-bound confirmation. This metadata is not a second paint truth. Do not generate `ui-contract.html`. Do not translate HTML into Flutter. Figma-origin scenarios preserve evidenced pixels; runtime scenarios from other sources must not be described as 1:1 to Figma.
 
 `ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.
 
@@ -52,9 +52,10 @@ python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/s
 
 ## If no Figma link
 
-- Non-UI sub-requirements: skip (already handled at breakdown).
-- UI sub-requirements without design: `blocked_missing_design` (`blocker_scope: slice_local`).
+- `ui_truth_mode=none` or `existing`: skip; ordinary project behavior/semantic verification applies.
+- `ui_truth_mode=figma` without a valid Figma source: `blocked_missing_design` (`blocker_scope: slice_local`).
+- `ui_truth_mode=runtime-baseline` without a requirement, project, or user-decision source: `blocked_missing_visual_truth` (`blocker_scope: slice_local`).
 
 ## Next handoff
 
-`acceptance_frozen` → `design` action. See [handoff-table.md](handoff-table.md).
+`acceptance_frozen` → `solution-design` according to `design_mode`. See [handoff-table.md](handoff-table.md).

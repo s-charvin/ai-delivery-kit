@@ -4,14 +4,14 @@ Use this tier when **no** external framework (spec-kit / OpenSpec / superpowers 
 
 All native artifacts live beside the slice: `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`.
 
-## `design` action (native design flow)
+## `solution-design` action (native solution-design flow)
 
 Inline in the main session (no separate tool):
 
-1. Read `requirement-slice.md`, frozen host component / `ui-truth-index.json` (UI-bearing), API docs, dependency graph.
-2. Produce: architecture sketch, component decomposition, data/state-transition model, scenario-linked responsive/content/interaction/motion/assets/theme/accessibility/platform/performance decisions, and key trade-offs.
-3. Write the design to `design.md` (canonical design file — see `docs/artifact-layout.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
-4. CP-DESIGN: set `design_approved: true` only after explicit user approval.
+1. Read `requirement-slice.md`, the enabled UI truth artifact when present, API docs, and the dependency graph.
+2. Produce: architecture sketch, component decomposition, data/state-transition model, scenario ID references, and key trade-offs. Runtime Coverage details remain in `contracts/ui-truth-index.json`.
+3. Write the solution design to `design.md` (canonical artifact path — see `docs/artifact-layout.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
+4. Set `design_approved: true` after the required review: `design_mode=full` only after explicit user approval through CP-DESIGN; `design_mode=light` after the short design and AI self-review without CP-DESIGN. Keep it `false` for `design_mode=none`.
 
 ## `spec` action — `spec/spec.md`
 
@@ -35,7 +35,7 @@ Create `spec/spec.md` with exactly four sections:
 - [ ] testable criterion 2
 ```
 
-Audit against every frozen unit/scenario id and preserve its evidence origin for UI-bearing slices, then set `spec_ready`.
+Audit against every frozen unit/scenario id and preserve its evidence origin for UI truth slices, then set `spec_ready`.
 
 ## `plan` action — `spec/plan.md`
 
@@ -81,7 +81,7 @@ No subagent framework is required, but the discipline is non-negotiable:
 ## `finish` action — built-in merge checklist
 
 1. Full analyze + full test pass clean.
-2. Structured visual/runtime acceptance written (UI only): `visual-acceptance.json` binds the current v2 index and passes or explicitly waives every scenario with mode-appropriate evidence.
+2. Structured visual/runtime acceptance written (`ui_truth_mode=figma` or `runtime-baseline` only): `visual-acceptance.json` binds the current v2 index and passes or explicitly waives every scenario with mode-appropriate evidence.
 3. Rebase onto the development branch (no merge commits); resolve conflicts, re-run tests.
 4. Open/merge the PR, then set `merged` only after `verification.md` is written in the user's current conversation language and signed. Preserve the three `ai-delivery-verification:*` markers from `templates/verification-template.md`; the status validator rejects `merged` without them.
 

@@ -10,7 +10,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输
 
 按子需求依赖图以及 `ui-truth-index.json` 持久化的 UI unit 类型/依赖执行：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当列出的依赖 unit 已在切片工作区完成，该 unit 才能启动。
 
-UI 切片必须继续使用 **Stage 2 创建的同一个切片 worktree**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v2 profile/state/scenario coverage 与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 worktree 或重画组件。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
+`ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 创建的同一个切片 worktree**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v2 profile/state/scenario coverage 与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 worktree 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
 
 ### 视觉真值 — 默认不要再查 Figma
 
@@ -64,10 +64,10 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 
 无论哪个框架档位，`implement` 动作都遵循这条链路：
 
-1. **隔离** — UI 切片复用已记录的 Stage 2 worktree/分支；只有尚无工作区的切片才在此创建一个 worktree/分支。
+1. **隔离** — `ui_truth_mode=figma` 或 `runtime-baseline` 复用已记录的 Stage 2 worktree/分支；只有尚无工作区的其他切片才在此创建一个 worktree/分支。
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
 3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
-4. **视觉/运行时验收**（仅 UI）— 在其 profile 下执行每个 v2 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录结构化 `visual-acceptance.json`。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。
+4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 下执行每个 v2 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录结构化 `visual-acceptance.json`。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。
 5. **验证** — 合并前集成检查；在 `verification.md` 中使用用户当前对话语言记录人类可读证据（模板：`templates/verification-template.md`，删除其中的语言指令注释）。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
 
@@ -107,7 +107,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 ## 状态更新
 
 - 开始实现时设 `in_dev`。
-- 仅当 `visual-acceptance.json` 绑定当前 v2 index，且每个 scenario 均带所需证据通过或明确 waived 后，才设 `visual_acceptance_passed`（仅 UI）。
+- 仅当 `ui_truth_mode=figma` 或 `runtime-baseline`，且 `visual-acceptance.json` 绑定当前 v2 index、每个 scenario 均带所需证据通过或明确 waived 后，才设 `visual_acceptance_passed`。
 - rebase 成功后设 `merged`。
 
 ## 进度账本（可选）

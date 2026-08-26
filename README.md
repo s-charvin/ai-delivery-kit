@@ -99,7 +99,7 @@ That path is for surgical recovery or expert use. It is not the normal entry for
 
 ## Framework Adaptation
 
-The orchestrator emits abstract stage actions (`design` / `spec` / `plan` / `tasks` / `implement` / `finish`) and adapts them to the frameworks already installed in your environment. Nothing is installed or required.
+The orchestrator emits abstract stage actions (`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`) and adapts them to the frameworks already installed in your environment. Nothing is installed or required. The canonical solution-design artifact remains `design.md` for layout stability.
 
 Recommended frameworks (detected, never installed):
 
@@ -107,14 +107,21 @@ Recommended frameworks (detected, never installed):
 |-----------|-----------------|------------------|
 | spec-kit | `spec` / `plan` / `tasks` | `.specify/` or `specify` CLI |
 | OpenSpec | `spec` / `plan` / `tasks` | `openspec/` or `openspec` CLI |
-| superpowers | `design` / `implement` / `finish` | superpowers skills in user skill dirs |
-| ECC | `design` / `implement` / `finish` | `/ecc:*` commands registered |
+| superpowers | `solution-design` / `implement` / `finish` | superpowers skills in user skill dirs |
+| ECC | `solution-design` / `implement` / `finish` | `/ecc:*` commands registered |
 
 No framework installed? The pipeline still runs end-to-end using built-in native artifacts (lightweight `spec.md` / `tasks.md` inside each sub-requirement plus inline discipline guidance).
 
 Per-framework usage guidance ships with the orchestrator skill: `references/framework-adaptation.md` and `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
-## Visual freeze (no HTML contract hooks)
+## Capability-gated UI truth (no HTML contract hooks)
+
+Each sub-requirement declares two independent modes in `status.json`:
+
+- `ui_truth_mode`: `none` (no visible UI), `existing` (behavior or semantics on an existing visual surface), `runtime-baseline` (new visible UI without stable Figma truth), or `figma` (stable Figma evidence).
+- `design_mode`: `none` (no solution-design artifact), `light` (a short self-reviewed solution design), or `full` (complete solution design with CP-DESIGN approval).
+
+Only `ui_truth_mode=figma` or `runtime-baseline` enables CP-UI, Stage 2, `acceptance_frozen`, the v2 UI truth index, and visual acceptance. `none` and `existing` proceed through ordinary solution-design/spec and behavior or semantic verification. `ui_bearing` is a consistency field, not a workflow gate. Runtime-baseline evidence must never be described as 1:1 Figma fidelity.
 
 After CP-UI authorization, Stage 2 implements and freezes **real host-stack components** plus official previews for visual scenarios in the slice worktree (Flutter: widget + golden PNG), with TDD and fresh-context review. Before component code, each unit must resolve an applicability-gated Runtime Coverage Plan for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. `ai-delivery init` does **not** install UI git hooks.
 
@@ -156,7 +163,7 @@ If `goreleaser` or `pwsh` are available locally, it includes those checks too.
 
 Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
 
-- `design.md`, `verification.md`, `visual-acceptance.json`, `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json`, `archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md` (canonical solution-design artifact when `design_mode` is `light` or `full`), `verification.md`, `visual-acceptance.json` (UI truth modes only), `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json` (UI truth modes only), `archive/<ISO-ts>/` + `MANIFEST.json`
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
 - Framework dirs (`.specify/`, `openspec/changes/`) are derived views synced back to canonical artifacts
 

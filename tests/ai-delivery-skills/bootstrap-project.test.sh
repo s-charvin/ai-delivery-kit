@@ -86,6 +86,21 @@ grep -Fq 'CP-UI' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'v2 profiles' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'runtime coverage' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'visual-acceptance.json' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'ui_truth_mode' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'design_mode' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'solution-design' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'capability' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'confirm_solution_design' "$TARGET_REPO/AGENTS.md"
+if grep -R -Fq 'ui_contract_exempt' "$TARGET_REPO/.agents/skills" "$TARGET_REPO/.ai-delivery/meta" \
+  --exclude='reconcile-delivery.py'; then
+  echo "legacy ui_contract_exempt bypass leaked into bootstrap output" >&2
+  exit 1
+fi
+if grep -R -Fq 'no_design_client' "$TARGET_REPO/.agents/skills" "$TARGET_REPO/.ai-delivery/meta" \
+  --exclude='reconcile-delivery.py'; then
+  echo "legacy no_design_client profile leaked into bootstrap output" >&2
+  exit 1
+fi
 [[ ! -e "$TARGET_REPO/.codex/rules/ui-contract-gate.md" ]]
 
 [[ ! -e "$TARGET_REPO/.codex/skills/ai-delivery" ]]
@@ -101,7 +116,12 @@ grep -Fq 'visual-acceptance.json' "$TARGET_REPO/AGENTS.md"
 [[ ! -e "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
-grep -Fq '"ui_stage2_authorization"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"capabilities"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"ui_truth"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+if grep -Fq '"ui_truth_mapping"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"; then
+  echo "ui truth must be capability-gated, not a fixed workflow gate" >&2
+  exit 1
+fi
 grep -Fq '"ui_stage2_reuses_worktree"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"

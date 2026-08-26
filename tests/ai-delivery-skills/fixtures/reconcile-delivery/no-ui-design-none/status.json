@@ -1,0 +1,16 @@
+{
+  "requirement_id": "no-ui-design-none",
+  "updated_at": "2026-08-26T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-NONE": {
+      "status": "split_ready",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
+      "design_approved": false,
+      "notes": "Small server-only correction"
+    }
+  }
+}

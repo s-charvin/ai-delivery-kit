@@ -1,6 +1,6 @@
 # 框架指南：superpowers
 
-已安装 superpowers 技能包时，`design` / `implement` / `finish` 动作使用本档位。superpowers 提供执行纪律类技能；编排器为它们提供外围状态机。
+已安装 superpowers 技能包时，`solution-design` / `implement` / `finish` 动作使用本档位。superpowers 提供执行纪律类技能；编排器为它们提供外围状态机。
 
 ## 检测标志
 
@@ -14,22 +14,22 @@
 
 | 动作 | superpowers 技能 |
 |------|------------------|
-| `design` | brainstorming 流程（CP-DESIGN 前的设计探索） |
+| `solution-design` | brainstorming 流程（方案设计探索；仅 `design_mode=full` 触发 CP-DESIGN） |
 | `implement` | `using-git-worktrees`、`subagent-driven-development`、`test-driven-development`、`requesting-code-review`、`verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
-## `design` 使用意见
+## `solution-design` 使用意见
 
-- 喂给 brainstorming 流程：`requirement-slice.md`、每个单元的 冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、API 文档、依赖图。
-- 产出：架构、组件分解、状态/转换模型，以及关联 scenario 的响应式布局、内容、交互、动效、资源、主题、无障碍、平台行为、性能与关键取舍。
-- 摘要记入子需求 `notes`；只有用户明确批准后才设置 `design_approved: true`。不要把设计文档写进框架自有目录。
+- 喂给 brainstorming 流程：`requirement-slice.md`、每个启用 UI truth 的单元的冻结宿主组件 / `ui-truth-index.json`、API 文档和依赖图。
+- 产出：架构、组件分解、状态/转换模型、scenario ID 引用和关键取舍。Runtime Coverage 保留在 UI truth index。
+- 规范方案设计写入子需求 `design.md`，`notes` 只保留指针；完成所需评审后设置 `design_approved: true`（`design_mode=light` 在 AI 自审后设置，`design_mode=full` 仅在用户明确批准后设置）。`design_mode=none` 保持 `false`。不要把方案设计文档写进框架自有目录。
 
 ## `implement` 使用意见（按切片）
 
 1. `using-git-worktrees` —— UI 切片定位并恢复 Stage 2 worktree；仅当没有已记录切片 worktree 时，才按每切片一个 worktree 创建。
 2. `subagent-driven-development`（默认）—— 每任务一个实现者子代理，串行执行；每个子代理内部经 `test-driven-development` 走 TDD。仅对相互独立、文件不重叠的测试/缺陷域并行派发；绝不允许两个实现者同时改同一批切片文件。
 3. `requesting-code-review` 驱动[评审循环](../stage-implementation.md#评审循环任务级闭环)：评审者始终是新鲜上下文的子代理；finding 作为修复简报交回实现者并重复评审，直到干净或 `review_loop.max_rounds` 预算耗尽，然后升级给用户。
-4. 视觉/运行时验收（仅 UI）—— 执行每个 v2 profile/state/scenario 条目，视觉证据对照已确认 preview，使用项目原生工具验证 behavior，并写入 `visual-acceptance.json`；失败重新进入同一评审循环。
+4. 视觉/运行时验收（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）—— 执行每个 v2 profile/state/scenario 条目，视觉证据对照已确认 preview，使用项目原生工具验证 behavior，并写入 `visual-acceptance.json`；失败重新进入同一评审循环。
 5. `verification-before-completion` —— 合并前做集成检查。
 6. 进入 `finish` 前，完整静态分析 + 完整测试必须干净通过。
 

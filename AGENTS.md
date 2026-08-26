@@ -10,4 +10,14 @@ Review medium: deterministic official-stack previews for visual scenarios. Give 
 Treat bundled template prose as an English source default, not as the output language. Write every human-readable AI Delivery artifact, review note, and necessary code comment in the user's current conversation language. Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, and literal protocol tokens exactly. Remove any `ai-delivery-template-language` instruction comment after localizing a copied template.
 
 UI work enters through `ai-delivery-orchestrator`. TemPad MCP errors → STOP, do not guess.
+
+Delivery routing is capability-gated by each sub-requirement's `ui_truth_mode`
+(`none`, `existing`, `runtime-baseline`, or `figma`) and `design_mode`
+(`none`, `light`, or `full`). Only `runtime-baseline` and `figma` enable CP-UI,
+`contracts/ui-truth-index.json`, and visual acceptance. `full` solution design
+uses CP-DESIGN; `light` self-approves a short `design.md`; `none` skips the
+solution-design artifact. Keep `ui_bearing` consistent with `ui_truth_mode`.
+Runtime checkpoints are `CP-UI`, `CP-DESIGN`, `CP-001`, `CP-002`, and
+`CP-ARCHIVE`; the corresponding gated runtime mode is
+`confirm_solution_design` for a pending full solution design.
 <!-- ai-delivery:ui-contract-gate:end -->

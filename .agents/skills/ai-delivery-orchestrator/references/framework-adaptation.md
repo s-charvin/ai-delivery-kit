@@ -9,15 +9,15 @@ reconcile emits one of these actions per sub-requirement:
 | Action | Meaning | Typical trigger status |
 |--------|---------|------------------------|
 | `requirement-breakdown` | Kit-owned skill: split the requirement | `draft` |
-| `ui-truth-mapping` | Kit-owned skill: controlled visual implementation in the slice worktree | `split_ready` (UI-bearing) after CP-UI |
-| `design` | Explore and propose a design; needs user approval (CP-DESIGN) | `split_ready` (non-UI) / `acceptance_frozen` with `design_approved: false` |
-| `spec` | Produce the sub-requirement specification | after `design_approved` |
+| `ui-truth-mapping` | Kit-owned capability: controlled visual implementation in the slice worktree | `split_ready` when `ui_truth_mode=figma` or `runtime-baseline`, after CP-UI |
+| `solution-design` | Explore and propose a solution design; approval depends on `design_mode` | `split_ready` or `acceptance_frozen` when `design_mode` is not `none` |
+| `spec` | Produce the sub-requirement specification | after the `design_mode` gate is satisfied |
 | `plan` | Produce the technical plan | `spec_ready` |
 | `tasks` | Produce the task breakdown | `plan_ready` |
 | `implement` | Implement remaining tasks (reuse Stage 2 worktree for UI; TDD + review discipline) | `tasks_ready` after CP-001 / `in_dev` |
 | `finish` | Rebase-merge and close the slice | `visual_acceptance_passed` |
 
-`requirement-breakdown` and `ui-truth-mapping` are kit skills and are invoked directly; `ui-truth-mapping` is still gated by CP-UI because it writes production code. All other actions are dispatched through the selected framework tier below.
+`requirement-breakdown` and `ui-truth-mapping` are kit skills and are invoked directly when their capabilities are enabled; `ui-truth-mapping` is gated by CP-UI because it writes production code. `solution-design` is an orchestrator action whose approval behavior follows `design_mode`; all other actions are dispatched through the selected framework tier below.
 
 ## Step 0 — Environment self-check (once per run)
 
@@ -38,7 +38,7 @@ When several frameworks are present, take the best of each:
 
 1. Spec-producing actions (`spec`, `plan`, `tasks`): prefer **spec-kit**, then **OpenSpec**, then native.
 2. Execution-discipline actions (`implement`, `finish`): prefer **superpowers**, then **ECC**, then native.
-3. `design` action: use whichever installed framework offers a design/brainstorming flow (superpowers brainstorming, ECC design agents); otherwise run the native design flow.
+3. `solution-design` action: use whichever installed framework offers a design/brainstorming flow (superpowers brainstorming, ECC design agents); otherwise run the native solution-design flow.
 4. Nothing installed: use the **native tier** for every action.
 5. Never mix two spec-producing frameworks on the same sub-requirement. The chosen tier for a sub-requirement is recorded once in `decisions.md` and stays stable across resumes.
 
@@ -46,7 +46,7 @@ When several frameworks are present, take the best of each:
 
 | Action | spec-kit | OpenSpec | superpowers | ECC | native |
 |--------|----------|----------|-------------|-----|--------|
-| `design` | — | — | brainstorming flow | design/review agents | native design flow |
+| `solution-design` | — | — | brainstorming flow | design/review agents | native solution-design flow |
 | `spec` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |
 | `plan` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |
 | `tasks` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |

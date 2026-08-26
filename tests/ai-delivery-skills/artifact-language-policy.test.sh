@@ -43,11 +43,21 @@ done
 
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'status-template.json'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'human-readable descriptive values'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'solution-design'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'ui_truth_mode'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'design_mode'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-4-sdd-bridge.md" 'visual-acceptance-template.json'
 require_contains "$ROOT/.agents/skills/ui-truth-mapping/SKILL.md" 'ui-truth-index-template.json'
 require_contains "$ROOT/.agents/skills/ui-truth-mapping/SKILL.md" 'confirmation.note'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json" "user's current conversation language"
 require_contains "$ROOT/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" "user's current conversation language"
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" 'Scenario ID'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" 'ui-truth-index.json'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" 'Solution Design'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" 'UI Scenario References'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"artifact_type":"solution-design"'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"layout_key":"solution_design"'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"canonical_path":"design.md"'
 
 for marker in \
   ai-delivery-verification:review-rounds \

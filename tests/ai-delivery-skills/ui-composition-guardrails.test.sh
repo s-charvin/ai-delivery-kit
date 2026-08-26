@@ -32,12 +32,14 @@ require_contains() {
 REQ_SKILL="$SKILL_ROOT/requirement-breakdown/SKILL.md"
 REQ_TEMPLATE="$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 UI_SKILL="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
+ORCH_SKILL="$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 UI_EXAMPLE="$SKILL_ROOT/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
 UI_INDEX_TEMPLATE="$SKILL_ROOT/ui-truth-mapping/templates/ui-truth-index-template.json"
 
 require_file "$REQ_SKILL"
 require_file "$REQ_TEMPLATE"
 require_file "$UI_SKILL"
+require_file "$ORCH_SKILL"
 require_file "$UI_EXAMPLE"
 require_file "$UI_INDEX_TEMPLATE"
 
@@ -55,6 +57,8 @@ require_contains "$UI_SKILL" 'not a second visible wash'
 require_contains "$UI_SKILL" 'ui-truth-index.json'
 require_contains "$UI_SKILL" '--update-goldens'
 require_contains "$UI_SKILL" 'CP-UI'
+require_contains "$ORCH_SKILL" 'ui_truth_mode'
+require_contains "$ORCH_SKILL" 'Capability-gated'
 require_contains "$UI_SKILL" 'same slice worktree'
 require_contains "$UI_SKILL" 'SHA-256'
 require_contains "$UI_SKILL" 'Runtime Coverage Plan'
@@ -75,6 +79,7 @@ require_contains "$UI_INDEX_TEMPLATE" '"profiles"'
 require_contains "$UI_INDEX_TEMPLATE" '"scenarios"'
 require_contains "$UI_INDEX_TEMPLATE" '"coverage"'
 require_contains "$UI_INDEX_TEMPLATE" '"reviewed_preview_sha256"'
+require_contains "$UI_INDEX_TEMPLATE" 'scenario_id'
 
 require_contains "$UI_EXAMPLE" 'matchesGoldenFile'
 require_contains "$UI_EXAMPLE" 'RepaintBoundary'

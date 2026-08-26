@@ -93,7 +93,7 @@ ai-delivery init --upgrade .
 
 ## 框架适配
 
-编排器输出抽象阶段动作（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并适配你环境中已安装的框架。不要求安装任何东西。
+编排器输出抽象阶段动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并适配你环境中已安装的框架。不要求安装任何东西。为保持布局稳定，规范方案设计仍落盘为 `design.md`。
 
 推荐框架（只检测、不安装）：
 
@@ -101,14 +101,21 @@ ai-delivery init --upgrade .
 |------|----------|----------|
 | spec-kit | `spec` / `plan` / `tasks` | 仓库根 `.specify/` 或 `specify` CLI |
 | OpenSpec | `spec` / `plan` / `tasks` | 仓库根 `openspec/` 或 `openspec` CLI |
-| superpowers | `design` / `implement` / `finish` | 用户技能目录含 superpowers 技能 |
-| ECC | `design` / `implement` / `finish` | IDE 中注册 `/ecc:*` 命令 |
+| superpowers | `solution-design` / `implement` / `finish` | 用户技能目录含 superpowers 技能 |
+| ECC | `solution-design` / `implement` / `finish` | IDE 中注册 `/ecc:*` 命令 |
 
 未安装任何框架？整条链路仍可端到端运行：使用内置原生档（子需求目录内的轻量 `spec.md` / `tasks.md` + 内置纪律指引）。
 
 各框架的具体使用意见随编排器技能分发：`references/framework-adaptation.md` 与 `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
 
-## 视觉冻结（无 HTML 契约 hook）
+## 按能力启用的 UI 真值（无 HTML 契约 hook）
+
+每个子需求在 `status.json` 中声明两条独立模式轴：
+
+- `ui_truth_mode`：`none`（没有可见 UI）、`existing`（既有视觉表面的行为或语义变化）、`runtime-baseline`（没有稳定 Figma 真值的新可见 UI）或 `figma`（有稳定 Figma 证据）。
+- `design_mode`：`none`（不需要方案设计产物）、`light`（短方案记录并自审）或 `full`（完整方案设计并经过 CP-DESIGN 审批）。
+
+只有 `ui_truth_mode=figma` 或 `runtime-baseline` 才启用 CP-UI、Stage 2、`acceptance_frozen`、v2 UI truth index 与视觉验收。`none` 与 `existing` 直接进入按需的 solution-design/spec，以及普通行为或语义验证。`ui_bearing` 只是与模式一致性校验字段，不是工作流 gate。runtime-baseline 证据不得称为 Figma 1:1 还原。
 
 CP-UI 授权后，Stage 2 在切片 worktree 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件**，并为每个视觉场景生成官方栈预览（Flutter：Widget + golden PNG）。编写组件代码前，每个 unit 都必须按适用性解决覆盖 `state`、`layout`、`content`、`interaction`、`motion`、`assets`、`theme`、`accessibility`、`platform`、`performance` 的 Runtime Coverage Plan。`ai-delivery init` **不会** 安装 UI git hook。
 
@@ -152,7 +159,7 @@ bash scripts/rehearse-release.sh
 
 本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
 
-- `design.md`、`verification.md`、`visual-acceptance.json`、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`、`archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`（`design_mode` 为 `light` 或 `full` 时的规范方案设计产物）、`verification.md`、`visual-acceptance.json`（仅 UI truth 模式）、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`（仅 UI truth 模式）、`archive/<ISO-ts>/` + `MANIFEST.json`
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
 - 框架目录（`.specify/`、`openspec/changes/`）为派生视图，产物须同步回 canonical
 

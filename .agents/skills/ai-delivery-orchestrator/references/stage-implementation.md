@@ -10,7 +10,7 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile 
 
 Follow the sub-requirement dependency graph and each UI unit's type/dependencies persisted in `ui-truth-index.json`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are complete in the slice workspace.
 
-For UI-bearing slices, continue in the **same slice worktree created during Stage 2** and implement against the frozen host-stack component plus the v2 profile/state/scenario coverage and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second worktree or re-draw the component. Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
+For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same slice worktree created during Stage 2** and implement against the frozen host-stack component plus the v2 profile/state/scenario coverage and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second worktree or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
 
 ### Visual truth — do not re-query Figma by default
 
@@ -64,10 +64,10 @@ When a stable Figma reference bitmap exists, record project-native image-diff ev
 
 The `implement` action always follows this chain, regardless of framework tier:
 
-1. **Isolate** — reuse the recorded Stage 2 worktree/branch for UI slices; create one worktree/branch here only for slices that do not already have one.
+1. **Isolate** — reuse the recorded Stage 2 worktree/branch for `ui_truth_mode=figma` or `runtime-baseline`; create one worktree/branch here only for slices that do not already have one.
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
-4. **Visual/runtime acceptance** (UI only) — execute every v2 scenario under its recorded profile with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record structured `visual-acceptance.json`. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes.
+4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 scenario under its recorded profile with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record structured `visual-acceptance.json`. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes.
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
@@ -107,7 +107,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 ## Status updates
 
 - `in_dev` when implementation starts.
-- `visual_acceptance_passed` only after `visual-acceptance.json` binds the current v2 index and every scenario is passed or explicitly waived with the required evidence.
+- Set `visual_acceptance_passed` only for `ui_truth_mode=figma` or `runtime-baseline`, after `visual-acceptance.json` binds the current v2 index and every scenario is passed or explicitly waived with the required evidence.
 - `merged` after successful rebase, and only when `verification.md` is signed (the validate-delivery-status gate rejects `merged` without it).
 
 ## Progress ledger (optional)

@@ -2,14 +2,14 @@
 
 ## 何时运行
 
-对每个 `split_ready`、`ui_bearing: true`、有 Figma 设计源且已记录 CP-UI 用户授权的子需求。
+对每个 `split_ready` 且 `ui_truth_mode=figma` 或 `runtime-baseline`、已记录 CP-UI 用户授权的子需求。`none` 与 `existing` 不进入此阶段。
 
 Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是“不含实现的 mapping”。
 
 ## 准备输入
 
 - 阅读 `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/requirement-slice.md`。
-- 收集 Figma file key 与目标 node id。
+- `figma` 模式收集 Figma file key 与目标 node id；`runtime-baseline` 模式收集定义运行时基线的 requirement、project 或 user-decision 来源，不得伪造 Figma 来源。
 - 从仓库判断宿主栈（优先 Flutter）。拿不准就停下问用户。
 - 每切片创建或复用一个隔离 worktree/分支，并在 `decisions.md` 或 `progress.md` 记录分支与路径；同一 worktree 贯穿 Stage 3 与 Stage 4。
 
@@ -17,9 +17,9 @@ Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是�
 
 Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code`。Stage 2 混用会搞乱归属。**Stage 4 默认也不再跑** — 接线已经写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
 
-传入需求切片与设计源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden/behavior tests），并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。
+传入需求切片与模式对应的真值来源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden/behavior tests），并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。
 
-v2 `contracts/ui-truth-index.json` 记录治理元数据：设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
+v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
@@ -52,9 +52,10 @@ python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/s
 
 ## 若无 Figma 链接
 
-- 非 UI 子需求：跳过（拆分阶段已处理）。
-- UI 子需求无设计：`blocked_missing_design`（`blocker_scope: slice_local`）。
+- `ui_truth_mode=none` 或 `existing`：跳过；使用普通项目行为/语义验证。
+- `ui_truth_mode=figma` 无有效 Figma 源：`blocked_missing_design`（`blocker_scope: slice_local`）。
+- `ui_truth_mode=runtime-baseline` 无 requirement、project 或 user-decision 来源：`blocked_missing_visual_truth`（`blocker_scope: slice_local`）。
 
 ## 下一步交接
 
-`acceptance_frozen` → `design` 动作。见 [handoff-table.md](handoff-table.md)。
+`acceptance_frozen` → 按 `design_mode` 进入 `solution-design`。见 [handoff-table.md](handoff-table.md)。

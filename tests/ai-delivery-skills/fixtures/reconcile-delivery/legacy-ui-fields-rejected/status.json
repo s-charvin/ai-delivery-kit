@@ -1,5 +1,5 @@
 {
-  "requirement_id": "no-design-client-ui-exempt",
+  "requirement_id": "legacy-ui-fields-rejected",
   "updated_at": "2026-08-12T00:00:00Z",
   "current_checkpoint": null,
   "runtime_mode": "resume",
@@ -7,9 +7,11 @@
     "SR-UI": {
       "status": "split_ready",
       "ui_bearing": true,
+      "ui_truth_mode": "existing",
+      "design_mode": "light",
       "design_approved": true,
       "ui_contract_exempt": true,
-      "notes": "component-library UI; explicit ui_contract_exempt"
+      "notes": "deprecated bypass must be rejected"
     }
   }
 }

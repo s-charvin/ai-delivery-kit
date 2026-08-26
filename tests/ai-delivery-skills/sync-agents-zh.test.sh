@@ -59,6 +59,29 @@ for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
   require_han_content "$DST/$skill/SKILL-zh.md"
 done
 
+for rel in ai-delivery-orchestrator/SKILL.md ai-delivery-orchestrator/templates/design-template.md ai-delivery-orchestrator/templates/status-template.json; do
+  require_no_han_content "$SRC/$rel"
+  grep -Fq 'ui_truth_mode' "$SRC/$rel" || grep -Fq 'solution-design' "$SRC/$rel" \
+    || fail "Missing mode-aware solution-design marker: $rel"
+done
+
+for tree in "$SRC" "$DST"; do
+  if grep -R -Fq 'ui_contract_exempt' "$tree/ai-delivery-orchestrator" \
+      --exclude='reconcile-delivery.py'; then
+    fail "Deprecated ui_contract_exempt bypass remains outside the explicit rejection guard"
+  fi
+  if grep -R -Fq 'no_design_client' "$tree/ai-delivery-orchestrator" \
+      --exclude='reconcile-delivery.py'; then
+    fail "Deprecated no_design_client profile remains outside the explicit rejection guard"
+  fi
+done
+grep -Fq 'legacy field ui_contract_exempt is forbidden' \
+  "$SRC/ai-delivery-orchestrator/scripts/reconcile-delivery.py" \
+  || fail "Reconcile must reject ui_contract_exempt explicitly"
+grep -Fq 'no_design_client participation profile is removed' \
+  "$SRC/ai-delivery-orchestrator/scripts/reconcile-delivery.py" \
+  || fail "Reconcile must reject no_design_client explicitly"
+
 # Localized templates
 require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
@@ -88,6 +111,22 @@ do
   if grep -Fq -- "ai-delivery-orchestrator/templates/$template" "$SYNC_SCRIPT"; then
     fail "Localized template must not be copied as a non-localized asset: $template"
   fi
+done
+
+grep -Fq 'Scenario IDs' "$SRC/ai-delivery-orchestrator/templates/design-template.md" \
+  || fail "English design template must reference scenario IDs"
+grep -Fq $'\u573a\u666f' "$DST/ai-delivery-orchestrator/templates/design-template.md" \
+  || fail "Chinese design template must localize scenario references"
+for design_template in \
+  "$SRC/ai-delivery-orchestrator/templates/design-template.md" \
+  "$DST/ai-delivery-orchestrator/templates/design-template.md"
+do
+  grep -Fq '"artifact_type":"solution-design"' "$design_template" \
+    || fail "Design template must declare solution-design artifact metadata: $design_template"
+  grep -Fq '"layout_key":"solution_design"' "$design_template" \
+    || fail "Design template must declare the solution_design layout key: $design_template"
+  grep -Fq '"canonical_path":"design.md"' "$design_template" \
+    || fail "Design template must preserve the canonical design.md path: $design_template"
 done
 
 # zh tree must not advertise .agents-zh as a runtime command path

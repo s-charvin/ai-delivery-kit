@@ -16,11 +16,12 @@
 ## 完成后
 
 - 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
-- 为每个子需求设置 `ui_bearing`：拥有页面/屏幕状态 → `true`；纯基础设施或无 UI → `false`。
+- 在能力审计中为每个子需求设置 `ui_truth_mode` 与 `design_mode`：`ui_truth_mode` 使用 `none`、`existing`、`runtime-baseline` 或 `figma`；`design_mode` 使用 `none`、`light` 或 `full`。
+- 保留 `ui_bearing` 作为一致性字段：仅 `ui_truth_mode=none` 时为 `false`，其他 UI truth 模式为 `true`。
 - 初始化 `status.json`：复制 `templates/status-template.json` 的结构，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键和机器值；其中人类可读的描述值改为用户当前对话语言。
 - 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。
 
-## 轻量审计清单（inline — 不要执行 `design` 动作）
+## 轻量审计清单（inline — 不要执行 `solution-design` 动作）
 
 对每个 `split_ready` 子需求，主会话输出四项检查：
 

@@ -57,10 +57,16 @@ require "$EN_BRIDGE" "exactly one result for every indexed scenario id" "EN exac
 require "$EN_DESIGN_STAGE" "every frozen unit/scenario id" "EN scenario-linked spec"
 require "$EN_DESIGN_STAGE" "which task implements or verifies each scenario id" "EN scenario-linked plan"
 require "$EN_DESIGN_STAGE" "complete scenario-to-test/acceptance coverage" "EN scenario-linked tasks"
-require "$EN_DESIGN_TEMPLATE" "Unit and Scenario Traceability" "EN design traceability"
+require "$EN_DESIGN_STAGE" "solution-design" "EN solution-design stage"
+require "$EN_DESIGN_STAGE" "ui_truth_mode" "EN UI truth mode routing"
+require "$EN_DESIGN_STAGE" "design_mode" "EN design mode routing"
+require "$EN_DESIGN_TEMPLATE" "UI Scenario References" "EN UI scenario references"
+require "$EN_DESIGN_TEMPLATE" "Scenario IDs" "EN scenario ID references"
+for forbidden in "Responsive" "Reduced motion" "Figma source"; do
+  forbid "$EN_DESIGN_TEMPLATE" "$forbidden" "EN design template must not duplicate runtime coverage ($forbidden)"
+done
+require "$EN_DESIGN_TEMPLATE" "does not duplicate their Runtime Coverage Plan" "EN design template delegates runtime coverage"
 require "$EN_DESIGN_TEMPLATE" "State and Transition Model" "EN design state model"
-require "$EN_DESIGN_TEMPLATE" "Runtime Boundaries" "EN design runtime boundaries"
-require "$EN_DESIGN_TEMPLATE" "Performance/resource lifecycle" "EN design performance lifecycle"
 
 # Kit skills must stay framework-agnostic — no host-app size tokens or live-node anecdotes.
 for f in "$EN" "$ZH"; do

@@ -10,11 +10,11 @@
 | `blocked_requirement_conflict` | 两个已批准来源互相矛盾 |
 | `blocked_dependency` | 上游子需求未就绪 |
 
-## UI 真值映射
+## UI truth 能力
 
 | 阻塞 | 触发条件 |
 |------|----------|
-| `blocked_missing_design` | 设计证据中缺少所需视觉载体 |
+| `blocked_missing_design` | Figma 设计证据中缺少所需视觉载体 |
 | `blocked_requirement_figma_conflict` | 需求与视觉真值不可调和 |
 | `blocked_figma_conflict` | 设计证据自相矛盾 |
 | `blocked_missing_state_code` | 最终屏幕状态缺少结构化帧证据 |

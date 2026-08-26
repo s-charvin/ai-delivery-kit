@@ -4,14 +4,14 @@
 
 所有原生产物都放在切片旁：`.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/`。
 
-## `design` 动作（原生设计流程）
+## `solution-design` 动作（原生方案设计流程）
 
 在主会话内联完成（无需单独工具）：
 
-1. 读取 `requirement-slice.md`、冻结宿主组件 / `ui-truth-index.json`（含 UI 时）、API 文档、依赖图。
-2. 产出：架构草图、组件分解、数据/状态转换模型、关联 scenario 的响应式/内容/交互/动效/资源/主题/无障碍/平台/性能决策，以及关键取舍。
-3. 将设计写入 `design.md`（规范设计文件，见 `docs/artifact-layout.md`）并向用户展示精简摘要；`notes` 只保留短状态标记。
-4. CP-DESIGN：只有用户明确批准后才设置 `design_approved: true`。
+1. 读取 `requirement-slice.md`、启用时的 UI truth 产物、API 文档与依赖图。
+2. 产出：架构草图、组件分解、数据/状态转换模型、scenario ID 引用与关键取舍。Runtime Coverage 细节留在 `contracts/ui-truth-index.json`。
+3. 将方案设计写入 `design.md`（规范产物路径，见 `docs/artifact-layout.md`）并向用户展示精简摘要；`notes` 只保留短状态标记。
+4. 完成所需评审后设置 `design_approved: true`：`design_mode=full` 仅经 CP-DESIGN 用户明确批准后设置；`design_mode=light` 完成短方案并通过 AI 自审后设置，不触发 CP-DESIGN。`design_mode=none` 保持 `false`。
 
 ## `spec` 动作 — `spec/spec.md`
 
@@ -81,7 +81,7 @@
 ## `finish` 动作 — 内置合并清单
 
 1. 完整静态分析 + 完整测试干净通过。
-2. 结构化视觉/运行时验收已落档（仅 UI）：`visual-acceptance.json` 绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
+2. 结构化视觉/运行时验收已落档（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）：`visual-acceptance.json` 绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
 3. 变基到开发分支（无 merge commit）；解决冲突后重跑测试。
 4. 开/合并 PR；只有使用用户当前对话语言写完并签署 `verification.md` 后才设置 `merged`。保留 `templates/verification-template.md` 的三个 `ai-delivery-verification:*` 标记；缺少时状态 validator 会拒绝 `merged`。
 

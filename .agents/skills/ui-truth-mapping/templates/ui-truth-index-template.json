@@ -1,6 +1,9 @@
 {
   "schema_version": 2,
+  "ui_truth_mode": "figma",
   "design_source": {
+    "evidence_origin": "figma",
+    "source_ref": "figma:<file-key>#<root-node>",
     "file_key": "<figma-file-key>",
     "root_node": "<figma-root-node>",
     "revision": "<figma-revision>",

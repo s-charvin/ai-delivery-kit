@@ -1,6 +1,6 @@
 # Framework Guide: superpowers
 
-Use this tier for `design` / `implement` / `finish` actions when the superpowers skill pack is installed. superpowers provides execution-discipline skills; the orchestrator supplies the state machine around them.
+Use this tier for `solution-design` / `implement` / `finish` actions when the superpowers skill pack is installed. superpowers provides execution-discipline skills; the orchestrator supplies the state machine around them.
 
 ## Detection signs
 
@@ -14,22 +14,22 @@ Never clone or symlink superpowers yourself.
 
 | Action | superpowers skill(s) |
 |--------|----------------------|
-| `design` | brainstorming flow (design exploration before CP-DESIGN) |
+| `solution-design` | brainstorming flow (solution-design exploration; CP-DESIGN only for `design_mode=full`) |
 | `implement` | `using-git-worktrees`, `subagent-driven-development`, `test-driven-development`, `requesting-code-review`, `verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
-## `design` usage advice
+## `solution-design` usage advice
 
-- Feed the brainstorming flow: `requirement-slice.md`, each unit's host component + `ui-truth-index.json` (UI-bearing), API docs, dependency graph.
-- Produce architecture, component decomposition, a state/transition model, and scenario-linked decisions for responsive layout, content, interaction, motion, assets, theme, accessibility, platform behavior, performance, and key trade-offs.
-- Store the summary in subreq `notes`; set `design_approved: true` only after explicit user approval. Do not write design docs into framework-owned directories.
+- Feed the brainstorming flow: `requirement-slice.md`, each enabled UI truth unit's host component + `ui-truth-index.json`, API docs, and the dependency graph.
+- Produce architecture, component decomposition, a state/transition model, scenario ID references, and key trade-offs. Runtime Coverage remains in the UI truth index.
+- Store the canonical solution design in subreq `design.md` and keep only a pointer in `notes`; set `design_approved: true` after the required review (`design_mode=light` after AI self-review, `design_mode=full` only after explicit user approval). Keep it `false` for `design_mode=none`. Do not write solution-design docs into framework-owned directories.
 
 ## `implement` usage advice (per slice)
 
 1. `using-git-worktrees` — locate and resume the Stage 2 worktree for UI slices; create one worktree per slice only when no recorded slice worktree exists.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
 3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
-4. Visual/runtime acceptance (UI only) — execute every v2 profile/state/scenario entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write `visual-acceptance.json`; failures re-enter the same review loop.
+4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 profile/state/scenario entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write `visual-acceptance.json`; failures re-enter the same review loop.
 5. `verification-before-completion` — integration checks before merge.
 6. Full analyze + full test must pass clean before `finish`.
 

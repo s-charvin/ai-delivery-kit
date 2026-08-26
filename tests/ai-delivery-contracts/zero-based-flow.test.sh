@@ -70,6 +70,9 @@ require_json_version "$SUBREQ_ROOT/traceability.json"
 
 require_contains "$SUBREQ_ROOT/status.json" '"blocked_from_status"'
 require_contains "$SUBREQ_ROOT/status.json" '"resume_target_status"'
+require_contains "$SUBREQ_ROOT/status.json" '"ui_truth_mode"'
+require_contains "$SUBREQ_ROOT/status.json" '"design_mode"'
+require_contains "$SUBREQ_ROOT/status.json" '"design_approved"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"spec_refs"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"api_contract_mapping"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"source_index"'

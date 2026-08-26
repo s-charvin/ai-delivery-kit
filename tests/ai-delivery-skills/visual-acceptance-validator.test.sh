@@ -53,6 +53,11 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     preview.write_bytes(b"default-png")
     unrelated_preview.write_bytes(b"unrelated-png")
+    (subreq / "design.md").write_text(
+        "# Solution Design\n\n"
+        "Scenario IDs: default-phone\n",
+        encoding="utf-8",
+    )
 
     status = {
         "requirement_id": "REQ-UI",
@@ -60,6 +65,8 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
             "SR-001": {
                 "status": "visual_acceptance_passed",
                 "ui_bearing": True,
+                "ui_truth_mode": "figma",
+                "design_mode": "full",
                 "design_approved": True,
             }
         },
@@ -82,7 +89,10 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     ]
     index = {
         "schema_version": 2,
+        "ui_truth_mode": "figma",
         "design_source": {
+            "evidence_origin": "figma",
+            "source_ref": "figma:file-key@rev-2026-08-25",
             "file_key": "figma-file-key",
             "root_node": "12:34",
             "revision": "rev-2026-08-25",
@@ -299,6 +309,99 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         "note": "",
     }
     expect_fail("waiver without note", waiver_without_note, "waiver note is required")
+
+    def write_status(*, status_name: str, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+        status["sub_requirements"]["SR-001"].update(
+            {
+                "status": status_name,
+                "ui_bearing": ui_bearing,
+                "ui_truth_mode": ui_truth_mode,
+                "design_mode": design_mode,
+                "design_approved": design_mode != "none",
+            }
+        )
+        (req_root / "status.json").write_text(
+            json.dumps(status, indent=2) + "\n", encoding="utf-8"
+        )
+
+    def expect_without_acceptance(label: str, *, status_name: str, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+        write_status(
+            status_name=status_name,
+            ui_bearing=ui_bearing,
+            ui_truth_mode=ui_truth_mode,
+            design_mode=design_mode,
+        )
+        acceptance_path.unlink(missing_ok=True)
+        index_path.unlink(missing_ok=True)
+        if design_mode == "none":
+            (subreq / "design.md").unlink(missing_ok=True)
+        else:
+            (subreq / "design.md").write_text(
+                "# Solution Design\n\nExisting behavior change.\n",
+                encoding="utf-8",
+            )
+        result = run()
+        require(result.returncode == 0, f"{label}: expected pass, got:\n{result.stderr}")
+
+    expect_without_acceptance(
+        "none skips visual acceptance",
+        status_name="spec_ready",
+        ui_bearing=False,
+        ui_truth_mode="none",
+        design_mode="none",
+    )
+    expect_without_acceptance(
+        "existing skips visual acceptance",
+        status_name="spec_ready",
+        ui_bearing=True,
+        ui_truth_mode="existing",
+        design_mode="light",
+    )
+
+    # A runtime baseline has no Figma claim, but it still needs deterministic
+    # visual evidence once its status reaches visual acceptance.
+    write_status(
+        status_name="visual_acceptance_passed",
+        ui_bearing=True,
+        ui_truth_mode="runtime-baseline",
+        design_mode="light",
+    )
+    runtime_index = copy.deepcopy(index)
+    runtime_index["ui_truth_mode"] = "runtime-baseline"
+    runtime_index["design_source"] = {
+        "evidence_origin": "requirement",
+        "source_ref": "requirement-slice.md#ui-baseline",
+        "captured_at": "2026-08-25T00:00:00Z",
+    }
+    for unit in runtime_index["units"]:
+        for state in unit.get("states", []):
+            if state.get("evidence_origin") == "figma":
+                state["evidence_origin"] = "requirement"
+                state["source_ref"] = "requirement-slice.md#ui-baseline"
+                state.pop("source_node", None)
+        for scenario in unit.get("scenarios", []):
+            if scenario.get("evidence_origin") == "figma":
+                scenario["evidence_origin"] = "requirement"
+                scenario["source_ref"] = "requirement-slice.md#ui-baseline"
+    index_path.write_text(json.dumps(runtime_index, indent=2) + "\n", encoding="utf-8")
+    expect_fail(
+        "runtime baseline missing acceptance",
+        None,
+        "requires visual-acceptance.json",
+    )
+
+    write_status(
+        status_name="visual_acceptance_passed",
+        ui_bearing=True,
+        ui_truth_mode="figma",
+        design_mode="full",
+    )
+    index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+    (subreq / "design.md").write_text(
+        "# Solution Design\n\nScenario IDs: default-phone\n",
+        encoding="utf-8",
+    )
+    expect_pass("restore Figma acceptance after mode matrix", valid_acceptance)
 
 print("PASS: structured visual acceptance rejects missing, stale, partial, and forged evidence.")
 PY

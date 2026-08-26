@@ -19,8 +19,8 @@ If `.specify/` exists but the CLI is missing or broken, degrade to the native ti
 
 ## Usage advice
 
-- Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each unit's frozen host component + `ui-truth-index.json` (UI-bearing), API docs if available, and the dependency graph.
-- For UI-bearing slices, spec-kit's input is the reviewed host component + v2 `ui-truth-index.json`; reference each unit/scenario id and its evidence origin instead of authoring a second visual description that could drift from the contract.
+- Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each enabled UI truth unit's frozen host component + `ui-truth-index.json`, API docs if available, and the dependency graph.
+- For UI truth slices, spec-kit's input is the reviewed host component + v2 `ui-truth-index.json`; reference each unit/scenario id and its evidence origin instead of authoring a second visual description that could drift from the contract.
 - Audit each output before advancing status:
   - `spec.md` → audit state transitions, content policies, motion, assets, accessibility, and acceptance criteria against every frozen unit/scenario id (UI) → `spec_ready`
   - `plan.md` → audit delivery slice ordering and scenario implementation/verification ownership → `plan_ready`
@@ -42,5 +42,5 @@ In the sub-requirement `traceability.json`:
 ## Boundaries
 
 - Do not fork or restate official `speckit-*` skills inside the repo.
-- Do not start `speckit-*` steps before design approval (`design_approved: true`); UI slices additionally require `acceptance_frozen`.
+- Do not start `speckit-*` steps while a `design_mode=full` approval is pending (`design_approved: false`); UI truth slices additionally require `acceptance_frozen`.
 - spec-kit covers spec-producing actions only; `implement` / `finish` dispatch to superpowers, ECC, or the native tier per [../framework-adaptation.md](../framework-adaptation.md).

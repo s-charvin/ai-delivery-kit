@@ -1,0 +1,16 @@
+{
+  "requirement_id": "no-ui-design-light",
+  "updated_at": "2026-08-26T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-LIGHT": {
+      "status": "split_ready",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "light",
+      "design_approved": false,
+      "notes": "Small API extension with an explicit light solution design"
+    }
+  }
+}

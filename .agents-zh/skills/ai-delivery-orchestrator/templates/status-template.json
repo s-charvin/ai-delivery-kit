@@ -1,23 +1,23 @@
 {
   "_schema": "1.0",
-  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪自身状态、阻塞详情和恢复目标。",
+  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪状态、能力模式、阻塞详情和恢复目标。",
 
   "_status_meanings": {
     "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
     "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
-    "acceptance_frozen": "CP-UI 授权的真实宿主组件、运行时覆盖矩阵与官方视觉 scenario 预览已在切片 worktree 中冻结；v2 contracts/ui-truth-index.json 的来源、profile、scenario、coverage、路径、SHA-256 与预览绑定确认均有效（仅 UI 子需求；非 UI 子需求跳过此状态）",
+    "acceptance_frozen": "已启用的 UI truth 能力已在切片 worktree 中冻结 CP-UI 授权的宿主组件、运行时覆盖矩阵与官方预览；v2 contracts/ui-truth-index.json 的来源、profile、scenario、coverage、路径、SHA-256 与预览绑定确认均有效（仅 ui_truth_mode=figma 或 runtime-baseline）",
     "spec_ready": "spec.md 已生成并对照契约审计通过",
     "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
     "tasks_ready": "tasks.md 已生成，任务粒度合适、按依赖排序且文件级范围 — 等待用户确认进入剩余开发工作",
-    "in_dev": "剩余实现进行中 — UI 切片复用 Stage 2 worktree，TDD 循环活跃",
-    "visual_acceptance_passed": "实现已通过每个已索引的视觉/运行时 scenario，且结构化 visual-acceptance.json 绑定当前 UI truth index（仅 UI 切片；非 UI 切片直接跳过此状态）",
+    "in_dev": "剩余实现进行中 — UI truth 切片复用 Stage 2 worktree，TDD 循环活跃",
+    "visual_acceptance_passed": "实现已通过每个已索引的视觉/运行时 scenario，且结构化 visual-acceptance.json 绑定当前 UI truth index（仅 ui_truth_mode=figma 或 runtime-baseline；其他模式跳过此状态）",
     "merged": "代码已变基合并到开发分支（无合并提交）",
     "archived": "冻结归档 — 产物已快照至 archive/ 区并写入 MANIFEST.json，不可变；需求变更须开新 <req-id>",
 
     "blocked_missing_requirement": "源中缺少关键业务事实",
     "blocked_requirement_conflict": "两个已批准的来源互相矛盾",
     "blocked_dependency": "上游子需求尚未就绪",
-    "blocked_missing_design": "设计证据中缺少所需视觉载体",
+    "blocked_missing_design": "缺少所需 UI truth 证据或方案设计输入",
     "blocked_requirement_figma_conflict": "需求与视觉真值不可调和地矛盾",
     "blocked_figma_conflict": "不同提供方的设计证据互相矛盾",
     "blocked_missing_state_code": "最终屏幕状态缺少结构化框架证据",
@@ -35,18 +35,18 @@
   },
 
   "_checkpoints": {
-    "CP-UI": "ui_visual_implementation_authorization — split_ready UI 切片等待用户授权在隔离 worktree 中写生产组件、golden 与预览",
+    "CP-UI": "ui_visual_implementation_authorization — UI truth 能力切片等待用户授权在隔离 worktree 中写生产组件、golden 与预览",
     "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
     "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
-    "CP-DESIGN": "design_approval — 方案设计已通过设计评审并获得用户批准，方可进入 spec 阶段",
+    "CP-DESIGN": "solution_design_approval — 完整方案设计须通过评审并获得用户批准，方可进入 spec 阶段",
     "CP-ARCHIVE": "archive_confirmation — 所有切片均已 merged，等待用户确认冻结归档（archive/ 不可变快照）"
   },
 
   "_runtime_modes": {
     "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
     "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
-    "confirm_ui": "current_checkpoint=CP-UI，split_ready UI 切片等待用户授权受控视觉实现；确认前 NEXT_ACTION=none",
-    "confirm_design": "current_checkpoint=CP-DESIGN，可运行切片需设计批准后方可进入 spec 阶段",
+    "confirm_ui": "current_checkpoint=CP-UI，ui_truth_mode=figma 或 runtime-baseline 的切片等待授权受控视觉实现；确认前 NEXT_ACTION=none",
+    "confirm_solution_design": "current_checkpoint=CP-DESIGN，design_mode=full 的切片需方案设计批准后方可进入 spec 阶段",
     "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
     "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
     "closing": "current_checkpoint=CP-ARCHIVE，所有可执行切片均已 merged，等待用户确认冻结归档",
@@ -65,7 +65,9 @@
       "blocked_from_status": null,
       "blocker_scope": null,
       "resume_target_status": null,
-      "ui_bearing": null,
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
       "design_approved": false,
       "notes": null
     }

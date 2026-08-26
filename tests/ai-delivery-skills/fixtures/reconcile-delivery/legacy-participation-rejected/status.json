@@ -1,5 +1,5 @@
 {
-  "requirement_id": "no-design-client-non-ui",
+  "requirement_id": "legacy-participation-rejected",
   "updated_at": "2026-08-12T00:00:00Z",
   "current_checkpoint": null,
   "runtime_mode": "resume",
@@ -7,8 +7,11 @@
     "SR-API": {
       "status": "split_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
+      "no_design_client": true,
       "design_approved": false,
-      "notes": "infra-only slice"
+      "notes": "legacy participation must be rejected"
     }
   }
 }

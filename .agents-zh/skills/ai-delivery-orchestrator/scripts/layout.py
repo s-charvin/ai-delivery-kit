@@ -12,7 +12,7 @@ under the `layout` key. Every path below is *relative to* `ai_delivery_path`
 
 Artifact kinds come in two scopes:
   * requirement-level   (no sub-requirement): status, requirement, ...
-  * sub-requirement-level: spec, plan, tasks, design, verification, ...
+  * sub-requirement-level: spec, plan, tasks, solution_design, verification, ...
 
 Reconcile, validators, and archive scripts resolve paths through this module.
 """
@@ -44,7 +44,7 @@ DEFAULT_LAYOUT: dict = {
         "decisions": "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
         "readme": "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
         "traceability": "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
-        "design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
+        "solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
         "verification": "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
         "visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
         "spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
@@ -153,35 +153,6 @@ def _read_binding(repo_root: Path) -> dict | None:
     return data if isinstance(data, dict) else None
 
 
-def load_participation_profile(start: Path | str) -> str:
-    """Read coordination.participation from project-binding.json (default: fullstack).
-
-    Stop at the first project-binding.json (even if participation is absent)
-    and never walk past a git root or the filesystem root.
-    """
-    start_path = Path(start)
-    for cand in [start_path, *start_path.parents]:
-        if _is_fs_root(cand):
-            break
-        data = _read_binding(cand)
-        if isinstance(data, dict):
-            coord = data.get("coordination")
-            if isinstance(coord, dict):
-                part = coord.get("participation")
-                if isinstance(part, str) and part.strip():
-                    return part.strip()
-            part = data.get("participation")
-            if isinstance(part, str) and part.strip():
-                return part.strip()
-            return "fullstack"
-        try:
-            if (cand / ".git").exists():
-                break
-        except OSError:
-            break
-    return "fullstack"
-
-
 def load_layout(repo_root: Path) -> dict:
     """Read the `layout` section from project-binding.json, else fallback."""
     data = _read_binding(repo_root)
@@ -274,6 +245,61 @@ def file_sha256(path: Path) -> str | None:
 SPEC_KINDS = ("spec", "plan", "tasks")
 
 DEFAULT_WORKFLOW_POLICY: dict = {
+    "version": 2,
+    "truth_policy": {
+        "functional_source": "Requirement",
+        "visual_source": "Figma",
+        "visual_sources_by_mode": {
+            "none": [],
+            "existing": [],
+            "runtime-baseline": ["requirement", "project", "user-decision"],
+            "figma": ["figma", "requirement", "project", "user-decision"],
+        },
+        "conflict_behavior": "block",
+    },
+    "workflow_gates": ["requirement_breakdown", "spec_pipeline", "implementation"],
+    "capabilities": {
+        "ui_truth": {
+            "checkpoint": "CP-UI",
+            "index": "contracts/ui-truth-index.json",
+            "preview": "official_host_stack_preview",
+            "modes": {
+                "none": {
+                    "enabled": False,
+                    "stage2": False,
+                    "requires_index": False,
+                    "requires_preview": False,
+                    "final_acceptance": "ordinary_behavior_and_semantic_tests",
+                },
+                "existing": {
+                    "enabled": False,
+                    "stage2": False,
+                    "requires_index": False,
+                    "requires_preview": False,
+                    "final_acceptance": "ordinary_behavior_and_semantic_tests",
+                },
+                "runtime-baseline": {
+                    "enabled": True,
+                    "stage2": True,
+                    "requires_index": True,
+                    "requires_preview": True,
+                    "final_acceptance": "visual_acceptance",
+                },
+                "figma": {
+                    "enabled": True,
+                    "stage2": True,
+                    "requires_index": True,
+                    "requires_preview": True,
+                    "final_acceptance": "visual_acceptance",
+                },
+            },
+        }
+    },
+    "solution_design": {
+        "modes": ["none", "light", "full"],
+        "full_checkpoint": "CP-DESIGN",
+        "artifact_key": "solution_design",
+    },
     "review_loop": {"max_rounds": 3},
     "spec_persistence": {
         "active": "living",
@@ -530,20 +556,10 @@ def _selftest() -> int:
         assert policy["review_loop"]["max_rounds"] == 3
         assert policy["spec_persistence"]["active"] == "living"
 
-    # 8) participation walks stop at the first binding / do not scan /
+    # 8) the canonical solution-design key retains the stable design.md filename
     with tempfile.TemporaryDirectory() as td:
-        nested = Path(td) / "requirements" / "R1"
-        nested.mkdir(parents=True)
-        assert load_participation_profile(nested) == "fullstack"
-        meta = Path(td) / ".ai-delivery" / "meta"
-        meta.mkdir(parents=True)
-        (meta / "project-binding.json").write_text(json.dumps({"version": 1}), encoding="utf-8")
-        assert load_participation_profile(nested) == "fullstack"
-        (meta / "project-binding.json").write_text(
-            json.dumps({"coordination": {"participation": "no-design-client"}}),
-            encoding="utf-8",
-        )
-        assert load_participation_profile(nested) == "no-design-client"
+        root = Path(td)
+        assert artifact_path(root, "solution_design", "REQ-1", sr_id="SR-001").name == "design.md"
 
     print("layout.py selftest OK")
     return 0

@@ -10,11 +10,11 @@ When a blocker occurs, record the narrowest matching blocker, continue other run
 | `blocked_requirement_conflict` | Two approved sources contradict each other |
 | `blocked_dependency` | Upstream sub-requirement not ready |
 
-## UI truth mapping
+## UI truth capability
 
 | Blocker | Trigger |
 |---------|---------|
-| `blocked_missing_design` | Required visual carrier missing from design evidence |
+| `blocked_missing_design` | Required Figma visual carrier is missing from design evidence |
 | `blocked_requirement_figma_conflict` | Requirement and visual truth irreconcilable |
 | `blocked_figma_conflict` | Design evidence contradicts itself |
 | `blocked_missing_state_code` | Final screen state lacks structured frame evidence |

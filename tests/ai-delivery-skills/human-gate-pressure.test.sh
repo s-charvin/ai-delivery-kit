@@ -65,6 +65,9 @@ refute_line() {
 # Scenario 1: stale CP-001 credential left behind after a regression must not
 # authorize implement. SR-001 regressed to spec_ready, SR-002 still tasks_ready.
 S1=$(new_scenario "stale-cp001")
+mkdir -p "$S1/sub-requirements/SR-001" "$S1/sub-requirements/SR-002"
+printf '# Solution Design\n' > "$S1/sub-requirements/SR-001/design.md"
+printf '# Solution Design\n' > "$S1/sub-requirements/SR-002/design.md"
 cat > "$S1/status.json" <<'EOF'
 {
   "requirement_id": "stale-cp001",
@@ -75,12 +78,16 @@ cat > "$S1/status.json" <<'EOF'
     "SR-001": {
       "status": "spec_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": "regressed after contract change"
     },
     "SR-002": {
       "status": "tasks_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     }
@@ -94,6 +101,9 @@ refute_line "stale-cp001" "$OUT1" "CHECKPOINT=CP-001"
 
 # Scenario 2: partial tasks_ready must not raise the CP-001 gate at all.
 S2=$(new_scenario "partial-tasks-ready")
+mkdir -p "$S2/sub-requirements/SR-001" "$S2/sub-requirements/SR-002"
+printf '# Solution Design\n' > "$S2/sub-requirements/SR-001/design.md"
+printf '# Solution Design\n' > "$S2/sub-requirements/SR-002/design.md"
 cat > "$S2/status.json" <<'EOF'
 {
   "requirement_id": "partial-tasks-ready",
@@ -104,12 +114,16 @@ cat > "$S2/status.json" <<'EOF'
     "SR-001": {
       "status": "tasks_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     },
     "SR-002": {
       "status": "spec_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     }
@@ -133,6 +147,8 @@ cat > "$S3/status.json" <<'EOF'
     "SR-001": {
       "status": "spec_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": false,
       "notes": null
     }
@@ -140,12 +156,18 @@ cat > "$S3/status.json" <<'EOF'
 }
 EOF
 OUT3=$(reconcile_output "$S3")
-require_line "forged-spec-ready" "$OUT3" "NEXT_ACTION=design"
+require_line "forged-spec-ready" "$OUT3" "NEXT_ACTION=solution-design"
 refute_line "forged-spec-ready" "$OUT3" "NEXT_ACTION=spec"
 
 # Scenario 4: a pending design approval must not block unrelated runnable work;
 # CP-DESIGN stays visible as a reminder.
 S4=$(new_scenario "design-pending-plus-runnable")
+mkdir -p "$S4/sub-requirements/SR-002"
+cat > "$S4/sub-requirements/SR-002/design.md" <<'EOF'
+# Solution Design
+
+Approved design for the runnable slice.
+EOF
 cat > "$S4/status.json" <<'EOF'
 {
   "requirement_id": "design-pending-plus-runnable",
@@ -156,12 +178,16 @@ cat > "$S4/status.json" <<'EOF'
     "SR-001": {
       "status": "split_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": false,
       "notes": "light audit passed"
     },
     "SR-002": {
       "status": "spec_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     }
@@ -186,6 +212,8 @@ cat > "$S5/status.json" <<'EOF'
     "SR-001": {
       "status": "split_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": false,
       "notes": "light audit passed"
     }
@@ -193,12 +221,15 @@ cat > "$S5/status.json" <<'EOF'
 }
 EOF
 OUT5=$(reconcile_output "$S5")
-require_line "design-pending-only" "$OUT5" "RUNTIME_MODE=confirm_design"
+require_line "design-pending-only" "$OUT5" "RUNTIME_MODE=confirm_solution_design"
 require_line "design-pending-only" "$OUT5" "CHECKPOINT=CP-DESIGN"
-require_line "design-pending-only" "$OUT5" "NEXT_ACTION=design"
+require_line "design-pending-only" "$OUT5" "NEXT_ACTION=solution-design"
 
 # Scenario 6: a slice-local blocker must not stop unrelated runnable work.
 S6=$(new_scenario "blocked-plus-runnable")
+mkdir -p "$S6/sub-requirements/SR-001" "$S6/sub-requirements/SR-002"
+printf '# Solution Design\n' > "$S6/sub-requirements/SR-001/design.md"
+printf '# Solution Design\n' > "$S6/sub-requirements/SR-002/design.md"
 cat > "$S6/status.json" <<'EOF'
 {
   "requirement_id": "blocked-plus-runnable",
@@ -211,12 +242,16 @@ cat > "$S6/status.json" <<'EOF'
       "blocker_scope": "slice_local",
       "resume_target_status": "in_dev",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     },
     "SR-002": {
       "status": "spec_ready",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     }
@@ -242,6 +277,8 @@ cat > "$S7/status.json" <<'EOF'
     "SR-001": {
       "status": "visual_acceptance_passed",
       "ui_bearing": true,
+      "ui_truth_mode": "figma",
+      "design_mode": "full",
       "design_approved": true,
       "notes": null
     }
@@ -267,6 +304,8 @@ cat > "$S8/status.json" <<'EOF'
     "SR-001": {
       "status": "split_ready",
       "ui_bearing": true,
+      "ui_truth_mode": "figma",
+      "design_mode": "full",
       "design_approved": false,
       "notes": "light audit passed"
     }
@@ -278,5 +317,132 @@ require_line "ui-implementation-without-approval" "$OUT8" "RUNTIME_MODE=confirm_
 require_line "ui-implementation-without-approval" "$OUT8" "CHECKPOINT=CP-UI"
 require_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=none"
 refute_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=ui-truth-mapping"
+
+# Scenario 9: an existing frozen surface is UI-bearing but does not need the
+# UI truth capability gate. It proceeds to solution design directly.
+S9=$(new_scenario "existing-ui-no-cpui")
+cat > "$S9/status.json" <<'EOF'
+{
+  "requirement_id": "existing-ui-no-cpui",
+  "updated_at": "2026-08-26T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "split_ready",
+      "ui_bearing": true,
+      "ui_truth_mode": "existing",
+      "design_mode": "light",
+      "design_approved": false,
+      "notes": "behavior-only change on a frozen component"
+    }
+  }
+}
+EOF
+OUT9=$(reconcile_output "$S9")
+require_line "existing-ui-no-cpui" "$OUT9" "NEXT_ACTION=solution-design"
+refute_line "existing-ui-no-cpui" "$OUT9" "CHECKPOINT=CP-UI"
+
+# Scenario 10: design_mode=none is a deliberate no-design path, not a hidden
+# no_design_client profile. It proceeds to spec without a design gate.
+S10=$(new_scenario "design-mode-none")
+cat > "$S10/status.json" <<'EOF'
+{
+  "requirement_id": "design-mode-none",
+  "updated_at": "2026-08-26T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "split_ready",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
+      "design_approved": false,
+      "notes": "small server-only fix"
+    }
+  }
+}
+EOF
+OUT10=$(reconcile_output "$S10")
+require_line "design-mode-none" "$OUT10" "NEXT_ACTION=spec"
+refute_line "design-mode-none" "$OUT10" "NEXT_ACTION=solution-design"
+
+# Scenario 11: old bypass fields are rejected rather than selecting a hidden
+# compatibility branch.
+S11=$(new_scenario "legacy-bypass-fields")
+cat > "$S11/status.json" <<'EOF'
+{
+  "requirement_id": "legacy-bypass-fields",
+  "updated_at": "2026-08-26T00:00:00Z",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "split_ready",
+      "ui_bearing": true,
+      "ui_truth_mode": "existing",
+      "design_mode": "light",
+      "design_approved": true,
+      "ui_contract_exempt": true,
+      "notes": "deprecated bypass must fail"
+    }
+  }
+}
+EOF
+OUT11=$(reconcile_output "$S11")
+echo "$OUT11" | grep -Eq "ui_contract_exempt|legacy|unsupported" \
+  || fail "legacy bypass was not rejected: $OUT11"
+
+# Scenario 12: a late full-design regression cannot fall through to implement,
+# finish, or archive merely because the slice already advanced its status.
+S12=$(new_scenario "late-design-regression")
+cat > "$S12/status.json" <<'EOF'
+{
+  "requirement_id": "late-design-regression",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "in_dev",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
+      "design_approved": false,
+      "notes": "approval was removed after a scope change"
+    }
+  }
+}
+EOF
+OUT12=$(reconcile_output "$S12")
+require_line "late-design-regression" "$OUT12" "RUNTIME_MODE=confirm_solution_design"
+require_line "late-design-regression" "$OUT12" "CHECKPOINT=CP-DESIGN"
+require_line "late-design-regression" "$OUT12" "NEXT_ACTION=solution-design"
+refute_line "late-design-regression" "$OUT12" "NEXT_ACTION=implement"
+
+# Scenario 13: light solution design is an executable prerequisite even when
+# the slice is already tasks_ready; CP-001 must not hide that action.
+S13=$(new_scenario "light-design-before-dev")
+cat > "$S13/status.json" <<'EOF'
+{
+  "requirement_id": "light-design-before-dev",
+  "current_checkpoint": null,
+  "runtime_mode": "resume",
+  "sub_requirements": {
+    "SR-001": {
+      "status": "tasks_ready",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "light",
+      "design_approved": false,
+      "notes": "short design record has not been generated"
+    }
+  }
+}
+EOF
+OUT13=$(reconcile_output "$S13")
+require_line "light-design-before-dev" "$OUT13" "RUNTIME_MODE=resume"
+require_line "light-design-before-dev" "$OUT13" "NEXT_ACTION=solution-design"
+refute_line "light-design-before-dev" "$OUT13" "CHECKPOINT=CP-001"
 
 echo 'PASS: human-review gate pressure scenarios rejected as expected.'

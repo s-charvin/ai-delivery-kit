@@ -31,11 +31,11 @@
 - 执行纪律（worktree / TDD / review / verification）由已安装的执行框架承担；未安装时用内置纪律
 - `.ai-delivery/` 负责需求拆分、UI 真相映射、状态、依赖和追踪等重要产物存放
 
-编排器本身**框架无关**：它只输出抽象阶段动作（`design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并在运行时适配你已安装的框架。绝不要求你安装任何东西。
+编排器本身**框架无关**：它只输出抽象阶段动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并在运行时适配你已安装的框架。绝不要求你安装任何东西。canonical 方案设计仍使用 `design.md` 路径。
 
 推荐主链路：
 
-`Requirement Intake → Requirement Breakdown → UI Truth Mapping → Design → Spec 管道 → Implementation → Merge`
+`Requirement Intake → Requirement Breakdown → Capability Review → Solution Design（按需）→ Spec 管道 → Implementation → Merge`
 
 说明：
 
@@ -91,8 +91,8 @@ bootstrap 之后**不需要安装任何东西**即可跑完整条链路 —— �
 |------|----------|--------------|
 | [spec-kit](https://github.com/github/spec-kit) | `spec` / `plan` / `tasks`（constitution 治理最完整） | 仓库根 `.specify/` 或 `specify` CLI |
 | [OpenSpec](https://github.com/Fission-AI/OpenSpec) | `spec` / `plan` / `tasks`（轻量 delta-spec，棕地友好） | 仓库根 `openspec/` 或 `openspec` CLI |
-| [superpowers](https://github.com/obra/superpowers) | `design` / `implement` / `finish`（执行纪律技能包） | 用户技能目录含 superpowers 技能 |
-| [ECC (Everything Claude Code)](https://github.com/everythingcc/everything-claude-code) | `design` / `implement` / `finish`（完整 harness 套件） | IDE 中注册 `/ecc:*` 命令 |
+| [superpowers](https://github.com/obra/superpowers) | `solution-design` / `implement` / `finish`（执行纪律技能包） | 用户技能目录含 superpowers 技能 |
+| [ECC (Everything Claude Code)](https://github.com/everythingcc/everything-claude-code) | `solution-design` / `implement` / `finish`（完整 harness 套件） | IDE 中注册 `/ecc:*` 命令 |
 
 每个框架的具体使用意见、命令细节与产物落位见对应指南：`.agents/skills/ai-delivery-orchestrator/references/frameworks/<name>.md`。
 
@@ -171,9 +171,11 @@ bootstrap 完成后，目标仓库至少具备：
 - 不允许脑补缺失业务规则
 ```
 
-### 第 2 步：UI Truth Mapping
+### 第 2 步：能力审计与 UI Truth Mapping（按需）
 
-如果需求包含 UI 且 Figma 设计可用：
+每个子需求在 `status.json` 中声明两条独立模式轴：`ui_truth_mode=none|existing|runtime-baseline|figma` 与 `design_mode=none|light|full`。只有 `figma` 或 `runtime-baseline` 启用 CP-UI、Stage 2、`acceptance_frozen`、UI truth index 与视觉验收；`none`/`existing` 不进入 UI gate。`full` 才需要 CP-DESIGN，`light` 记录短方案并自审，`none` 跳过方案设计产物。`ui_bearing` 只用于模式一致性校验。
+
+如果 `ui_truth_mode=figma` 或 `runtime-baseline`：
 
 ```text
 使用 $ui-truth-mapping 处理子需求 SR-001。
@@ -198,11 +200,11 @@ bootstrap 完成后，目标仓库至少具备：
 - Stage 4 复用该 worktree，不要重新创建工作区或重画组件
 ```
 
-如果当前没有 Figma 设计，或需求不含 UI，可以跳过这一步。非 UI 子需求直接进入设计阶段。
+如果 `ui_truth_mode=none` 或 `existing`，跳过这一步；既有 UI 只做行为/语义验证，非 UI 切片按 `design_mode` 直接进入方案设计或 spec。
 
-### 第 3 步：Design + Spec 管道（框架无关）
+### 第 3 步：Solution Design + Spec 管道（框架无关）
 
-设计阶段（`design` 动作）：基于 `requirement-slice.md`、已冻结的宿主组件、v2 `ui-truth-index.json` 与 API 文档做设计探索。`design.md` 必须引用 unit/scenario ID，并明确状态机、内容策略、动效、资源、无障碍、平台/性能取舍及验证路径；`notes` 只保留短指针。**用户明确批准后**才进入 spec 阶段（检查点 CP-DESIGN）。
+方案设计阶段（`solution-design` 动作）：基于 `requirement-slice.md`、已启用 UI truth 的宿主组件、v2 `ui-truth-index.json` 与 API 文档做方案决策。`design.md` 只引用 unit/scenario ID、状态机、责任与验证归属，不重复维护 Runtime Coverage；`notes` 只保留短指针。`design_mode=full` 时须用户明确批准后才进入 spec 阶段（检查点 CP-DESIGN），`light` 自审通过，`none` 不生成该文件。
 
 spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
@@ -234,9 +236,9 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 
 执行约束（与框架无关）：
 
-- UI 切片复用 Stage 2 的 worktree；仅尚无记录 worktree 的非 UI 切片才新建
+- `ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 的 worktree；`none`/`existing` 使用正常项目工作区
 - 严格按 tasks 与上游 .ai-delivery 产物实现
-- UI 切片逐 scenario 执行宿主项目原生验证，并写入绑定当前 index 哈希的 `visual-acceptance.json`；旧 Markdown/截图存在性不构成验收
+- 启用 UI truth 的切片逐 scenario 执行宿主项目原生验证，并写入绑定当前 index 哈希的 `visual-acceptance.json`；`existing` 只做行为/语义验证，旧 Markdown/截图存在性不构成验收
 - 不允许跳过测试、review 和完成前验证
 - 切片完成并验收后走 `finish` 动作：rebase 合并（无 merge commit），设置 `merged`
 

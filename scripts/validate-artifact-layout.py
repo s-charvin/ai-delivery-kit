@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import tempfile
 from pathlib import Path
@@ -66,6 +67,67 @@ STATUS_ORDER = [
     "merged",
     "archived",
 ]
+UI_TRUTH_CAPABILITY_MODES = frozenset({"runtime-baseline", "figma"})
+UI_TRUTH_MODES = frozenset({"none", "existing", "runtime-baseline", "figma"})
+DESIGN_MODES = frozenset({"none", "light", "full"})
+LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
+
+
+def _contains_identifier(text: str, identifier: str) -> bool:
+    """Match a machine id as a token, not as a substring of another id."""
+    return re.search(
+        rf"(?<![a-z0-9-]){re.escape(identifier)}(?![a-z0-9-])", text
+    ) is not None
+
+
+def legacy_binding_errors(req_root: Path) -> list[str]:
+    """Reject removed mode fields in the project binding metadata."""
+
+    def legacy_keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    def has_legacy_profile(value: object) -> bool:
+        if isinstance(value, dict):
+            if value.get("participation") == "no_design_client":
+                return True
+            return any(has_legacy_profile(nested) for nested in value.values())
+        if isinstance(value, list):
+            return any(has_legacy_profile(nested) for nested in value)
+        return False
+
+    candidates = [req_root / ".ai-delivery" / "meta" / "project-binding.json"]
+    candidates.extend(
+        parent / ".ai-delivery" / "meta" / "project-binding.json"
+        for parent in req_root.parents
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        stale = sorted(legacy_keys(data))
+        if has_legacy_profile(data):
+            stale.append("no_design_client")
+        if stale:
+            return [
+                "[LAYOUT] legacy project-binding field(s) are forbidden: "
+                + ", ".join(sorted(set(stale)))
+            ]
+    return []
 
 
 def _at_least(status: str, target: str) -> bool:
@@ -79,6 +141,35 @@ def _has_ui_truth(subreq_dir: Path) -> bool:
     return (subreq_dir / "contracts" / "ui-truth-index.json").is_file()
 
 
+def _check_design_scenario_refs(subreq_id: str, subreq_dir: Path) -> list[str]:
+    index_path = subreq_dir / "contracts" / "ui-truth-index.json"
+    design_path = subreq_dir / "design.md"
+    if not index_path.is_file() or not design_path.is_file():
+        return []
+    try:
+        index = json.loads(index_path.read_text(encoding="utf-8"))
+        design_text = design_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return [f"[DESIGN] {subreq_id}: cannot inspect scenario references: {exc}"]
+    errors: list[str] = []
+    for unit in index.get("units", []) if isinstance(index, dict) else []:
+        if not isinstance(unit, dict):
+            continue
+        for scenario in unit.get("scenarios", []):
+            if not isinstance(scenario, dict):
+                continue
+            scenario_id = scenario.get("scenario_id")
+            if (
+                isinstance(scenario_id, str)
+                and scenario_id
+                and not _contains_identifier(design_text, scenario_id)
+            ):
+                errors.append(
+                    f"[DESIGN] {subreq_id}: design.md must reference indexed scenario_id {scenario_id}"
+                )
+    return errors
+
+
 def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list[str], list[str]]:
     """Return (errors, warnings) for one sub-requirement."""
     errors: list[str] = []
@@ -87,8 +178,51 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
     if not isinstance(status, str):
         return errors, warnings
 
+    def legacy_keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    for field in sorted(legacy_keys(entry)):
+        errors.append(f"[LAYOUT] {subreq_id}: legacy field {field} is forbidden")
+    if type(entry.get("design_approved")) is not bool:
+        errors.append(f"[LAYOUT] {subreq_id}: design_approved must be a boolean")
+    elif entry.get("design_mode") == "none" and entry.get("design_approved") is True:
+        errors.append(
+            f"[LAYOUT] {subreq_id}: design_mode=none cannot set design_approved=true"
+        )
+
     new_layout = is_new_layout(subreq_dir)
-    ui_bearing = bool(entry.get("ui_bearing")) or _has_ui_truth(subreq_dir)
+    ui_truth_mode = entry.get("ui_truth_mode")
+    design_mode = entry.get("design_mode")
+    if type(entry.get("ui_bearing")) is not bool:
+        errors.append(f"[LAYOUT] {subreq_id}: ui_bearing must be a boolean")
+    ui_bearing = entry.get("ui_bearing") is True
+    if ui_truth_mode not in UI_TRUTH_MODES:
+        errors.append(
+            f"[LAYOUT] {subreq_id}: ui_truth_mode must be one of "
+            f"{', '.join(sorted(UI_TRUTH_MODES))}"
+        )
+    if design_mode not in DESIGN_MODES:
+        errors.append(
+            f"[LAYOUT] {subreq_id}: design_mode must be one of "
+            f"{', '.join(sorted(DESIGN_MODES))}"
+        )
+    if isinstance(ui_truth_mode, str) and ui_truth_mode in UI_TRUTH_MODES:
+        expected_ui = ui_truth_mode != "none"
+        if ui_bearing != expected_ui:
+            errors.append(
+                f"[LAYOUT] {subreq_id}: ui_bearing is inconsistent with "
+                f"ui_truth_mode={ui_truth_mode}"
+            )
 
     if new_layout:
         if _at_least(status, "spec_ready") and not (subreq_dir / "spec" / "spec.md").is_file():
@@ -97,7 +231,11 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
             errors.append(f"[LAYOUT] {subreq_id}: status={status} (new layout) requires spec/plan.md")
         if _at_least(status, "tasks_ready") and not (subreq_dir / "spec" / "tasks.md").is_file():
             errors.append(f"[LAYOUT] {subreq_id}: status={status} (new layout) requires spec/tasks.md")
-        if _at_least(status, "spec_ready") and not (subreq_dir / "design.md").is_file():
+        if (
+            design_mode in {"light", "full"}
+            and _at_least(status, "spec_ready")
+            and not (subreq_dir / "design.md").is_file()
+        ):
             errors.append(f"[LAYOUT] {subreq_id}: status={status} (new layout) requires design.md")
         if status in {"merged", "archived"} and not (subreq_dir / "verification.md").is_file():
             errors.append(f"[LAYOUT] {subreq_id}: status={status} requires verification.md")
@@ -123,17 +261,51 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
         ):
             errors.append(f"[LAYOUT] {subreq_id}: status={status} requires tasks.md or plan.md")
 
-    if ui_bearing and _at_least(status, "acceptance_frozen") and not _has_ui_truth(subreq_dir):
+    if ui_truth_mode in UI_TRUTH_CAPABILITY_MODES and _at_least(status, "acceptance_frozen") and not _has_ui_truth(subreq_dir):
         errors.append(
-            f"[LAYOUT] {subreq_id}: UI-bearing status={status} requires contracts/ui-truth-index.json"
+            f"[LAYOUT] {subreq_id}: ui_truth_mode={ui_truth_mode} status={status} "
+            "requires contracts/ui-truth-index.json"
         )
 
-    if ui_bearing and status in {"visual_acceptance_passed", "merged", "archived"}:
+    if status == "acceptance_frozen" and ui_truth_mode not in UI_TRUTH_CAPABILITY_MODES:
+        errors.append(
+            f"[LAYOUT] {subreq_id}: acceptance_frozen requires ui_truth_mode="
+            "figma or runtime-baseline"
+        )
+    if status == "visual_acceptance_passed" and ui_truth_mode not in UI_TRUTH_CAPABILITY_MODES:
+        errors.append(
+            f"[LAYOUT] {subreq_id}: visual_acceptance_passed requires ui_truth_mode="
+            "figma or runtime-baseline"
+        )
+
+    if ui_truth_mode in UI_TRUTH_CAPABILITY_MODES and status in {"visual_acceptance_passed", "merged", "archived"}:
         if not (subreq_dir / "visual-acceptance.json").is_file():
             errors.append(
-                f"[LAYOUT] {subreq_id}: UI-bearing status={status} "
+                f"[LAYOUT] {subreq_id}: ui_truth_mode={ui_truth_mode} status={status} "
                 "requires visual-acceptance.json"
             )
+
+    if ui_truth_mode not in UI_TRUTH_CAPABILITY_MODES and _has_ui_truth(subreq_dir):
+        errors.append(
+            f"[LAYOUT] {subreq_id}: contracts/ui-truth-index.json is forbidden when "
+            f"ui_truth_mode={ui_truth_mode}"
+        )
+    if ui_truth_mode not in UI_TRUTH_CAPABILITY_MODES and (
+        subreq_dir / "visual-acceptance.json"
+    ).is_file():
+        errors.append(
+            f"[LAYOUT] {subreq_id}: visual-acceptance.json is forbidden when "
+            f"ui_truth_mode={ui_truth_mode}"
+        )
+
+    design_path = subreq_dir / "design.md"
+    if design_mode == "none" and design_path.is_file():
+        errors.append(f"[LAYOUT] {subreq_id}: design_mode=none must not produce design.md")
+    if design_mode in {"light", "full"} and entry.get("design_approved") is True and not design_path.is_file():
+        errors.append(f"[LAYOUT] {subreq_id}: design_approved=true requires design.md")
+
+    if design_mode in {"light", "full"}:
+        errors.extend(_check_design_scenario_refs(subreq_id, subreq_dir))
 
     return errors, warnings
 
@@ -185,21 +357,30 @@ def validate_requirement(req_root: Path, check_archive: bool = False) -> list[st
         return ["[LAYOUT] sub_requirements must be a mapping"]
 
     errors: list[str] = []
+    errors.extend(legacy_binding_errors(req_root))
+    for field in sorted(LEGACY_MODE_FIELDS):
+        if field in data:
+            errors.append(f"[LAYOUT] legacy field {field} is forbidden")
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
             errors.append(f"[LAYOUT] sub_requirements.{subreq_id} must be a mapping")
             continue
-        if str(entry.get("status", "")).startswith("blocked_"):
-            continue
         subreq_dir = req_root / "sub-requirements" / subreq_id
         sub_errors, _warnings = validate_subreq(subreq_id, entry, subreq_dir)
         errors.extend(sub_errors)
-        if check_archive:
+        if check_archive and not str(entry.get("status", "")).startswith("blocked_"):
             errors.extend(verify_archive(subreq_dir, entry.get("status")))
     return errors
 
 
 def _selftest() -> int:
+    assert not _contains_identifier(
+        "default-phone-extra", "default-phone"
+    ), "scenario ids must not match as substrings"
+    assert _contains_identifier(
+        "Scenario IDs: default-phone", "default-phone"
+    ), "scenario token should be discoverable"
+
     with tempfile.TemporaryDirectory() as td:
         root = Path(td)
 
@@ -210,7 +391,19 @@ def _selftest() -> int:
         (old / "tasks.md").write_text("# tasks\n", encoding="utf-8")
         st_old = root / "status.json"
         st_old.write_text(
-            json.dumps({"sub_requirements": {"SR-OLD": {"status": "tasks_ready"}}}),
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-OLD": {
+                            "status": "tasks_ready",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "none",
+                            "design_approved": False,
+                        }
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         assert validate_requirement(root) == [], "old-layout tasks_ready should validate clean"
@@ -224,7 +417,19 @@ def _selftest() -> int:
         (new / "design.md").write_text("# design\n", encoding="utf-8")
         st_new = root / "status.json"
         st_new.write_text(
-            json.dumps({"sub_requirements": {"SR-NEW": {"status": "tasks_ready"}}}),
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-NEW": {
+                            "status": "tasks_ready",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "light",
+                            "design_approved": True,
+                        }
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         errs = validate_requirement(root)
@@ -234,7 +439,19 @@ def _selftest() -> int:
         (new / "spec" / "plan.md").write_text("# plan\n", encoding="utf-8")
         (new / "spec" / "tasks.md").write_text("# tasks\n", encoding="utf-8")
         st_new.write_text(
-            json.dumps({"sub_requirements": {"SR-NEW": {"status": "merged"}}}),
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-NEW": {
+                            "status": "merged",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "light",
+                            "design_approved": True,
+                        }
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         errs = validate_requirement(root)
@@ -288,7 +505,19 @@ def _selftest() -> int:
             encoding="utf-8",
         )
         (root / "status.json").write_text(
-            json.dumps({"sub_requirements": {"SR-D": {"status": "plan_ready"}}}),
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-D": {
+                            "status": "plan_ready",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "light",
+                            "design_approved": True,
+                        }
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         assert validate_requirement(root) == [], validate_requirement(root)
@@ -298,7 +527,19 @@ def _selftest() -> int:
         assert any(e.startswith("[DRIFT]") for e in errs), errs
         # drift is not enforced before plan_ready (nothing derived yet)
         (root / "status.json").write_text(
-            json.dumps({"sub_requirements": {"SR-D": {"status": "spec_ready"}}}),
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-D": {
+                            "status": "spec_ready",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "light",
+                            "design_approved": True,
+                        }
+                    }
+                }
+            ),
             encoding="utf-8",
         )
         assert not any(e.startswith("[DRIFT]") for e in validate_requirement(root))

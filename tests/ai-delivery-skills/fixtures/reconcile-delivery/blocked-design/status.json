@@ -11,6 +11,8 @@
       "blocker_scope": "slice_local",
       "resume_target_status": "split_ready",
       "ui_bearing": true,
+      "ui_truth_mode": "figma",
+      "design_mode": "full",
       "design_approved": false,
       "notes": null
     }

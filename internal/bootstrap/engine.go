@@ -69,7 +69,7 @@ func (e Engine) Run(cfg Config) error {
 	timestamp := now.Format(time.RFC3339)
 
 	if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, ".ai-delivery/meta/project-binding.json"), map[string]any{
-		"version":          1,
+		"version":          2,
 		"project_id":       cfg.ProjectID,
 		"project_root":     cfg.RepoRoot,
 		"ai_delivery_path": ".ai-delivery",
@@ -91,7 +91,7 @@ func (e Engine) Run(cfg Config) error {
 				"decisions":         "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
 				"readme":            "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
 				"traceability":      "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
-				"design":            "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
+				"solution_design":   "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
 				"verification":      "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
 				"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
 				"spec":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
@@ -108,17 +108,64 @@ func (e Engine) Run(cfg Config) error {
 	}
 
 	if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, ".ai-delivery/meta/workflow-policy.json"), map[string]any{
-		"version": 1,
+		"version": 2,
 		"truth_policy": map[string]any{
 			"functional_source": "Requirement",
 			"visual_source":     "Figma",
+			"visual_sources_by_mode": map[string]any{
+				"none":             []string{},
+				"existing":         []string{},
+				"runtime-baseline": []string{"requirement", "project", "user-decision"},
+				"figma":            []string{"figma", "requirement", "project", "user-decision"},
+			},
 			"conflict_behavior": "block",
 		},
 		"workflow_gates": []string{
 			"requirement_breakdown",
-			"ui_truth_mapping",
 			"spec_pipeline",
 			"implementation",
+		},
+		"capabilities": map[string]any{
+			"ui_truth": map[string]any{
+				"modes": map[string]any{
+					"none": map[string]any{
+						"enabled":          false,
+						"stage2":           false,
+						"requires_index":   false,
+						"requires_preview": false,
+						"final_acceptance": "ordinary_behavior_and_semantic_tests",
+					},
+					"existing": map[string]any{
+						"enabled":          false,
+						"stage2":           false,
+						"requires_index":   false,
+						"requires_preview": false,
+						"final_acceptance": "ordinary_behavior_and_semantic_tests",
+					},
+					"runtime-baseline": map[string]any{
+						"enabled":          true,
+						"stage2":           true,
+						"requires_index":   true,
+						"requires_preview": true,
+						"final_acceptance": "visual_acceptance",
+					},
+					"figma": map[string]any{
+						"enabled":          true,
+						"stage2":           true,
+						"requires_index":   true,
+						"requires_preview": true,
+						"final_acceptance": "visual_acceptance",
+					},
+				},
+				"checkpoint": "CP-UI",
+				"index":      "contracts/ui-truth-index.json",
+				"preview":    "official_host_stack_preview",
+			},
+		},
+		"solution_design": map[string]any{
+			"modes":           []string{"none", "light", "full"},
+			"full_checkpoint": "CP-DESIGN",
+			"artifact_key":    "solution_design",
 		},
 		"status_sequence": []string{
 			"draft",
@@ -146,11 +193,9 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"gate_requirements": map[string]any{
-			"ui_stage2_authorization": []string{"CP-UI"},
-			"ui_bearing_before_spec":  []string{"acceptance_frozen"},
-			"ui_bearing_before_plan":  []string{"acceptance_frozen"},
-			"ui_bearing_before_tasks": []string{"acceptance_frozen"},
-			"ui_bearing_before_merge": []string{"visual_acceptance_passed"},
+			"solution_design_full":     []string{"CP-DESIGN"},
+			"development_confirmation": []string{"CP-001"},
+			"archive_confirmation":     []string{"CP-ARCHIVE"},
 		},
 		"worktree_policy": map[string]any{
 			"require_isolated_worktree":           true,

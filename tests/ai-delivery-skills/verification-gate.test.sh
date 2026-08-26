@@ -18,12 +18,22 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 
 write_status() {
-  local req_root="$1" subreq_id="$2" subreq_status="$3"
+  local req_root="$1" subreq_id="$2" subreq_status="$3" design_mode="${4:-light}"
+  local design_approved=true
+  if [[ "$design_mode" == "none" ]]; then
+    design_approved=false
+  fi
   cat >"$req_root/status.json" <<EOF
 {
   "requirement_id": "REQ-VERIFY",
   "sub_requirements": {
-    "$subreq_id": { "status": "$subreq_status", "ui_bearing": false }
+    "$subreq_id": {
+      "status": "$subreq_status",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "$design_mode",
+      "design_approved": $design_approved
+    }
   }
 }
 EOF
@@ -85,7 +95,7 @@ OLD_SR="$OLD_ROOT/sub-requirements/SR-001"
 mkdir -p "$OLD_SR"
 echo '# spec' >"$OLD_SR/spec.md"
 echo '# tasks' >"$OLD_SR/tasks.md"
-write_status "$OLD_ROOT" "SR-001" "merged"
+write_status "$OLD_ROOT" "SR-001" "merged" "none"
 
 output="$(run_validator "$OLD_ROOT")" \
   || fail "legacy-layout merged must stay clean, got: $output"

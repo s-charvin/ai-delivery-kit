@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "project_id": "ai-delivery-kit",
   "project_root": ".",
   "ai_delivery_path": ".ai-delivery",
@@ -21,7 +21,7 @@
       "decisions": "requirements/{req_id}/sub-requirements/{sr_id}/decisions.md",
       "readme": "requirements/{req_id}/sub-requirements/{sr_id}/README.md",
       "traceability": "requirements/{req_id}/sub-requirements/{sr_id}/traceability.json",
-      "design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
+      "solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
       "verification": "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
       "visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
       "spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",

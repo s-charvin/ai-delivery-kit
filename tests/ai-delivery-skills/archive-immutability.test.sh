@@ -40,6 +40,8 @@ cat > "$TMP/status.json" <<'JSON'
     "SR-001": {
       "status": "merged",
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "light",
       "design_approved": true
     }
   }

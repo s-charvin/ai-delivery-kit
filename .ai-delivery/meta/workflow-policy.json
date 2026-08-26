@@ -3,14 +3,61 @@
   "truth_policy": {
     "functional_source": "Requirement",
     "visual_source": "Figma",
+    "visual_sources_by_mode": {
+      "none": [],
+      "existing": [],
+      "runtime-baseline": ["requirement", "project", "user-decision"],
+      "figma": ["figma", "requirement", "project", "user-decision"]
+    },
     "conflict_behavior": "block"
   },
   "workflow_gates": [
     "requirement_breakdown",
-    "ui_truth_mapping",
     "spec_pipeline",
     "implementation"
   ],
+  "capabilities": {
+    "ui_truth": {
+      "checkpoint": "CP-UI",
+      "index": "contracts/ui-truth-index.json",
+      "preview": "official_host_stack_preview",
+      "modes": {
+        "none": {
+          "enabled": false,
+          "stage2": false,
+          "requires_index": false,
+          "requires_preview": false,
+          "final_acceptance": "ordinary_behavior_and_semantic_tests"
+        },
+        "existing": {
+          "enabled": false,
+          "stage2": false,
+          "requires_index": false,
+          "requires_preview": false,
+          "final_acceptance": "ordinary_behavior_and_semantic_tests"
+        },
+        "runtime-baseline": {
+          "enabled": true,
+          "stage2": true,
+          "requires_index": true,
+          "requires_preview": true,
+          "final_acceptance": "visual_acceptance"
+        },
+        "figma": {
+          "enabled": true,
+          "stage2": true,
+          "requires_index": true,
+          "requires_preview": true,
+          "final_acceptance": "visual_acceptance"
+        }
+      }
+    }
+  },
+  "solution_design": {
+    "modes": ["none", "light", "full"],
+    "full_checkpoint": "CP-DESIGN",
+    "artifact_key": "solution_design"
+  },
   "status_sequence": [
     "draft",
     "split_ready",
@@ -37,11 +84,9 @@
     ]
   },
   "gate_requirements": {
-    "ui_stage2_authorization": ["CP-UI"],
-    "ui_bearing_before_spec": ["acceptance_frozen"],
-    "ui_bearing_before_plan": ["acceptance_frozen"],
-    "ui_bearing_before_tasks": ["acceptance_frozen"],
-    "ui_bearing_before_merge": ["visual_acceptance_passed"]
+    "solution_design_full": ["CP-DESIGN"],
+    "development_confirmation": ["CP-001"],
+    "archive_confirmation": ["CP-ARCHIVE"]
   },
   "worktree_policy": {
     "require_isolated_worktree": true,

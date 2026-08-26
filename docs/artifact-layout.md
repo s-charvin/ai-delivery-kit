@@ -21,11 +21,11 @@
     delivery-report.md           # 新增：结项报告（archive 动作产出）
     sub-requirements/<SR-xxx>/
       requirement-slice.md  decisions.md  README.md  traceability.json
-      design.md                  # 新增：真实设计文件（替代 status.json notes 碎片）
+      design.md                  # 新增：规范方案设计文件（solution-design；替代 status.json notes 碎片）
       verification.md            # 新增：verify-before-completion 证据
       spec/  spec.md plan.md tasks.md      # canonical 三件套
-      contracts/  ui-truth-index.json
-      visual-acceptance.json      # 绑定当前 UI index 与逐 scenario 的结构化验收证据
+      contracts/  ui-truth-index.json   # 仅 ui_truth_mode=figma/runtime-baseline
+      visual-acceptance.json      # 仅 UI truth 模式；绑定当前 UI index 与逐 scenario 的结构化验收证据
       archive/<ISO-ts>/          # flow-forward 冻结区
         spec.md plan.md tasks.md design.md verification.md
         MANIFEST.json            # sha256 清单，不可变性的机器校验依据
@@ -63,9 +63,23 @@
 - coordination MCP（可选）：读取同一 `project-binding.json` layout 段（见 coordination 仓库 `config/paths.py`）
 - hash 规范化（两侧一致）：去 CRLF、去行尾空白、去文末空白后再算 sha256，避免误报。
 
-## 5. 其他收敛规则
+## 5. 能力模式与其他收敛规则
 
-- **ui-truth 索引**（已完成）：v2 `contracts/ui-truth-index.json` 只存仓内相对指针与治理信息（`component_path` / `preview_path` / Flutter `golden_test`、profile/state/scenario/coverage、SHA-256 与预览绑定确认）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`，也不保留 v1 兼容分支。
+### 5.1 两条独立模式轴
+
+每个 sub-requirement 在 `status.json` 中声明：
+
+- `ui_truth_mode`: `none`（无可见 UI）、`existing`（既有视觉表面的行为/语义变化）、`runtime-baseline`（无稳定 Figma 真值的新可见 UI）或 `figma`（稳定 Figma 证据）。只有后两者启用 CP-UI、Stage 2、`acceptance_frozen`、UI truth index 与 visual acceptance。
+- `design_mode`: `none`（不生成 `design.md`）、`light`（短方案设计记录并自审）或 `full`（完整方案设计并需要 CP-DESIGN）。
+- `ui_bearing` 保留为与 `ui_truth_mode` 一致性校验字段，不再作为 UI gate 的独立来源。
+
+`design.md` 与 `design-template.md` 是稳定 canonical 路径；人类语义统一称为 `solution-design`。设计文档只引用 UI truth index 中的 `unit_id` / `scenario_id`，Runtime Coverage Plan 的唯一事实源仍是 `contracts/ui-truth-index.json`，不得在 design.md 重复维护。
+
+`design-template.md` 的 `ai-delivery-meta` 固定声明 `artifact_type=solution-design`、`layout_key=solution_design` 与 `canonical_path=design.md`；实例化时只替换时间戳/作者占位符，并删除语言指令注释。
+
+### 5.2 UI truth 索引
+
+- **ui-truth 索引**（已完成）：v2 `contracts/ui-truth-index.json` 只存仓内相对指针与治理信息（truth mode/source、`component_path` / `preview_path` / Flutter `golden_test`、profile/state/scenario/coverage、SHA-256 与预览绑定确认）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`，也不保留 v1 兼容分支。
 - **UI 验收**：`visual-acceptance.json` 绑定当前 `ui-truth-index.json` 哈希，逐 scenario 保存 `passed | waived` 与模式对应的 preview/test/manual/image-diff 证据；旧 Markdown/截图目录存在性不再构成 gate。
 - **依赖数据收敛**（已完成）：`dependency-graph.json` 为唯一 canonical；缺失时 reconcile 才 fallback 读 per-subreq `dependency.json` 并输出 `[WARN]`。
 - **验证器去重**（已完成）：bootstrap 播种到 `.ai-delivery/scripts/`；reconcile 经 `layout.py` 的 `resolve_validator_script` 单一入口解析。

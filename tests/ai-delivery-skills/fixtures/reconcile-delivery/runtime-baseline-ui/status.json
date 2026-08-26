@@ -1,5 +1,5 @@
 {
-  "requirement_id": "no-design-client-ui",
+  "requirement_id": "runtime-baseline-ui",
   "updated_at": "2026-08-12T00:00:00Z",
   "current_checkpoint": null,
   "runtime_mode": "resume",
@@ -7,8 +7,10 @@
     "SR-UI": {
       "status": "split_ready",
       "ui_bearing": true,
+      "ui_truth_mode": "runtime-baseline",
+      "design_mode": "light",
       "design_approved": false,
-      "notes": "no Figma; component-library UI"
+      "notes": "no Figma; component-library UI uses a runtime baseline"
     }
   }
 }

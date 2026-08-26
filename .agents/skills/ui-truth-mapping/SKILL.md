@@ -1,11 +1,13 @@
 ---
 name: ui-truth-mapping
-description: Use only when the ai-delivery orchestrator has a governed `.ai-delivery` requirement slice in Stage 2, CP-UI is confirmed, and a Figma design must be frozen as a real host-stack component (Flutter first) plus an official-stack preview for acceptance. Use for scoped subtrees, multiple reviewable states, motion/Spine/Lottie/shimmer, mask/alpha compositing, or repairing a prior HTML-contract/full-screen dump. Do not use for a generic Figma implementation request; use the host project's normal UI workflow or `figma-design-to-code` instead.
+description: Use only when the ai-delivery orchestrator has a governed `.ai-delivery` requirement slice in Stage 2, CP-UI is confirmed, and a Figma or runtime-baseline UI truth source must be frozen as a real host-stack component (Flutter first) plus an official-stack preview for acceptance. Use for scoped subtrees, multiple reviewable states, motion/Spine/Lottie/shimmer, mask/alpha compositing, or repairing a prior HTML-contract/full-screen dump. Do not use for a generic Figma implementation request; use the host project's normal UI workflow or `figma-design-to-code` instead.
 ---
 
 # UI Truth Mapping
 
-Extract structured UI truth from a design source (Figma) and freeze it as **real components in the host project**, plus an official-stack preview the user can open.
+Extract structured UI truth from Figma or an approved runtime baseline and freeze it as **real components in the host project**, plus an official-stack preview the user can open.
+
+The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual evidence, or `ui_truth_mode=runtime-baseline` when the requirement, project, or explicit user decision supplies the baseline without stable Figma. This skill never presents a runtime baseline as 1:1 Figma truth.
 
 **Principle 1 — no second conversion.** Write the widget/component the project already uses. Do not freeze HTML (or any parallel mock) and later translate it into Flutter/React.
 
@@ -18,7 +20,7 @@ This skill does one thing: after CP-UI authorization, use the **same slice workt
 ## Input
 
 - A requirement-slice (scope, fields, acceptance signals)
-- A design source locator (Figma file key + node id, or equivalent)
+- A truth source locator: Figma file key + node id for `figma`, or a requirement/project/user-decision reference for `runtime-baseline`
 - For follow-ups: any hint of the target unit (path, widget name, or "no known unit yet")
 
 ## Output
@@ -42,7 +44,8 @@ Write review notes, freeze packets, and necessary production/test code comments 
 | Field | Meaning |
 |---|---|
 | `schema_version` | Integer `2` |
-| `design_source` | Figma file key, root node, revision, capture timestamp |
+| `ui_truth_mode` | `figma` or `runtime-baseline`; must match the sub-requirement status |
+| `design_source` | Figma file key/root node/revision for `figma`, or evidence origin/source reference for `runtime-baseline`, plus capture timestamp |
 | `unit_id` / `type` / `stack` | Kebab-case id, `page`/`component`/`modal`/`shared-component`, `flutter`/`web` |
 | `source_node` / `dependencies` | Figma source node and unit dependency ids |
 | `component_path` / `component_sha256` | Repo-relative real component and current content hash |
@@ -53,7 +56,7 @@ Write review notes, freeze packets, and necessary production/test code comments 
 | `coverage[]` | Exactly one applicability row for every required runtime dimension |
 | `confirmation` | `confirmed` or `waived`, timestamp/by; visual confirmation binds `reviewed_preview_sha256` |
 
-Do **not** generate `ui-contract.html`. Do **not** copy `ui-contract-template.html` (removed). Do **not** translate HTML into Flutter.
+Do **not** generate `ui-contract.html`. Do **not** copy `ui-contract-template.html` (removed). Do **not** translate HTML into Flutter. Runtime-baseline evidence must use only `requirement`, `project`, or `user-decision` origins; never fabricate Figma metadata.
 
 ## Stack
 
@@ -90,7 +93,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 
 ## Hard Boundary
 
-- Invoke only from a governed Stage 2 slice after CP-UI is recorded. This skill writes production code, golden tests, previews, and the v2 index inside the recorded slice worktree; it is not an implementation-free preflight.
+- Invoke only from a governed Stage 2 slice after CP-UI is recorded for `ui_truth_mode=figma` or `runtime-baseline`. This skill writes production code, golden tests, previews, and the v2 index inside the recorded slice worktree; it is not an implementation-free preflight.
 - **Requirement-scoped extract:** In Scope artifacts decide the root — smallest ancestor covering artifacts that belong to **one** unit. Disconnected artifacts → split units. Never dump the full page.
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
@@ -307,6 +310,8 @@ Do **not** claim freeze from "the widget looks right" without a preview path. Do
 ### 7. Index and status
 
 Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v2 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, and confirmation metadata, never paint.
+
+For `ui_truth_mode=runtime-baseline`, set `ui_truth_mode` in the index, use a `requirement`, `project`, or `user-decision` `design_source`, and omit Figma-only identifiers. For `ui_truth_mode=figma`, the top-level source must be Figma; runtime gaps may still use the other allowed origins on individual states and scenarios.
 
 Set `acceptance_frozen` only after the freeze bar. On failure → `blocked_verification_failure`.
 

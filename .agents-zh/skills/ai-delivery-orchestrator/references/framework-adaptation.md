@@ -9,15 +9,15 @@ reconcile 为每个子需求输出以下动作之一：
 | 动作 | 含义 | 典型触发状态 |
 |------|------|--------------|
 | `requirement-breakdown` | kit 自有技能：拆分需求 | `draft` |
-| `ui-truth-mapping` | kit 自有技能：在切片 worktree 中执行受控视觉实现 | CP-UI 之后的 `split_ready`（含 UI） |
-| `design` | 探索并提出设计方案；需用户批准（CP-DESIGN） | `split_ready`（非 UI）/ `acceptance_frozen` 且 `design_approved: false` |
-| `spec` | 产出子需求规格 | `design_approved` 之后 |
+| `ui-truth-mapping` | kit 自有能力：在切片 worktree 中执行受控视觉实现 | `ui_truth_mode=figma` 或 `runtime-baseline` 的 `split_ready`，且 CP-UI 之后 |
+| `solution-design` | 探索并提出方案设计；是否审批由 `design_mode` 决定 | `design_mode` 非 `none` 的 `split_ready` / `acceptance_frozen` |
+| `spec` | 产出子需求规格 | `design_mode` 门禁满足后 |
 | `plan` | 产出技术方案 | `spec_ready` |
 | `tasks` | 产出任务拆分 | `plan_ready` |
 | `implement` | 实现剩余任务（UI 复用 Stage 2 worktree；TDD + 评审纪律） | CP-001 之后的 `tasks_ready` / `in_dev` |
 | `finish` | 变基合并并关闭切片 | `visual_acceptance_passed` |
 
-`requirement-breakdown` 与 `ui-truth-mapping` 是 kit 技能，直接调用；但 `ui-truth-mapping` 会写生产代码，仍受 CP-UI 门禁。其余动作一律通过下文选定的框架档位分发。
+`requirement-breakdown` 与 `ui-truth-mapping` 是 kit 技能，能力启用时直接调用；`ui-truth-mapping` 会写生产代码，仍受 CP-UI 门禁。`solution-design` 是由 `design_mode` 决定审批行为的编排器动作；其余动作一律通过下文选定的框架档位分发。
 
 ## 第 0 步 — 环境自查（每次 run 执行一次）
 
@@ -38,7 +38,7 @@ reconcile 为每个子需求输出以下动作之一：
 
 1. 规格类动作（`spec`、`plan`、`tasks`）：优先 **spec-kit**，其次 **OpenSpec**，再次原生档。
 2. 执行纪律类动作（`implement`、`finish`）：优先 **superpowers**，其次 **ECC**，再次原生档。
-3. `design` 动作：使用已安装框架中提供设计/头脑风暴流程者（superpowers brainstorming、ECC 设计代理）；否则走原生设计流程。
+3. `solution-design` 动作：使用已安装框架中提供设计/头脑风暴流程者（superpowers brainstorming、ECC 设计代理）；否则走原生方案设计流程。
 4. 什么都没装：所有动作一律使用**原生档**。
 5. 同一子需求绝不混用两个规格类框架。子需求的档位选定后在 `decisions.md` 记录一次，跨 resume 保持稳定。
 
@@ -46,7 +46,7 @@ reconcile 为每个子需求输出以下动作之一：
 
 | 动作 | spec-kit | OpenSpec | superpowers | ECC | 原生档 |
 |------|----------|----------|-------------|-----|--------|
-| `design` | — | — | brainstorming 流程 | 设计/评审代理 | 原生设计流程 |
+| `solution-design` | — | — | brainstorming 流程 | 设计/评审代理 | 原生方案设计流程 |
 | `spec` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |
 | `plan` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |
 | `tasks` | [frameworks/spec-kit.md](frameworks/spec-kit.md) | [frameworks/openspec.md](frameworks/openspec.md) | — | — | [frameworks/native.md](frameworks/native.md) |

@@ -11,6 +11,8 @@
       "blocker_scope": null,
       "resume_target_status": null,
       "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "full",
       "design_approved": false,
       "notes": "light audit passed"
     }

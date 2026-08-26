@@ -1,11 +1,13 @@
 ---
 name: ui-truth-mapping
-description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需求切片处于 Stage 2、CP-UI 已确认，且必须把 Figma 设计冻结为真实宿主栈组件（优先 Flutter）与官方栈验收预览时使用。适用于作用域子树、多状态、Spine/Lottie/shimmer 动效、蒙版/alpha 合成，或修复先前 HTML 契约/整页 dump。泛化 Figma 实现请求不要触发本技能，使用宿主项目惯例或 `figma-design-to-code`。
+description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需求切片处于 Stage 2、CP-UI 已确认，且必须把 Figma 或 runtime-baseline UI 真值冻结为真实宿主栈组件（优先 Flutter）与官方栈验收预览时使用。适用于作用域子树、多状态、Spine/Lottie/shimmer 动效、蒙版/alpha 合成，或修复先前 HTML 契约/整页 dump。泛化 Figma 实现请求不要触发本技能，使用宿主项目惯例或 `figma-design-to-code`。
 ---
 
 # UI 真值映射
 
-从设计源（Figma）提取结构化 UI 真值，冻结为**宿主项目里的真实组件**，外加用户能打开的官方栈预览。
+从 Figma 或已批准的 runtime baseline 提取结构化 UI 真值，冻结为**宿主项目里的真实组件**，外加用户能打开的官方栈预览。
+
+编排器在 Figma 提供视觉证据时选择 `ui_truth_mode=figma`；没有稳定 Figma、由需求/项目/明确用户决策提供基线时选择 `ui_truth_mode=runtime-baseline`。本技能绝不把 runtime baseline 说成 Figma 1:1 真值。
 
 **原则 1 — 禁止二次转换。** 写项目已经在用的 Widget/组件。不要先冻一份 HTML（或任何平行赝品）再翻译成 Flutter/React。
 
@@ -18,7 +20,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 ## 输入
 
 - 需求切片（范围、字段、验收信号）
-- 设计源定位符（Figma 文件 key + 节点 id，或等效）
+- 真值源定位符：`figma` 使用 Figma 文件 key + 节点 id；`runtime-baseline` 使用 requirement/project/user-decision 引用
 - 后续需求：目标单元的任何线索（路径、Widget 名，或「尚无已知单元」）
 
 ## 输出
@@ -42,7 +44,8 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 | 字段 | 含义 |
 |---|---|
 | `schema_version` | 整数 `2` |
-| `design_source` | Figma file key、根节点、revision、采集时间 |
+| `ui_truth_mode` | `figma` 或 `runtime-baseline`，必须与子需求状态一致 |
+| `design_source` | `figma` 的 file key/root node/revision，或 `runtime-baseline` 的 evidence origin/source reference，及采集时间 |
 | `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component`、`flutter`/`web` |
 | `source_node` / `dependencies` | Figma 源节点与 unit 依赖 id |
 | `component_path` / `component_sha256` | 真实组件仓内相对路径与当前内容 hash |
@@ -53,7 +56,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 | `coverage[]` | 每个必需运行时维度恰好一条适用性记录 |
 | `confirmation` | `confirmed` 或 `waived`、时间/人员；视觉确认绑定 `reviewed_preview_sha256` |
 
-**禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 把 HTML 翻译成 Flutter。
+**禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 把 HTML 翻译成 Flutter。runtime-baseline 只能使用 `requirement`、`project` 或 `user-decision` 来源，不得伪造 Figma 元数据。
 
 ## 技术栈
 
@@ -90,7 +93,7 @@ templates/
 
 ## 硬边界
 
-- 仅能由受治理 Stage 2 且已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。
+- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。本技能会在记录的切片 worktree 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
@@ -307,6 +310,8 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 ### 7. 索引与状态
 
 按 v2 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针、环境 profile、coverage、治理 hash/来源/确认元数据，绝不存绘制。
+
+对 `ui_truth_mode=runtime-baseline`，索引中的 `ui_truth_mode` 必须一致，`design_source` 只能使用 `requirement`、`project` 或 `user-decision`，并省略 Figma 专属标识。对 `ui_truth_mode=figma`，顶层来源必须是 Figma；单个 state/scenario 的运行时缺口仍可使用其他允许来源。
 
 仅在冻结条满足后设置 `acceptance_frozen`。失败 → `blocked_verification_failure`。
 

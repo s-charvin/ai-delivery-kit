@@ -8,7 +8,7 @@ CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT
 
 **CP-001 确认前禁止 dispatch 实现工作。**
 
-UI 切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-worktrees` 为同一切片创建第二个工作区。
+`ui_truth_mode=figma` 或 `runtime-baseline` 的切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-worktrees` 为同一切片创建第二个工作区；`none` 与 `existing` 使用正常项目工作区。
 
 ## tasks.md → 任务简报
 
@@ -38,9 +38,9 @@ UI 切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-wo
 两个阶段都走[评审循环](stage-implementation.md#评审循环任务级闭环)：实现 → 新鲜上下文评审 → finding 成为修复简报 → 复审，直到干净或 `review_loop.max_rounds` 预算耗尽（然后升级给用户；绝不自动合并）。
 
 1. **每任务评审** — 每个任务完成后；每轮的 finding 与修复摘要记入 `progress.md`。
-2. **合并前评审** — 全部任务后做切片级评审；再视觉验收（UI）与验证步骤。
+2. **合并前评审** — 全部任务后做切片级评审；启用 UI truth 能力时再做视觉验收与验证步骤。
 
-## 视觉验收证据（UI）
+## 视觉验收证据（UI truth 能力）
 
 设置 `visual_acceptance_passed` 前，使用 `templates/visual-acceptance-template.json` 实例化 `sub-requirements/<subreq-id>/visual-acceptance.json`。保持机器键/枚举不变，并用用户当前对话语言填写摘要和说明。
 
@@ -51,10 +51,10 @@ UI 切片恢复 Stage 2 记录的分支/worktree。禁止再运行 `using-git-wo
 ## 状态链
 
 ```
-tasks_ready → (CP-001) → in_dev → visual_acceptance_passed（UI）→ merged
+tasks_ready → (CP-001) → in_dev → visual_acceptance_passed（UI truth 能力）→ merged
 ```
 
-非 UI 子需求跳过 `visual_acceptance_passed`。
+`ui_truth_mode=none` 与 `existing` 跳过 `visual_acceptance_passed`；existing UI 变更使用普通行为和语义证据。
 
 ## 切片完成后 handoff
 

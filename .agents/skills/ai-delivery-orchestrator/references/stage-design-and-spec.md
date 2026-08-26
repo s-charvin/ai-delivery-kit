@@ -1,54 +1,54 @@
-# Stage 3: Design + Spec Pipeline
+# Stage 3: Solution Design + Spec Pipeline
 
-Stage 3 runs two abstract actions: `design` (approval-gated) and `spec` → `plan` → `tasks`. Concrete tooling depends on the framework tier chosen per [framework-adaptation.md](framework-adaptation.md).
+Stage 3 runs the `solution-design` action when `design_mode` is `light` or `full`, followed by `spec` → `plan` → `tasks`. `design_mode=none` skips the solution-design artifact and gate. Concrete tooling depends on the framework tier chosen per [framework-adaptation.md](framework-adaptation.md).
 
 ## When to run
 
-- `design`: each sub-requirement at `acceptance_frozen` (UI) or `split_ready` (non-UI) with `design_approved: false`.
-- `spec` / `plan` / `tasks`: each sub-requirement with `design_approved: true`, one step at a time per reconcile output.
+- `solution-design`: each sub-requirement at `acceptance_frozen` (when UI truth is enabled) or `split_ready` (otherwise) with `design_mode=light`, or with `design_mode=full` and `design_approved: false`.
+- `spec` / `plan` / `tasks`: each sub-requirement whose design mode gate is satisfied, one step at a time per reconcile output.
 
-## Design action (HARD-GATE)
+## Solution-design action (HARD-GATE)
 
 <HARD-GATE>
-Orchestrator design-mode: after the design session, do NOT write plan/spec artifacts of your own before the user approves the design.
-Do NOT write design docs into framework-owned directories.
-Write the design summary to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. Set `design_approved=true` only after user approval; then proceed to the `spec` action.
+For `design_mode=full`, after the solution-design session do NOT write plan/spec artifacts of your own before the user approves the design.
+Do NOT write solution-design docs into framework-owned directories.
+Write the canonical solution design to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. For `design_mode=light`, set `design_approved=true` after the short record and AI self-review. For `design_mode=full`, set it only after explicit user approval. Then proceed to the `spec` action.
 </HARD-GATE>
 
 <HARD-GATE>
-Do not run `spec`, `plan`, or `tasks` actions until the design is presented and the user explicitly approves it.
+Do not run `spec`, `plan`, or `tasks` actions while a `design_mode=full` solution-design gate is pending. `design_mode=light` requires a short design record and self-review; `design_mode=none` requires neither.
 </HARD-GATE>
 
-Feed the design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
+Feed the solution-design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
 
 - `requirement-slice.md`
-- each unit's Stage 2 component in the recorded slice worktree + valid v2 `ui-truth-index.json` profile/state/scenario/coverage and preview/hash pointers (if UI-bearing)
+- each enabled UI truth unit's Stage 2 component in the recorded slice worktree + valid v2 `ui-truth-index.json` profile/state/scenario/coverage and preview/hash pointers (if `ui_truth_mode=figma` or `runtime-baseline`)
 - API docs (if available)
 - Dependency graph
 
-Design session should produce:
+The solution-design session should produce:
 
 - Architecture (component tree, data flow, state management)
 - Route/navigation design (multi-screen)
 - Component decomposition strategy
 - Data model sketch
 - State machine and data-to-UI transitions, including applicable loading/refreshing/empty/partial/error/offline/auth/permission/disabled behavior
-- Runtime profile and scenario design covering responsive constraints, content/localization boundaries, input/focus/gesture behavior, themes, accessibility, platform behavior, assets, motion lifecycle, and performance
+- References to the indexed UI scenario IDs that own runtime coverage; do not duplicate the Runtime Coverage Plan in `design.md`
 - Key technical decisions and trade-offs
 
-Write the design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). On user approval, set `design_approved: true`.
+Write the solution-design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). For `design_mode=full`, set `design_approved: true` only on user approval; for `design_mode=light`, set it after recording the short design and self-review result without CP-DESIGN.
 
-If design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
+If the solution design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
 
-**Pause:** design approval is checkpoint CP-DESIGN. Wait for explicit user approval.
+**Pause:** only `design_mode=full` uses checkpoint CP-DESIGN. Wait for explicit user approval before proceeding.
 
 ## Spec pipeline (framework-agnostic)
 
-When `design_approved: true`, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
+When the design mode gate is satisfied, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
 
 Write all human-readable content in `spec.md`, `plan.md`, and `tasks.md` in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
 
-1. `spec` → `spec.md` — audit against every frozen unit/scenario id. For UI slices the Stage 2 component + confirmed preview set is the visual input, not a separate spec document. Preserve the distinction between Figma-origin fidelity and approved runtime behavior.
+1. `spec` → `spec.md` — audit against every frozen unit/scenario id. For UI truth slices the Stage 2 component + confirmed preview set is the visual input, not a separate visual spec document. Preserve the distinction between Figma-origin fidelity and approved runtime behavior.
 2. `plan` → `plan.md` — audit delivery slice ordering and identify which task implements or verifies each scenario id.
 3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage.
 
@@ -80,8 +80,8 @@ After all executable subreqs reach `tasks_ready`, enter CP-001 and confirm with 
 
 API docs pass directly to the spec pipeline and implementation. No separate API mapping stage. Gaps → `integration_deferred` in notes; they do not block read-only UI evidence, while production shell work still waits for CP-UI.
 
-## Non-UI sub-requirements
+## Modes without a UI truth capability
 
-- Skip UI Truth Mapping (`acceptance_frozen` not required).
-- `split_ready` → `design` → spec pipeline.
-- Skip `visual_acceptance_passed` at merge.
+- `ui_truth_mode=none` or `existing` skips UI Truth Mapping (`acceptance_frozen` not required).
+- `split_ready` → `solution-design` only when `design_mode` is `light` or `full` → spec pipeline.
+- `existing` uses ordinary project behavior/semantic verification; `none` and `existing` skip `visual_acceptance_passed` at merge.

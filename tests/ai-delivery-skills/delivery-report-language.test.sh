@@ -19,7 +19,6 @@ mkdir -p "$SUB/spec"
 printf '# spec\n' > "$SUB/spec/spec.md"
 printf '# plan\n' > "$SUB/spec/plan.md"
 printf '# tasks\n' > "$SUB/spec/tasks.md"
-printf '# design\n' > "$SUB/design.md"
 printf '# verification\n' > "$SUB/verification.md"
 
 cat > "$TMP/status.json" <<'JSON'
@@ -27,7 +26,11 @@ cat > "$TMP/status.json" <<'JSON'
   "requirement_id": "report-language",
   "sub_requirements": {
     "SR-001": {
-      "status": "merged"
+      "status": "merged",
+      "ui_bearing": false,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
+      "design_approved": false
     }
   }
 }

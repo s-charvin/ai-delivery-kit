@@ -12,11 +12,29 @@ from pathlib import Path
 # Resolve the sibling layout resolver (single source of truth for artifact paths
 # and for the one normalize/hash implementation behind drift detection).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from layout import resolve_validator_script, spec_drift, load_participation_profile  # noqa: E402
+from layout import resolve_validator_script, spec_drift  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"archived"})
 BLOCKED_PREFIX = "blocked_"
-DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen"})
+DESIGN_PENDING_STATUSES = frozenset({"split_ready", "acceptance_frozen", "spec_ready", "plan_ready", "tasks_ready"})
+DESIGN_GATE_STATUSES = DESIGN_PENDING_STATUSES | frozenset(
+    {"in_dev", "visual_acceptance_passed", "merged"}
+)
+DESIGN_ARTIFACT_STATUSES = frozenset(
+    {
+        "spec_ready",
+        "plan_ready",
+        "tasks_ready",
+        "in_dev",
+        "visual_acceptance_passed",
+        "merged",
+        "archived",
+    }
+)
+UI_TRUTH_MODES = frozenset({"none", "existing", "runtime-baseline", "figma"})
+UI_TRUTH_CAPABILITY_MODES = frozenset({"runtime-baseline", "figma"})
+DESIGN_MODES = frozenset({"none", "light", "full"})
+LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
 
 # spec-kit living-spec persistence: once derived artifacts exist, a changed
 # spec.md makes plan/tasks stale. Report from plan_ready onwards; only send the
@@ -27,26 +45,17 @@ DRIFT_CHECK_STATUSES = frozenset(
 )
 DRIFT_DOWNGRADE_STATUSES = frozenset({"plan_ready", "tasks_ready"})
 
-# Participation profiles without a standing design/Figma resource (coordination
-# participation-profiles.yaml: no_design_client).
-PROFILES_WITHOUT_DESIGN = frozenset({"no_design_client"})
-
 # Abstract stage actions only. Framework-specific tooling is resolved at
 # runtime via references/framework-adaptation.md — reconcile stays a pure
 # state machine and never hard-codes third-party skill names.
-ACTION_BY_STATUS: dict[tuple[str, bool | None, bool], str] = {
-    ("draft", None, False): "requirement-breakdown",
-    ("split_ready", True, False): "ui-truth-mapping",
-    ("split_ready", False, False): "design",
-    ("split_ready", False, True): "spec",
-    ("acceptance_frozen", True, False): "design",
-    ("acceptance_frozen", True, True): "spec",
-    ("spec_ready", None, True): "plan",
-    ("plan_ready", None, True): "tasks",
-    ("tasks_ready", None, True): "implement",
-    ("in_dev", None, True): "implement",
-    ("visual_acceptance_passed", None, True): "finish",
-    ("merged", None, True): "archive",
+ACTION_BY_STATUS: dict[str, str] = {
+    "draft": "requirement-breakdown",
+    "spec_ready": "plan",
+    "plan_ready": "tasks",
+    "tasks_ready": "implement",
+    "in_dev": "implement",
+    "visual_acceptance_passed": "finish",
+    "merged": "archive",
 }
 
 
@@ -66,36 +75,113 @@ def has_ui_artifacts(subreq_dir: Path) -> bool:
     return find_ui_truth_index(subreq_dir) is not None
 
 
-def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:
-    ui_bearing = entry.get("ui_bearing")
-    if ui_bearing is True:
-        return True
-    if ui_bearing is False:
-        return False
-    if has_ui_artifacts(subreq_dir):
-        return True
-    status = entry.get("status", "")
-    if status in {"acceptance_frozen", "visual_acceptance_passed"}:
-        return True
-    return False
+def ui_truth_mode(entry: dict) -> str | None:
+    value = entry.get("ui_truth_mode")
+    return value if isinstance(value, str) else None
 
 
-def needs_design_approval(entry: dict, ui_bearing: bool, participation: str) -> bool:
-    if bool(entry.get("design_approved")):
-        return False
-    status = entry.get("status")
-    if not isinstance(status, str) or is_blocked(status):
-        return False
-    if participation in PROFILES_WITHOUT_DESIGN:
-        if status == "split_ready" and not ui_bearing:
-            return False
-        if status == "acceptance_frozen" and ui_bearing:
-            return False
-    if status == "split_ready" and not ui_bearing:
+def design_mode(entry: dict) -> str | None:
+    value = entry.get("design_mode")
+    return value if isinstance(value, str) else None
+
+
+def requires_ui_truth(entry: dict) -> bool:
+    return ui_truth_mode(entry) in UI_TRUTH_CAPABILITY_MODES
+
+
+def infer_ui_bearing(entry: dict, subreq_dir: Path | None = None) -> bool:
+    """Return the declared surface flag; modes, not artifacts, drive routing.
+
+    The optional directory argument is retained for callers that imported the
+    old helper, but no longer infers a UI surface from generated artifacts.
+    """
+    return entry.get("ui_bearing") is True
+
+
+def mode_errors(entry: dict) -> list[str]:
+    """Return deterministic mode/legacy-field errors for one status entry."""
+    errors: list[str] = []
+    def legacy_keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    for field in sorted(legacy_keys(entry)):
+        if field == "ui_contract_exempt":
+            errors.append("legacy field ui_contract_exempt is forbidden")
+        else:
+            errors.append(f"legacy field {field} is forbidden")
+    bearing = entry.get("ui_bearing")
+    truth = ui_truth_mode(entry)
+    design = design_mode(entry)
+    if type(bearing) is not bool:
+        errors.append("[MODE] ui_bearing must be a boolean")
+    if truth not in UI_TRUTH_MODES:
+        errors.append(
+            "[MODE] ui_truth_mode must be one of: "
+            + ", ".join(sorted(UI_TRUTH_MODES))
+        )
+    if design not in DESIGN_MODES:
+        errors.append(
+            "[MODE] design_mode must be one of: "
+            + ", ".join(sorted(DESIGN_MODES))
+        )
+    if type(entry.get("design_approved")) is not bool:
+        errors.append("[MODE] design_approved must be a boolean")
+    elif design == "none" and entry.get("design_approved") is True:
+        errors.append("[MODE] design_mode=none cannot set design_approved=true")
+    if isinstance(bearing, bool) and isinstance(truth, str) and truth in UI_TRUTH_MODES:
+        expected = truth != "none"
+        if bearing != expected:
+            errors.append(
+                f"[MODE] ui_bearing={str(bearing).lower()} is inconsistent with "
+                f"ui_truth_mode={truth} (expected {str(expected).lower()})"
+            )
+    return errors
+
+
+def design_gate_satisfied(entry: dict, subreq_dir: Path | None = None) -> bool:
+    """Whether solution-design work is complete for the selected mode."""
+    mode = design_mode(entry)
+    if mode == "none":
         return True
-    if status == "acceptance_frozen" and ui_bearing:
-        return True
-    return False
+    if entry.get("design_approved") is not True:
+        return False
+    # A status flag cannot stand in for the canonical artifact. This check is
+    # kept in reconcile as well as the validator so an unseeded invocation
+    # cannot silently skip the solution-design action.
+    return subreq_dir is None or (subreq_dir / "design.md").is_file()
+
+
+def solution_design_pending(entry: dict, subreq_dir: Path | None = None) -> bool:
+    return design_mode(entry) in {"light", "full"} and not design_gate_satisfied(
+        entry, subreq_dir
+    )
+
+
+def design_artifact_errors(entry: dict, subreq_dir: Path, status: str) -> list[str]:
+    """Reject stale/forged design artifacts independently of the validator."""
+    mode = design_mode(entry)
+    design_path = subreq_dir / "design.md"
+    if mode == "none":
+        if design_path.is_file():
+            return ["design_mode=none must not produce design.md"]
+        return []
+    if mode not in {"light", "full"}:
+        return []
+    if status in DESIGN_ARTIFACT_STATUSES and not design_path.is_file():
+        return [f"status={status} requires design.md"]
+    if entry.get("design_approved") is True and not design_path.is_file():
+        return ["design_approved=true requires design.md"]
+    return []
 
 
 def _load_legacy_dependency_json(req_root: Path) -> dict[str, list[str]]:
@@ -165,6 +251,59 @@ def load_dependency_graph(req_root: Path) -> tuple[dict[str, list[str]], list[st
     return deps, warnings
 
 
+def legacy_participation_errors(req_root: Path) -> list[str]:
+    """Reject removed routing fields and participation profiles."""
+    def legacy_keys(value: object) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    def has_legacy_profile(value: object) -> bool:
+        if isinstance(value, dict):
+            if value.get("participation") == "no_design_client":
+                return True
+            return any(has_legacy_profile(nested) for nested in value.values())
+        if isinstance(value, list):
+            return any(has_legacy_profile(nested) for nested in value)
+        return False
+
+    candidates = [req_root / ".ai-delivery" / "meta" / "project-binding.json"]
+    candidates.extend(
+        cand / ".ai-delivery" / "meta" / "project-binding.json"
+        for cand in req_root.parents
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+
+        stale_keys = legacy_keys(data)
+        if stale_keys:
+            return [
+                "[MODE] legacy project-binding field(s) are forbidden: "
+                + ", ".join(sorted(stale_keys))
+            ]
+        if has_legacy_profile(data):
+            return [
+                "[MODE] no_design_client participation profile is removed; "
+                "use ui_truth_mode and design_mode"
+            ]
+    return []
+
+
 def dependencies_satisfied(
     subreq_id: str,
     sub_requirements: dict,
@@ -179,38 +318,67 @@ def dependencies_satisfied(
     return True
 
 
-def next_action_for_entry(entry: dict, ui_bearing: bool, participation: str) -> str | None:
+def next_action_for_entry(
+    entry: dict,
+    ui_bearing: bool | None = None,
+    subreq_dir: Path | None = None,
+) -> str | None:
+    """Derive the next abstract action from status and the two capability axes."""
     status = entry.get("status")
     if not isinstance(status, str) or is_blocked(status) or status in TERMINAL_STATUSES:
         return None
 
-    design_approved = bool(entry.get("design_approved"))
+    truth = ui_truth_mode(entry)
+    mode = design_mode(entry)
+    if truth not in UI_TRUTH_MODES or mode not in DESIGN_MODES:
+        return None
+    if subreq_dir is not None:
+        artifact_errors = design_artifact_errors(entry, subreq_dir, status)
+        # An unapproved light/full design is recoverable: dispatch the
+        # solution-design action so it can create the missing artifact and
+        # complete its review. Contradictory none-mode artifacts and forged
+        # approvals remain fail-closed.
+        if artifact_errors and not (
+            mode in {"light", "full"} and entry.get("design_approved") is False
+        ):
+            return None
 
     if status == "draft":
-        return ACTION_BY_STATUS[("draft", None, False)]
+        return ACTION_BY_STATUS["draft"]
 
-    if status == "split_ready":
-        if ui_bearing:
-            if participation in PROFILES_WITHOUT_DESIGN:
-                if entry.get("ui_contract_exempt"):
-                    return ACTION_BY_STATUS[("split_ready", False, design_approved)]
-                return "design"
-            return ACTION_BY_STATUS[("split_ready", True, False)]
-        if participation in PROFILES_WITHOUT_DESIGN:
-            return "spec"
-        return ACTION_BY_STATUS[("split_ready", False, design_approved)]
+    if status in {"split_ready", "acceptance_frozen", "spec_ready"}:
+        # The visual capability must finish before any solution/spec work.
+        if status == "split_ready" and truth in UI_TRUTH_CAPABILITY_MODES:
+            return "ui-truth-mapping"
+        if status == "acceptance_frozen" and truth not in UI_TRUTH_CAPABILITY_MODES:
+            return None
+        if solution_design_pending(entry, subreq_dir):
+            return "solution-design"
+        if status == "spec_ready":
+            return ACTION_BY_STATUS["spec_ready"]
+        return "spec"
 
-    if status == "acceptance_frozen":
-        return ACTION_BY_STATUS[("acceptance_frozen", True, design_approved)]
+    if status == "plan_ready":
+        if solution_design_pending(entry, subreq_dir):
+            return "solution-design"
+        return ACTION_BY_STATUS["plan_ready"]
 
-    if status in {"spec_ready", "plan_ready", "tasks_ready", "in_dev", "visual_acceptance_passed", "merged"}:
-        if (
-            not design_approved
-            and status not in {"in_dev", "visual_acceptance_passed", "merged"}
-            and not (participation in PROFILES_WITHOUT_DESIGN and not ui_bearing)
-        ):
-            return "design"
-        return ACTION_BY_STATUS.get((status, None, True))
+    if status in {"tasks_ready", "in_dev"}:
+        if solution_design_pending(entry, subreq_dir):
+            return "solution-design"
+        return ACTION_BY_STATUS[status]
+
+    if status == "visual_acceptance_passed":
+        if truth not in UI_TRUTH_CAPABILITY_MODES:
+            return None
+        if solution_design_pending(entry, subreq_dir):
+            return "solution-design"
+        return ACTION_BY_STATUS["visual_acceptance_passed"]
+
+    if status == "merged":
+        if solution_design_pending(entry, subreq_dir):
+            return "solution-design"
+        return ACTION_BY_STATUS["merged"]
 
     return None
 
@@ -284,8 +452,10 @@ def reconcile(
 
     validation_errors = run_status_validator(status_path, req_root, validator_script)
     errors.extend(validation_errors)
+    legacy_errors = legacy_participation_errors(req_root)
+    errors.extend(legacy_errors)
+    metadata_invalid = bool(legacy_errors)
 
-    participation = load_participation_profile(req_root)
     deps, dep_warnings = load_dependency_graph(req_root)
     errors.extend(dep_warnings)
     recorded_checkpoint = status_data.get("current_checkpoint")
@@ -299,6 +469,8 @@ def reconcile(
     dev_waiting: list[str] = []
     archive_pending: list[str] = []
     downgraded: set[str] = set()
+    invalid_mode_subreqs: set[str] = set()
+    invalid_artifact_subreqs: set[str] = set()
 
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
@@ -306,6 +478,20 @@ def reconcile(
         status = entry.get("status")
         if not isinstance(status, str):
             continue
+
+        # Validate mode fields before blocker/dependency short-circuits. A
+        # blocked or waiting slice must not become a storage path for removed
+        # bypass fields or an invalid capability combination.
+        entry_mode_errors = mode_errors(entry)
+        if entry_mode_errors:
+            invalid_mode_subreqs.add(subreq_id)
+            errors.extend(f"[MODE] {subreq_id}: {message}" for message in entry_mode_errors)
+
+        subreq_dir = req_root / "sub-requirements" / subreq_id
+        artifact_errors = design_artifact_errors(entry, subreq_dir, status)
+        if artifact_errors:
+            invalid_artifact_subreqs.add(subreq_id)
+            errors.extend(f"[DESIGN] {subreq_id}: {message}" for message in artifact_errors)
 
         if is_blocked(status):
             blocked.append(f"{subreq_id}:{status}")
@@ -320,8 +506,16 @@ def reconcile(
         if not dependencies_satisfied(subreq_id, sub_requirements, deps):
             continue
 
-        subreq_dir = req_root / "sub-requirements" / subreq_id
+        if entry_mode_errors:
+            continue
+        truth = ui_truth_mode(entry)
+        mode = design_mode(entry)
         ui_bearing = infer_ui_bearing(entry, subreq_dir)
+        # A mode=none artifact is contradictory, so stop that slice instead
+        # of routing it into the pipeline. Missing light/full artifacts remain
+        # recoverable through the solution-design action.
+        if artifact_errors and mode == "none":
+            continue
 
         if status in DRIFT_CHECK_STATUSES:
             for message in spec_drift(subreq_dir):
@@ -343,11 +537,17 @@ def reconcile(
                 status = "spec_ready"
                 entry = {**entry, "status": status}
 
-        if needs_design_approval(entry, ui_bearing, participation):
-            design_pending.append((subreq_id, "design"))
+        # A full solution design pauses for CP-DESIGN. Light mode remains
+        # runnable so the action can write its short record and self-approve.
+        if (
+            mode == "full"
+            and solution_design_pending(entry, subreq_dir)
+            and status in DESIGN_GATE_STATUSES
+            and not (status == "split_ready" and truth in UI_TRUTH_CAPABILITY_MODES)
+        ):
+            design_pending.append((subreq_id, "solution-design"))
             continue
-
-        action = next_action_for_entry(entry, ui_bearing, participation)
+        action = next_action_for_entry(entry, ui_bearing, subreq_dir)
         if action:
             if action == "archive":
                 # merged -> archive is a pure housekeeping action; it must not
@@ -364,7 +564,7 @@ def reconcile(
                     actionable.append((subreq_id, action))
                 else:
                     ui_waiting.append(subreq_id)
-            elif status == "tasks_ready":
+            elif status == "tasks_ready" and action == "implement":
                 # Development is gated by CP-001. Hold tasks_ready slices until
                 # all_tasks_ready and a recorded CP-001 confirmation allow release.
                 dev_waiting.append(subreq_id)
@@ -379,10 +579,15 @@ def reconcile(
         and isinstance(entry.get("status"), str)
         and not is_blocked(entry["status"])
     ]
-    all_archived = all(
-        isinstance(sub_requirements.get(sid), dict)
-        and sub_requirements[sid].get("status") == "archived"
-        for sid in executable
+    all_archived = (
+        not validation_errors
+        and not metadata_invalid
+        and not (invalid_mode_subreqs | invalid_artifact_subreqs)
+        and all(
+            isinstance(sub_requirements.get(sid), dict)
+            and sub_requirements[sid].get("status") == "archived"
+            for sid in executable
+        )
     ) if executable else False
 
     # A drift-downgraded slice is no longer tasks_ready even though status.json
@@ -390,6 +595,9 @@ def reconcile(
     # stale plan/tasks pair.
     all_tasks_ready = (
         bool(executable)
+        and not validation_errors
+        and not metadata_invalid
+        and not (invalid_mode_subreqs | invalid_artifact_subreqs)
         and not (downgraded & set(executable))
         and all(
             isinstance(sub_requirements.get(sid), dict)
@@ -398,16 +606,24 @@ def reconcile(
         )
     )
 
-    # CP-001 is valid only while every slice is tasks_ready and user confirmation
-    # is recorded. A stale confirmation after rollback must not reauthorize implement.
-    dev_authorized = recorded_checkpoint == "CP-001" and all_tasks_ready
+    # CP-001 is valid only while every slice is tasks_ready, no solution-design
+    # prerequisite is pending, and user confirmation is recorded. A stale
+    # confirmation must not reauthorize implementation around a design gate.
+    prerequisite_actionable = any(
+        action != "implement" for _, action in actionable
+    )
+    dev_authorized = (
+        recorded_checkpoint == "CP-001"
+        and all_tasks_ready
+        and not design_pending
+        and not prerequisite_actionable
+    )
     for subreq_id in dev_waiting:
         if dev_authorized:
             runnable.append(f"{subreq_id}:tasks_ready->implement")
             actionable.append((subreq_id, "implement"))
 
     checkpoint = recorded_checkpoint
-
     if all_archived and executable:
         runtime_mode = "completed"
         checkpoint = None
@@ -416,16 +632,22 @@ def reconcile(
         checkpoint = "CP-ARCHIVE"
     elif checkpoint == "CP-002":
         runtime_mode = "blocker_recovery"
-    elif all_tasks_ready:
-        runtime_mode = "confirm_to_dev"
-        checkpoint = "CP-001"
     elif ui_waiting and not actionable:
         runtime_mode = "confirm_ui"
         checkpoint = "CP-UI"
     elif design_pending and not actionable:
-        runtime_mode = "confirm_design"
+        runtime_mode = "confirm_solution_design"
         checkpoint = "CP-DESIGN"
-    elif not runnable and blocked:
+    elif all_tasks_ready and not design_pending and not prerequisite_actionable:
+        runtime_mode = "confirm_to_dev"
+        checkpoint = "CP-001"
+    elif not runnable and (
+        blocked
+        or invalid_mode_subreqs
+        or invalid_artifact_subreqs
+        or validation_errors
+        or metadata_invalid
+    ):
         runtime_mode = "blocker_recovery"
         checkpoint = checkpoint or "CP-002"
     else:
@@ -447,7 +669,7 @@ def reconcile(
         next_subreq = None
     elif runtime_mode == "closing" and archive_pending:
         next_subreq, next_action = archive_pending[0], "archive"
-    elif runtime_mode == "confirm_design" and design_pending:
+    elif runtime_mode == "confirm_solution_design" and design_pending:
         next_subreq, next_action = design_pending[0]
     elif runtime_mode == "confirm_to_dev":
         next_subreq = next((sid for sid in executable if sub_requirements[sid].get("status") == "tasks_ready"), None)
@@ -458,7 +680,14 @@ def reconcile(
         next_action = "none"
     elif runtime_mode == "blocker_recovery":
         next_action = "none"
-        next_subreq = blocked[0].split(":", 1)[0] if blocked else None
+        if blocked:
+            next_subreq = blocked[0].split(":", 1)[0]
+        elif invalid_mode_subreqs:
+            next_subreq = sorted(invalid_mode_subreqs)[0]
+        elif invalid_artifact_subreqs:
+            next_subreq = sorted(invalid_artifact_subreqs)[0]
+        else:
+            next_subreq = None
     elif actionable:
         next_subreq, next_action = actionable[0]
     else:

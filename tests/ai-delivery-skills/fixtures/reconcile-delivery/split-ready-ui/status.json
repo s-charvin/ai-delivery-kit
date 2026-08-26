@@ -11,6 +11,8 @@
       "blocker_scope": null,
       "resume_target_status": null,
       "ui_bearing": true,
+      "ui_truth_mode": "figma",
+      "design_mode": "full",
       "design_approved": false,
       "notes": "light audit passed"
     }

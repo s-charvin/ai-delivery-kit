@@ -24,6 +24,10 @@ UNIT_TYPES = frozenset({"page", "component", "modal", "shared-component"})
 STACKS = frozenset({"flutter", "web"})
 CONFIRMATION_STATUSES = frozenset({"confirmed", "waived"})
 EVIDENCE_ORIGINS = frozenset({"figma", "requirement", "project", "user-decision"})
+UI_TRUTH_MODES = frozenset({"none", "existing", "runtime-baseline", "figma"})
+UI_TRUTH_CAPABILITY_MODES = frozenset({"runtime-baseline", "figma"})
+DESIGN_MODES = frozenset({"none", "light", "full"})
+LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
 SURFACE_KINDS = frozenset({"viewport", "container"})
 ORIENTATIONS = frozenset({"portrait", "landscape", "not-applicable"})
 REVIEW_MODES = frozenset({"visual", "behavior", "both"})
@@ -79,14 +83,6 @@ POST_FREEZE_STATUSES = frozenset(
         "archived",
     }
 )
-UI_IMPLIES_UI_STATUSES = frozenset(
-    {
-        "acceptance_frozen",
-        "visual_acceptance_passed",
-        "merged",
-        "archived",
-    }
-)
 VISUAL_ACCEPTANCE_STATUSES = frozenset(
     {"visual_acceptance_passed", "merged", "archived"}
 )
@@ -106,6 +102,58 @@ def find_repo_root(start: Path) -> Path:
         if (cand / ".ai-delivery" / "meta" / "project-binding.json").is_file():
             return cand
     return start
+
+
+def legacy_participation_errors(req_root: Path) -> list[str]:
+    """Reject removed routing fields and participation profiles."""
+    def legacy_keys(value: Any) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    def has_legacy_profile(value: Any) -> bool:
+        if isinstance(value, dict):
+            if value.get("participation") == "no_design_client":
+                return True
+            return any(has_legacy_profile(nested) for nested in value.values())
+        if isinstance(value, list):
+            return any(has_legacy_profile(nested) for nested in value)
+        return False
+
+    candidates = [req_root / ".ai-delivery" / "meta" / "project-binding.json"]
+    candidates.extend(
+        cand / ".ai-delivery" / "meta" / "project-binding.json"
+        for cand in req_root.parents
+    )
+    for path in candidates:
+        if not path.is_file():
+            continue
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        if not isinstance(data, dict):
+            continue
+        stale_keys = legacy_keys(data)
+        if stale_keys:
+            return [
+                "[MODE] legacy project-binding field(s) are forbidden: "
+                + ", ".join(sorted(stale_keys))
+            ]
+        if has_legacy_profile(data):
+            return [
+                "[MODE] no_design_client participation profile is removed; "
+                "use ui_truth_mode and design_mode"
+            ]
+    return []
 
 
 def ui_truth_index_path(subreq_dir: Path) -> Path:
@@ -137,18 +185,61 @@ def has_ui_artifacts(subreq_dir: Path) -> bool:
     return ui_truth_index_path(subreq_dir).is_file() and bool(index_units(subreq_dir))
 
 
-def infer_ui_bearing(entry: dict, subreq_dir: Path) -> bool:
-    ui_bearing = entry.get("ui_bearing")
-    if ui_bearing is True:
-        return True
-    if ui_bearing is False:
-        return False
-    if has_ui_artifacts(subreq_dir):
-        return True
-    status = entry.get("status", "")
-    if status in UI_IMPLIES_UI_STATUSES:
-        return True
-    return False
+def infer_ui_bearing(entry: dict, subreq_dir: Path | None = None) -> bool:
+    """Use the explicit surface flag; never infer it from artifacts or status."""
+    return entry.get("ui_bearing") is True
+
+
+def mode_errors(entry: dict) -> list[str]:
+    errors: list[str] = []
+    def legacy_keys(value: Any) -> set[str]:
+        if isinstance(value, dict):
+            found = {key for key in value if key in LEGACY_MODE_FIELDS}
+            for nested in value.values():
+                found.update(legacy_keys(nested))
+            return found
+        if isinstance(value, list):
+            found: set[str] = set()
+            for nested in value:
+                found.update(legacy_keys(nested))
+            return found
+        return set()
+
+    for field in sorted(legacy_keys(entry)):
+        errors.append(f"legacy field {field} is forbidden")
+    bearing = entry.get("ui_bearing")
+    truth = entry.get("ui_truth_mode")
+    design = entry.get("design_mode")
+    if type(bearing) is not bool:
+        errors.append("ui_bearing must be a boolean")
+    if truth not in UI_TRUTH_MODES:
+        errors.append(
+            "ui_truth_mode must be one of: " + ", ".join(sorted(UI_TRUTH_MODES))
+        )
+    if design not in DESIGN_MODES:
+        errors.append(
+            "design_mode must be one of: " + ", ".join(sorted(DESIGN_MODES))
+        )
+    if isinstance(bearing, bool) and truth in UI_TRUTH_MODES:
+        expected = truth != "none"
+        if bearing != expected:
+            errors.append(
+                f"ui_bearing={str(bearing).lower()} is inconsistent with "
+                f"ui_truth_mode={truth} (expected {str(expected).lower()})"
+            )
+    if type(entry.get("design_approved")) is not bool:
+        errors.append("design_approved must be a boolean")
+    elif design == "none" and entry.get("design_approved") is True:
+        errors.append("design_mode=none cannot set design_approved=true")
+    return errors
+
+
+def requires_ui_truth(entry: dict) -> bool:
+    return entry.get("ui_truth_mode") in UI_TRUTH_CAPABILITY_MODES
+
+
+def design_artifact_required(entry: dict, status: str) -> bool:
+    return entry.get("design_mode") in {"light", "full"} and status in POST_FREEZE_STATUSES
 
 
 def verification_required_markers(req_root: Path) -> tuple[str, ...]:
@@ -189,6 +280,13 @@ def check_verification_evidence(
 
 def _is_non_empty_string(value: Any) -> bool:
     return isinstance(value, str) and bool(value.strip())
+
+
+def _contains_identifier(text: str, identifier: str) -> bool:
+    """Match an ASCII machine id as a token, not as a substring of another id."""
+    return re.search(
+        rf"(?<![a-z0-9-]){re.escape(identifier)}(?![a-z0-9-])", text
+    ) is not None
 
 
 def _is_iso8601_timestamp(value: Any) -> bool:
@@ -277,7 +375,11 @@ def _is_positive_number(value: Any) -> bool:
 
 
 def _check_evidence_source(
-    value: dict[str, Any], *, prefix: str, figma_requires_node: bool
+    value: dict[str, Any],
+    *,
+    prefix: str,
+    figma_requires_node: bool,
+    allowed_origins: frozenset[str] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     origin = value.get("evidence_origin")
@@ -285,6 +387,11 @@ def _check_evidence_source(
         errors.append(
             f"{prefix} evidence_origin must be one of: "
             f"{', '.join(sorted(EVIDENCE_ORIGINS))}"
+        )
+    elif allowed_origins is not None and origin not in allowed_origins:
+        errors.append(
+            f"{prefix} evidence_origin must be one of: "
+            f"{', '.join(sorted(allowed_origins))}"
         )
     if not _is_non_empty_string(value.get("source_ref")):
         errors.append(f"{prefix} source_ref is required")
@@ -332,7 +439,11 @@ def _check_confirmation(
 
 
 def check_ui_truth_index(
-    subreq_id: str, subreq_dir: Path, repo_root: Path, status: str
+    subreq_id: str,
+    subreq_dir: Path,
+    repo_root: Path,
+    status: str,
+    expected_mode: str | None = None,
 ) -> list[str]:
     path = ui_truth_index_path(subreq_dir)
     if not path.is_file():
@@ -344,6 +455,18 @@ def check_ui_truth_index(
         return [f"[GATE] {subreq_id} cannot parse {UI_TRUTH_INDEX.as_posix()}"]
 
     errors: list[str] = []
+    index_mode = data.get("ui_truth_mode")
+    if index_mode not in UI_TRUTH_CAPABILITY_MODES:
+        errors.append(
+            f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} ui_truth_mode "
+            "must be runtime-baseline or figma"
+        )
+    if expected_mode in UI_TRUTH_CAPABILITY_MODES and index_mode != expected_mode:
+        errors.append(
+            f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} ui_truth_mode "
+            f"must match status.json ({expected_mode})"
+        )
+    effective_mode = index_mode if index_mode in UI_TRUTH_CAPABILITY_MODES else expected_mode
     if type(data.get("schema_version")) is not int or data["schema_version"] != UI_TRUTH_SCHEMA_VERSION:
         errors.append(
             f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} schema_version "
@@ -354,9 +477,26 @@ def check_ui_truth_index(
     if not isinstance(design_source, dict):
         errors.append(f"[GATE] {subreq_id} design_source must be an object")
     else:
-        for field in ("file_key", "root_node", "revision"):
-            if not _is_non_empty_string(design_source.get(field)):
-                errors.append(f"[GATE] {subreq_id} design_source.{field} is required")
+        source_origin = design_source.get("evidence_origin")
+        if source_origin not in EVIDENCE_ORIGINS:
+            errors.append(
+                f"[GATE] {subreq_id} design_source.evidence_origin must be one of: "
+                f"{', '.join(sorted(EVIDENCE_ORIGINS))}"
+            )
+        elif effective_mode == "figma" and source_origin != "figma":
+            errors.append(
+                f"[GATE] {subreq_id} figma ui truth requires design_source.evidence_origin=figma"
+            )
+        elif effective_mode == "runtime-baseline" and source_origin == "figma":
+            errors.append(
+                f"[GATE] {subreq_id} runtime-baseline cannot use figma design_source evidence"
+            )
+        if not _is_non_empty_string(design_source.get("source_ref")):
+            errors.append(f"[GATE] {subreq_id} design_source.source_ref is required")
+        if effective_mode == "figma":
+            for field in ("file_key", "root_node", "revision"):
+                if not _is_non_empty_string(design_source.get(field)):
+                    errors.append(f"[GATE] {subreq_id} design_source.{field} is required")
         if not _is_iso8601_timestamp(design_source.get("captured_at")):
             errors.append(
                 f"[GATE] {subreq_id} design_source.captured_at must be an ISO-8601 timestamp with timezone"
@@ -404,8 +544,8 @@ def check_ui_truth_index(
                 f"{', '.join(sorted(STACKS))}"
             )
 
-        if not _is_non_empty_string(unit.get("source_node")):
-            errors.append(f"[GATE] {subreq_id} unit {unit_id} source_node is required")
+        if effective_mode == "figma" and not _is_non_empty_string(unit.get("source_node")):
+            errors.append(f"[GATE] {subreq_id} unit {unit_id} source_node is required for figma evidence")
 
         dependencies = unit.get("dependencies")
         valid_dependencies: list[str] = []
@@ -594,7 +734,12 @@ def check_ui_truth_index(
                 _check_evidence_source(
                     state,
                     prefix=f"[GATE] {subreq_id} unit {unit_id} state {state_id}",
-                    figma_requires_node=True,
+                    figma_requires_node=effective_mode == "figma",
+                    allowed_origins=(
+                        frozenset({"figma", "requirement", "project", "user-decision"})
+                        if effective_mode == "figma"
+                        else frozenset({"requirement", "project", "user-decision"})
+                    ),
                 )
             )
 
@@ -687,7 +832,14 @@ def check_ui_truth_index(
                 )
             errors.extend(
                 _check_evidence_source(
-                    scenario, prefix=prefix, figma_requires_node=False
+                    scenario,
+                    prefix=prefix,
+                    figma_requires_node=False,
+                    allowed_origins=(
+                        frozenset({"figma", "requirement", "project", "user-decision"})
+                        if effective_mode == "figma"
+                        else frozenset({"requirement", "project", "user-decision"})
+                    ),
                 )
             )
 
@@ -1068,6 +1220,71 @@ def check_visual_acceptance(
     return errors
 
 
+DESIGN_ARTIFACT_STATUSES = frozenset(
+    {
+        "spec_ready",
+        "plan_ready",
+        "tasks_ready",
+        "in_dev",
+        "visual_acceptance_passed",
+        "merged",
+        "archived",
+    }
+)
+
+
+def check_solution_design_artifact(
+    subreq_id: str,
+    subreq_dir: Path,
+    status: str,
+    entry: dict[str, Any],
+    index: dict[str, Any] | None,
+) -> list[str]:
+    """Validate conditional design.md and scenario references.
+
+    Runtime Coverage remains exclusively in the UI truth index. The solution
+    design only needs to cite scenario IDs and assign implementation and
+    verification responsibility.
+    """
+    mode = entry.get("design_mode")
+    design_path = subreq_dir / "design.md"
+    errors: list[str] = []
+    if mode == "none":
+        if design_path.is_file():
+            errors.append(
+                f"[DESIGN] {subreq_id} design_mode=none must not produce design.md"
+            )
+        return errors
+    if mode in {"light", "full"} and entry.get("design_approved") is True and not design_path.is_file():
+        errors.append(
+            f"[DESIGN] {subreq_id} design_approved=true requires design.md"
+        )
+    if status in DESIGN_ARTIFACT_STATUSES and not design_path.is_file():
+        errors.append(
+            f"[DESIGN] {subreq_id} status={status} design_mode={mode} requires design.md"
+        )
+        return errors
+    if not design_path.is_file() or index is None:
+        return errors
+    try:
+        text = design_path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        return [f"[DESIGN] {subreq_id} cannot read design.md: {exc}"]
+    scenario_ids: list[str] = []
+    for unit in index.get("units", []):
+        if not isinstance(unit, dict):
+            continue
+        for scenario in unit.get("scenarios", []):
+            if isinstance(scenario, dict) and _is_non_empty_string(scenario.get("scenario_id")):
+                scenario_ids.append(scenario["scenario_id"])
+    for scenario_id in sorted(set(scenario_ids)):
+        if not _contains_identifier(text, scenario_id):
+            errors.append(
+                f"[DESIGN] {subreq_id} design.md must reference indexed scenario_id {scenario_id}"
+            )
+    return errors
+
+
 def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     try:
         status_data = json.loads(status_path.read_text(encoding="utf-8"))
@@ -1081,6 +1298,10 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     verification_markers = verification_required_markers(req_root)
     repo_root = find_repo_root(req_root)
     errors: list[str] = []
+    for field in sorted(LEGACY_MODE_FIELDS):
+        if field in status_data:
+            errors.append(f"[STATUS] legacy field {field} is forbidden")
+    errors.extend(legacy_participation_errors(req_root))
 
     for subreq_id, entry in sub_requirements.items():
         if not isinstance(entry, dict):
@@ -1092,22 +1313,76 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
             errors.append(f"[STATUS] sub_requirements.{subreq_id}.status missing")
             continue
 
+        errors.extend(
+            f"[STATUS] sub_requirements.{subreq_id}: {message}"
+            for message in mode_errors(entry)
+        )
+
+        subreq_dir = req_root / "sub-requirements" / subreq_id
+        index_file = ui_truth_index_path(subreq_dir)
+        index = load_ui_truth_index(subreq_dir) if index_file.is_file() else None
+        # Mode/artifact consistency is checked even for blocked slices. A
+        # blocker may pause execution, but it must not preserve a removed
+        # design bypass or a forged approval flag.
+        errors.extend(
+            check_solution_design_artifact(
+                subreq_id, subreq_dir, status, entry, index
+            )
+        )
+
+        truth_mode = entry.get("ui_truth_mode")
+
+        if status == "acceptance_frozen" and truth_mode not in UI_TRUTH_CAPABILITY_MODES:
+            errors.append(
+                f"[STATUS] {subreq_id} acceptance_frozen is only valid for "
+                "ui_truth_mode=figma or runtime-baseline"
+            )
+        if status == "visual_acceptance_passed" and truth_mode not in UI_TRUTH_CAPABILITY_MODES:
+            errors.append(
+                f"[STATUS] {subreq_id} visual_acceptance_passed is only valid for "
+                "ui_truth_mode=figma or runtime-baseline"
+            )
+        if truth_mode not in UI_TRUTH_CAPABILITY_MODES and index_file.is_file():
+            errors.append(
+                f"[STATUS] {subreq_id} ui-truth-index.json is forbidden when "
+                f"ui_truth_mode={truth_mode}"
+            )
+        if truth_mode not in UI_TRUTH_CAPABILITY_MODES and (
+            subreq_dir / VISUAL_ACCEPTANCE_ARTIFACT
+        ).is_file():
+            errors.append(
+                f"[STATUS] {subreq_id} visual-acceptance.json is forbidden when "
+                f"ui_truth_mode={truth_mode}"
+            )
+
+        # A blocker pauses execution, but it does not make an invalid state or
+        # a stale capability artifact legal. Keep post-freeze evidence checks
+        # below the blocker boundary so blocked slices are still auditable
+        # without requiring them to complete the paused capability.
         if status.startswith("blocked_"):
             continue
 
-        subreq_dir = req_root / "sub-requirements" / subreq_id
-        ui_bearing = infer_ui_bearing(entry, subreq_dir)
-
-        if status in POST_FREEZE_STATUSES and ui_bearing:
+        if status in POST_FREEZE_STATUSES and truth_mode in UI_TRUTH_CAPABILITY_MODES:
             errors.extend(
-                check_ui_truth_index(subreq_id, subreq_dir, repo_root, status)
+                check_ui_truth_index(
+                    subreq_id, subreq_dir, repo_root, status, expected_mode=truth_mode
+                )
             )
 
-        if status in VISUAL_ACCEPTANCE_STATUSES and ui_bearing:
+        if status in VISUAL_ACCEPTANCE_STATUSES and truth_mode in UI_TRUTH_CAPABILITY_MODES:
             errors.extend(
                 check_visual_acceptance(subreq_id, subreq_dir, repo_root, status)
             )
 
+        if (
+            entry.get("design_mode") in {"light", "full"}
+            and status in DESIGN_ARTIFACT_STATUSES
+            and entry.get("design_approved") is not True
+        ):
+            errors.append(
+                f"[STATUS] {subreq_id} status={status} requires design_approved=true "
+                f"for design_mode={entry.get('design_mode')}"
+            )
         if status in VERIFICATION_REQUIRED_STATUSES:
             errors.extend(
                 check_verification_evidence(

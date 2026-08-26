@@ -11,7 +11,9 @@
       "blocker_scope": null,
       "resume_target_status": null,
       "ui_bearing": true,
-      "design_approved": true,
+      "ui_truth_mode": "existing",
+      "design_mode": "none",
+      "design_approved": false,
       "notes": null
     },
     "SR-002": {
@@ -21,7 +23,9 @@
       "blocker_scope": null,
       "resume_target_status": null,
       "ui_bearing": false,
-      "design_approved": true,
+      "ui_truth_mode": "none",
+      "design_mode": "none",
+      "design_approved": false,
       "notes": null
     }
   }
