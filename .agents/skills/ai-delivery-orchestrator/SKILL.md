@@ -13,6 +13,19 @@ Requirement → [Breakdown?] → Capability review → Solution Design? → Spec
 
 The orchestrator is **framework-agnostic**: it emits abstract stage actions and adapts them to whatever AI development framework the user has installed. It never requires installing anything.
 
+## Scenario guidance
+
+During ordinary requirement analysis, scan the scenario registry in
+[references/scenario-guidance.md](references/scenario-guidance.md) for triggers
+that match the requirement or delivery context. Select only matching scenarios
+before making scenario-sensitive decisions; if none matches, continue with the
+ordinary workflow rules. The catalog is optional, trigger-based, and advisory:
+this scan is part of existing analysis and does not add a stage, artifact, gate,
+or downstream maintenance obligation. Put material decisions in the host
+workflow's existing record or current action report. If a selected scenario's
+relationship is unclear, record `unknown` and ask rather than assuming
+compatibility. The reference does not replace the host workflow's own rules.
+
 ## Artifact language
 
 - Treat bundled template prose as an English source default, not as the output language.

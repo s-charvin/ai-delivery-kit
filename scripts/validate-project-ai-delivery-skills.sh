@@ -252,6 +252,7 @@ validate_orchestrator_skill() {
     templates/status-template.json \
     templates/todo-template.md \
     templates/visual-acceptance-template.json \
+    references/scenario-guidance.md \
     references/handoff-table.md \
     references/reconcile-rules.md \
     scripts/reconcile-delivery.py
