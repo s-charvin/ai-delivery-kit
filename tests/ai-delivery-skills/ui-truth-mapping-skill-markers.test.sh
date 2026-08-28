@@ -41,6 +41,41 @@ require "$EN" "Split a multi-clause SECTION note per unit" "EN split SECTION not
 require "$EN" "Consistency check (REQUIRED before writing component code)" "EN consistency check"
 require "$EN" "Coverage review after every prune (REQUIRED)" "EN coverage review"
 require "$EN" "User-named reference implementation" "EN user-named reference"
+require "$EN" "Real data or intentional emptiness" "EN real-data emptiness"
+require "$EN" "motion_decision" "EN motion decision"
+require "$EN" "Stage 4 must later record independent motion acceptance" "EN separate motion acceptance"
+require "$EN" "test-harness fixture" "EN fixture containment"
+require "$EN" "If a temporary placeholder is genuinely necessary, ask separately whether it is allowed" "EN placeholder approval"
+
+# ZH — motion and resource guardrails stay explicit in the localized entrypoint
+unicode_text() {
+  python3 -c 'import sys; print("".join(chr(int(codepoint, 16)) for codepoint in sys.argv[1].split()), end="")' "$1"
+}
+
+ZH_SEPARATE_MOTION_CONFIRMATION=$(unicode_text '9759 6001 89C6 89C9 786E 8BA4 548C 52A8 6548 786E 8BA4 002F 8C41 514D 662F 5206 5F00 7684 8BC1 636E')
+ZH_GIF_SCOPE=$(unicode_text '4E0D 8981 65B0 589E')
+ZH_GIF_ENCODER=$(unicode_text '7F16 7801 5668')
+ZH_REAL_WIDGET_API=$(unicode_text '771F 5B9E')
+ZH_STRICT_KEYFRAMES=$(unicode_text '4E25 683C 9012 589E 7684 7D2F 8BA1')
+ZH_MINIMUM_GIF_FRAMES=$(unicode_text '81F3 5C11 4E24 4E2A')
+ZH_ALTERNATE_FORMATS=$(unicode_text '6216 5BBF 4E3B 5DF2 652F 6301 7684 5176 4ED6 683C 5F0F 002F 5B98 65B9 8FD0 884C 65F6 5F55 5236')
+
+require "$ZH" "static / no motion" "ZH explicit static motion decision"
+require "$ZH" "$ZH_SEPARATE_MOTION_CONFIRMATION" "ZH separate motion confirmation"
+require "$ZH" "$ZH_GIF_SCOPE WebP/MP4 $ZH_GIF_ENCODER" "ZH GIF scope"
+require "$ZH" "$ZH_REAL_WIDGET_API Widget API" "ZH real motion trigger"
+require "$EN" "strictly" "EN strict motion keyframes"
+require "$EN" "increasing cumulative" "EN cumulative motion keyframes"
+require "$EN" "at least two for a GIF" "EN minimum GIF keyframes"
+require "$ZH" "$ZH_STRICT_KEYFRAMES" "ZH strict motion keyframes"
+require "$ZH" "GIF $ZH_MINIMUM_GIF_FRAMES" "ZH minimum GIF keyframes"
+
+if grep -Fq 'GIF/video/runtime preview' "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"; then
+  fail "GIF-only contract still permits video motion previews"
+fi
+if grep -Fq "$ZH_ALTERNATE_FORMATS" "$ZH"; then
+  fail "localized GIF-only contract still permits alternate motion formats"
+fi
 
 # EN — runtime coverage
 require "$EN" "### 3c. Runtime Coverage Plan" "EN runtime coverage plan"
@@ -50,6 +85,7 @@ require "$EN" 'figma` / `requirement` / `project` / `user-decision' "EN evidence
 require "$EN" "all ten coverage dimensions" "EN complete coverage"
 require "$EN" 'reviewed_preview_sha256' "EN preview-bound confirmation"
 require "$EN" 'structured `visual-acceptance.json`' "EN structured Stage 4 acceptance"
+require "$EN" "A static golden never substitutes for motion acceptance" "EN golden cannot replace motion"
 
 # EN — sizing
 require "$EN" "### 5b. Layout sizing classification" "EN §5b"
@@ -93,6 +129,18 @@ require "$EXAMPLE" "PNG canvas" "example preview canvas ≠ runtime"
 require "$EXAMPLE" "state-switcher" "example bans in-widget switcher"
 require "$EXAMPLE" "viewPadding" "example strips system chrome"
 require "$EXAMPLE" "per reviewable visual scenario" "example one test per visual scenario"
+
+MOTION_EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+[[ -f "$MOTION_EXAMPLE" ]] || fail "Missing motion example: $MOTION_EXAMPLE"
+require "$MOTION_EXAMPLE" "matchesGoldenFile" "motion example golden matcher"
+require "$MOTION_EXAMPLE" "cumulative elapsed keyframes" "motion example cumulative keyframes"
+require "$MOTION_EXAMPLE" "GIF" "motion example GIF output"
+require "$MOTION_EXAMPLE" "Trigger the real widget behavior" "motion example real trigger"
+require "$MOTION_EXAMPLE" "Process.runSync" "motion example GIF encoder"
+require "$MOTION_EXAMPLE" "duration" "motion example preserves timing"
+require "$MOTION_EXAMPLE" "could not be decoded" "motion example validates GIF"
+require "$MOTION_EXAMPLE" "at least two keyframes" "motion example minimum frames"
+require "$MOTION_EXAMPLE" "strictly increasing cumulative keyframes" "motion example strict timing"
 
 for f in "$EN" "$ZH"; do
   if grep -E '343|375[[:space:]]*artboard|343\.w' "$f" >/dev/null; then

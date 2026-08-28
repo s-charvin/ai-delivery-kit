@@ -51,6 +51,9 @@ do
   require_identical "$rel"
 done
 
+require_file "$DST/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+require_han_content "$DST/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+
 # Localized skill entrypoints
 for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
   require_file "$SRC/$skill/SKILL.md"

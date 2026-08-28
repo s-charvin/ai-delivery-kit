@@ -80,9 +80,12 @@ require "$EN" "snapshot \`w×h\` equality" "EN VA not snapshot px"
 require "$EN" "execute every v2 scenario" "EN complete runtime scenario execution"
 require "$EN" "preview hashes remain identical" "EN preview hash invalidation"
 require "$EN" "reference/candidate/diff hashes" "EN deterministic image diff evidence"
+require "$EN" "one independent motion acceptance record for every indexed unit" "EN independent motion acceptance"
+require "$EN" "fabricated fixture content" "EN no fabricated data"
 
 require "$EN_UI" "Stage 4 does not re-run it by default" "EN Stage 2 pointer"
 require "$EN_UI" "all ten coverage dimensions" "EN runtime coverage freeze gate"
+require "$EN_UI" "Static golden confirmation and motion confirmation/waiver are separate gates" "EN Stage 2 motion gate"
 
 require "$EN_SKILL" "do not re-query TemPad / run \`figma-design-to-code\` by default" "EN SKILL Stage 4"
 require "$EN_SKILL" "structured \`visual-acceptance.json\`" "EN structured acceptance gate"

@@ -50,7 +50,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 - container/viewport 边界、orientation、安全区、fixed/sticky overlay、IME、scroll、clip 与 hit testing；
 - 长文本/不可断词/本地化/RTL、text scaling 或 zoom、列表数量与数值/日期边界；
 - hover/focus/pressed/selected/expanded、keyboard/pointer/touch/gesture 替代、focus trap/return 与语义播报；
-- 动效 trigger/keyframe/timing/interruption/reduced-motion/资源生命周期，以及适用的性能检查；
+- 动效 trigger/keyframe/timing/interruption/reduced-motion/资源生命周期，以及适用的性能检查；有索引动效预览时必须使用它，无法录制时用项目原生行为/人工证据；
 - 图片/矢量的 loading/error/offline、crop/focal/aspect/density/theme/cache/semantics 行为；
 - 支持的主题、contrast/state parity、平台语义、输入模式与原生无障碍要求。
 
@@ -67,7 +67,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 1. **解析 workspace** — 遵循 [workspace-policy.md](workspace-policy.md)。`ui_truth_mode=figma` 或 `runtime-baseline` 复用已记录的 Stage 2 用户已批准 workspace；其他切片默认使用当前 checkout。只有为当前子需求取得明确确认后，才能创建或复用项目内 worktree。
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
 3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
-4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 下执行每个 v2 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录结构化 `visual-acceptance.json`。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。
+4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 下执行每个 v2 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录结构化 `visual-acceptance.json`，且为每个索引 unit 写一条独立动效验收；静态 golden 不能满足该记录。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。绑定数据无真实值时必须验收为空/省略，而不是伪造 fixture 内容。
 5. **验证** — 合并前集成检查；在 `verification.md` 中使用用户当前对话语言记录人类可读证据（模板：`templates/verification-template.md`，删除其中的语言指令注释）。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
 

@@ -117,9 +117,9 @@ ai-delivery init --upgrade .
 
 只有 `ui_truth_mode=figma` 或 `runtime-baseline` 才启用 CP-UI、Stage 2、`acceptance_frozen`、v2 UI truth index 与视觉验收。`none` 与 `existing` 直接进入按需的 solution-design/spec，以及普通行为或语义验证。`ui_bearing` 只是与模式一致性校验字段，不是工作流 gate。runtime-baseline 证据不得称为 Figma 1:1 还原。
 
-CP-UI 授权后，Stage 2 在用户已批准 workspace 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件**，并为每个视觉场景生成官方栈预览（Flutter：Widget + golden PNG）。默认使用当前 checkout。创建或复用 worktree 必须为当前子需求另行确认，并使用 `<project-root>/.worktrees/<req-id>-<sr-id>`；禁止外部或平台托管临时路径。编写组件代码前，每个 unit 都必须按适用性解决覆盖 `state`、`layout`、`content`、`interaction`、`motion`、`assets`、`theme`、`accessibility`、`platform`、`performance` 的 Runtime Coverage Plan。`ai-delivery init` **不会** 安装 UI git hook。
+CP-UI 授权后，Stage 2 在用户已批准 workspace 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件**，并为每个视觉场景生成官方栈预览（Flutter：Widget + golden PNG；有动效的 unit 在宿主能够生成时还需确定性 GIF）。GIF 是唯一治理的动效预览格式；无法生成时记录原因并延后运行时验证，不得新增 WebP/MP4 或伪造文件。默认使用当前 checkout。创建或复用 worktree 必须为当前子需求另行确认，并使用 `<project-root>/.worktrees/<req-id>-<sr-id>`；禁止外部或平台托管临时路径。编写组件代码前，每个 unit 都必须按适用性解决覆盖 `state`、`layout`、`content`、`interaction`、`motion`、`assets`、`theme`、`accessibility`、`platform`、`performance` 的 Runtime Coverage Plan，并记录独立的 `motion_decision`（动效需确认/豁免，无动效也需明确确认）。golden 只证明静态帧，不能替代动效验收；Stage 4 还必须为每个 unit 记录独立动效验收。可见 UI 必须使用真实控件和有依据的资源；缺失真实数据时呈现空/省略状态，未经批准的占位层、静态替身和静默 fallback 均禁止。资源缺失时必须由用户明确选择“为空、延后或阻塞”。`ai-delivery init` **不会** 安装 UI git hook。
 
-对话里给用户每份预览的 **绝对路径**。v2 `contracts/ui-truth-index.json` 保存组件/测试/预览的 **仓内相对路径**、环境 profile、带来源的 state、具体 scenario、完整 coverage、SHA-256，以及绑定当前预览哈希的确认。只有 Figma 实际展示的场景才可称为 1:1 真值；未展示的运行时行为必须来自需求、项目规范或用户明确决策。Stage 4 复用同一个用户已批准 workspace，并写入 `visual-acceptance.json`，绑定当前 index 哈希与每个 scenario 对应模式的证据。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
+对话里给用户每份预览的 **绝对路径**。v2 `contracts/ui-truth-index.json` 保存组件/测试/预览的 **仓内相对路径**、环境 profile、带来源的 state、具体 scenario、完整 coverage、SHA-256，以及绑定当前预览哈希的确认。只有 Figma 实际展示的场景才可称为 1:1 真值；未展示的运行时行为必须来自需求、项目规范或用户明确决策。Stage 4 复用同一个用户已批准 workspace，并写入 `visual-acceptance.json`，绑定当前 index 哈希、每个 scenario 对应模式的证据，以及每个索引 unit 一条独立动效验收记录。若仍使用其他 Codex hook，`.codex/config.toml` 仍需 `[features] hooks = true`。
 
 仓库根 `AGENTS.md` 带有简短 UI 真值提醒（升级时 amend）。旧 IDE JSON 可从 `.ai-delivery/backups/ide-gates/` 恢复。
 

@@ -1,0 +1,189 @@
+// ui-truth-mapping 的 Flutter 动效预览示例。
+// 这是测试层模式，不是生产 Widget，也不是视觉占位物。
+// 替换导入、主题夹具和真实 unit；不要把教学注释复制到产品代码。
+//
+// 官方 Flutter 路径：
+//   1. 先通过真实 Widget API 触发动效；
+//   2. 按明确的累计 elapsed keyframe 推进真实 Widget；
+//   3. 每个 keyframe 用 matchesGoldenFile 写 PNG（运行 --update-goldens）；
+//   4. 使用宿主已有 GIF 编码器，并在 motion_decision 记录路径和 SHA-256。
+//
+// 禁止 dummy Widget、外部视觉 slot 或伪造动效文件。GIF 已足够，也是本契约
+// 唯一的动效预览格式。没有 GIF 编码器时记录动效豁免并延后验收。
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+// import 'package:host_app/.../real_unit.dart';
+
+void main() {
+  testWidgets('real unit motion preview', (tester) async {
+    final repaintKey = GlobalKey();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RepaintBoundary(
+          key: repaintKey,
+          // 替换为宿主真实 unit；不要用 fixture、占位或绘制替身。
+          child: RealHostUnit(),
+        ),
+      ),
+    );
+
+    // 在第一个 keyframe 前通过真实交互或状态 API 触发动效。
+    final output = Directory('build/motion-preview')..createSync(recursive: true);
+    final frameDirectory = Directory('${output.path}/unit')
+      ..createSync(recursive: true);
+    const elapsedTimes = <Duration>[
+      Duration.zero,
+      Duration(milliseconds: 120),
+      Duration(milliseconds: 240),
+    ];
+    _validateElapsedTimes(elapsedTimes);
+
+    for (var index = 0; index < elapsedTimes.length; index++) {
+      final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
+      await tester.binding.pump(
+        elapsedTimes[index] - previous,
+        EnginePhase.paint,
+      );
+      await expectLater(
+        find.byKey(repaintKey),
+        matchesGoldenFile(
+          Uri.file(
+            '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+          ),
+        ),
+      );
+    }
+
+    _encodeGif(
+      frameDirectory: frameDirectory,
+      outputFile: File('${output.absolute.path}/unit.gif'),
+      elapsedTimes: elapsedTimes,
+    );
+  });
+}
+
+void _encodeGif({
+  required Directory frameDirectory,
+  required File outputFile,
+  required List<Duration> elapsedTimes,
+}) {
+  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
+  if (outputFile.existsSync()) {
+    outputFile.deleteSync();
+  }
+  final manifest = StringBuffer();
+  for (var index = 0; index < elapsedTimes.length; index++) {
+    final frameFile = File(
+      '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    );
+    if (!frameFile.existsSync()) {
+      throw StateError('缺少动效帧：${frameFile.path}');
+    }
+    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
+    final delta = index + 1 < elapsedTimes.length
+        ? elapsedTimes[index + 1] - elapsedTimes[index]
+        : elapsedTimes[index] - elapsedTimes[index - 1];
+    manifest.writeln(
+      'duration ${delta.inMicroseconds / 1000000}',
+    );
+  }
+  final lastFrame = File(
+    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
+  );
+  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
+  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
+  try {
+    final result = Process.runSync('ffmpeg', [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-y',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      manifestFile.absolute.path,
+      '-frames:v',
+      '${elapsedTimes.length}',
+      '-fps_mode',
+      'vfr',
+      '-vf',
+      'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
+      '-loop',
+      '0',
+      outputFile.absolute.path,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('GIF 编码失败：${result.stderr}');
+    }
+  } on ProcessException catch (error) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    throw StateError('需要宿主已有 GIF 编码器：$error');
+  } catch (_) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    rethrow;
+  } finally {
+    if (manifestFile.existsSync()) {
+      manifestFile.deleteSync();
+    }
+  }
+  if (!outputFile.existsSync()) {
+    throw StateError('GIF 编码器没有产出文件：${outputFile.path}');
+  }
+  final verification = Process.runSync('ffmpeg', [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    outputFile.absolute.path,
+    '-map',
+    '0:v:0',
+    '-f',
+    'null',
+    '-',
+  ]);
+  if (verification.exitCode != 0) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    throw StateError('编码后的 GIF 无法解码：${verification.stderr}');
+  }
+}
+
+void _validateElapsedTimes(List<Duration> elapsedTimes) {
+  if (elapsedTimes.length < 2) {
+    throw ArgumentError.value(
+      elapsedTimes,
+      'elapsedTimes',
+      '动效 GIF 至少需要两个 keyframe',
+    );
+  }
+  if (elapsedTimes.first < Duration.zero) {
+    throw ArgumentError.value(
+      elapsedTimes,
+      'elapsedTimes',
+      '累计 keyframe 不能早于零时刻',
+    );
+  }
+  for (var index = 1; index < elapsedTimes.length; index++) {
+    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
+      throw ArgumentError.value(
+        elapsedTimes,
+        'elapsedTimes',
+        '累计 keyframe 必须严格递增',
+      );
+    }
+  }
+}
+
+String _escapeConcatPath(String path) =>
+    path.replaceAll('\\', '/').replaceAll("'", "'\\''");

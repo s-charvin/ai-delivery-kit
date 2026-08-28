@@ -23,5 +23,21 @@
       ],
       "note": "<使用用户当前对话语言填写 scenario 说明>"
     }
+  ],
+  "motion_acceptance": [
+    {
+      "unit_id": "profile-card",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "motion",
+          "path": "test/motion/profile-card-default.gif",
+          "sha256": "<64-lowercase-hex-motion-preview-sha256>",
+          "command": "<项目原生动效录制或运行时验证命令>",
+          "summary": "<使用用户当前对话语言填写动效验收摘要>"
+        }
+      ],
+      "note": "<使用用户当前对话语言填写动效验收说明>"
+    }
   ]
 }

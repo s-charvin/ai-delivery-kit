@@ -46,6 +46,8 @@ CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT
 
 该产物必须绑定当前 `ui-truth-index.json` 的 SHA-256，并恰好为每个已索引 scenario id 提供一条结果。`passed` scenario 需要与 `review_mode` 匹配的证据：visual 使用 preview/image-diff，behavior 使用 test/manual，`both` 同时需要两类。`waived` 必须记录用户身份、时间戳与理由。所有文件路径均为仓内相对路径并校验 hash。
 
+对于 UI truth 切片，该产物还必须包含 `motion_acceptance`，并为每个已索引 `unit_id` 恰好提供一条记录。记录的 `result` 为 `passed` 或 `waived`；静态 unit 必须以明确的 `test` 或 `manual` 证据通过，绝不能豁免。已索引动效预览的动态 unit 必须提供路径和 SHA-256 一致的 `motion` 证据；宿主无法确定性生成动效预览时，`passed` 必须提供独立的 Stage 4 运行时 `test` 或 `manual` 证据，`waived` 必须记录用户身份、时间戳和理由。静态 golden 证据不能替代每个 unit 独立的动效验收。
+
 有稳定 Figma 参考位图时，image-diff 证据记录 reference/candidate/diff 的路径与 hash、metric、threshold、actual、命令和摘要。没有稳定位图时，使用精确设计数值映射、确定性预览与用户确认；不得声称做过自动像素等价比较。
 
 ## 状态链

@@ -50,7 +50,7 @@ Use the exact profiles and scenarios from the v2 index; do not invent a universa
 - container/viewport boundaries, orientation, safe areas, fixed/sticky overlays, IME, scroll, clipping, and hit testing;
 - long/unbroken/localized/RTL content, text scaling or zoom, list-count and numeric/date boundaries;
 - hover/focus/pressed/selected/expanded, keyboard/pointer/touch/gesture alternatives, focus trap/return, and semantics announcements;
-- motion trigger/keyframes/timing/interruption/reduced-motion/resource lifecycle and applicable performance checks;
+- motion trigger/keyframes/timing/interruption/reduced-motion/resource lifecycle and applicable performance checks; use the indexed motion preview when available and project-native behavior/manual evidence when it is unavailable;
 - image/vector loading/error/offline, crop/focal/aspect/density/theme/cache/semantics behavior;
 - supported themes, contrast/state parity, platform semantics, input modes, and native accessibility expectations.
 
@@ -67,7 +67,7 @@ The `implement` action always follows this chain, regardless of framework tier:
 1. **Resolve workspace** — follow [workspace-policy.md](workspace-policy.md). Reuse the recorded Stage 2 user-approved workspace for `ui_truth_mode=figma` or `runtime-baseline`; otherwise default to the current checkout. Creating or reusing a project-local worktree is allowed only after explicit confirmation for this sub-requirement.
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
-4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 scenario under its recorded profile with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record structured `visual-acceptance.json`. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes.
+4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 scenario under its recorded profile with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record structured `visual-acceptance.json` with one independent motion acceptance record for every indexed unit. Static golden evidence never satisfies that motion record. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes. Data-bound visuals with no real value must be accepted as empty/omitted, not as fabricated fixture content.
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 

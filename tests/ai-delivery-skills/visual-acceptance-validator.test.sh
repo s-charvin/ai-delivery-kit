@@ -42,16 +42,18 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     component = repo / "lib" / "profile_card.dart"
     golden_test = repo / "test" / "profile_card_golden_test.dart"
     preview = repo / "test" / "goldens" / "profile-card-default.png"
+    motion_preview = repo / "test" / "motion" / "profile-card-default.gif"
     unrelated_preview = repo / "test" / "goldens" / "unrelated.png"
     index_path = contracts / "ui-truth-index.json"
     acceptance_path = subreq / "visual-acceptance.json"
 
-    for path in (contracts, component.parent, golden_test.parent, preview.parent):
+    for path in (contracts, component.parent, golden_test.parent, preview.parent, motion_preview.parent):
         path.mkdir(parents=True, exist_ok=True)
     (repo / ".git").mkdir()
     component.write_text("class ProfileCard {}\n", encoding="utf-8")
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     preview.write_bytes(b"default-png")
+    motion_preview.write_bytes(b"motion-gif")
     unrelated_preview.write_bytes(b"unrelated-png")
     (subreq / "design.md").write_text(
         "# Solution Design\n\n"
@@ -109,6 +111,19 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
                 "component_sha256": sha256(component),
                 "golden_test": "test/profile_card_golden_test.dart",
                 "golden_test_sha256": sha256(golden_test),
+                "motion_decision": {
+                    "decision": "animated",
+                    "verification_mode": "runtime",
+                    "preview_path": "test/motion/profile-card-default.gif",
+                    "preview_sha256": sha256(motion_preview),
+                    "confirmation": {
+                        "status": "confirmed",
+                        "confirmed_at": "2026-08-25T00:09:00Z",
+                        "confirmed_by": "user",
+                        "reviewed_preview_sha256": sha256(motion_preview),
+                        "note": "The motion contract is separately approved.",
+                    },
+                },
                 "profiles": [
                     {
                         "profile_id": "phone-portrait-light",
@@ -194,6 +209,22 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
                 "note": "Visual and behavior evidence are complete.",
             }
         ],
+        "motion_acceptance": [
+            {
+                "unit_id": "profile-card",
+                "result": "passed",
+                "evidence": [
+                    {
+                        "kind": "motion",
+                        "path": "test/motion/profile-card-default.gif",
+                        "sha256": sha256(motion_preview),
+                        "command": "record-motion",
+                        "summary": "The deterministic motion recording passed.",
+                    }
+                ],
+                "note": "Motion acceptance is independent from the golden frame.",
+            }
+        ],
     }
 
     def write_acceptance(data: dict) -> None:
@@ -230,6 +261,24 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
 
     expect_pass("valid structured visual acceptance", valid_acceptance)
     expect_fail("missing acceptance", None, "requires visual-acceptance.json")
+
+    missing_motion_acceptance = copy.deepcopy(valid_acceptance)
+    del missing_motion_acceptance["motion_acceptance"]
+    expect_fail(
+        "missing motion acceptance",
+        missing_motion_acceptance,
+        "motion_acceptance must be an array",
+    )
+
+    mismatched_motion_evidence = copy.deepcopy(valid_acceptance)
+    mismatched_motion_evidence["motion_acceptance"][0]["evidence"][0]["path"] = (
+        "test/motion/other-unit.gif"
+    )
+    expect_fail(
+        "motion evidence from another unit",
+        mismatched_motion_evidence,
+        "motion evidence must match motion_decision preview_path",
+    )
 
     wrong_schema = copy.deepcopy(valid_acceptance)
     wrong_schema["schema_version"] = 2
@@ -309,6 +358,78 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         "note": "",
     }
     expect_fail("waiver without note", waiver_without_note, "waiver note is required")
+
+    static_index = copy.deepcopy(index)
+    static_index["units"][0]["motion_decision"] = {
+        "decision": "static",
+        "verification_mode": "not_applicable",
+        "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "2026-08-25T00:09:00Z",
+            "confirmed_by": "user",
+            "note": "The unit is intentionally static and has no motion.",
+        },
+    }
+    index_path.write_text(json.dumps(static_index, indent=2) + "\n", encoding="utf-8")
+    static_acceptance = copy.deepcopy(valid_acceptance)
+    static_acceptance["ui_truth_index_sha256"] = sha256(index_path)
+    static_acceptance["motion_acceptance"] = [
+        {
+            "unit_id": "profile-card",
+            "result": "passed",
+            "evidence": [
+                {
+                    "kind": "manual",
+                    "reviewed_by": "reviewer",
+                    "reviewed_at": "2026-08-25T01:00:00Z",
+                    "summary": "The unit remains static under the supported profile.",
+                }
+            ],
+            "note": "Static/no-motion acceptance is complete.",
+        }
+    ]
+    expect_pass("static no-motion acceptance", static_acceptance)
+
+    static_without_motion_evidence = copy.deepcopy(static_acceptance)
+    static_without_motion_evidence["motion_acceptance"][0]["evidence"] = []
+    expect_fail(
+        "static no-motion acceptance without evidence",
+        static_without_motion_evidence,
+        "static/no-motion acceptance requires test or manual evidence",
+    )
+
+    static_preview_as_test_evidence = copy.deepcopy(static_acceptance)
+    static_preview_as_test_evidence["motion_acceptance"][0]["evidence"] = [
+        {
+            "kind": "test",
+            "path": "test/goldens/profile-card-default.png",
+            "sha256": sha256(preview),
+            "command": "flutter test",
+            "summary": "The static golden was incorrectly used as motion evidence.",
+        }
+    ]
+    expect_fail(
+        "static golden cannot be motion test evidence",
+        static_preview_as_test_evidence,
+        "must reference a test/report artifact, not a preview file",
+    )
+
+    static_motion_waived = copy.deepcopy(static_acceptance)
+    static_motion_waived["motion_acceptance"][0].update(
+        {
+            "result": "waived",
+            "waived_by": "user",
+            "waived_at": "2026-08-25T01:00:00Z",
+            "note": "No motion exists.",
+        }
+    )
+    expect_fail(
+        "static no-motion acceptance cannot be waived",
+        static_motion_waived,
+        "static/no-motion acceptance cannot be waived",
+    )
+
+    index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
 
     def write_status(*, status_name: str, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
         status["sub_requirements"]["SR-001"].update(

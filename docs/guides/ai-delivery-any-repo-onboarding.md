@@ -175,6 +175,10 @@ bootstrap 完成后，目标仓库至少具备：
 
 每个子需求在 `status.json` 中声明两条独立模式轴：`ui_truth_mode=none|existing|runtime-baseline|figma` 与 `design_mode=none|light|full`。只有 `figma` 或 `runtime-baseline` 启用 CP-UI、Stage 2、`acceptance_frozen`、UI truth index 与视觉验收；`none`/`existing` 不进入 UI gate。`full` 才需要 CP-DESIGN，`light` 记录短方案并自审，`none` 跳过方案设计产物。`ui_bearing` 只用于模式一致性校验。
 
+启用 UI truth 的每个 unit 都必须在 `contracts/ui-truth-index.json` 记录独立的 `motion_decision`：有动效时记录动效契约、独立确认或豁免及后续运行时验证方式；无动效时也必须取得明确的 `static / no motion` 确认。静态 golden 只证明静态帧，不能代替动效验收。宿主能够确定性产出动效时，只使用 GIF 作为动效审阅媒介，并记录 GIF 的仓内相对路径和 SHA-256；GIF 已足够，不得新增 WebP、MP4 或其他编码器/验收门槛。宿主无法生成 GIF 时，记录不可用原因并把动效验证延后到 Stage 4，绝不伪造文件。
+
+可见 UI 必须使用真实宿主控件和有证据的资源；真实数据缺失时保持产品真实的空/省略状态。未经用户明确批准，禁止外部占位层、dummy/fixture 视觉、静态替身、通用图标、绘制输入壳或静默 fallback。必需资源不可用时，先让用户选择为空、延后并保持阻塞，或阻塞 unit；若确需临时占位辅助评审，也必须另行取得明确授权，并确保它不进入生产 UI/数据路径。
+
 如果 `ui_truth_mode=figma` 或 `runtime-baseline`：
 
 ```text
@@ -192,6 +196,7 @@ bootstrap 完成后，目标仓库至少具备：
 - 基于结构化 node payload 完成映射
 - 每个独立 unit 在用户已批准 workspace 的宿主项目里写真实组件（Flutter：Widget + golden/behavior tests），并在写组件代码前完成 Runtime Coverage Plan
 - v2 `contracts/ui-truth-index.json` 记录 profile、带来源的 state、具体 scenario、十个维度的适用性 coverage、依赖、仓内路径、SHA-256，以及绑定当前预览哈希的确认/豁免证据
+- 每个 unit 必须写入独立 `motion_decision`；动态 unit 适用时生成并向用户展示 GIF，静态 unit 明确确认 `static / no motion`。Stage 4 必须在 `visual-acceptance.json` 为每个 unit 写独立 `motion_acceptance`，不能用 golden 代替
 - 只有 Figma 实际展示的视觉场景可称为 1:1；未展示的响应式、内容、交互、动效、资源、主题、无障碍、平台与性能行为必须来自 requirement、project 或 user-decision
 - 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter
 - 更新 traceability.json

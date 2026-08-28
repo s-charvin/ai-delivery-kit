@@ -16,14 +16,30 @@
 //   (that was HTML preview chrome, not product UI).
 // - No status-bar / home-indicator / IME in the PNG unless those bars
 //   are in-scope product chrome. Zero MediaQuery padding / viewPadding.
-// - Motion: named keyframe PNG. Do not loop an animation in the golden.
-//   Motion table → widget comments / freeze chat, not a second paint file.
+// - Motion: named keyframe PNG is static evidence only. Do not loop an
+//   animation in the golden. The motion table and its separate confirmation
+//   or waiver belong in widget comments / freeze chat, not a second paint
+//   file. A golden never substitutes for runtime motion acceptance.
+//   Flutter's matchesGoldenFile is PNG-oriented and does not itself encode
+//   GIF. If the host repo already provides a deterministic GIF encoder, drive
+//   the REAL widget through explicit keyframes and publish the resulting GIF as
+//   a separate motion preview, with its repo-relative path and SHA-256 in
+//   motion_decision. Do not add an encoder or fabricate an animated file
+//   solely for this template. If no GIF encoder exists, obtain motion
+//   confirmation/waiver
+//   first and schedule runtime acceptance after implementation.
 //   Do not use pumpAndSettle() for shimmer/Lottie/other continuous animation:
 //   disable tickers or pump an explicit, named keyframe duration instead.
 //   Test trigger, interruption/reversal/cancel, reduced-motion fallback, and
 //   resource disposal with project-native behavior tests outside the PNG.
-// - No network. Reuse the host's ImageProvider / fixture override.
-//   Cover content-image loading/error/offline fallbacks when applicable.
+// - No network. Reuse the host's real ImageProvider / dependency boundary.
+//   A test fixture may supply deterministic bytes to the harness only; it
+//   must not become a product visual fallback or an external placeholder
+//   widget. Cover content-image loading/error/offline states when applicable.
+// - Do not make an in-scope surface look complete with dummy data, a
+//   thumbnail, generic icon, painted input shell, or static stand-in. If the
+//   real resource is unavailable, stop and obtain an explicit user decision
+//   to render empty, defer, or block before freezing.
 // - Do not add packages the host project does not already use.
 // - Follow host Theme / localizations / golden harness when neighbors have them.
 //   MaterialApp below is only the fallback.
@@ -76,7 +92,8 @@ void main() {
     );
 
     // One frame keeps continuous motion deterministic. For a motion state,
-    // use a separate testWidgets and an explicit pump(Duration) keyframe.
+    // use a separate testWidgets and an explicit pump(Duration) keyframe;
+    // motion confirmation/waiver is recorded separately from this PNG.
     await tester.pump();
 
     await expectLater(

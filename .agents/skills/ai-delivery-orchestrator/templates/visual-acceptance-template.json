@@ -23,5 +23,21 @@
       ],
       "note": "<scenario note in the user's current conversation language>"
     }
+  ],
+  "motion_acceptance": [
+    {
+      "unit_id": "profile-card",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "motion",
+          "path": "test/motion/profile-card-default.gif",
+          "sha256": "<64-lowercase-hex-motion-preview-sha256>",
+          "command": "<project-native motion recording or runtime verification command>",
+          "summary": "<motion acceptance summary in the user's current conversation language>"
+        }
+      ],
+      "note": "<motion acceptance note in the user's current conversation language>"
+    }
   ]
 }

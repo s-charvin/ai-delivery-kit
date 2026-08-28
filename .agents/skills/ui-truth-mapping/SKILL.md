@@ -11,7 +11,7 @@ The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual eviden
 
 **Principle 1 — no second conversion.** Write the widget/component the project already uses. Do not freeze HTML (or any parallel mock) and later translate it into Flutter/React.
 
-**Principle 2 — official preview.** Flutter: golden PNG from `flutter test --update-goldens`. Web: whatever that repo already uses to preview a component. In chat, give the user the **absolute path**. In the delivery index, store **repo-relative** paths only.
+**Principle 2 — official preview.** Use the host's deterministic official-stack preview. Flutter static scenarios use a golden PNG from `flutter test --update-goldens`; animated scenarios should additionally use a test-generated GIF when the host can produce one. GIF is the only motion-preview format governed by this skill: do not add WebP/MP4 encoders or make another format a gate. If the host cannot record a GIF, do not fabricate a file: obtain the motion decision first, record why the preview is unavailable, and defer runtime verification to Stage 4. Web uses the repo's existing preview mechanism. In chat, give the user every preview's **absolute path**. In the delivery index, store **repo-relative** paths only.
 
 **Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
 
@@ -31,7 +31,8 @@ Per independent unit, **production code** in the host tree + an official preview
 <host project>
 ├── lib/…/<unit>.dart          # Flutter: real widget (follow neighbors)
 ├── test/…/<unit>_golden_test.dart
-└── test/goldens/<unit>.png    # review medium
+├── test/goldens/<unit>.png    # static review medium
+└── test/motion/<unit>.*       # optional official motion review medium
 
 .ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/
 └── ui-truth-index.json        # pointers only — not paint
@@ -50,6 +51,7 @@ Write review notes, freeze packets, and necessary production/test code comments 
 | `source_node` / `dependencies` | Figma source node and unit dependency ids |
 | `component_path` / `component_sha256` | Repo-relative real component and current content hash |
 | `golden_test` / `golden_test_sha256` | Flutter golden test and current content hash |
+| `motion_decision` | Required per unit: `animated` or `static`, its verification mode, separate confirmation/waiver note, and optional deterministic motion preview path/hash; unavailable recordings require a reason |
 | `profiles[]` | Test surface, size, orientation, theme, locale, text scale, reduced motion, and input mode |
 | `states[]` | `state_id`, `evidence_origin`, `source_ref`; Figma-origin states also require `source_node` |
 | `scenarios[]` | State + profile + coverage dimensions + review mode + source; visual scenarios point to a deterministic preview |
@@ -66,15 +68,16 @@ Judge from the repo. Do not run a heavy probe.
 - Looks like a web app (existing page/component tree in that repo's stack) → **Web**. Follow **that** architecture (React/Vue/Svelte/plain HTML — whatever neighbors use). Do not assume "the contract is HTML".
 - Unsure → **stop and ask**. Do not default to an HTML contract.
 
-## Template (Flutter golden skeleton only)
+## Templates (Flutter static and motion previews)
 
 ```
 templates/
 ├── flutter-golden-preview-test.dart.example
+├── flutter-motion-preview-test.dart.example
 └── ui-truth-index-template.json
 ```
 
-The example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per visual scenario, no system chrome, no in-widget state-switcher). **It is not a widget template.** Do not copy its instructional comments into project code; rewrite only necessary comments in the user's current conversation language. Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
+The golden example teaches `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens`, plus preview rules in comments (PNG canvas ≠ runtime size, one `testWidgets` per visual scenario, no system chrome, no in-widget state-switcher). The motion example shows the concrete official-stack pattern: trigger the real widget behavior, pump cumulative elapsed keyframes, let `matchesGoldenFile` write each PNG frame, then invoke an existing GIF encoder. GIF is sufficient for motion acceptance; do not add WebP/MP4 encoders or dependencies. This matcher path is preferred for Flutter tests because it manages the test binding's raster readback lifecycle; direct `RenderRepaintBoundary.toImage` is an escape hatch for a host-proven single-frame path. **Neither file is a widget template.** Do not copy instructional comments into project code; rewrite only necessary comments in the user's current conversation language. Widget code must follow adjacent production files. Do not add dependencies the host project does not already use.
 
 ## Quick Reference — Scenario → Unit split
 
@@ -98,6 +101,10 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
 - **Do not invent visual truth.** No Figma-origin unit, state, paint, icon, or transition beyond Figma evidence (`get_code` / `get_structure`). Missing runtime behavior may come only from requirement, project, or explicit user-decision evidence and must be labeled accordingly.
+- **No unapproved placeholders or visual substitutes.** An in-scope visible surface, interaction, input, icon, image, or animation must use its real host-stack control and evidence-backed resource. Do not use an externally injected widget/slot, dummy data, thumbnail, fixture, static stand-in, generic icon, or “close enough” asset to make the scenario appear complete. External injection is allowed only for a real dependency boundary and must not carry the in-scope visual UI or motion itself.
+- **Real data or intentional emptiness.** If an in-scope data-bound value is absent, null, empty, or not yet available, render the product's real empty/omitted state. Never inject a fake/default record, sample image, placeholder text, or fixture value into production code to make a preview look complete. Test fixtures may provide deterministic bytes only inside the host test harness and must never become a product fallback.
+- **Missing resources require a user decision.** If a required font, icon, image, animation, or effect cannot be obtained or rendered, stop at that boundary and ask the user to choose: render empty, defer the resource and keep the scenario blocked, or block the unit. Render empty only after the user selects that option and record the decision and affected scenarios; never choose a fallback silently. If a temporary placeholder is genuinely necessary, ask separately whether it is allowed; explicit approval must name the resource and scope, and the placeholder must stay out of production UI/data paths. Without that approval, it remains forbidden.
+- **Use real interactive primitives.** Inputs must be editable host controls with required focus, keyboard/IME, validation, and semantics behavior. Icons and images must come from evidence-backed project or design resources; a familiar glyph or platform icon is not an authorized substitute for a missing asset.
 - **Do not invent layout.** Transfer geometry mechanically into the host layout system (Flutter constraints, CSS, etc.). Do not rewrite into a hand-authored semantic page that drops evidence.
 - Preview px is an artboard snapshot, not runtime sizing. Classify **fill / hug / fixed** (§5b). Variable copy is hug or fill plus overflow / min / max — never fixed from the sample.
 - Never copy TemPad `data-hint-*` into product code or the index.
@@ -153,20 +160,20 @@ Classify each frame: `page` / `component` / `*-state` / `modal` / `shared-compon
 
 ### 2c. Dynamics & motion scan (REQUIRED per unit, after §2)
 
-0. **Text-hint sweep** — TEXT / sticky / callout in the scoped subtree **and** parent SECTION siblings. Keywords: motion, animation, transition, typewriter, shimmer, Lottie, GIF, skeleton, placeholder, API-returned, pulse, loading (and the designer's language equivalents).
+0. **Text-hint sweep** — TEXT / sticky / callout in the scoped subtree **and** parent SECTION siblings. Keywords: motion, animation, transition, typewriter, shimmer, Spine, skeletal, Lottie, GIF, skeleton, placeholder, API-returned, pulse, loading (and the designer's language equivalents).
 1. **Candidate sweep** on `source_node` (INSTANCE/COMPONENT, image fills, motion-named layers).
 2. **Motion probe** when available (`get_node_motion` / equivalent). Text hints still count if tools are missing.
-3. **Assets** — persist Lottie/GIF/video when bytes exist; otherwise `pending-user`, poster frame only — do not invent the file. Record trigger, playback/loop policy, interruption behavior, off-screen policy, and reduced-motion fallback.
+3. **Assets** — persist Spine/skeletal, Lottie, GIF, or video resources when bytes exist; otherwise `pending-user`, poster frame only — do not invent the file. Record trigger, playback/loop policy, interruption behavior, off-screen policy, and reduced-motion fallback. If the resource is data-bound and absent, record the real empty/omitted result instead of supplying fixture content.
 4. **Classify** (`content-bound`, `component-variant`, `motion-preset`, `design-animation-asset`, `prototype-transition`).
-5. **Map** to states / goldens / placeholders. **User-named reference implementation:** if the user points at existing code, **read it first**; preview mechanics must match that reference (get_code packing must not silently invert growth/reveal).
+5. **Map** to states / goldens / motion review evidence. A golden is a static review frame, never a placeholder for the runtime surface. Bind each data-bound visual to its real value or intentional empty state. **User-named reference implementation:** if the user points at existing code, **read it first**; preview mechanics must match that reference (get_code packing must not silently invert growth/reveal).
 6. **Consistency check (REQUIRED before writing component code):** same chrome across states/instances must not get uneven motion coverage without explicit evidence. Uneven coverage is an anomaly — stop and ask.
 7. **Coverage review after every prune (REQUIRED):** re-read remaining source clauses against remaining targets. Split a multi-clause SECTION note per unit.
 
-Record a **Motion and transitions** table for the user (in their language): Scenario | Trigger | From | To/keyframes | Duration | Easing | Delay | Repeat | Interrupt/reverse/cancel | Reduced-motion fallback | Performance strategy | Reference. Motion ≠ data binding. Missing lifecycle evidence is unresolved coverage, not permission to choose a generic animation. Put this in golden/widget comments or the chat freeze packet — not as a second paint file.
+Record a **Motion and transitions** table for the user (in their language): Scenario | Trigger | From | To/keyframes | Duration | Easing | Delay | Repeat | Interrupt/reverse/cancel | Reduced-motion fallback | Performance strategy | Reference. Every UI unit needs an explicit motion decision: describe the motion contract when motion exists, or record “static / no motion” and obtain confirmation when it does not. Motion ≠ data binding. Missing lifecycle evidence is unresolved coverage, not permission to choose a generic animation. Put this in golden/widget comments or the chat freeze packet — not as a second paint file. Static visual confirmation and motion confirmation/waiver are separate evidence; a keyframe PNG alone never confirms the motion contract. When the host can deterministically record the real motion, show the resulting GIF to the user and bind its repository-relative path and SHA-256 in `motion_decision`; GIF is sufficient and no additional motion encoder is required.
 
 ### 2d. Missing-resource escalation
 
-`pending-user` assets → stop and ask (file or explicit waiver) before freeze.
+`pending-user` assets or missing data-bound resources → stop and ask before freeze. The user must explicitly choose a real resource, an approved empty rendering, or a blocked/deferred unit; “use a placeholder for now” is not an implicit option. If the skill believes a temporary placeholder is the only viable review aid, ask for explicit approval naming its exact scope and keep it outside production UI/data paths. Record the selected disposition and affected scenarios in the existing freeze record.
 
 **Dispatch:** more than one independent unit → per-unit subagent so evidence stays isolated.
 
@@ -232,9 +239,9 @@ Runtime scenarios without Figma frames may use existing project primitives and t
 
 ### 3d. Asset and rendering plan (REQUIRED when `assets` is covered)
 
-Record for each image, SVG, icon, animation, gradient, blur, shadow, mask, or blend effect: role, evidence/source, persisted delivery path, sizing class, fit/crop/focal point, aspect ratio, density or vector scaling, token/theme behavior, loading/error/offline fallback, cache policy, semantics, and test fixture.
+Record for each image, SVG, icon, animation, gradient, blur, shadow, mask, or blend effect: role, evidence/source, persisted delivery path, sizing class, fit/crop/focal point, aspect ratio, density or vector scaling, token/theme behavior, loading/error/offline fallback, cache policy, semantics, and test-harness fixture (never a production fallback).
 
-Use the least complex host-native path that preserves the evidence: existing/native primitive → established project dependency → custom painter/shader → pre-rendered asset only for truly static output whose scaling, theme, and accessibility behavior remain correct. Missing fonts, weights, vector semantics, effects, or runtime assets block freeze; do not silently substitute a close-enough implementation.
+Use the least complex host-native path that preserves the evidence: existing/native primitive → established project dependency → custom painter/shader → pre-rendered asset only for truly static output whose scaling, theme, and accessibility behavior remain correct. Missing fonts, weights, vector semantics, effects, or runtime assets block freeze until the user chooses an explicit disposition; do not silently substitute a close-enough implementation.
 
 ### 4. Write the real component (Flutter first)
 
@@ -277,20 +284,29 @@ Implementation consumes the classification, not snapshot `w×h`. Dumping every s
 
 ### 6. Official preview (Flutter golden)
 
-Use `templates/flutter-golden-preview-test.dart.example` as a **skeleton** only. Follow host `flutter_test` conventions when they already exist.
+Use `templates/flutter-golden-preview-test.dart.example` for static frames and `templates/flutter-motion-preview-test.dart.example` for deterministic motion capture. Both are **skeletons** only. Follow host `flutter_test` conventions when they already exist.
 
 ```bash
 flutter test <golden_test.dart> --update-goldens
 ```
 
-Then print each visual scenario PNG **absolute path** to the user. Multiple state/profile combinations → multiple goldens (or the host's existing pattern).
+For motion, trigger the real widget behavior, advance it with strictly
+increasing cumulative `pump` keyframes (at least two for a GIF), and use
+`matchesGoldenFile` for each named PNG frame. This official matcher path is preferred to repeated direct
+`RenderRepaintBoundary.toImage` calls because it owns the test binding's raster
+readback lifecycle. After the frames exist, invoke an encoder already approved
+by the host; a GIF is sufficient. Verify that the output decodes before
+publishing it. A missing encoder is an unavailability reason, never permission
+to create a fake animation.
+
+Then print each static preview and, when produced, each GIF motion preview's **absolute path** to the user. Multiple state/profile combinations → multiple goldens and GIF motion recordings (or the host's existing GIF-producing pattern). If a GIF cannot be recorded, print the recorded unavailability reason and do not invent a substitute path.
 
 Skeleton comments are binding, not optional color. In particular:
 
 - `setSurfaceSize` is the **PNG canvas** (artboard snapshot), not a runtime width lock. fill / hug / fixed lives in the widget.
 - One `testWidgets` per reviewable visual scenario. The test configures its recorded profile without turning canvas dimensions into widget locks. Do **not** bake a state-switcher or review panel into the widget (retired HTML preview chrome).
 - Do **not** paint status-bar / home-indicator / IME unless those bars are in-scope product UI. Zero `MediaQuery` padding / `viewPadding`.
-- Motion = named **keyframe** PNG. A looping animation inside the golden is wrong. Motion table stays in comments / freeze chat.
+- Motion = named **keyframe** PNG plus a separately confirmed motion contract. A looping animation inside the golden is wrong. A static golden never substitutes for motion acceptance. When available, a deterministic GIF is the motion review medium; the motion table stays in comments / freeze chat, and the golden confirms only the captured static frame.
 - Use the host Theme / localizations / image-fixture / golden harness when neighbors already do.
 
 Web: open/build the component the way that repo already previews (Storybook, a local route, a static file). Print that **absolute path**. Do not add Playwright just for this skill.
@@ -300,9 +316,9 @@ Web: open/build the component the way that repo already previews (Storybook, a l
 1. Component compiles / the host preview opens.
 2. Official preview file exists; chat showed its **absolute path**.
 3. The v2 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, profiles, sourced states, scenarios, and all ten coverage dimensions.
-4. Every visual scenario has a deterministic preview plus confirmation/waiver bound to its current `preview_sha256`; behavior scenarios have approved sources and an explicit Stage 4 verification mode.
-5. Scope matches the slice; icons/images are evidence-backed; runtime coverage is resolved; motion/asset plans are present when applicable; sizing is classified; compositing is recorded when §3b fired.
-6. Stage 2 tests pass and the latest fresh-context review is clean; record the user-approved workspace and optional branch for Stage 4 reuse.
+4. Every visual scenario has a deterministic preview plus static visual confirmation/waiver bound to its current `preview_sha256`; every applicable motion scenario additionally has motion confirmation or an explicit motion waiver with a reason and a later runtime verification mode. A confirmed motion decision must include a deterministic GIF path and hash when the host can produce one; when it cannot, record the unavailability reason and defer runtime verification. A unit with unresolved motion disposition cannot freeze.
+5. Scope matches the slice; icons/images and interactive controls are evidence-backed and real; absent data renders the real empty/omitted state; no unapproved placeholder or visual fallback is present; runtime coverage is resolved; motion/asset plans and the static-vs-motion confirmation split are recorded; sizing is classified; compositing is recorded when §3b fired.
+6. Stage 2 tests pass and the latest fresh-context review is clean; record the user-approved workspace and optional branch for Stage 4 reuse. Stage 4 must later record independent motion acceptance for every unit.
 7. If the unit set changed, sweep stale pointers in the requirement directory in the same change.
 
 Do **not** claim freeze from "the widget looks right" without a preview path. Do **not** generate `contract-preview-*.png` as a substitute for the official golden.
@@ -347,11 +363,15 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Hand-drawing icons; leaving asset shells unresolved; rebuilding a masked SVG from structure and dropping the baked mask.
 - Treating a mask / alpha gradient as a second src-over overlay; skipping §3b; copying `data-hint-*`.
 - Downloading a Figma **example** image as a frozen asset when the requirement shows server content.
+- Injecting fake/default data or fixture content into production code when a real value is absent; the correct result is the real empty/omitted state or an explicit user disposition.
 - Skipping §2c; scoping the text-hint sweep only to `source_node`; truncating a multi-clause SECTION note; silently rewriting motion coverage.
 - Shipping a motion preview whose mechanics disagree with a user-named reference implementation.
 - Hitting the network inside a golden test.
 - Adding Flutter/web dependencies the host project does not already use.
 - Declaring freeze without an absolute preview path and explicit user confirmation.
+- Using an unapproved placeholder, dummy/fixture visual, generic icon, external widget slot, or static substitute for an in-scope surface; choosing empty rendering without the user's explicit disposition.
+- Treating an editable input as a painted text shell or replacing an evidence-backed icon/image with a familiar platform glyph.
+- Treating static golden confirmation as motion confirmation, or entering `acceptance_frozen` while motion is unconfirmed/unwaived.
 - Dispatching this skill before CP-UI, writing production code outside the recorded user-approved workspace, or creating a second Stage 4 workspace for the same slice.
 - Leaving `ui-truth-index.json` paths as absolute filesystem paths (index is repo-relative).
 - Omitting `schema_version`, profiles, sourced states, scenario previews/confirmation, coverage, or content hashes; accepting hash drift after freeze.

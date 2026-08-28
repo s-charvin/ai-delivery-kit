@@ -20,6 +20,20 @@
       "component_sha256": "<64-lowercase-hex-sha256>",
       "golden_test": "test/features/profile/profile_card_golden_test.dart",
       "golden_test_sha256": "<64-lowercase-hex-sha256>",
+      "motion_decision": {
+        "decision": "animated",
+        "verification_mode": "runtime",
+        "preview_path": "test/motion/profile-card-default.gif",
+        "preview_sha256": "<64-lowercase-hex-motion-preview-sha256>",
+        "preview_unavailable_reason": null,
+        "confirmation": {
+          "status": "confirmed",
+          "confirmed_at": "<ISO8601-with-timezone>",
+          "confirmed_by": "user",
+          "reviewed_preview_sha256": "<64-lowercase-hex-motion-preview-sha256>",
+          "note": "<motion confirmation or waiver note in the user's current conversation language>"
+        }
+      },
       "profiles": [
         {
           "profile_id": "phone-portrait-light",

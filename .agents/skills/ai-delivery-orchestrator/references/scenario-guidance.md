@@ -137,16 +137,32 @@ Do:
   persistence, authorization, or external effects are involved;
 - retire or isolate old paths when the replacement is breaking, then test that
   they are no longer reachable;
+- treat visible target surfaces as part of the target contract: implement them
+  with real host-stack controls and evidence-backed resources, and record
+  static visual confirmation separately from motion confirmation (or an
+  explicit no-motion decision);
+- preserve the target's real data semantics: absent or unavailable values render
+  the intentional empty/omitted state, while deterministic fixtures remain
+  confined to the test harness;
 - keep the scenario decision and evidence in the host's existing record or
   current action report.
 
 Do not:
 
 - preserve behavior solely for compile compatibility;
+- keep old UI semantics, state mappings, entry points, or wiring solely to
+  keep a breaking replacement compiling before its owning replacement surface
+  is ready;
 - treat file location, naming, shared cache keys, or existing screens as proof
   of semantic compatibility;
 - add fallback mappings, payload fields, persistence, or side effects outside
   the target contract or an explicitly approved compatibility boundary;
+- use an external widget slot, dummy/fixture visual, generic icon, painted
+  input shell, or other placeholder to make an in-scope replacement appear
+  complete. When a required visual resource is unavailable, stop and ask the
+  user to choose empty rendering, defer, or block;
+- inject fabricated/default data into production UI when the real value is
+  absent; record the empty/omitted behavior or ask for an explicit disposition;
 - alter the host workflow's routing or lifecycle merely because this guidance
   was selected, or widen the requirement;
 - turn a scenario selection into a repository-wide legacy audit when unrelated
@@ -181,6 +197,11 @@ entry points, old snapshots, cache hydration, replayed events, retries,
 concurrent calls, and side-effect boundaries. A fresh-context review must ask
 which legacy paths can still be reached and whether each remaining reuse has
 evidence for semantic compatibility.
+For UI-bearing replacements, acceptance must also show that interactive
+controls are real and that every visual unit has separate static and motion
+evidence. Static golden confirmation alone is insufficient for an animated
+surface; an explicit no-motion decision or motion waiver must be recorded when
+runtime motion evidence cannot yet be produced.
 For every retired or isolated surface, name the retirement boundary and attach
 negative evidence for that boundary; do not claim that unrelated, out-of-scope
 legacy behavior was removed. Include duplicate-side-effect and stale-test or

@@ -5,12 +5,12 @@
   "_status_meanings": {
     "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
     "split_ready": "Complete source_ref coverage, normalized statements, explicit scope, and dependencies - ready to enter the next stage",
-    "acceptance_frozen": "The enabled UI truth capability has a CP-UI-authorized host component, runtime coverage matrix, and official previews frozen in the user-approved workspace; v2 contracts/ui-truth-index.json provenance, profiles, scenarios, coverage, paths, SHA-256 hashes, and preview-bound confirmations are valid (ui_truth_mode=figma or runtime-baseline only)",
+    "acceptance_frozen": "The enabled UI truth capability has a CP-UI-authorized host component, runtime coverage matrix, and official previews frozen in the user-approved workspace; v2 contracts/ui-truth-index.json provenance, profiles, scenarios, coverage, paths, SHA-256 hashes, preview-bound static confirmations, and a separate motion_decision for every unit (confirmed animated motion or confirmed static / no motion; GIF path/hash or recorded unavailability reason when applicable) are valid (ui_truth_mode=figma or runtime-baseline only)",
     "spec_ready": "spec.md has been generated and audited against the contract",
     "plan_ready": "plan.md has been generated and audited against delivery-slice ordering",
     "tasks_ready": "tasks.md has been generated with suitable task granularity, dependency ordering, and file-level scope - awaiting user confirmation to enter the remaining development work",
     "in_dev": "Remaining implementation work is in progress - UI truth slices reuse the Stage 2 user-approved workspace and the TDD loop is active",
-    "visual_acceptance_passed": "The implementation passed every indexed visual/runtime scenario and structured visual-acceptance.json binds the current UI truth index (ui_truth_mode=figma or runtime-baseline only; other modes skip this state)",
+    "visual_acceptance_passed": "The implementation passed every indexed visual/runtime scenario and structured visual-acceptance.json binds the current UI truth index with independent motion_acceptance for every unit (including GIF evidence or runtime verification when applicable; ui_truth_mode=figma or runtime-baseline only; other modes skip this state)",
     "merged": "Code has been rebased and integrated into the development branch without a merge commit",
     "archived": "Frozen archive - artifacts are snapshotted under archive/ with a MANIFEST.json and are immutable; requirement changes require a new <req-id>",
 

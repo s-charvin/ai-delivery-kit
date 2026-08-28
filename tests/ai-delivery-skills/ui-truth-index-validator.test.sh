@@ -44,15 +44,17 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     golden_test = repo / "test" / "profile_card_golden_test.dart"
     default_preview = repo / "test" / "goldens" / "profile-card-default.png"
     loading_preview = repo / "test" / "goldens" / "profile-card-loading.png"
+    motion_preview = repo / "test" / "motion" / "profile-card-default.gif"
     index_path = contracts / "ui-truth-index.json"
 
-    for path in (contracts, component.parent, golden_test.parent, default_preview.parent):
+    for path in (contracts, component.parent, golden_test.parent, default_preview.parent, motion_preview.parent):
         path.mkdir(parents=True, exist_ok=True)
     (repo / ".git").mkdir()
     component.write_text("class ProfileCard {}\n", encoding="utf-8")
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     default_preview.write_bytes(b"default-png")
     loading_preview.write_bytes(b"loading-png")
+    motion_preview.write_bytes(b"motion-gif")
     (subreq / "design.md").write_text(
         "# Solution Design\n\n"
         "| Unit ID | Scenario ID | Responsibility | Verification |\n"
@@ -100,6 +102,19 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
                 "component_sha256": sha256(component),
                 "golden_test": "test/profile_card_golden_test.dart",
                 "golden_test_sha256": sha256(golden_test),
+                "motion_decision": {
+                    "decision": "animated",
+                    "verification_mode": "runtime",
+                    "preview_path": "test/motion/profile-card-default.gif",
+                    "preview_sha256": sha256(motion_preview),
+                    "confirmation": {
+                        "status": "confirmed",
+                        "confirmed_at": "2026-08-25T00:09:00Z",
+                        "confirmed_by": "user",
+                        "reviewed_preview_sha256": sha256(motion_preview),
+                        "note": "The motion contract is separately approved.",
+                    },
+                },
                 "profiles": [
                     {
                         "profile_id": "phone-portrait-light",
@@ -398,6 +413,24 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     ] = sha256(text_preview)
     expect_fail("invalid Flutter preview type", invalid_preview, "preview_path must end with .png")
 
+    unsupported_motion_preview = copy.deepcopy(valid_index)
+    mp4_preview = repo / "test" / "motion" / "profile-card-default.mp4"
+    mp4_preview.write_bytes(b"motion-mp4")
+    unsupported_motion_preview["units"][0]["motion_decision"]["preview_path"] = (
+        "test/motion/profile-card-default.mp4"
+    )
+    unsupported_motion_preview["units"][0]["motion_decision"]["preview_sha256"] = sha256(
+        mp4_preview
+    )
+    unsupported_motion_preview["units"][0]["motion_decision"]["confirmation"][
+        "reviewed_preview_sha256"
+    ] = sha256(mp4_preview)
+    expect_fail(
+        "unsupported motion preview type",
+        unsupported_motion_preview,
+        "motion_decision.preview_path must end with .gif",
+    )
+
     drifted = copy.deepcopy(valid_index)
     component.write_text("class ProfileCard { final bool changed = true; }\n", encoding="utf-8")
     expect_fail("component hash drift", drifted, "component_sha256 mismatch")
@@ -406,6 +439,112 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     missing_confirmation = copy.deepcopy(valid_index)
     del missing_confirmation["units"][0]["scenarios"][0]["confirmation"]
     expect_fail("missing confirmation", missing_confirmation, "confirmation must be an object")
+
+    missing_motion_decision = copy.deepcopy(valid_index)
+    del missing_motion_decision["units"][0]["motion_decision"]
+    expect_fail("missing motion decision", missing_motion_decision, "motion_decision must be an object")
+
+    static_motion_without_decision_note = copy.deepcopy(valid_index)
+    static_motion_without_decision_note["units"][0]["motion_decision"] = {
+        "decision": "static",
+        "verification_mode": "not_applicable",
+        "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "2026-08-25T00:09:00Z",
+            "confirmed_by": "user",
+            "note": "",
+        },
+    }
+    expect_fail(
+        "static motion decision without note",
+        static_motion_without_decision_note,
+        "motion_decision confirmation.note is required",
+    )
+
+    static_motion_decision = copy.deepcopy(valid_index)
+    static_motion_decision["units"][0]["motion_decision"] = {
+        "decision": "static",
+        "verification_mode": "not_applicable",
+        "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "2026-08-25T00:09:00Z",
+            "confirmed_by": "user",
+            "note": "The unit is intentionally static and has no motion.",
+        },
+    }
+    expect_pass("explicit static no-motion decision", static_motion_decision)
+
+    static_motion_waived = copy.deepcopy(static_motion_decision)
+    static_motion_waived["units"][0]["motion_decision"]["confirmation"]["status"] = "waived"
+    expect_fail(
+        "static motion decision cannot be waived",
+        static_motion_waived,
+        "static motion_decision requires confirmation.status=confirmed",
+    )
+
+    animated_without_preview_reason = copy.deepcopy(valid_index)
+    animated_without_preview_reason["units"][0]["motion_decision"].pop("preview_path")
+    animated_without_preview_reason["units"][0]["motion_decision"].pop("preview_sha256")
+    animated_without_preview_reason["units"][0]["motion_decision"]["confirmation"].pop(
+        "reviewed_preview_sha256"
+    )
+    expect_fail(
+        "animated motion without preview reason",
+        animated_without_preview_reason,
+        "without a preview requires preview_unavailable_reason",
+    )
+
+    animated_without_preview = copy.deepcopy(animated_without_preview_reason)
+    animated_without_preview["units"][0]["motion_decision"][
+        "preview_unavailable_reason"
+    ] = "The host test stack cannot record deterministic motion output."
+    expect_pass("animated motion with deferred preview", animated_without_preview)
+
+    animated_preview_with_unavailable_reason = copy.deepcopy(valid_index)
+    animated_preview_with_unavailable_reason["units"][0]["motion_decision"][
+        "preview_unavailable_reason"
+    ] = "The host could not record motion."
+    expect_fail(
+        "animated motion preview contradicts unavailable reason",
+        animated_preview_with_unavailable_reason,
+        "with a preview must not declare preview_unavailable_reason",
+    )
+
+    animated_without_motion_scenario = copy.deepcopy(valid_index)
+    animated_without_motion_scenario["units"][0]["scenarios"][2]["dimensions"].remove(
+        "motion"
+    )
+    animated_without_motion_scenario["units"][0]["coverage"][4] = {
+        "dimension": "motion",
+        "status": "not_applicable",
+        "scenario_ids": [],
+        "note": "No motion scenario was provided.",
+    }
+    expect_fail(
+        "animated motion without motion scenario",
+        animated_without_motion_scenario,
+        "animated motion_decision requires a motion scenario",
+    )
+
+    stale_motion_confirmation = copy.deepcopy(valid_index)
+    stale_motion_confirmation["units"][0]["motion_decision"]["confirmation"][
+        "reviewed_preview_sha256"
+    ] = "0" * 64
+    expect_fail(
+        "stale motion preview confirmation",
+        stale_motion_confirmation,
+        "motion_decision confirmation.reviewed_preview_sha256 must match preview_sha256",
+    )
+
+    animated_without_runtime_verification = copy.deepcopy(valid_index)
+    animated_without_runtime_verification["units"][0]["motion_decision"][
+        "verification_mode"
+    ] = "not_applicable"
+    expect_fail(
+        "animated motion without runtime verification",
+        animated_without_runtime_verification,
+        "animated motion_decision requires a runtime verification mode",
+    )
 
     waiver_without_note = copy.deepcopy(valid_index)
     waiver_without_note["units"][0]["scenarios"][1]["confirmation"]["status"] = "waived"

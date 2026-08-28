@@ -1,0 +1,195 @@
+// Flutter motion-preview example for ui-truth-mapping.
+// This is a test-layer pattern, not a product widget or a visual placeholder.
+// Replace the imports, theme harness, and real unit with the host project's
+// existing components. Do not copy the instructional comments into product
+// code.
+//
+// The official Flutter path is:
+//   1. pump the REAL widget at explicit cumulative elapsed keyframes;
+//   2. use matchesGoldenFile for each PNG frame (run with --update-goldens);
+//   3. encode the frame directory with a host-approved GIF encoder;
+//   4. record the motion preview path and SHA-256 in motion_decision.
+//
+// Trigger the real widget behavior before the first keyframe. Do not silently
+// call an unknown controller or invent a trigger in this test skeleton.
+// Do not use a dummy widget, an external visual slot, or a fabricated motion
+// file. GIF is sufficient and is the only motion-preview format in this
+// contract. If the host has no GIF encoder, record the motion waiver and defer
+// it.
+
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+// import 'package:host_app/.../real_unit.dart';
+
+void main() {
+  testWidgets('real unit motion preview', (tester) async {
+    final repaintKey = GlobalKey();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RepaintBoundary(
+          key: repaintKey,
+          // Replace this symbol with the real host component before running.
+          // Do not substitute a fixture, placeholder, or painted stand-in.
+          child: RealHostUnit(),
+        ),
+      ),
+    );
+
+    final output = Directory('build/motion-preview')..createSync(recursive: true);
+    final frameDirectory = Directory('${output.path}/unit')
+      ..createSync(recursive: true);
+    const elapsedTimes = <Duration>[
+      Duration.zero,
+      Duration(milliseconds: 120),
+      Duration(milliseconds: 240),
+    ];
+    _validateElapsedTimes(elapsedTimes);
+
+    for (var index = 0; index < elapsedTimes.length; index++) {
+      final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
+      await tester.binding.pump(
+        elapsedTimes[index] - previous,
+        EnginePhase.paint,
+      );
+      await expectLater(
+        find.byKey(repaintKey),
+        matchesGoldenFile(
+          Uri.file(
+            '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+          ),
+        ),
+      );
+    }
+
+    _encodeGif(
+      frameDirectory: frameDirectory,
+      outputFile: File('${output.absolute.path}/unit.gif'),
+      elapsedTimes: elapsedTimes,
+    );
+  });
+}
+
+void _encodeGif({
+  required Directory frameDirectory,
+  required File outputFile,
+  required List<Duration> elapsedTimes,
+}) {
+  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
+  if (outputFile.existsSync()) {
+    outputFile.deleteSync();
+  }
+  final manifest = StringBuffer();
+  for (var index = 0; index < elapsedTimes.length; index++) {
+    final frameFile = File(
+      '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    );
+    if (!frameFile.existsSync()) {
+      throw StateError('Missing motion frame: ${frameFile.path}');
+    }
+    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
+    final delta = index + 1 < elapsedTimes.length
+        ? elapsedTimes[index + 1] - elapsedTimes[index]
+        : elapsedTimes[index] - elapsedTimes[index - 1];
+    manifest.writeln(
+      'duration ${delta.inMicroseconds / 1000000}',
+    );
+  }
+  final lastFrame = File(
+    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
+  );
+  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
+  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
+  try {
+    final result = Process.runSync('ffmpeg', [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-y',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
+      '-i',
+      manifestFile.absolute.path,
+      '-frames:v',
+      '${elapsedTimes.length}',
+      '-fps_mode',
+      'vfr',
+      '-vf',
+      'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
+      '-loop',
+      '0',
+      outputFile.absolute.path,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('GIF encoding failed: ${result.stderr}');
+    }
+  } on ProcessException catch (error) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    throw StateError('A host GIF encoder is required: $error');
+  } catch (_) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    rethrow;
+  } finally {
+    if (manifestFile.existsSync()) {
+      manifestFile.deleteSync();
+    }
+  }
+  if (!outputFile.existsSync()) {
+    throw StateError('GIF encoder produced no output: ${outputFile.path}');
+  }
+  final verification = Process.runSync('ffmpeg', [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-i',
+    outputFile.absolute.path,
+    '-map',
+    '0:v:0',
+    '-f',
+    'null',
+    '-',
+  ]);
+  if (verification.exitCode != 0) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    throw StateError('Encoded GIF could not be decoded: ${verification.stderr}');
+  }
+}
+
+void _validateElapsedTimes(List<Duration> elapsedTimes) {
+  if (elapsedTimes.length < 2) {
+    throw ArgumentError.value(
+      elapsedTimes,
+      'elapsedTimes',
+      'a motion GIF requires at least two keyframes',
+    );
+  }
+  if (elapsedTimes.first < Duration.zero) {
+    throw ArgumentError.value(
+      elapsedTimes,
+      'elapsedTimes',
+      'must not start before zero',
+    );
+  }
+  for (var index = 1; index < elapsedTimes.length; index++) {
+    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
+      throw ArgumentError.value(
+        elapsedTimes,
+        'elapsedTimes',
+        'must be strictly increasing cumulative keyframes',
+      );
+    }
+  }
+}
+
+String _escapeConcatPath(String path) =>
+    path.replaceAll('\\', '/').replaceAll("'", "'\\''");

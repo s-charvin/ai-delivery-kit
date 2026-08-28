@@ -46,6 +46,8 @@ Before setting `visual_acceptance_passed`, instantiate `templates/visual-accepta
 
 The artifact must bind the current `ui-truth-index.json` SHA-256 and contain exactly one result for every indexed scenario id. `passed` scenarios need evidence appropriate to `review_mode`: preview/image-diff for visual, test/manual for behavior, and both categories for `both`. `waived` requires user identity, timestamp, and reason. Every file path is repo-relative and hash-verified.
 
+For UI truth slices, the artifact must also contain `motion_acceptance` with exactly one row for every indexed `unit_id`. The row's `result` is `passed` or `waived`; a static unit must be `passed` with explicit `test` or `manual` evidence and can never be waived. An animated unit with an indexed motion preview must include matching `motion` evidence (path and SHA-256); when no deterministic motion preview was available, `passed` requires independent Stage 4 runtime `test` or `manual` evidence, and `waived` requires the user's identity, timestamp, and reason. Static golden evidence never substitutes for this per-unit motion acceptance.
+
 When a stable Figma reference bitmap exists, image-diff evidence records reference/candidate/diff paths and hashes, metric, threshold, actual result, command, and summary. When no stable bitmap exists, use exact design-value mapping, deterministic preview, and user confirmation; do not claim automated pixel equivalence.
 
 ## Status chain

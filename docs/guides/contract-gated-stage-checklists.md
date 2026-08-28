@@ -26,7 +26,8 @@
 - Each unit must resolve all ten applicability-gated runtime dimensions: `state`, `layout`, `content`, `interaction`, `motion`, `assets`, `theme`, `accessibility`, `platform`, and `performance`. Applicable but unresolved coverage blocks `acceptance_frozen`.
 - State and scenario evidence comes only from `figma`, `requirement`, `project`, or `user-decision`. Only Figma-evidenced scenarios carry a 1:1 Figma claim.
 - Each unit's v2 `type` (`page` / `component` / `modal` / `shared-component`) and `dependencies` define delivery ordering (`shared-component` → `page` → `modal`).
-- Every visual scenario must have a deterministic preview, SHA-256, and confirmation/waiver bound to the current preview hash before `acceptance_frozen`.
+- Every visual scenario must have a deterministic preview, SHA-256, and static visual confirmation/waiver bound to the current preview hash before `acceptance_frozen`. Every unit must also have a `motion_decision`: animated motion needs separate motion confirmation/waiver and a later runtime/behavior/manual verification mode; static UI needs an explicit confirmed “static / no motion” decision. When the host can produce deterministic motion output, use GIF only, record its path/hash, and show it to the user; when it cannot, record the reason and defer runtime verification. A golden alone never confirms motion.
+- Visible UI must use real host-stack controls and evidence-backed resources. Unapproved placeholders, external visual slots, dummy/fixture visuals, fabricated data, generic icons, painted input shells, and silent fallbacks fail the gate. Missing resources require an explicit user choice to render empty, defer, or block; absent data must render the real empty/omitted state.
 - API docs are passed directly to implementation — not part of this gate.
 
 ## Review Extension
