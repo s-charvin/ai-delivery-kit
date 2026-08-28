@@ -8,6 +8,11 @@
 //   3. 每个 keyframe 用 matchesGoldenFile 写 PNG（运行 --update-goldens）；
 //   4. 使用宿主已有 GIF 编码器，并在 motion_decision 记录路径和 SHA-256。
 //
+// 使用 25 FPS 捕获节奏（每帧 40000 微秒）覆盖整个动效区间。GIF 以厘秒
+// 存储时间，因此 40 ms 可以精确得到 25 FPS。本 ffmpeg 示例显式设置输入
+// `-framerate 25` 和输出 `-r 25`；改用其他编码器时保持等效速率，不要改成
+// 100 ms 以上的稀疏间隔。
+//
 // 禁止 dummy Widget、外部视觉 slot 或伪造动效文件。GIF 已足够，也是本契约
 // 唯一的动效预览格式。没有 GIF 编码器时记录预览不可用原因，取得动效确认
 // 或用户明确豁免，并把运行时验证延后到 Stage 4。
@@ -36,11 +41,9 @@ void main() {
     final output = Directory('build/motion-preview')..createSync(recursive: true);
     final frameDirectory = Directory('${output.path}/unit')
       ..createSync(recursive: true);
-    const elapsedTimes = <Duration>[
-      Duration.zero,
-      Duration(milliseconds: 120),
-      Duration(milliseconds: 240),
-    ];
+    final elapsedTimes = _elapsedTimesForMotion(
+      const Duration(milliseconds: 240),
+    );
     _validateElapsedTimes(elapsedTimes);
 
     for (var index = 0; index < elapsedTimes.length; index++) {
@@ -67,16 +70,38 @@ void main() {
   });
 }
 
+List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
+  // GIF 审阅捕获目标为 25 FPS（每帧 40 ms）。
+  const frameInterval = Duration(microseconds: 40000);
+  if (totalDuration <= Duration.zero) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      '必须为正数',
+    );
+  }
+  final elapsedTimes = <Duration>[];
+  for (
+    var elapsed = Duration.zero;
+    elapsed < totalDuration;
+    elapsed += frameInterval
+  ) {
+    elapsedTimes.add(elapsed);
+  }
+  if (elapsedTimes.last != totalDuration) {
+    elapsedTimes.add(totalDuration);
+  }
+  return elapsedTimes;
+}
+
 void _encodeGif({
   required Directory frameDirectory,
   required File outputFile,
   required List<Duration> elapsedTimes,
 }) {
-  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
   if (outputFile.existsSync()) {
     outputFile.deleteSync();
   }
-  final manifest = StringBuffer();
   for (var index = 0; index < elapsedTimes.length; index++) {
     final frameFile = File(
       '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
@@ -84,35 +109,23 @@ void _encodeGif({
     if (!frameFile.existsSync()) {
       throw StateError('缺少动效帧：${frameFile.path}');
     }
-    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
-    final delta = index + 1 < elapsedTimes.length
-        ? elapsedTimes[index + 1] - elapsedTimes[index]
-        : elapsedTimes[index] - elapsedTimes[index - 1];
-    manifest.writeln(
-      'duration ${delta.inMicroseconds / 1000000}',
-    );
   }
-  final lastFrame = File(
-    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
-  );
-  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
-  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
   try {
     final result = Process.runSync('ffmpeg', [
       '-hide_banner',
       '-loglevel',
       'error',
       '-y',
-      '-f',
-      'concat',
-      '-safe',
-      '0',
+      '-framerate',
+      '25',
       '-i',
-      manifestFile.absolute.path,
+      '${frameDirectory.absolute.path}/unit_%05d.png',
       '-frames:v',
       '${elapsedTimes.length}',
       '-fps_mode',
-      'vfr',
+      'cfr',
+      '-r',
+      '25',
       '-vf',
       'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
       '-loop',
@@ -132,10 +145,6 @@ void _encodeGif({
       outputFile.deleteSync();
     }
     rethrow;
-  } finally {
-    if (manifestFile.existsSync()) {
-      manifestFile.deleteSync();
-    }
   }
   if (!outputFile.existsSync()) {
     throw StateError('GIF 编码器没有产出文件：${outputFile.path}');
@@ -185,6 +194,3 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
     }
   }
 }
-
-String _escapeConcatPath(String path) =>
-    path.replaceAll('\\', '/').replaceAll("'", "'\\''");

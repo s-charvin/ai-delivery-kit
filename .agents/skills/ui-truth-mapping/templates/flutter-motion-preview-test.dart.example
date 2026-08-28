@@ -10,6 +10,11 @@
 //   3. encode the frame directory with a host-approved GIF encoder;
 //   4. record the motion preview path and SHA-256 in motion_decision.
 //
+// Use a 25 FPS capture cadence (40,000 microseconds per frame) across the
+// motion interval. GIF stores delays in centiseconds, so 40 ms maps exactly
+// to 25 FPS. Keep both the input `-framerate 25` and output `-r 25` explicit
+// when adapting the encoder. Do not replace this with sparse 100+ ms steps.
+//
 // Trigger the real widget behavior before the first keyframe. Do not silently
 // call an unknown controller or invent a trigger in this test skeleton.
 // Do not use a dummy widget, an external visual slot, or a fabricated motion
@@ -42,11 +47,9 @@ void main() {
     final output = Directory('build/motion-preview')..createSync(recursive: true);
     final frameDirectory = Directory('${output.path}/unit')
       ..createSync(recursive: true);
-    const elapsedTimes = <Duration>[
-      Duration.zero,
-      Duration(milliseconds: 120),
-      Duration(milliseconds: 240),
-    ];
+    final elapsedTimes = _elapsedTimesForMotion(
+      const Duration(milliseconds: 240),
+    );
     _validateElapsedTimes(elapsedTimes);
 
     for (var index = 0; index < elapsedTimes.length; index++) {
@@ -73,16 +76,38 @@ void main() {
   });
 }
 
+List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
+  // GIF review captures target 25 FPS (40 ms per frame).
+  const frameInterval = Duration(microseconds: 40000);
+  if (totalDuration <= Duration.zero) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      'must be positive',
+    );
+  }
+  final elapsedTimes = <Duration>[];
+  for (
+    var elapsed = Duration.zero;
+    elapsed < totalDuration;
+    elapsed += frameInterval
+  ) {
+    elapsedTimes.add(elapsed);
+  }
+  if (elapsedTimes.last != totalDuration) {
+    elapsedTimes.add(totalDuration);
+  }
+  return elapsedTimes;
+}
+
 void _encodeGif({
   required Directory frameDirectory,
   required File outputFile,
   required List<Duration> elapsedTimes,
 }) {
-  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
   if (outputFile.existsSync()) {
     outputFile.deleteSync();
   }
-  final manifest = StringBuffer();
   for (var index = 0; index < elapsedTimes.length; index++) {
     final frameFile = File(
       '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
@@ -90,35 +115,23 @@ void _encodeGif({
     if (!frameFile.existsSync()) {
       throw StateError('Missing motion frame: ${frameFile.path}');
     }
-    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
-    final delta = index + 1 < elapsedTimes.length
-        ? elapsedTimes[index + 1] - elapsedTimes[index]
-        : elapsedTimes[index] - elapsedTimes[index - 1];
-    manifest.writeln(
-      'duration ${delta.inMicroseconds / 1000000}',
-    );
   }
-  final lastFrame = File(
-    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
-  );
-  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
-  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
   try {
     final result = Process.runSync('ffmpeg', [
       '-hide_banner',
       '-loglevel',
       'error',
       '-y',
-      '-f',
-      'concat',
-      '-safe',
-      '0',
+      '-framerate',
+      '25',
       '-i',
-      manifestFile.absolute.path,
+      '${frameDirectory.absolute.path}/unit_%05d.png',
       '-frames:v',
       '${elapsedTimes.length}',
       '-fps_mode',
-      'vfr',
+      'cfr',
+      '-r',
+      '25',
       '-vf',
       'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
       '-loop',
@@ -138,10 +151,6 @@ void _encodeGif({
       outputFile.deleteSync();
     }
     rethrow;
-  } finally {
-    if (manifestFile.existsSync()) {
-      manifestFile.deleteSync();
-    }
   }
   if (!outputFile.existsSync()) {
     throw StateError('GIF encoder produced no output: ${outputFile.path}');
@@ -191,6 +200,3 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
     }
   }
 }
-
-String _escapeConcatPath(String path) =>
-    path.replaceAll('\\', '/').replaceAll("'", "'\\''");

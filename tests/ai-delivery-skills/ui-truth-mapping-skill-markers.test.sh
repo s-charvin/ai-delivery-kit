@@ -51,6 +51,9 @@ require "$EN" "do not use a poster frame or static substitute" "EN no poster fal
 require "$EN" "This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage" "EN Stage 2 freeze gate"
 require "$EN" "Static golden confirmation alone never advances \`acceptance_frozen\`" "EN golden cannot advance freeze"
 require "$EN" "test/motion/<unit>.gif" "EN GIF output path"
+require "$EN" "25 FPS" "EN motion capture cadence"
+require "$EN" "100+ ms keyframe gaps" "EN sparse keyframe ban"
+require "$EN" "explicit 25 FPS input/output rate" "EN explicit encoder rate"
 
 # ZH — motion and resource guardrails stay explicit in the localized entrypoint
 unicode_text() {
@@ -68,6 +71,7 @@ ZH_RESOURCE_CLASS=$(unicode_text '4FDD 7559 6240 9700 8D44 6E90 7C7B 522B')
 ZH_NO_POSTER_FALLBACK=$(unicode_text '4E0D 5F97 4F7F 7528 6D77 62A5 5E27 6216 9759 6001 66FF 4EE3')
 ZH_STAGE2_FREEZE_GATE=$(unicode_text '8FD9 662F 0020 0053 0074 0061 0067 0065 0020 0032 0020 0055 0049 0020 0054 0072 0075 0074 0068 0020 004D 0061 0070 0070 0069 006E 0067 0020 5185 7684 51BB 7ED3 95E8 69DB FF0C 4E0D 662F 72EC 7ACB 0020 0053 0074 0061 0067 0065')
 ZH_GOLDEN_CANNOT_FREEZE=$(unicode_text '4EC5 9759 6001 0020 0067 006F 006C 0064 0065 006E 0020 786E 8BA4 7EDD 4E0D 80FD 63A8 8FDB 5230 0020 0060 0061 0063 0063 0065 0070 0074 0061 006E 0063 0065 005F 0066 0072 006F 007A 0065 006E 0060')
+ZH_EXPLICIT_ENCODER_RATE=$(unicode_text '663E 5F0F 63A5 6536 0020 0032 0035 0020 0046 0050 0053 0020 7684 8F93 5165 002F 8F93 51FA 901F 7387')
 
 require "$ZH" "static / no motion" "ZH explicit static motion decision"
 require "$ZH" "$ZH_SEPARATE_MOTION_CONFIRMATION" "ZH separate motion confirmation"
@@ -83,6 +87,8 @@ require "$ZH" "$ZH_NO_POSTER_FALLBACK" "ZH no poster fallback"
 require "$ZH" "$ZH_STAGE2_FREEZE_GATE" "ZH Stage 2 freeze gate"
 require "$ZH" "$ZH_GOLDEN_CANNOT_FREEZE" "ZH golden cannot advance freeze"
 require "$ZH" "test/motion/<unit>.gif" "ZH GIF output path"
+require "$ZH" "25 FPS" "ZH motion capture cadence"
+require "$ZH" "$ZH_EXPLICIT_ENCODER_RATE" "ZH explicit encoder rate"
 
 for f in "$EN" "$ZH"; do
   if grep -Fq 'test/motion/<unit>.*' "$f"; then
@@ -152,17 +158,48 @@ require "$EXAMPLE" "per reviewable visual scenario" "example one test per visual
 
 MOTION_EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
 [[ -f "$MOTION_EXAMPLE" ]] || fail "Missing motion example: $MOTION_EXAMPLE"
+ZH_MOTION_EXAMPLE="$ROOT/.agents-zh/skills/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+[[ -f "$ZH_MOTION_EXAMPLE" ]] || fail "Missing localized motion example: $ZH_MOTION_EXAMPLE"
 require "$MOTION_EXAMPLE" "matchesGoldenFile" "motion example golden matcher"
 require "$MOTION_EXAMPLE" "cumulative elapsed keyframes" "motion example cumulative keyframes"
 require "$MOTION_EXAMPLE" "GIF" "motion example GIF output"
 require "$MOTION_EXAMPLE" "Trigger the real widget behavior" "motion example real trigger"
 require "$MOTION_EXAMPLE" "Process.runSync" "motion example GIF encoder"
-require "$MOTION_EXAMPLE" "duration" "motion example preserves timing"
+require "$MOTION_EXAMPLE" "totalDuration" "motion example covers total duration"
 require "$MOTION_EXAMPLE" "could not be decoded" "motion example validates GIF"
 require "$MOTION_EXAMPLE" "at least two keyframes" "motion example minimum frames"
 require "$MOTION_EXAMPLE" "strictly increasing cumulative keyframes" "motion example strict timing"
 require "$MOTION_EXAMPLE" "record why the preview is" "motion example records unavailable reason"
 require "$MOTION_EXAMPLE" "obtain motion confirmation or an explicit waiver" "motion example requires disposition"
+require "$MOTION_EXAMPLE" "25 FPS" "motion example high cadence"
+require "$MOTION_EXAMPLE" "40,000 microseconds" "motion example frame interval"
+require "$MOTION_EXAMPLE" "_elapsedTimesForMotion" "motion example samples every frame"
+require "$MOTION_EXAMPLE" "'-framerate'" "motion example explicit input rate"
+require "$MOTION_EXAMPLE" "'-r'" "motion example explicit output rate"
+require "$MOTION_EXAMPLE" "unit_%05d.png" "motion example numbered frame input"
+require "$MOTION_EXAMPLE" "'cfr'" "motion example constant frame rate"
+require "$ZH_MOTION_EXAMPLE" "25 FPS" "localized motion example high cadence"
+require "$ZH_MOTION_EXAMPLE" "40000" "localized motion example frame interval"
+require "$ZH_MOTION_EXAMPLE" "_elapsedTimesForMotion" "localized motion example samples every frame"
+require "$ZH_MOTION_EXAMPLE" "'-framerate'" "localized motion example explicit input rate"
+require "$ZH_MOTION_EXAMPLE" "'-r'" "localized motion example explicit output rate"
+require "$ZH_MOTION_EXAMPLE" "unit_%05d.png" "localized motion example numbered frame input"
+require "$ZH_MOTION_EXAMPLE" "'cfr'" "localized motion example constant frame rate"
+
+for f in "$MOTION_EXAMPLE" "$ZH_MOTION_EXAMPLE"; do
+  if grep -Fq 'Duration(milliseconds: 120)' "$f"; then
+    fail "motion example must not use sparse 120 ms frame steps in $(basename "$f")"
+  fi
+  if grep -Fq '30 FPS' "$f"; then
+    fail "motion example must use the 25 FPS contract in $(basename "$f")"
+  fi
+  if grep -Fq "'concat'" "$f"; then
+    fail "motion example must not rely on concat's default time base in $(basename "$f")"
+  fi
+  if grep -Fq "'vfr'" "$f"; then
+    fail "motion example must use constant frame rate output in $(basename "$f")"
+  fi
+done
 
 for f in "$EN" "$ZH"; do
   if grep -E '343|375[[:space:]]*artboard|343\.w' "$f" >/dev/null; then

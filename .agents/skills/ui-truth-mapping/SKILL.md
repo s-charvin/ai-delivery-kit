@@ -11,7 +11,7 @@ The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual eviden
 
 **Principle 1 — no second conversion.** Write the widget/component the project already uses. Do not freeze HTML (or any parallel mock) and later translate it into Flutter/React.
 
-**Principle 2 — official preview.** Use the host's deterministic official-stack preview. Flutter static scenarios use a golden PNG from `flutter test --update-goldens`; animated scenarios should additionally use a test-generated GIF when the host can produce one. GIF is the only motion-preview format governed by this skill: do not add WebP/MP4 encoders or make another format a gate. If the host cannot record a GIF, do not fabricate a file: obtain the motion decision first, record why the preview is unavailable, and defer runtime verification to Stage 4. Web uses the repo's existing preview mechanism. In chat, give the user every preview's **absolute path**. In the delivery index, store **repo-relative** paths only.
+**Principle 2 — official preview.** Use the host's deterministic official-stack preview. Flutter static scenarios use a golden PNG from `flutter test --update-goldens`; animated scenarios should additionally use a test-generated GIF when the host can produce one. Target a 25 FPS capture cadence (40 ms per frame) across the motion interval; do not undersample with 100+ ms keyframe gaps. GIF timing is stored in centiseconds, so 40 ms maps exactly to 25 FPS. The encoder must receive an explicit 25 FPS input/output rate; never rely on a default image-sequence or concat time base. GIF is the only motion-preview format governed by this skill: do not add WebP/MP4 encoders or make another format a gate. If the host cannot record a GIF, do not fabricate a file: obtain the motion decision first, record why the preview is unavailable, and defer runtime verification to Stage 4. Web uses the repo's existing preview mechanism. In chat, give the user every preview's **absolute path**. In the delivery index, store **repo-relative** paths only.
 
 **Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
 
@@ -225,7 +225,7 @@ For each unit, classify every dimension below as `covered` with scenario ids or 
 | `layout` | Minimum/target/maximum constraints, container or viewport breakpoints, orientation, safe areas, fixed/sticky coexistence, overlays, IME, scroll behavior, z-order, clipping, and hit testing |
 | `content` | Empty/short/long/multiline/unbroken strings, list counts, large numbers and localized formats, RTL, locale changes, text scaling or browser zoom, wrapping/truncation/expand behavior |
 | `interaction` | Idle, hover, focus, pressed, selected, expanded, keyboard, pointer/touch, drag/swipe alternatives, rapid repeat, re-entry, focus trap/return, and disabled behavior |
-| `motion` | Trigger, from/to or keyframes, timing, easing, delay, repeat, interruption/reversal/cancel, reduced-motion result, deterministic test keyframe, and repaint/resource lifecycle |
+| `motion` | Trigger, from/to or keyframes, timing, capture cadence (target 25 FPS / 40 ms per frame), easing, delay, repeat, interruption/reversal/cancel, reduced-motion result, deterministic test keyframe, and repaint/resource lifecycle |
 | `assets` | Static vs content-bound vs motion, source/ownership, vector palette/themeability, fit/crop/focal point, aspect ratio, density, loading/error/empty/offline fallback, cache, and semantics |
 | `theme` | Figma variable modes, host semantic tokens, supported light/dark/high-contrast modes, contrast, and interaction-state parity |
 | `accessibility` | Native semantics, name/role/state/value, reading/focus order, visible focus, screen-reader updates, platform touch targets, non-color cues, WCAG AA on web, and reduced motion/text scaling |
@@ -292,11 +292,14 @@ flutter test <golden_test.dart> --update-goldens
 ```
 
 For motion, trigger the real widget behavior, advance it with strictly
-increasing cumulative `pump` keyframes (at least two for a GIF), and use
-`matchesGoldenFile` for each named PNG frame. This official matcher path is preferred to repeated direct
+increasing cumulative `pump` keyframes at a target 25 FPS (40 ms per frame,
+at least two for a GIF), and use `matchesGoldenFile` for every sampled
+PNG frame. Do not capture only widely spaced keyframes and call that a smooth
+motion preview. This official matcher path is preferred to repeated direct
 `RenderRepaintBoundary.toImage` calls because it owns the test binding's raster
 readback lifecycle. After the frames exist, invoke an encoder already approved
-by the host; a GIF is sufficient. Verify that the output decodes before
+by the host with an explicit 25 FPS input/output rate; a GIF is sufficient.
+Verify that the output decodes before
 publishing it. A missing encoder is an unavailability reason, never permission
 to create a fake animation.
 

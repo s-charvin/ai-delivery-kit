@@ -11,7 +11,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 1 — 禁止二次转换。** 写项目已经在用的 Widget/组件。不要先冻一份 HTML（或任何平行赝品）再翻译成 Flutter/React。
 
-**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
+**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。动效捕获目标为 25 FPS（每帧 40 ms），覆盖整个动效区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。编码器必须显式接收 25 FPS 的输入/输出速率；不能依赖默认的 image-sequence 或 concat 时间基。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
 
 **原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
 
@@ -225,7 +225,7 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 | `layout` | 最小/目标/最大约束、container/viewport breakpoint、orientation、安全区、fixed/sticky 共存、overlay、IME、scroll、z-order、clip、hit testing |
 | `content` | 空/短/长/多行/不可断字符串、列表数量、大数字与本地格式、RTL、locale 切换、text scaling/browser zoom、wrap/truncation/expand |
 | `interaction` | idle、hover、focus、pressed、selected、expanded、keyboard、pointer/touch、drag/swipe 替代、快速重复、重入、focus trap/return、disabled 行为 |
-| `motion` | trigger、from/to 或 keyframes、timing、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
+| `motion` | trigger、from/to 或 keyframes、timing、捕获节奏（目标 25 FPS / 每帧 40 ms）、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
 | `assets` | static/content-bound/motion 角色、来源/所有权、vector palette/themeability、fit/crop/focal point、aspect ratio、density、loading/error/empty/offline fallback、cache、semantics |
 | `theme` | Figma variable modes、宿主 semantic tokens、支持的 light/dark/high-contrast、contrast 与交互态一致性 |
 | `accessibility` | 原生 semantics、name/role/state/value、reading/focus order、可见 focus、screen-reader 更新、平台点击热区、非颜色提示、Web WCAG AA、reduced motion/text scaling |
@@ -291,7 +291,7 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 flutter test <golden_test.dart> --update-goldens
 ```
 
-动效要先通过真实 Widget API 触发，再按严格递增的累计 `pump` keyframe 推进（GIF 至少两个），并用 `matchesGoldenFile` 写出每个具名 PNG 帧。这个官方 matcher 路径优先于重复直接 `RenderRepaintBoundary.toImage` 调用，因为它负责测试绑定的栅格读回生命周期。帧写出后调用宿主已有的 GIF 编码器；编码完成后必须确认文件可解码。没有编码器时记录不可用原因，不得伪造动效文件。
+动效要先通过真实 Widget API 触发，再按目标 25 FPS（每帧 40 ms）严格递增的累计 `pump` keyframe 覆盖整个动效区间（GIF 至少两个），并用 `matchesGoldenFile` 写出每个采样 PNG 帧。不得只捕获间隔很大的关键帧后宣称预览流畅。这个官方 matcher 路径优先于重复直接 `RenderRepaintBoundary.toImage` 调用，因为它负责测试绑定的栅格读回生命周期。帧写出后调用显式设置 25 FPS 输入/输出速率的宿主已有 GIF 编码器；编码完成后必须确认文件可解码。没有编码器时记录不可用原因，不得伪造动效文件。
 
 然后把每个静态 preview，以及已生成的每个 GIF 动效 preview 的 **绝对路径** 打印给用户。多个 state/profile 组合 → 多个 golden 与 GIF 动效录制（或宿主已有的 GIF 产出方式）。如果无法录制 GIF，打印已记录的不可用原因，不得发明替代路径。
 
