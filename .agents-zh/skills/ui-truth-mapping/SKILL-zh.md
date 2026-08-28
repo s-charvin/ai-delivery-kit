@@ -32,7 +32,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 ├── lib/…/<unit>.dart          # Flutter：真实 Widget（跟邻接文件）
 ├── test/…/<unit>_golden_test.dart
 ├── test/goldens/<unit>.png    # 静态审阅媒介
-└── test/motion/<unit>.*       # 可选的官方动效审阅媒介
+└── test/motion/<unit>.gif     # 可选的 GIF 动效审阅媒介
 
 .ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/
 └── ui-truth-index.json        # 只做指针 — 不是绘制
@@ -91,7 +91,7 @@ templates/
 | 底栏 / 对话框 / 弹出层 | 单独 `modal`；触发器补丁进触发器所在容器 Widget | 弹层帧 | 所有弹层帧作为具名状态 / golden | 把弹层嵌成页面状态；把触发器放进 modal Widget |
 | 多状态列表/表单/模块 | 一个 `component`（若路由本身是范围则 `page`） | 作用域模块根 | 每个视觉帧 → 一个 golden（或宿主已有的多 golden 写法） | 同一单元每个状态一个独立 Widget |
 | 仅元素属性（`disabled` / `selected`） | 在已有单元里补丁该节点 | 不变 | **不要** 加单元级状态 | 把 `disabled` 做成整单元 golden |
-| 带 **变体属性** 或 **动效** 的组件 | 同一单元；动效记在 golden 的注释 / 审阅说明 | 组件/实例根 | 静态 **关键帧** golden + 独立动效决定/证据 | 只当静态 PNG 且省略动效表 |
+| 带 **变体属性** 或 **动效** 的组件 | 同一单元；记录独立的 `motion_decision` 与动效证据 | 组件/实例根 | 静态 **关键帧** golden + 独立动效决定（宿主能录制时使用 GIF） | 只当静态 PNG 或省略动效表 |
 | 同边界 **颜色渐变 + alpha 渐变** / Figma 蒙版 | 同一单元；把兄弟当绘制层之前先跑 **§3b** | 合成后的绘制根 | 一个合成效果 | 两层 `src-over` 覆盖填充 |
 
 ## 硬边界

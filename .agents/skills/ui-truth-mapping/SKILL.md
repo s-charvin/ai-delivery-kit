@@ -32,7 +32,7 @@ Per independent unit, **production code** in the host tree + an official preview
 ├── lib/…/<unit>.dart          # Flutter: real widget (follow neighbors)
 ├── test/…/<unit>_golden_test.dart
 ├── test/goldens/<unit>.png    # static review medium
-└── test/motion/<unit>.*       # optional official motion review medium
+└── test/motion/<unit>.gif     # optional GIF motion review medium
 
 .ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/
 └── ui-truth-index.json        # pointers only — not paint
@@ -91,7 +91,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 | Bottom sheet / dialog / popover | `modal` alone; trigger patched into the trigger's container widget | Sheet/dialog frame | All sheet frames as named states / goldens | Nest the sheet as a page state; put the trigger inside the modal widget |
 | Multi-state list/form/module | One `component` (or `page` if the route is the scope) | Scoped module root | Every visual frame → one golden (or the host's multi-golden style) | Separate widgets per state of the same unit |
 | Element property only (`disabled` / `selected`) | Patch that node in its existing unit | Unchanged | Do **not** add a unit-level state | Spawn `disabled` as a full-unit golden |
-| Component with **variant properties** or **motion** | Same unit; record motion in comments / review notes on the golden | Component/instance root | Static **keyframe** golden; motion spec in notes | Treat motion as a static PNG only and omit the motion table |
+| Component with **variant properties** or **motion** | Same unit; record a separate `motion_decision` and motion evidence | Component/instance root | Static **keyframe** golden + independent motion decision (GIF when the host can record it) | Treat motion as a static PNG only or omit the motion table |
 | Same-bounds **color gradient + alpha gradient** / Figma mask | Same unit; run **§3b** before treating siblings as paint | The composited paint root | One composited effect | Two `src-over` overlay fills |
 
 ## Hard Boundary

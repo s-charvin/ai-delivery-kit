@@ -14,8 +14,9 @@
 // call an unknown controller or invent a trigger in this test skeleton.
 // Do not use a dummy widget, an external visual slot, or a fabricated motion
 // file. GIF is sufficient and is the only motion-preview format in this
-// contract. If the host has no GIF encoder, record the motion waiver and defer
-// it.
+// contract. If the host has no GIF encoder, record why the preview is
+// unavailable, obtain motion confirmation or an explicit waiver, and defer
+// runtime verification.
 
 import 'dart:io';
 

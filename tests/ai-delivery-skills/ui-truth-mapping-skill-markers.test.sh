@@ -50,6 +50,7 @@ require "$EN" "Preserve the required resource class" "EN resource class preserva
 require "$EN" "do not use a poster frame or static substitute" "EN no poster fallback"
 require "$EN" "This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage" "EN Stage 2 freeze gate"
 require "$EN" "Static golden confirmation alone never advances \`acceptance_frozen\`" "EN golden cannot advance freeze"
+require "$EN" "test/motion/<unit>.gif" "EN GIF output path"
 
 # ZH — motion and resource guardrails stay explicit in the localized entrypoint
 unicode_text() {
@@ -81,6 +82,13 @@ require "$ZH" "$ZH_RESOURCE_CLASS" "ZH resource class preservation"
 require "$ZH" "$ZH_NO_POSTER_FALLBACK" "ZH no poster fallback"
 require "$ZH" "$ZH_STAGE2_FREEZE_GATE" "ZH Stage 2 freeze gate"
 require "$ZH" "$ZH_GOLDEN_CANNOT_FREEZE" "ZH golden cannot advance freeze"
+require "$ZH" "test/motion/<unit>.gif" "ZH GIF output path"
+
+for f in "$EN" "$ZH"; do
+  if grep -Fq 'test/motion/<unit>.*' "$f"; then
+    fail "motion output path must be GIF-only in $(basename "$f")"
+  fi
+done
 
 if grep -Fq 'GIF/video/runtime preview' "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"; then
   fail "GIF-only contract still permits video motion previews"
@@ -153,6 +161,8 @@ require "$MOTION_EXAMPLE" "duration" "motion example preserves timing"
 require "$MOTION_EXAMPLE" "could not be decoded" "motion example validates GIF"
 require "$MOTION_EXAMPLE" "at least two keyframes" "motion example minimum frames"
 require "$MOTION_EXAMPLE" "strictly increasing cumulative keyframes" "motion example strict timing"
+require "$MOTION_EXAMPLE" "record why the preview is" "motion example records unavailable reason"
+require "$MOTION_EXAMPLE" "obtain motion confirmation or an explicit waiver" "motion example requires disposition"
 
 for f in "$EN" "$ZH"; do
   if grep -E '343|375[[:space:]]*artboard|343\.w' "$f" >/dev/null; then
