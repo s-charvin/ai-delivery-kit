@@ -96,14 +96,15 @@ templates/
 
 ## 硬边界
 
-- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。本技能会在记录的用户已批准 workspace 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。Workspace 选择仍归编排器 `workspace-policy.md` 所有。
+- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。这是 Stage 2 UI Truth Mapping 内的冻结门槛，不是独立 Stage。仅静态 golden 确认绝不能推进到 `acceptance_frozen`。本技能会在记录的用户已批准 workspace 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。Workspace 选择仍归编排器 `workspace-policy.md` 所有。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
 - **不要发明视觉真值。** 不得有 Figma 证据（`get_code` / `get_structure`）之外的 Figma 来源单元、state、绘制、图标或转场。缺失运行时行为只能来自 requirement、project 或明确 user-decision 证据，并须正确标记来源。
-- **真实数据或有意为空。** 范围内绑定数据的值缺失、为 null、为空或尚未可用时，渲染产品真实的空/省略状态。绝不在生产代码里注入假记录、示例图片、占位文案或 fixture 值来填满预览；测试 fixture 只能在宿主测试夹具中提供确定性字节，绝不能成为产品 fallback。
+- **真实数据或有意为空。** 范围内绑定数据的值缺失、为 null、为空或尚未可用时，渲染产品真实的空/省略状态。绝不在生产代码里注入假记录、示例图片、占位文案或 fixture 值来填满预览；测试 fixture 只能为夹具机制或有证据的资源提供确定性字节，绝不能用 fixture 字节代替缺失的范围内视觉/数据，或让预览看起来完整。
 - **禁止未经批准的占位或视觉替身。** 范围内可见表面、交互、输入、图标、图片或动画必须使用真实宿主控件与有证据的资源。不得用外部注入 Widget/slot、dummy 数据、缩略图、fixture、静态替身、通用图标或「差不多」资源让 scenario 看起来完整。外部注入仅可用于真实依赖边界，且不得承载范围内视觉 UI 或动效本身。
-- **缺资源必须取得用户决定。** 必需字体、图标、图片、动画或 effect 无法获取/渲染时，在该边界停下并让用户选择：渲染为空、延后资源并保持 scenario 阻塞，或阻塞 unit。只有用户选择后才能渲染为空并记录受影响 scenario；不得静默 fallback。如果确实需要临时占位来辅助评审，必须另行询问用户是否允许；明确批准必须写明资源与作用域，且占位不得进入生产 UI/数据路径。没有该批准仍然严禁占位。
+- **缺资源必须取得用户决定。** 必需字体、图标、图片、动画或 effect 无法获取/渲染时，在该边界停下并让用户选择：渲染为空、延后资源并保持 scenario 阻塞，或阻塞 unit。只有用户选择后才能渲染为空并记录受影响 scenario；不得静默 fallback。缺失动效资源时，未经该明确决定不得使用海报帧或静态替代。如果确实需要临时占位来辅助评审，必须另行询问用户是否允许；明确批准必须写明资源与作用域，且占位不得进入生产 UI/数据路径。没有该批准仍然严禁占位。
+- **保留所需资源类别。** 必需的矢量/SVG 图标不能用位图、字体字形、平台图标或视觉近似替代；必需的 Spine/Lottie 资源不能用静态图片或手绘动画替代。证据要求的资源类别不可用时，必须按上述缺资源决策处理，不得静默降级资源类别。
 - **使用真实交互原语。** 输入必须是可编辑的宿主控件，并具备所需 focus、键盘/IME、校验与语义行为。图标和图片必须来自有证据的项目/设计资源；缺失资源时，熟悉的字形或平台图标也不是授权替身。
 - **不要发明布局。** 把几何机械迁入宿主布局系统（Flutter 约束、CSS 等）。不要手写语义化整页而丢掉证据。
 - 预览 px 是画板快照，不是运行时尺寸。分类 **fill / hug / fixed**（§5b）。可变文案是 hug 或 fill 加 overflow / min / max — 禁止按样品写成 fixed。
@@ -163,7 +164,7 @@ templates/
 0. **文本提示扫描** — 作用域子树 **以及** 父级 SECTION 兄弟里的 TEXT / 便签 / 标注。关键词：motion、animation、transition、typewriter、shimmer、Spine、skeletal、Lottie、GIF、skeleton、placeholder、API-returned、pulse、loading（以及设计师语言的等价说法）。
 1. 在 `source_node` 上做 **候选扫描**（INSTANCE/COMPONENT、图片填充、动效命名图层）。
 2. 有工具时做 **动效探测**（`get_node_motion` / 等价）。缺工具时文本提示仍然算数。
-3. **资产** — 有字节则持久化 Spine/骨骼、Lottie、GIF 或视频资源；否则 `pending-user`，只留海报帧 — 不要发明文件。记录 trigger、播放/循环策略、中断行为、离屏策略与 reduced-motion fallback。绑定真实数据的资源缺失时，记录真实空/省略结果，不得补 fixture 内容。
+3. **资产** — 只有在证据要求且确实提供字节时，才持久化 Spine/骨骼、Lottie、GIF 或视频等原始资源类别；视频源资源绝不是另一种动效预览输出。必需资源不可用时标记 `pending-user` 并停下；未经用户明确决定不得使用海报帧或静态替代，也不得发明文件。记录 trigger、播放/循环策略、中断行为、离屏策略与 reduced-motion fallback。绑定真实数据的资源缺失时，记录真实空/省略结果，不得补 fixture 内容。
 4. **分类**（`content-bound`、`component-variant`、`motion-preset`、`design-animation-asset`、`prototype-transition`）。
 5. **映射** 到状态 / golden / 动效审阅证据。Golden 只是静态审阅帧，绝不是运行时表面的占位层。绑定真实数据的可见内容必须对应真实值或有意为空。**用户点名的参考实现：** 若用户指向现有代码，**先读它**；预览力学必须匹配该参考（get_code 的 packing 不得悄悄反转生长/显现）。
 6. **一致性检查（写组件代码前必做）：** 跨状态/实例的同一铬不能在没有显式证据时得到不均的动效覆盖。不均覆盖是异常 — 停下询问。
@@ -361,6 +362,7 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 - 把蒙版 / 仅 alpha 渐变当成第二层 src-over 覆盖；跳过 §3b；拷贝 `data-hint-*`。
 - 需求表明是服务端内容时，把 Figma **示例** 图当下载冻结资产。
 - 真实值缺失时向生产 UI 注入假/默认数据或 fixture；正确结果是产品真实的空/省略状态，或取得用户明确决定。
+- 未取得明确用户决定，就把证据要求的矢量/SVG、Spine、Lottie 或其他资源类别替换成位图、字形、平台图标、静态图片或手绘近似。
 - 跳过 §2c；文本提示扫描只扫 `source_node`；截断多条款 SECTION 备注；悄悄改写动效覆盖。
 - 交出的动效预览力学与用户点名的参考实现不一致。
 - golden 测试里打真网。

@@ -368,6 +368,87 @@ def _check_content_hash(
     return []
 
 
+def _skip_gif_sub_blocks(payload: bytes, offset: int) -> tuple[int, str | None]:
+    """Skip GIF data sub-blocks and report truncated payloads."""
+    while True:
+        if offset >= len(payload):
+            return offset, "truncated GIF data sub-block"
+        size = payload[offset]
+        offset += 1
+        if size == 0:
+            return offset, None
+        end = offset + size
+        if end > len(payload):
+            return end, "truncated GIF data sub-block"
+        offset = end
+
+
+def _gif_frame_count(path: Path) -> tuple[int, str | None]:
+    """Read enough of a GIF structure to prove it is a multi-frame GIF."""
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        return 0, f"could not read GIF: {exc}"
+
+    if len(payload) < 13 or payload[:6] not in {b"GIF87a", b"GIF89a"}:
+        return 0, "invalid GIF header"
+
+    offset = 13
+    packed = payload[10]
+    if packed & 0x80:
+        color_table_size = 3 * (1 << ((packed & 0x07) + 1))
+        if offset + color_table_size > len(payload):
+            return 0, "truncated GIF global color table"
+        offset += color_table_size
+
+    frame_count = 0
+    while offset < len(payload):
+        introducer = payload[offset]
+        offset += 1
+        if introducer == 0x3B:  # trailer
+            return frame_count, None
+        if introducer == 0x2C:  # image descriptor
+            if offset + 9 > len(payload):
+                return frame_count, "truncated GIF image descriptor"
+            image_packed = payload[offset + 8]
+            offset += 9
+            if image_packed & 0x80:
+                color_table_size = 3 * (1 << ((image_packed & 0x07) + 1))
+                if offset + color_table_size > len(payload):
+                    return frame_count, "truncated GIF local color table"
+                offset += color_table_size
+            if offset >= len(payload):
+                return frame_count, "truncated GIF image data"
+            offset += 1  # LZW minimum code size
+            offset, error = _skip_gif_sub_blocks(payload, offset)
+            if error is not None:
+                return frame_count, error
+            frame_count += 1
+            continue
+        if introducer == 0x21:  # extension block
+            if offset >= len(payload):
+                return frame_count, "truncated GIF extension block"
+            label = payload[offset]
+            offset += 1
+            if label == 0x01:  # plain-text extension has a fixed header first
+                if offset >= len(payload):
+                    return frame_count, "truncated GIF plain-text extension"
+                header_size = payload[offset]
+                offset += 1
+                if header_size != 12:
+                    return frame_count, "invalid GIF plain-text extension header"
+                if offset + header_size > len(payload):
+                    return frame_count, "truncated GIF plain-text extension header"
+                offset += header_size
+            offset, error = _skip_gif_sub_blocks(payload, offset)
+            if error is not None:
+                return frame_count, error
+            continue
+        return frame_count, f"unknown GIF block introducer 0x{introducer:02x}"
+
+    return frame_count, "missing GIF trailer"
+
+
 def _is_finite_number(value: Any) -> bool:
     return (
         not isinstance(value, bool)
@@ -532,6 +613,18 @@ def _check_motion_decision(
                 unit_id="motion",
             )
         )
+        if motion_preview_file is not None and decision == "animated":
+            frame_count, gif_error = _gif_frame_count(motion_preview_file)
+            if gif_error is not None:
+                errors.append(
+                    f"{prefix} motion_decision.preview_path must be a valid GIF: "
+                    f"{gif_error}"
+                )
+            elif frame_count < 2:
+                errors.append(
+                    f"{prefix} motion_decision.preview_path must contain at least "
+                    "two GIF frames"
+                )
     return errors
 
 

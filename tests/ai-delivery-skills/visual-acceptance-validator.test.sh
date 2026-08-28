@@ -34,6 +34,15 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+# Minimal real GIF payload; the validator must reject extension-only fakes.
+TWO_FRAME_GIF = bytes.fromhex(
+    "47494638396101000100810000ff000000000000000000000021ff0b"
+    "4e45545343415045322e30030100000021f904000a0000002c000000"
+    "0001000100000804000104040021f904010a0001002c000000000100"
+    "0100810000ff000000000000000000080400010404003b"
+)
+
+
 with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     repo = Path(td) / "repo"
     req_root = repo / ".ai-delivery" / "requirements" / "REQ-UI"
@@ -53,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     component.write_text("class ProfileCard {}\n", encoding="utf-8")
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     preview.write_bytes(b"default-png")
-    motion_preview.write_bytes(b"motion-gif")
+    motion_preview.write_bytes(TWO_FRAME_GIF)
     unrelated_preview.write_bytes(b"unrelated-png")
     (subreq / "design.md").write_text(
         "# Solution Design\n\n"

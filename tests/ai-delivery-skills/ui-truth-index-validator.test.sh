@@ -35,6 +35,20 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
+# Minimal real GIF payloads keep this validator test independent of Pillow or
+# any other image package while exercising the motion-file checks.
+TWO_FRAME_GIF = bytes.fromhex(
+    "47494638396101000100810000ff000000000000000000000021ff0b"
+    "4e45545343415045322e30030100000021f904000a0000002c000000"
+    "0001000100000804000104040021f904010a0001002c000000000100"
+    "0100810000ff000000000000000000080400010404003b"
+)
+ONE_FRAME_GIF = bytes.fromhex(
+    "47494638376101000100810000ff00000000000000000000002c0000"
+    "00000100010000080400010404003b"
+)
+
+
 with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     repo = Path(td) / "repo"
     req_root = repo / ".ai-delivery" / "requirements" / "REQ-UI"
@@ -54,7 +68,7 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     default_preview.write_bytes(b"default-png")
     loading_preview.write_bytes(b"loading-png")
-    motion_preview.write_bytes(b"motion-gif")
+    motion_preview.write_bytes(TWO_FRAME_GIF)
     (subreq / "design.md").write_text(
         "# Solution Design\n\n"
         "| Unit ID | Scenario ID | Responsibility | Verification |\n"
@@ -430,6 +444,36 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
         unsupported_motion_preview,
         "motion_decision.preview_path must end with .gif",
     )
+
+    malformed_motion_preview = copy.deepcopy(valid_index)
+    motion_preview.write_bytes(b"not-a-gif")
+    malformed_motion_preview["units"][0]["motion_decision"]["preview_sha256"] = sha256(
+        motion_preview
+    )
+    malformed_motion_preview["units"][0]["motion_decision"]["confirmation"][
+        "reviewed_preview_sha256"
+    ] = sha256(motion_preview)
+    expect_fail(
+        "malformed GIF payload",
+        malformed_motion_preview,
+        "motion_decision.preview_path must be a valid GIF",
+    )
+
+    one_frame_motion_preview = copy.deepcopy(valid_index)
+    motion_preview.write_bytes(ONE_FRAME_GIF)
+    one_frame_motion_preview["units"][0]["motion_decision"]["preview_sha256"] = sha256(
+        motion_preview
+    )
+    one_frame_motion_preview["units"][0]["motion_decision"]["confirmation"][
+        "reviewed_preview_sha256"
+    ] = sha256(motion_preview)
+    expect_fail(
+        "single-frame GIF payload",
+        one_frame_motion_preview,
+        "motion_decision.preview_path must contain at least two GIF frames",
+    )
+
+    motion_preview.write_bytes(TWO_FRAME_GIF)
 
     drifted = copy.deepcopy(valid_index)
     component.write_text("class ProfileCard { final bool changed = true; }\n", encoding="utf-8")

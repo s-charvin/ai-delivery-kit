@@ -46,6 +46,10 @@ require "$EN" "motion_decision" "EN motion decision"
 require "$EN" "Stage 4 must later record independent motion acceptance" "EN separate motion acceptance"
 require "$EN" "test-harness fixture" "EN fixture containment"
 require "$EN" "If a temporary placeholder is genuinely necessary, ask separately whether it is allowed" "EN placeholder approval"
+require "$EN" "Preserve the required resource class" "EN resource class preservation"
+require "$EN" "do not use a poster frame or static substitute" "EN no poster fallback"
+require "$EN" "This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage" "EN Stage 2 freeze gate"
+require "$EN" "Static golden confirmation alone never advances \`acceptance_frozen\`" "EN golden cannot advance freeze"
 
 # ZH — motion and resource guardrails stay explicit in the localized entrypoint
 unicode_text() {
@@ -59,6 +63,10 @@ ZH_REAL_WIDGET_API=$(unicode_text '771F 5B9E')
 ZH_STRICT_KEYFRAMES=$(unicode_text '4E25 683C 9012 589E 7684 7D2F 8BA1')
 ZH_MINIMUM_GIF_FRAMES=$(unicode_text '81F3 5C11 4E24 4E2A')
 ZH_ALTERNATE_FORMATS=$(unicode_text '6216 5BBF 4E3B 5DF2 652F 6301 7684 5176 4ED6 683C 5F0F 002F 5B98 65B9 8FD0 884C 65F6 5F55 5236')
+ZH_RESOURCE_CLASS=$(unicode_text '4FDD 7559 6240 9700 8D44 6E90 7C7B 522B')
+ZH_NO_POSTER_FALLBACK=$(unicode_text '4E0D 5F97 4F7F 7528 6D77 62A5 5E27 6216 9759 6001 66FF 4EE3')
+ZH_STAGE2_FREEZE_GATE=$(unicode_text '8FD9 662F 0020 0053 0074 0061 0067 0065 0020 0032 0020 0055 0049 0020 0054 0072 0075 0074 0068 0020 004D 0061 0070 0070 0069 006E 0067 0020 5185 7684 51BB 7ED3 95E8 69DB FF0C 4E0D 662F 72EC 7ACB 0020 0053 0074 0061 0067 0065')
+ZH_GOLDEN_CANNOT_FREEZE=$(unicode_text '4EC5 9759 6001 0020 0067 006F 006C 0064 0065 006E 0020 786E 8BA4 7EDD 4E0D 80FD 63A8 8FDB 5230 0020 0060 0061 0063 0063 0065 0070 0074 0061 006E 0063 0065 005F 0066 0072 006F 007A 0065 006E 0060')
 
 require "$ZH" "static / no motion" "ZH explicit static motion decision"
 require "$ZH" "$ZH_SEPARATE_MOTION_CONFIRMATION" "ZH separate motion confirmation"
@@ -69,6 +77,10 @@ require "$EN" "increasing cumulative" "EN cumulative motion keyframes"
 require "$EN" "at least two for a GIF" "EN minimum GIF keyframes"
 require "$ZH" "$ZH_STRICT_KEYFRAMES" "ZH strict motion keyframes"
 require "$ZH" "GIF $ZH_MINIMUM_GIF_FRAMES" "ZH minimum GIF keyframes"
+require "$ZH" "$ZH_RESOURCE_CLASS" "ZH resource class preservation"
+require "$ZH" "$ZH_NO_POSTER_FALLBACK" "ZH no poster fallback"
+require "$ZH" "$ZH_STAGE2_FREEZE_GATE" "ZH Stage 2 freeze gate"
+require "$ZH" "$ZH_GOLDEN_CANNOT_FREEZE" "ZH golden cannot advance freeze"
 
 if grep -Fq 'GIF/video/runtime preview' "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"; then
   fail "GIF-only contract still permits video motion previews"
