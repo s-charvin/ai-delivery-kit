@@ -11,7 +11,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 1 — 禁止二次转换。** 写项目已经在用的 Widget/组件。不要先冻一份 HTML（或任何平行赝品）再翻译成 Flutter/React。
 
-**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。动效捕获目标为 25 FPS（每帧 40 ms），覆盖整个动效区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。编码器必须显式接收 25 FPS 的输入/输出速率；不能依赖默认的 image-sequence 或 concat 时间基。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
+**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。动效捕获目标为 25 FPS（每帧 40 ms），覆盖连续变化区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。均匀捕获必须显式声明目标速率；带有意停顿或可变帧间隔的捕获必须保留这些时长，不得被恒定帧率选项压缩或拉长时间轴。编码器必须显式接收 25 FPS 的输入/输出速率。每份动效预览必须包含完整的 trigger→settled 转场或至少一个完整循环，只允许简短可审阅的片头/片尾停留，并自动重播。展示前必须解码并核验帧数、总时长与循环元数据。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
 
 **原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
 
@@ -232,6 +232,8 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 | `platform` | 支持的平台与输入模式、系统栏/安全区、返回/导航、IME、pointer/touch 惯例、平台原生组件 |
 | `performance` | 稳定 loading layout、适用时列表虚拟化、正确图片尺寸、animation/repaint 隔离、controller/资源释放、离屏暂停、项目原生预算 |
 
+每个可编辑输入都必须有明确的状态/IME 矩阵。至少覆盖：未输入且未编辑；已聚焦且正在编辑；已完成且未编辑；平台可展示时的 IME 隐藏与 IME 显示。可达时再补校验、disabled/只读、提交或多行状态。每一行必须绑定可见值、focus、可审阅时的选区/光标、随状态变化的图标/装饰、IME/inset 条件、底部操作布局、滚动/避让行为，以及收起/提交转场。不得仅因字段同页或同布局就从另一行推断。
+
 只创建产品实际支持的 profile；不得生成通用笛卡尔矩阵。每个 profile 记录 `surface.kind`（`viewport` 或 `container`）、测试宽高、可选 device-pixel ratio、orientation、theme、locale、text scale、reduced-motion 与 input mode。Profile 尺寸配置证据与测试，不得转成运行时固定尺寸。
 
 每个 scenario 绑定一个 state 与一个 profile，并列出它证明的 dimensions。像素复审使用 `review_mode: visual`；语义/交互/生命周期检查使用 `behavior`；两者兼有用 `both`。Visual 与 `both` scenario 需要确定性 preview 与明确确认；behavior scenario 需要已批准来源及后续宿主项目原生验证方式。
@@ -241,6 +243,8 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 ### 3d. 资源与渲染计划（`assets` 为 covered 时必做）
 
 对每个图片、SVG、icon、animation、gradient、blur、shadow、mask 或 blend effect 记录：角色、证据/来源、持久化交付路径、尺寸类别、fit/crop/focal point、aspect ratio、density 或 vector scaling、token/theme 行为、loading/error/offline fallback、cache policy、semantics 与 test-harness fixture（绝不作为生产 fallback）。
+
+在语义组件边界解析资源组合，不要只从叶子导出拼装。当多个矢量/图片图层构成一个可复用视觉，且设计源提供组合导出或可导出父级时，持久化并使用该组合资源。不要下载最小叶子再在宿主布局代码里重建几何、蒙版或偏移。只有证据表明运行时状态、主题、动画、无障碍或宿主既有资源管线需要独立控制时才拆开；把原因记入资源计划。
 
 选择能保留证据的最低复杂度宿主原生路径：已有/原生 primitive → 项目既有依赖 → custom painter/shader → 仅对缩放、主题、无障碍仍正确的真正静态输出使用预渲染资源。缺失字体、字重、vector semantics、effect 或运行时资源时阻止冻结；不得静默替换成近似实现。
 
@@ -256,6 +260,10 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 - Web：在该仓组件里遵守同一纪律。
 
 通过组件真实 API 实现每个 covered scenario。优先使用原生交互 primitive 与项目既有组件；保留 semantic role/name/state、键盘或手势替代、focus order/trap/return、平台点击热区与 screen-reader 播报。宿主已有能力时补聚焦的 behavior/semantics 测试。不得仅为满足本技能新增依赖。
+
+对可编辑控件，从真实控件状态推导视觉变体——focus、当前值、校验、enabled/只读与 IME 可见性——而不是从页面、布局、路由或预览 scenario 名称推导。重复出现的输入组件共用同一状态模型，除非证据明确区分。
+
+若布局或动画代码会预测量文本，必须使用与实际渲染相同的已解析字体族、字重、样式继承、locale、方向、文字缩放/zoom、约束与行高。用默认或仅测试用排版做的测量无效。几何只应在真实换行、行数或有证据的状态变化时改变。
 
 Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line metrics、letter spacing、filter、shadow、gradient、blur、mask、blend mode、clip、opacity 与 stacking。缺字体/effect 或与宿主 renderer 冲突是 blocker，不是允许近似。requirement/project/user-decision 来源 scenario 遵守记录来源并复用宿主设计系统。
 
@@ -285,13 +293,15 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 
 ### 6. 官方预览（Flutter golden）
 
-把 `templates/flutter-golden-preview-test.dart.example` 只当 **骨架**。宿主已有 `flutter_test` 惯例则跟它。
+把 `templates/flutter-golden-preview-test.dart.example` 只当 **骨架**，动效捕获使用 `templates/flutter-motion-preview-test.dart.example`。两者都只是骨架。宿主已有 `flutter_test` 惯例则跟它。
 
 ```bash
 flutter test <golden_test.dart> --update-goldens
 ```
 
-动效要先通过真实 Widget API 触发，再按目标 25 FPS（每帧 40 ms）严格递增的累计 `pump` keyframe 覆盖整个动效区间（GIF 至少两个），并用 `matchesGoldenFile` 写出每个采样 PNG 帧。不得只捕获间隔很大的关键帧后宣称预览流畅。这个官方 matcher 路径优先于重复直接 `RenderRepaintBoundary.toImage` 调用，因为它负责测试绑定的栅格读回生命周期。帧写出后调用显式设置 25 FPS 输入/输出速率的宿主已有 GIF 编码器；编码完成后必须确认文件可解码。没有编码器时记录不可用原因，不得伪造动效文件。
+当请求的审阅范围是完整预览矩阵时，必须执行每个已索引 scenario，并重新生成或重新哈希该矩阵中的每份产物。测试对照已有基线通过，并不证明产物由当前代码写出；未变的 hash 也必须显式记录。
+
+动效要先通过真实 Widget API 触发，再按目标 25 FPS（每帧 40 ms）严格递增的累计 `pump` keyframe 覆盖整个动效区间（GIF 至少两个），并用 `matchesGoldenFile` 写出每个采样 PNG 帧。不得只捕获间隔很大的关键帧后宣称预览流畅。这个官方 matcher 路径优先于重复直接 `RenderRepaintBoundary.toImage` 调用，因为它负责测试绑定的栅格读回生命周期。捕获时间轴必须足够早以展示 trigger，跑完整段转场或一个完整循环，并以短暂 settled 停留结束。帧写出后调用宿主已有 GIF 编码器。均匀 40 ms 采样必须显式接收 25 FPS 的输入/输出速率；有意停顿或可变间隔必须保留声明的每帧时长，不得强制恒定帧率。GIF 已足够。发布前必须解码并核验期望帧数、总时长、终态或完整循环，以及自动循环元数据。没有编码器时记录不可用原因，不得伪造动效文件。
 
 然后把每个静态 preview，以及已生成的每个 GIF 动效 preview 的 **绝对路径** 打印给用户。多个 state/profile 组合 → 多个 golden 与 GIF 动效录制（或宿主已有的 GIF 产出方式）。如果无法录制 GIF，打印已记录的不可用原因，不得发明替代路径。
 
@@ -359,10 +369,17 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 - 把快照 `w×h` 当 fill/hug 的通过/失败标准。
 - 跳过 §5b；把可变文案标成 fixed；不问用户就发明 overflow。
 - 手绘图标；资产壳不解析；从 structure 重建带蒙版 SVG 却丢掉烘焙蒙版。
+- 父级才是有证据的可复用视觉时，只导出叶子矢量/图片，再在宿主布局代码里重建组合资源，且没有记录运行时需要。
 - 把蒙版 / 仅 alpha 渐变当成第二层 src-over 覆盖；跳过 §3b；拷贝 `data-hint-*`。
 - 需求表明是服务端内容时，把 Figma **示例** 图当下载冻结资产。
 - 真实值缺失时向生产 UI 注入假/默认数据或 fixture；正确结果是产品真实的空/省略状态，或取得用户明确决定。
 - 未取得明确用户决定，就把证据要求的矢量/SVG、Spine、Lottie 或其他资源类别替换成位图、字形、平台图标、静态图片或手绘近似。
+- 使用未经批准的占位、dummy/fixture visual、通用 icon、external widget slot 或静态替代去填范围内表面；未经用户明确决定就选择空渲染。
+- 把可编辑输入当成涂绘文字壳，或把有证据的图标/图片替换成熟悉的平台字形。
+- 按页面/布局身份选择输入图标或装饰，而不是按控件真实的 focus、值、校验、enabled/只读和 IME 状态；漏掉未输入、编辑中、已完成、IME 隐藏或 IME 显示证据。
+- 用与实际渲染不同的排版、locale、方向、缩放或约束预测量文本，然后在真实换行或行数并未变化时改几何。
+- 把静态 golden 确认当成动效确认，或在动效未确认/未豁免时进入 `acceptance_frozen`。
+- 在 trigger、转场/循环和 settled 状态尚未全部可见时发布动效预览；加入过长空等；编码时压缩或拉长已声明帧时长；或不核验解码时长与自动重播。
 - 跳过 §2c；文本提示扫描只扫 `source_node`；截断多条款 SECTION 备注；悄悄改写动效覆盖。
 - 交出的动效预览力学与用户点名的参考实现不一致。
 - golden 测试里打真网。

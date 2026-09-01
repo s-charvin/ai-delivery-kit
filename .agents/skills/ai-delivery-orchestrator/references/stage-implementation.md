@@ -12,6 +12,8 @@ Follow the sub-requirement dependency graph and each UI unit's type/dependencies
 
 For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v2 profile/state/scenario coverage and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
 
+Before adding an integration abstraction, trace the host's existing ownership and call path for the same kind of operation: API/client, transport, serialization, repository/use-case, dependency injection, and test seam. Extend that path when it fits. Do not introduce a parallel adapter, client, repository, transport, or injection architecture solely for one new operation or for easier testing; a new layer requires an established project boundary or an explicit requirement decision.
+
 ### Visual truth — do not re-query Figma by default
 
 Do not run `figma-design-to-code` or call TemPad (`get_code` / `get_structure`) as a pre-implement ritual. Stage 2 already froze the real widget/component. Re-fetching creates a second truth and can disagree with the landed preview.
@@ -47,10 +49,10 @@ Tests and visual acceptance for `fill`/`hug` boxes assert constraint behavior (s
 Use the exact profiles and scenarios from the v2 index; do not invent a universal device/theme Cartesian matrix. Apply project-native checks for the covered dimensions:
 
 - state/data lifecycle, reachable error/offline/permission/disabled paths, and rapid re-entry;
-- container/viewport boundaries, orientation, safe areas, fixed/sticky overlays, IME, scroll, clipping, and hit testing;
+- container/viewport boundaries, orientation, safe areas, fixed/sticky overlays, IME, scroll, clipping, and hit testing; every editable input exercises empty/not-editing, active-editing, completed/not-editing, IME-hidden, and IME-shown states when applicable, with visuals driven by real control state;
 - long/unbroken/localized/RTL content, text scaling or zoom, list-count and numeric/date boundaries;
 - hover/focus/pressed/selected/expanded, keyboard/pointer/touch/gesture alternatives, focus trap/return, and semantics announcements;
-- motion trigger/keyframes/timing/interruption/reduced-motion/resource lifecycle and applicable performance checks; use the indexed motion preview when available and project-native behavior/manual evidence when it is unavailable;
+- motion trigger/keyframes/timing/interruption/reduced-motion/resource lifecycle and applicable performance checks; the review artifact must show the complete transition or loop without excessive idle time, replay automatically, and decode to the expected frame count and total duration; use the indexed motion preview when available and project-native behavior/manual evidence when it is unavailable;
 - image/vector loading/error/offline, crop/focal/aspect/density/theme/cache/semantics behavior;
 - supported themes, contrast/state parity, platform semantics, input modes, and native accessibility expectations.
 

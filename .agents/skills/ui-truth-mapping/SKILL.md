@@ -11,7 +11,7 @@ The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual eviden
 
 **Principle 1 — no second conversion.** Write the widget/component the project already uses. Do not freeze HTML (or any parallel mock) and later translate it into Flutter/React.
 
-**Principle 2 — official preview.** Use the host's deterministic official-stack preview. Flutter static scenarios use a golden PNG from `flutter test --update-goldens`; animated scenarios should additionally use a test-generated GIF when the host can produce one. Target a 25 FPS capture cadence (40 ms per frame) across the motion interval; do not undersample with 100+ ms keyframe gaps. GIF timing is stored in centiseconds, so 40 ms maps exactly to 25 FPS. The encoder must receive an explicit 25 FPS input/output rate; never rely on a default image-sequence or concat time base. GIF is the only motion-preview format governed by this skill: do not add WebP/MP4 encoders or make another format a gate. If the host cannot record a GIF, do not fabricate a file: obtain the motion decision first, record why the preview is unavailable, and defer runtime verification to Stage 4. Web uses the repo's existing preview mechanism. In chat, give the user every preview's **absolute path**. In the delivery index, store **repo-relative** paths only.
+**Principle 2 — official preview.** Use the host's deterministic official-stack preview. Flutter static scenarios use a golden PNG from `flutter test --update-goldens`; animated scenarios should additionally use a test-generated GIF when the host can produce one. Target a 25 FPS capture cadence (40 ms per frame) across continuously changing motion; do not undersample with 100+ ms keyframe gaps. GIF timing is stored in centiseconds, so 40 ms maps exactly to 25 FPS. Uniform captures must declare the intended rate explicitly; captures with intentional holds or variable frame intervals must preserve those durations and must not be forced through a constant-rate option that shortens or stretches the timeline. Every motion preview must include the complete trigger-to-settled transition or at least one complete loop, only a brief reviewable lead/terminal hold, and automatic replay. Decode the result and verify frame count, total duration, and loop metadata before showing it. GIF is the only motion-preview format governed by this skill: do not add WebP/MP4 encoders or make another format a gate. If the host cannot record a GIF, do not fabricate a file: obtain the motion decision first, record why the preview is unavailable, and defer runtime verification to Stage 4. Web uses the repo's existing preview mechanism. In chat, give the user every preview's **absolute path**. In the delivery index, store **repo-relative** paths only.
 
 **Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
 
@@ -232,6 +232,8 @@ For each unit, classify every dimension below as `covered` with scenario ids or 
 | `platform` | Supported platforms and input modes, system bars/safe areas, back/navigation behavior, IME, pointer vs touch conventions, and platform-specific primitives |
 | `performance` | Stable loading layout, list virtualization when applicable, correctly sized images, animation/repaint isolation, controller/resource disposal, off-screen pausing, and project-native budgets |
 
+Every editable input must have an explicit state/IME matrix. At minimum cover: empty and not editing; focused and actively editing; completed and not editing; IME hidden and IME shown wherever the platform can display it. Add validation, disabled/read-only, submission, or multiline states when reachable. Each row must bind the visible value, focus, selection/caret when reviewable, state-dependent icon/decoration, IME/inset condition, bottom-action layout, scrolling/avoidance behavior, and dismissal/submit transition. Do not infer one row from another merely because the field shares a page or layout.
+
 Create only profiles the product actually supports; do not generate a universal Cartesian matrix. Each profile records `surface.kind` (`viewport` or `container`), test width/height, optional device-pixel ratio, orientation, theme, locale, text scale, reduced-motion preference, and input mode. Profile dimensions configure evidence and tests — they are not runtime size constants.
 
 Each scenario binds one state to one profile and lists the dimensions it proves. Use `review_mode: visual` for pixel review, `behavior` for semantics/interaction/lifecycle checks, or `both`. Visual and `both` scenarios require deterministic previews and explicit confirmation. Behavior scenarios require an approved source and later project-native verification evidence.
@@ -241,6 +243,8 @@ Runtime scenarios without Figma frames may use existing project primitives and t
 ### 3d. Asset and rendering plan (REQUIRED when `assets` is covered)
 
 Record for each image, SVG, icon, animation, gradient, blur, shadow, mask, or blend effect: role, evidence/source, persisted delivery path, sizing class, fit/crop/focal point, aspect ratio, density or vector scaling, token/theme behavior, loading/error/offline fallback, cache policy, semantics, and test-harness fixture (never a production fallback).
+
+Resolve asset composition at the semantic component boundary, not from leaf exports alone. When multiple vector/image layers form one reusable visual and the design source exposes a composed export or exportable parent, persist and use that composed asset. Do not download the smallest leaves and reconstruct their geometry, masks, or offsets in host layout code. Keep parts separate only when evidenced runtime state, theming, animation, accessibility, or the host's established asset pipeline requires independent control; record that reason in the asset plan.
 
 Use the least complex host-native path that preserves the evidence: existing/native primitive → established project dependency → custom painter/shader → pre-rendered asset only for truly static output whose scaling, theme, and accessibility behavior remain correct. Missing fonts, weights, vector semantics, effects, or runtime assets block freeze until the user chooses an explicit disposition; do not silently substitute a close-enough implementation.
 
@@ -256,6 +260,10 @@ Map evidence into the host layout system:
 - Web: the same discipline in that repo's components.
 
 Implement every covered scenario through the component's real API. Prefer native interactive primitives and established project components; preserve semantic role/name/state, keyboard or gesture alternatives, focus order/trap/return, platform touch targets, and screen-reader announcements. Add focused behavior/semantics tests where the host already supports them. Do not add a dependency solely to satisfy this skill.
+
+For editable controls, derive visual variants from the real control state—focus, current value, validation, enabled/read-only state, and IME visibility—not from the page, layout, route, or preview scenario name. Repeated input components share the same state model unless evidence explicitly distinguishes them.
+
+If layout or animation code pre-measures text, use the same resolved font family, weight, style inheritance, locale, direction, text scaling/zoom, constraints, and line-height as the actual renderer. A measurement made with default or test-only typography is invalid. Verify that geometry changes only when rendered wrapping, line count, or an evidenced state actually changes.
 
 Figma-origin scenarios preserve evidenced values exactly, including font family/available weight, line metrics, letter spacing, filters, shadows, gradients, blur, masks, blend mode, clip, opacity, and stacking. A missing font/effect or a conflict with the host renderer is a blocker, not permission to approximate. Requirement/project/user-decision scenarios follow their recorded source while reusing the host design system.
 
@@ -291,17 +299,27 @@ Use `templates/flutter-golden-preview-test.dart.example` for static frames and `
 flutter test <golden_test.dart> --update-goldens
 ```
 
+When the requested review scope is a complete preview matrix, execute every
+indexed scenario and freshly regenerate or re-hash every artifact in that
+matrix. A test passing against an existing baseline is not evidence that the
+artifact was produced by the current code; record unchanged hashes explicitly.
+
 For motion, trigger the real widget behavior, advance it with strictly
 increasing cumulative `pump` keyframes at a target 25 FPS (40 ms per frame,
 at least two for a GIF), and use `matchesGoldenFile` for every sampled
 PNG frame. Do not capture only widely spaced keyframes and call that a smooth
 motion preview. This official matcher path is preferred to repeated direct
 `RenderRepaintBoundary.toImage` calls because it owns the test binding's raster
-readback lifecycle. After the frames exist, invoke an encoder already approved
-by the host with an explicit 25 FPS input/output rate; a GIF is sufficient.
-Verify that the output decodes before
-publishing it. A missing encoder is an unavailability reason, never permission
-to create a fake animation.
+readback lifecycle. The capture timeline must start early enough to show the
+trigger, run through the complete transition or one full repeating cycle, and
+end with only a short settled-state hold. After the frames exist, invoke an
+encoder already approved by the host. Use an explicit 25 FPS rate for uniform
+40 ms samples; preserve declared per-frame durations for intentional holds or
+variable intervals instead of forcing constant-rate timing. A GIF is sufficient.
+Before publishing, decode it and verify expected frame count, total duration,
+terminal state or completed cycle, and automatic loop metadata. A missing
+encoder is an unavailability reason, never permission to create a fake
+animation.
 
 Then print each static preview and, when produced, each GIF motion preview's **absolute path** to the user. Multiple state/profile combinations → multiple goldens and GIF motion recordings (or the host's existing GIF-producing pattern). If a GIF cannot be recorded, print the recorded unavailability reason and do not invent a substitute path.
 
@@ -365,6 +383,7 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Treating snapshot `w×h` as pass/fail for fill/hug.
 - Skipping §5b; marking variable copy as fixed; inventing overflow instead of asking.
 - Hand-drawing icons; leaving asset shells unresolved; rebuilding a masked SVG from structure and dropping the baked mask.
+- Exporting only leaf vectors/images when their parent is the evidenced reusable visual, then reconstructing the composed asset in host layout code without a recorded runtime need.
 - Treating a mask / alpha gradient as a second src-over overlay; skipping §3b; copying `data-hint-*`.
 - Downloading a Figma **example** image as a frozen asset when the requirement shows server content.
 - Injecting fake/default data or fixture content into production code when a real value is absent; the correct result is the real empty/omitted state or an explicit user disposition.
@@ -376,7 +395,10 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Using an unapproved placeholder, dummy/fixture visual, generic icon, external widget slot, or static substitute for an in-scope surface; choosing empty rendering without the user's explicit disposition.
 - Replacing an evidenced vector/SVG, Spine, Lottie, or other required resource class with a raster, glyph, platform icon, static image, or hand-drawn approximation without an explicit user decision.
 - Treating an editable input as a painted text shell or replacing an evidence-backed icon/image with a familiar platform glyph.
+- Selecting an input icon or decoration from page/layout identity instead of the control's real focus, value, validation, enabled/read-only, and IME state; omitting empty, active-editing, completed, IME-hidden, or IME-shown evidence.
+- Pre-measuring text with typography, locale, direction, scaling, or constraints that differ from the actual renderer, then changing geometry when the rendered wrapping or line count did not change.
 - Treating static golden confirmation as motion confirmation, or entering `acceptance_frozen` while motion is unconfirmed/unwaived.
+- Publishing a motion preview before the trigger, transition/cycle, and settled state are all visible; adding excessive dead time; shortening or stretching declared frame durations during encoding; or failing to verify decoded duration and automatic replay.
 - Dispatching this skill before CP-UI, writing production code outside the recorded user-approved workspace, or creating a second Stage 4 workspace for the same slice.
 - Leaving `ui-truth-index.json` paths as absolute filesystem paths (index is repo-relative).
 - Omitting `schema_version`, profiles, sourced states, scenario previews/confirmation, coverage, or content hashes; accepting hash drift after freeze.

@@ -100,6 +100,7 @@ inventory these surfaces when applicable:
 - state, transition, recovery, retry, and concurrency behavior;
 - persistence, cache, snapshots, credentials, and invalidation rules;
 - protocol adapters, payloads, response mapping, and error handling;
+- the host's established integration topology: API/client ownership, transport, serialization, dependency injection, repository/use-case boundaries, and test seams;
 - analytics, notifications, side effects, feature flags, and background work;
 - visible surfaces whose interaction or meaning may have changed.
 
@@ -131,6 +132,7 @@ Do:
 - establish the old observable contract before inspecting candidate code for
   reuse;
 - verify each reused surface against the target contract and name its owner;
+- extend the host's established integration path for new operations when its ownership and semantics still fit; introduce a new adapter, transport, repository, or dependency-injection layer only when the requirement or an established project boundary requires it;
 - record a handoff or dependency when an affected surface belongs to another
   owner, and keep implementation within the authorized boundary;
 - define migration, rollout, rollback, and invalidation boundaries when
@@ -157,6 +159,7 @@ Do not:
   of semantic compatibility;
 - add fallback mappings, payload fields, persistence, or side effects outside
   the target contract or an explicitly approved compatibility boundary;
+- introduce a parallel integration architecture merely to isolate one new operation, improve test injection, or avoid touching the existing API/client owner when the host already has a matching extension point;
 - use an external widget slot, dummy/fixture visual, generic icon, painted
   input shell, or other placeholder to make an in-scope replacement appear
   complete. When a required visual resource is unavailable, stop and ask the
@@ -175,6 +178,7 @@ Do not:
 
 - Structural reuse is allowed for infrastructure, pure utilities, data sources,
   and components whose contract is verified to match the target.
+- Reuse the existing integration owner and test seam when they match the target contract. Testability alone does not justify a parallel adapter; prefer the project's existing injection or mocking boundary.
 - Structural reuse is not semantic reuse. Do not infer compatibility from code location or naming.
   The same rule applies to an existing screen, a shared cache key, or a familiar adapter.
 - Do not retain old state mappings, fallback branches, payload fields, cache

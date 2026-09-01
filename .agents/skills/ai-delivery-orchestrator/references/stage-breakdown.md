@@ -6,12 +6,12 @@
 
 ## Prepare inputs
 
-- Read the requirement document.
+- Read the requirement document and every explicitly supplied supporting artifact. Inspect content before assigning a semantic role; filenames, extensions, folders, and labels such as `draft` or `pending` do not prove that a source is only copy, localization, reference material, or safe to omit.
 - Output directory: `.ai-delivery/requirements/<req-id>/`.
 
 ## Run `requirement-breakdown`
 
-Feed the requirement document path. It produces sub-requirements with `requirement-slice.md`, `dependency.json`, and the artifact set.
+Feed the requirement document and supporting-source paths. It produces sub-requirements with `requirement-slice.md`, `dependency.json`, and the artifact set.
 
 ## After completion
 
@@ -29,8 +29,10 @@ For each `split_ready` sub-requirement, main session outputs four checks:
 
 1. **Gaps** — missing critical business facts?
 2. **Conflicts** — contradictions with `global-rules.md` or other slices?
-3. **States** — missing error, empty, loading, or permission boundaries?
+3. **States** — do all sources agree on reachable states, event-driven transitions, ordering, branches/convergence, loading/error/empty/permission boundaries, persistence, and side effects? Visual evidence being unavailable does not defer non-visual flow rules.
 4. **Permissions** — auth boundaries clear?
+
+The audit must reject `split_ready` when a supplied source contains material behavior that is only categorized by document title instead of traced to a slice, global rule, open question, or explicit exclusion with reason. `pending` evidence is recorded as `unknown` where authority is unresolved; it is not silently ignored.
 
 Outcomes:
 

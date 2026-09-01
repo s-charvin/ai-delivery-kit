@@ -70,11 +70,15 @@ done
 
 for tree in "$SRC" "$DST"; do
   if grep -R -Fq 'ui_contract_exempt' "$tree/ai-delivery-orchestrator" \
-      --exclude='reconcile-delivery.py'; then
+      --exclude-dir='__pycache__' \
+      --exclude='reconcile-delivery.py' \
+      --exclude='*.pyc'; then
     fail "Deprecated ui_contract_exempt bypass remains outside the explicit rejection guard"
   fi
   if grep -R -Fq 'no_design_client' "$tree/ai-delivery-orchestrator" \
-      --exclude='reconcile-delivery.py'; then
+      --exclude-dir='__pycache__' \
+      --exclude='reconcile-delivery.py' \
+      --exclude='*.pyc'; then
     fail "Deprecated no_design_client profile remains outside the explicit rejection guard"
   fi
 done

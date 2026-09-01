@@ -3,19 +3,22 @@
 // 替换导入、主题夹具和真实 unit；不要把教学注释复制到产品代码。
 //
 // 官方 Flutter 路径：
-//   1. 先通过真实 Widget API 触发动效；
-//   2. 按明确的累计 elapsed keyframe 推进真实 Widget；
-//   3. 每个 keyframe 用 matchesGoldenFile 写 PNG（运行 --update-goldens）；
-//   4. 使用宿主已有 GIF 编码器，并在 motion_decision 记录路径和 SHA-256。
+//   1. 按明确的累计 elapsed keyframe pump 真实 Widget；
+//   2. 每个 PNG 帧使用 matchesGoldenFile（运行 --update-goldens）；
+//   3. 用宿主已批准的 GIF 编码器编码帧目录；
+//   4. 在 motion_decision 记录动效预览路径和 SHA-256。
 //
-// 使用 25 FPS 捕获节奏（每帧 40000 微秒）覆盖整个动效区间。GIF 以厘秒
-// 存储时间，因此 40 ms 可以精确得到 25 FPS。本 ffmpeg 示例显式设置输入
-// `-framerate 25` 和输出 `-r 25`；改用其他编码器时保持等效速率，不要改成
-// 100 ms 以上的稀疏间隔。
+// 本示例刻意使用严格均匀的 25 FPS 捕获节奏（每帧 40000 微秒）。GIF 以厘秒
+// 存储时间，因此 40 ms 可以精确得到 25 FPS。校验器会拒绝任何非均匀
+// keyframe，以免 CFR 编码器悄悄改时长。有意停顿或可变帧时长时，改用保留
+// 时长的 VFR/concat 编码器，不要改写本 CFR 命令。不要把连续动效用 100 ms
+// 以上的稀疏步进替代。把占位 totalDuration 换成完整的 trigger→settled
+// 转场或一个完整循环，只保留短暂终态停留。不要发布截断 GIF 或过长空等尾巴。
 //
-// 禁止 dummy Widget、外部视觉 slot 或伪造动效文件。GIF 已足够，也是本契约
-// 唯一的动效预览格式。没有 GIF 编码器时记录预览不可用原因，取得动效确认
-// 或用户明确豁免，并把运行时验证延后到 Stage 4。
+// 在第一个 keyframe 前通过真实 Widget 行为触发动效。不要在本骨架里静默
+// 调用未知 controller 或发明 trigger。禁止 dummy Widget、外部视觉 slot
+// 或伪造动效文件。GIF 已足够，也是本契约唯一的动效预览格式。没有 GIF
+// 编码器时记录预览不可用原因，取得动效确认或明确豁免，并把运行时验证延后。
 
 import 'dart:io';
 
@@ -23,6 +26,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // import 'package:host_app/.../real_unit.dart';
+
+const _frameInterval = Duration(milliseconds: 40);
 
 void main() {
   testWidgets('real unit motion preview', (tester) async {
@@ -37,8 +42,8 @@ void main() {
       ),
     );
 
-    // 在第一个 keyframe 前通过真实交互或状态 API 触发动效。
-    final output = Directory('build/motion-preview')..createSync(recursive: true);
+    final output = Directory('build/motion-preview')
+      ..createSync(recursive: true);
     final frameDirectory = Directory('${output.path}/unit')
       ..createSync(recursive: true);
     final elapsedTimes = _elapsedTimesForMotion(
@@ -72,7 +77,6 @@ void main() {
 
 List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
   // GIF 审阅捕获目标为 25 FPS（每帧 40 ms）。
-  const frameInterval = Duration(microseconds: 40000);
   if (totalDuration <= Duration.zero) {
     throw ArgumentError.value(
       totalDuration,
@@ -84,12 +88,26 @@ List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
   for (
     var elapsed = Duration.zero;
     elapsed < totalDuration;
-    elapsed += frameInterval
+    elapsed += _frameInterval
   ) {
     elapsedTimes.add(elapsed);
   }
-  if (elapsedTimes.last != totalDuration) {
+  if (elapsedTimes.isEmpty) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      '必须至少覆盖一帧 40 ms',
+    );
+  }
+  final remainder = totalDuration - elapsedTimes.last;
+  if (remainder == _frameInterval) {
     elapsedTimes.add(totalDuration);
+  } else if (remainder != Duration.zero) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      '本均匀 CFR 示例要求时长必须是 40 ms 的整数倍',
+    );
   }
   return elapsedTimes;
 }
@@ -149,24 +167,7 @@ void _encodeGif({
   if (!outputFile.existsSync()) {
     throw StateError('GIF 编码器没有产出文件：${outputFile.path}');
   }
-  final verification = Process.runSync('ffmpeg', [
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-i',
-    outputFile.absolute.path,
-    '-map',
-    '0:v:0',
-    '-f',
-    'null',
-    '-',
-  ]);
-  if (verification.exitCode != 0) {
-    if (outputFile.existsSync()) {
-      outputFile.deleteSync();
-    }
-    throw StateError('编码后的 GIF 无法解码：${verification.stderr}');
-  }
+  _verifyGif(outputFile, elapsedTimes.length);
 }
 
 void _validateElapsedTimes(List<Duration> elapsedTimes) {
@@ -177,20 +178,80 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
       '动效 GIF 至少需要两个 keyframe',
     );
   }
-  if (elapsedTimes.first < Duration.zero) {
+  if (elapsedTimes.first != Duration.zero) {
     throw ArgumentError.value(
       elapsedTimes,
       'elapsedTimes',
-      '累计 keyframe 不能早于零时刻',
+      '本均匀 CFR 示例必须从零时刻开始',
     );
   }
   for (var index = 1; index < elapsedTimes.length; index++) {
-    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
+    if (elapsedTimes[index] - elapsedTimes[index - 1] != _frameInterval) {
       throw ArgumentError.value(
         elapsedTimes,
         'elapsedTimes',
-        '累计 keyframe 必须严格递增',
+        '必须使用精确 40 ms 间隔；可变时长请改用保留时长的 VFR 编码器',
       );
     }
+  }
+}
+
+void _verifyGif(File outputFile, int expectedFrameCount) {
+  try {
+    final result = Process.runSync('ffprobe', [
+      '-v',
+      'error',
+      '-count_frames',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=nb_read_frames,nb_frames:format=duration',
+      '-of',
+      'default=noprint_wrappers=1',
+      outputFile.absolute.path,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('编码后的 GIF 无法解码：${result.stderr}');
+    }
+
+    final metadata = <String, String>{};
+    for (final line in '${result.stdout}'.split('\n')) {
+      final separator = line.indexOf('=');
+      if (separator > 0) {
+        metadata[line.substring(0, separator)] = line.substring(separator + 1);
+      }
+    }
+    final frameCount = int.tryParse(metadata['nb_read_frames'] ?? '') ??
+        int.tryParse(metadata['nb_frames'] ?? '');
+    final durationSeconds = double.tryParse(metadata['duration'] ?? '');
+    final expectedSeconds =
+        expectedFrameCount * _frameInterval.inMicroseconds / 1000000;
+    if (frameCount != expectedFrameCount) {
+      throw StateError(
+        '编码后的 GIF 时长不匹配：frames=$frameCount, '
+        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'expectedDuration=$expectedSeconds',
+      );
+    }
+    if (durationSeconds != null &&
+        (durationSeconds - expectedSeconds).abs() > 0.05) {
+      throw StateError(
+        '编码后的 GIF 时长不匹配：frames=$frameCount, '
+        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'expectedDuration=$expectedSeconds',
+      );
+    }
+    if (!String.fromCharCodes(
+      outputFile.readAsBytesSync(),
+    ).contains('NETSCAPE2.0')) {
+      throw StateError('编码后的 GIF 缺少自动循环元数据');
+    }
+  } on ProcessException catch (error) {
+    throw StateError('需要宿主已有 GIF 核验工具：$error');
+  } catch (_) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    rethrow;
   }
 }

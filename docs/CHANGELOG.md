@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v0.4.0 — 2026-09-01
 
 ### Changed
 
@@ -11,6 +11,12 @@
 - Renamed the human-facing abstract action to `solution-design` while keeping the canonical `design.md` path and machine `design_approved`/`CP-DESIGN` tokens stable.
 - Design artifacts now reference indexed unit/scenario IDs; Runtime Coverage remains authoritative in `contracts/ui-truth-index.json` instead of being duplicated in `design.md`.
 - Propagated unit/scenario traceability through solution-design, spec, plan, tasks, implementation, verification, bootstrap layout, English sources, and the `.agents-zh` mirror.
+- `ui-truth-mapping` now resolves composed vector/image assets at the semantic component boundary instead of downloading leaves and reconstructing them in layout code.
+- Editable inputs require an explicit empty / editing / completed plus IME-hidden / IME-shown matrix. Icons and decorations follow real control state, not page or layout identity.
+- Text pre-measurement must use the same resolved typography, scaler, and constraints as the renderer, so geometry does not jump without a real wrap or line-count change.
+- Motion GIFs must cover the complete trigger-to-settled transition or one full loop, keep only a short hold, replay automatically, and decode to the expected 25 FPS frame count and duration. Passing an old golden baseline is not evidence that the current matrix was regenerated.
+- Requirement breakdown classifies supporting sources by content, not filename. Pending/to-confirm labels record `unknown`; they do not authorize omission. Non-visual state machines are not deferred because Figma is missing.
+- Stage 4 and change-scenario guidance reuse the host's existing API/client/injection path. Do not invent a parallel adapter solely for one new operation or easier testing.
 
 ## v0.3.7 — 2026-08-24
 

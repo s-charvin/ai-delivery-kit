@@ -12,6 +12,8 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输
 
 `ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 使用的同一个用户已批准 workspace**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v2 profile/state/scenario coverage 与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
 
+新增集成抽象之前，先追溯宿主对同类操作的既有所有权与调用路径：API/client、transport、序列化、repository/use-case、依赖注入和测试缝。路径仍匹配时就扩展它。不要仅为一次新操作或更容易测试而平行引入 adapter、client、repository、transport 或注入架构；新层必须有既有项目边界或明确需求决策。
+
 ### 视觉真值 — 默认不要再查 Figma
 
 默认不要跑 `figma-design-to-code`，也不要调用 TemPad（`get_code` / `get_structure`）作为实现前仪式。Stage 2 已经把真实 Widget/组件冻进仓库。再拉一次会制造第二真值，并可能和已确认预览打架。
@@ -47,10 +49,10 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 使用 v2 index 中精确记录的 profile 与 scenario；不得发明通用设备/主题笛卡尔积。对 covered 维度采用项目原生检查：
 
 - state/数据生命周期、可达的 error/offline/permission/disabled 路径，以及快速重复进入；
-- container/viewport 边界、orientation、安全区、fixed/sticky overlay、IME、scroll、clip 与 hit testing；
+- container/viewport 边界、orientation、安全区、fixed/sticky overlay、IME、scroll、clip 与 hit testing；每个可编辑输入在适用时都要覆盖未输入/未编辑、编辑中、已完成/未编辑、IME 隐藏与 IME 显示，视觉由真实控件状态驱动；
 - 长文本/不可断词/本地化/RTL、text scaling 或 zoom、列表数量与数值/日期边界；
 - hover/focus/pressed/selected/expanded、keyboard/pointer/touch/gesture 替代、focus trap/return 与语义播报；
-- 动效 trigger/keyframe/timing/interruption/reduced-motion/资源生命周期，以及适用的性能检查；有索引动效预览时必须使用它，无法录制时用项目原生行为/人工证据；
+- 动效 trigger/keyframe/timing/interruption/reduced-motion/资源生命周期，以及适用的性能检查；审阅产物必须展示完整转场或循环、没有过长空等、自动重播，并能解码出期望帧数与总时长；有索引动效预览时必须使用它，无法录制时用项目原生行为/人工证据；
 - 图片/矢量的 loading/error/offline、crop/focal/aspect/density/theme/cache/semantics 行为；
 - 支持的主题、contrast/state parity、平台语义、输入模式与原生无障碍要求。
 

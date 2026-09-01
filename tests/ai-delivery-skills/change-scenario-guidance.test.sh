@@ -38,6 +38,8 @@ for marker in \
   "entry points" \
   "persistence" \
   "protocol adapters" \
+  "established integration topology" \
+  "parallel integration architecture" \
   "side effects" \
   "fresh-context review" \
   "preserve behavior solely for compile compatibility" \

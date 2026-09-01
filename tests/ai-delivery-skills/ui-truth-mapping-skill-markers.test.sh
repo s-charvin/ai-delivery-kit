@@ -53,7 +53,7 @@ require "$EN" "Static golden confirmation alone never advances \`acceptance_froz
 require "$EN" "test/motion/<unit>.gif" "EN GIF output path"
 require "$EN" "25 FPS" "EN motion capture cadence"
 require "$EN" "100+ ms keyframe gaps" "EN sparse keyframe ban"
-require "$EN" "explicit 25 FPS input/output rate" "EN explicit encoder rate"
+require "$EN" "Uniform captures must declare the intended rate explicitly" "EN explicit encoder rate"
 
 # ZH — motion and resource guardrails stay explicit in the localized entrypoint
 unicode_text() {
@@ -72,6 +72,10 @@ ZH_NO_POSTER_FALLBACK=$(unicode_text '4E0D 5F97 4F7F 7528 6D77 62A5 5E27 6216 97
 ZH_STAGE2_FREEZE_GATE=$(unicode_text '8FD9 662F 0020 0053 0074 0061 0067 0065 0020 0032 0020 0055 0049 0020 0054 0072 0075 0074 0068 0020 004D 0061 0070 0070 0069 006E 0067 0020 5185 7684 51BB 7ED3 95E8 69DB FF0C 4E0D 662F 72EC 7ACB 0020 0053 0074 0061 0067 0065')
 ZH_GOLDEN_CANNOT_FREEZE=$(unicode_text '4EC5 9759 6001 0020 0067 006F 006C 0064 0065 006E 0020 786E 8BA4 7EDD 4E0D 80FD 63A8 8FDB 5230 0020 0060 0061 0063 0063 0065 0070 0074 0061 006E 0063 0065 005F 0066 0072 006F 007A 0065 006E 0060')
 ZH_EXPLICIT_ENCODER_RATE=$(unicode_text '663E 5F0F 63A5 6536 0020 0032 0035 0020 0046 0050 0053 0020 7684 8F93 5165 002F 8F93 51FA 901F 7387')
+ZH_IME_MATRIX=$(unicode_text '6BCF 4E2A 53EF 7F16 8F91 8F93 5165 90FD 5FC5 987B 6709 660E 786E 7684 72B6 6001 002F 0049 004D 0045 0020 77E9 9635')
+ZH_COMPOSED_ASSETS=$(unicode_text '5728 8BED 4E49 7EC4 4EF6 8FB9 754C 89E3 6790 8D44 6E90 7EC4 5408')
+ZH_CONTROL_STATE_VARIANTS=$(unicode_text '4ECE 771F 5B9E 63A7 4EF6 72B6 6001 63A8 5BFC 89C6 89C9 53D8 4F53')
+ZH_MEASUREMENT_FONT=$(unicode_text '4F7F 7528 4E0E 5B9E 9645 6E32 67D3 76F8 540C 7684 5DF2 89E3 6790 5B57 4F53 65CF')
 
 require "$ZH" "static / no motion" "ZH explicit static motion decision"
 require "$ZH" "$ZH_SEPARATE_MOTION_CONFIRMATION" "ZH separate motion confirmation"
@@ -112,6 +116,14 @@ require "$EN" "all ten coverage dimensions" "EN complete coverage"
 require "$EN" 'reviewed_preview_sha256' "EN preview-bound confirmation"
 require "$EN" 'structured `visual-acceptance.json`' "EN structured Stage 4 acceptance"
 require "$EN" "A static golden never substitutes for motion acceptance" "EN golden cannot replace motion"
+require "$EN" "Every editable input must have an explicit state/IME matrix" "EN input IME matrix"
+require "$EN" "Resolve asset composition at the semantic component boundary" "EN composed assets"
+require "$EN" "derive visual variants from the real control state" "EN input icon from control state"
+require "$EN" "use the same resolved font family" "EN measurement matches renderer"
+require "$ZH" "$ZH_IME_MATRIX" "ZH input IME matrix"
+require "$ZH" "$ZH_COMPOSED_ASSETS" "ZH composed assets"
+require "$ZH" "$ZH_CONTROL_STATE_VARIANTS" "ZH input icon from control state"
+require "$ZH" "$ZH_MEASUREMENT_FONT" "ZH measurement matches renderer"
 
 # EN — sizing
 require "$EN" "### 5b. Layout sizing classification" "EN §5b"
@@ -168,7 +180,8 @@ require "$MOTION_EXAMPLE" "Process.runSync" "motion example GIF encoder"
 require "$MOTION_EXAMPLE" "totalDuration" "motion example covers total duration"
 require "$MOTION_EXAMPLE" "could not be decoded" "motion example validates GIF"
 require "$MOTION_EXAMPLE" "at least two keyframes" "motion example minimum frames"
-require "$MOTION_EXAMPLE" "strictly increasing cumulative keyframes" "motion example strict timing"
+require "$MOTION_EXAMPLE" "must use exactly 40 ms intervals" "motion example strict timing"
+require "$MOTION_EXAMPLE" "NETSCAPE2.0" "motion example automatic loop"
 require "$MOTION_EXAMPLE" "record why the preview is" "motion example records unavailable reason"
 require "$MOTION_EXAMPLE" "obtain motion confirmation or an explicit waiver" "motion example requires disposition"
 require "$MOTION_EXAMPLE" "25 FPS" "motion example high cadence"
@@ -185,6 +198,8 @@ require "$ZH_MOTION_EXAMPLE" "'-framerate'" "localized motion example explicit i
 require "$ZH_MOTION_EXAMPLE" "'-r'" "localized motion example explicit output rate"
 require "$ZH_MOTION_EXAMPLE" "unit_%05d.png" "localized motion example numbered frame input"
 require "$ZH_MOTION_EXAMPLE" "'cfr'" "localized motion example constant frame rate"
+require "$ZH_MOTION_EXAMPLE" "NETSCAPE2.0" "localized motion example automatic loop"
+require "$ZH_MOTION_EXAMPLE" "ffprobe" "localized motion example verifies GIF"
 
 for f in "$MOTION_EXAMPLE" "$ZH_MOTION_EXAMPLE"; do
   if grep -Fq 'Duration(milliseconds: 120)' "$f"; then

@@ -10,10 +10,15 @@
 //   3. encode the frame directory with a host-approved GIF encoder;
 //   4. record the motion preview path and SHA-256 in motion_decision.
 //
-// Use a 25 FPS capture cadence (40,000 microseconds per frame) across the
-// motion interval. GIF stores delays in centiseconds, so 40 ms maps exactly
-// to 25 FPS. Keep both the input `-framerate 25` and output `-r 25` explicit
-// when adapting the encoder. Do not replace this with sparse 100+ ms steps.
+// This example intentionally uses a strictly uniform 25 FPS capture cadence
+// (40,000 microseconds per frame). GIF stores delays in centiseconds, so 40 ms
+// maps exactly to 25 FPS. The validator rejects any non-uniform keyframes
+// before the CFR encoder can silently change their timing. For intentional
+// holds or variable frame durations, use a duration-preserving VFR/concat
+// encoder instead of adapting this CFR command. Do not replace continuous
+// motion with sparse 100+ ms steps. Replace the placeholder totalDuration
+// with the complete trigger-to-settled transition or one full loop, plus only
+// a short terminal hold. Do not publish a truncated GIF or a long idle tail.
 //
 // Trigger the real widget behavior before the first keyframe. Do not silently
 // call an unknown controller or invent a trigger in this test skeleton.
@@ -30,6 +35,8 @@ import 'package:flutter_test/flutter_test.dart';
 
 // import 'package:host_app/.../real_unit.dart';
 
+const _frameInterval = Duration(milliseconds: 40);
+
 void main() {
   testWidgets('real unit motion preview', (tester) async {
     final repaintKey = GlobalKey();
@@ -44,7 +51,8 @@ void main() {
       ),
     );
 
-    final output = Directory('build/motion-preview')..createSync(recursive: true);
+    final output = Directory('build/motion-preview')
+      ..createSync(recursive: true);
     final frameDirectory = Directory('${output.path}/unit')
       ..createSync(recursive: true);
     final elapsedTimes = _elapsedTimesForMotion(
@@ -78,7 +86,6 @@ void main() {
 
 List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
   // GIF review captures target 25 FPS (40 ms per frame).
-  const frameInterval = Duration(microseconds: 40000);
   if (totalDuration <= Duration.zero) {
     throw ArgumentError.value(
       totalDuration,
@@ -90,12 +97,26 @@ List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
   for (
     var elapsed = Duration.zero;
     elapsed < totalDuration;
-    elapsed += frameInterval
+    elapsed += _frameInterval
   ) {
     elapsedTimes.add(elapsed);
   }
-  if (elapsedTimes.last != totalDuration) {
+  if (elapsedTimes.isEmpty) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      'must cover at least one 40 ms frame',
+    );
+  }
+  final remainder = totalDuration - elapsedTimes.last;
+  if (remainder == _frameInterval) {
     elapsedTimes.add(totalDuration);
+  } else if (remainder != Duration.zero) {
+    throw ArgumentError.value(
+      totalDuration,
+      'totalDuration',
+      'must be a multiple of 40 ms for this uniform-CFR example',
+    );
   }
   return elapsedTimes;
 }
@@ -155,24 +176,7 @@ void _encodeGif({
   if (!outputFile.existsSync()) {
     throw StateError('GIF encoder produced no output: ${outputFile.path}');
   }
-  final verification = Process.runSync('ffmpeg', [
-    '-hide_banner',
-    '-loglevel',
-    'error',
-    '-i',
-    outputFile.absolute.path,
-    '-map',
-    '0:v:0',
-    '-f',
-    'null',
-    '-',
-  ]);
-  if (verification.exitCode != 0) {
-    if (outputFile.existsSync()) {
-      outputFile.deleteSync();
-    }
-    throw StateError('Encoded GIF could not be decoded: ${verification.stderr}');
-  }
+  _verifyGif(outputFile, elapsedTimes.length);
 }
 
 void _validateElapsedTimes(List<Duration> elapsedTimes) {
@@ -183,20 +187,81 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
       'a motion GIF requires at least two keyframes',
     );
   }
-  if (elapsedTimes.first < Duration.zero) {
+  if (elapsedTimes.first != Duration.zero) {
     throw ArgumentError.value(
       elapsedTimes,
       'elapsedTimes',
-      'must not start before zero',
+      'must start at zero for this uniform-CFR example',
     );
   }
   for (var index = 1; index < elapsedTimes.length; index++) {
-    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
+    if (elapsedTimes[index] - elapsedTimes[index - 1] != _frameInterval) {
       throw ArgumentError.value(
         elapsedTimes,
         'elapsedTimes',
-        'must be strictly increasing cumulative keyframes',
+        'must use exactly 40 ms intervals; use a duration-preserving VFR '
+            'encoder for variable timing',
       );
     }
+  }
+}
+
+void _verifyGif(File outputFile, int expectedFrameCount) {
+  try {
+    final result = Process.runSync('ffprobe', [
+      '-v',
+      'error',
+      '-count_frames',
+      '-select_streams',
+      'v:0',
+      '-show_entries',
+      'stream=nb_read_frames,nb_frames:format=duration',
+      '-of',
+      'default=noprint_wrappers=1',
+      outputFile.absolute.path,
+    ]);
+    if (result.exitCode != 0) {
+      throw StateError('Encoded GIF could not be decoded: ${result.stderr}');
+    }
+
+    final metadata = <String, String>{};
+    for (final line in '${result.stdout}'.split('\n')) {
+      final separator = line.indexOf('=');
+      if (separator > 0) {
+        metadata[line.substring(0, separator)] = line.substring(separator + 1);
+      }
+    }
+    final frameCount = int.tryParse(metadata['nb_read_frames'] ?? '') ??
+        int.tryParse(metadata['nb_frames'] ?? '');
+    final durationSeconds = double.tryParse(metadata['duration'] ?? '');
+    final expectedSeconds =
+        expectedFrameCount * _frameInterval.inMicroseconds / 1000000;
+    if (frameCount != expectedFrameCount) {
+      throw StateError(
+        'Encoded GIF timing mismatch: frames=$frameCount, '
+        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'expectedDuration=$expectedSeconds',
+      );
+    }
+    if (durationSeconds != null &&
+        (durationSeconds - expectedSeconds).abs() > 0.05) {
+      throw StateError(
+        'Encoded GIF timing mismatch: frames=$frameCount, '
+        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'expectedDuration=$expectedSeconds',
+      );
+    }
+    if (!String.fromCharCodes(
+      outputFile.readAsBytesSync(),
+    ).contains('NETSCAPE2.0')) {
+      throw StateError('Encoded GIF is missing automatic-loop metadata');
+    }
+  } on ProcessException catch (error) {
+    throw StateError('A host GIF verification tool is required: $error');
+  } catch (_) {
+    if (outputFile.existsSync()) {
+      outputFile.deleteSync();
+    }
+    rethrow;
   }
 }
