@@ -62,6 +62,12 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if !strings.Contains(string(binding), `"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"`) {
 		t.Fatalf("expected visual acceptance layout in binding json, got %s", string(binding))
 	}
+	if !strings.Contains(string(binding), `"retrospective": "requirements/{req_id}/retrospective.md"`) {
+		t.Fatalf("expected retrospective layout in binding json, got %s", string(binding))
+	}
+	if !strings.Contains(string(binding), `"retrospective_index": "retrospectives/index.md"`) {
+		t.Fatalf("expected retrospective index layout in binding json, got %s", string(binding))
+	}
 
 	policy, err := os.ReadFile(filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"))
 	if err != nil {

@@ -23,6 +23,12 @@ For each task row in `tasks.md`:
 
 One execution cycle per task: fresh context (subagent when the tier supports it) → implement → review → mark task done in ledger.
 
+When a review or implementation cycle produces a reusable problem, record it in
+the requirement-level `retrospective.md` before starting the next attempted
+solution, then tell the user what was recorded. Follow
+[retrospective-guidance.md](retrospective-guidance.md); this remains optional
+and does not add a gate.
+
 ## progress.md ↔ ledger
 
 Append to `.ai-delivery/requirements/<req-id>/progress.md`:

@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## v0.4.1 — 2026-09-02
+
+### Added
+
+- Added an optional, framework-neutral requirement-level `retrospective.md` ledger with a compact archived problem index for progressive, scenario-matched loading. Archive registration is idempotent and does not regenerate ledger content.
 
 ### Changed
 

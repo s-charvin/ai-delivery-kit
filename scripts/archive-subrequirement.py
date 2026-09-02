@@ -13,6 +13,9 @@ It:
 4. When every executable sub-requirement is ``archived``, generates a
    requirement-level ``delivery-report.md`` from a caller-supplied template
    already localized to the user's current conversation language.
+5. If a requirement-level ``retrospective.md`` exists, registers its marked
+   problem map in the project-level retrospective index without rewriting the
+   ledger.
 
 The archive snapshot is immutable: any later byte change is caught by
 ``validate-artifact-layout.py --verify-archive``. Requirement changes must open a
@@ -24,6 +27,7 @@ from __future__ import annotations
 import argparse
 import datetime
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -65,7 +69,19 @@ def _locate_layout_dir() -> Path:
 
 
 sys.path.insert(0, str(_locate_layout_dir()))
-from layout import canonical_sha256  # noqa: E402
+from layout import (  # noqa: E402
+    artifact_path,
+    artifact_path_from_ai_delivery_dir,
+    canonical_sha256,
+    find_ai_delivery_dir,
+)
+
+RETROSPECTIVE_INDEX_START = "<!-- ai-delivery-retrospective:problem-index:v1 -->"
+RETROSPECTIVE_INDEX_END = "<!-- /ai-delivery-retrospective:problem-index:v1 -->"
+PROJECT_INDEX_START = "<!-- ai-delivery-retrospective:index:v1 -->"
+PROJECT_INDEX_END = "<!-- /ai-delivery-retrospective:index:v1 -->"
+INDEX_TEMPLATE_MARKER = "ai-delivery-retrospective:index:v1"
+INDEX_TEMPLATE_PLACEHOLDER = "<retrospective_rows>"
 
 
 def freeze(subreq_dir: Path, req_id: str, subreq_id: str, now: datetime.datetime) -> tuple[Path, list[str]]:
@@ -191,12 +207,200 @@ def render_delivery_report(
     return out
 
 
+def _table_cells(line: str) -> list[str]:
+    if not line.lstrip().startswith("|"):
+        return []
+    cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+    return cells if len(cells) >= 6 else []
+
+
+def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
+    """Read only the stable problem-map table; never synthesize its content."""
+    try:
+        lines = retrospective.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise SystemExit(f"ERROR: cannot read retrospective {retrospective}: {exc}")
+
+    try:
+        start = lines.index(RETROSPECTIVE_INDEX_START)
+        end = lines.index(RETROSPECTIVE_INDEX_END, start + 1)
+    except ValueError:
+        raise SystemExit(
+            "ERROR: retrospective is missing the stable problem-index markers"
+        )
+
+    entries: list[dict[str, str]] = []
+    for line in lines[start + 1 : end]:
+        cells = _table_cells(line)
+        if len(cells) < 6 or not cells[0].startswith("RET-") or cells[0].lower() in {"problem", "id"}:
+            continue
+        entries.append(
+            {
+                "id": cells[0],
+                "trigger": cells[1],
+                "scenario": cells[2],
+                "path": cells[3],
+                "status": cells[4],
+                "details": cells[5],
+            }
+        )
+    return entries
+
+
+def retrospective_ledger_path(req_root: Path, req_id: str) -> Path:
+    ad_dir = find_ai_delivery_dir(req_root)
+    if ad_dir is not None:
+        return artifact_path_from_ai_delivery_dir(ad_dir, "retrospective", req_id)
+    return artifact_path(req_root.parent.parent.parent, "retrospective", req_id)
+
+
+def retrospective_index_path(req_root: Path, req_id: str) -> Path:
+    ad_dir = find_ai_delivery_dir(req_root)
+    if ad_dir is not None:
+        return artifact_path_from_ai_delivery_dir(ad_dir, "retrospective_index", req_id)
+    return artifact_path(req_root.parent.parent.parent, "retrospective_index", req_id)
+
+
+def has_writable_index_block(index_text: str) -> bool:
+    try:
+        start = index_text.index(PROJECT_INDEX_START)
+        end = index_text.index(PROJECT_INDEX_END, start)
+    except ValueError:
+        return False
+    return any(
+        line.startswith("| ---")
+        for line in index_text[start:end].splitlines()
+    )
+
+
+def load_retrospective_index_template(path: Path) -> str:
+    try:
+        template = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SystemExit(f"ERROR: cannot read retrospective index template: {exc}")
+    if TEMPLATE_LANGUAGE_MARKER in template:
+        raise SystemExit(
+            "ERROR: retrospective index template still contains its language instruction"
+        )
+    if INDEX_TEMPLATE_MARKER not in template or INDEX_TEMPLATE_PLACEHOLDER not in template:
+        raise SystemExit(
+            "ERROR: retrospective index template must contain the stable marker and "
+            f"{INDEX_TEMPLATE_PLACEHOLDER}"
+        )
+    return template
+
+
+def preflight_retrospective_index(
+    req_root: Path, req_id: str, template_path: Path | None
+) -> str | None:
+    """Validate ledger/index inputs before archive state or bytes are changed."""
+    retrospective = retrospective_ledger_path(req_root, req_id)
+    if not retrospective.is_file():
+        return None
+    entries = read_retrospective_entries(retrospective)
+    if not entries:
+        return None
+
+    index = retrospective_index_path(req_root, req_id)
+    existing = index.read_text(encoding="utf-8") if index.is_file() else ""
+    if template_path is None and not has_writable_index_block(existing):
+        raise SystemExit(
+            "ERROR: first retrospective index creation requires a localized "
+            "--retrospective-index-template"
+        )
+    return (
+        load_retrospective_index_template(template_path)
+        if template_path is not None
+        else None
+    )
+
+
+def register_retrospective_index(
+    req_root: Path,
+    req_id: str,
+    archived_at: datetime.datetime,
+    template: str | None,
+) -> Path | None:
+    """Idempotently replace one requirement's rows in the project index."""
+    retrospective = retrospective_ledger_path(req_root, req_id)
+    if not retrospective.is_file():
+        return None
+
+    entries = read_retrospective_entries(retrospective)
+    if not entries:
+        return None
+
+    index = retrospective_index_path(req_root, req_id)
+    existing = index.read_text(encoding="utf-8") if index.is_file() else ""
+    rows = []
+    for entry in entries:
+        anchor = ""
+        details = entry["details"]
+        if "#" in details:
+            anchor = "#" + details.rsplit("#", 1)[1].rstrip(")")
+        target = f"{Path(os.path.relpath(retrospective, index.parent)).as_posix()}{anchor}"
+        rows.append(
+            f"| {req_id}/{entry['id']} | {entry['trigger']} | {entry['scenario']} | "
+            f"{entry['path']} | {entry['status']} | {archived_at.isoformat()} | "
+            f"[{req_id}/{entry['id']}]({target}) |"
+        )
+    row_text = "\n".join(rows)
+
+    if existing:
+        try:
+            start = existing.index(PROJECT_INDEX_START)
+            end_marker = PROJECT_INDEX_END
+            end = existing.index(end_marker, start) + len(end_marker)
+            block = existing[start:end]
+            lines = block.splitlines()
+            separator = next((i for i, line in enumerate(lines) if line.startswith("| ---")), None)
+            if separator is None:
+                raise ValueError
+            other_rows = [
+                line
+                for line in lines[separator + 1 : -1]
+                if not line.lstrip().startswith("|")
+                or not line.lstrip().startswith(f"| {req_id}/")
+            ]
+            replacement = "\n".join(
+                lines[: separator + 1] + other_rows + [row_text, lines[-1]]
+            )
+            content = existing[:start] + replacement + existing[end:]
+        except ValueError:
+            if template is None:
+                raise SystemExit(
+                    "ERROR: retrospective index has no recognized markers and no localized "
+                    "--retrospective-index-template was provided"
+                )
+            content = existing.rstrip() + "\n\n" + template.replace(INDEX_TEMPLATE_PLACEHOLDER, row_text).rstrip() + "\n"
+    else:
+        if template is None:
+            raise SystemExit(
+                "ERROR: first retrospective index creation requires a localized "
+                "--retrospective-index-template"
+            )
+        if INDEX_TEMPLATE_MARKER not in template or INDEX_TEMPLATE_PLACEHOLDER not in template:
+            raise SystemExit(
+                "ERROR: retrospective index template must contain the stable marker and "
+                f"{INDEX_TEMPLATE_PLACEHOLDER}"
+            )
+        content = template.replace(INDEX_TEMPLATE_PLACEHOLDER, row_text).rstrip() + "\n"
+    index.parent.mkdir(parents=True, exist_ok=True)
+    index.write_text(content, encoding="utf-8")
+    return index
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--req-root", type=Path, required=True, help="Requirement root (parent of sub-requirements/)")
     parser.add_argument("--subreq", type=str, required=True, help="Sub-requirement id to archive")
     parser.add_argument("--now", type=str, default=None, help="Override archive timestamp (ISO8601, for tests)")
     parser.add_argument("--no-status-write", action="store_true", help="Freeze only; do not touch status.json")
+    parser.add_argument(
+        "--retrospective-index-template",
+        type=Path,
+        help="Localized index template used when the project retrospective index is first created",
+    )
     report_group = parser.add_mutually_exclusive_group()
     report_group.add_argument(
         "--delivery-report-template",
@@ -232,6 +436,7 @@ def main() -> int:
         return 2
 
     report_template = None
+    index_template = None
     will_complete = not args.no_status_write and all_archived_after(data, args.subreq)
     if will_complete and not args.no_delivery_report:
         if args.delivery_report_template is None:
@@ -242,6 +447,14 @@ def main() -> int:
             )
             return 2
         report_template = load_delivery_report_template(args.delivery_report_template)
+    if will_complete:
+        try:
+            index_template = preflight_retrospective_index(
+                req_root, data.get("requirement_id", ""), args.retrospective_index_template
+            )
+        except SystemExit as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
 
     now = (
         datetime.datetime.fromisoformat(args.now)
@@ -265,6 +478,11 @@ def main() -> int:
             return 2
         report = render_delivery_report(req_root, data, now, report_template)
         print(f"DELIVERY_REPORT {report.relative_to(req_root)}")
+
+    if not args.no_status_write and all_archived(data):
+        index = register_retrospective_index(req_root, req_id, now, index_template)
+        if index is not None:
+            print(f"RETROSPECTIVE_INDEX {index}")
 
     return 0
 

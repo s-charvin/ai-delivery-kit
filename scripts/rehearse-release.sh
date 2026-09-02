@@ -84,6 +84,7 @@ main() {
   run_step "reconcile delivery" zsh tests/ai-delivery-skills/reconcile-delivery.test.sh
   run_step "archive immutability" bash tests/ai-delivery-skills/archive-immutability.test.sh
   run_step "delivery report language" bash tests/ai-delivery-skills/delivery-report-language.test.sh
+  run_step "retrospective ledger and index" bash tests/ai-delivery-skills/retrospective-feature.test.sh
   run_step "zero-based flow fixture" zsh tests/ai-delivery-contracts/zero-based-flow.test.sh
   run_step "ui composition guardrails" bash tests/ai-delivery-skills/ui-composition-guardrails.test.sh
   run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh

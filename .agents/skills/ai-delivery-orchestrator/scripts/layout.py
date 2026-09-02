@@ -11,6 +11,7 @@ under the `layout` key. Every path below is *relative to* `ai_delivery_path`
 (also from that file, default `.ai-delivery`).
 
 Artifact kinds come in two scopes:
+  * project-level       (shared by all requirements): retrospective_index, ...
   * requirement-level   (no sub-requirement): status, requirement, ...
   * sub-requirement-level: spec, plan, tasks, solution_design, verification, ...
 
@@ -29,6 +30,9 @@ from pathlib import Path
 DEFAULT_LAYOUT: dict = {
     "requirement_root": "requirements/{req_id}",
     "sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
+    "project_artifacts": {
+        "retrospective_index": "retrospectives/index.md",
+    },
     "requirement_artifacts": {
         "status": "requirements/{req_id}/status.json",
         "requirement": "requirements/{req_id}/requirement.md",
@@ -38,6 +42,7 @@ DEFAULT_LAYOUT: dict = {
         "progress": "requirements/{req_id}/progress.md",
         "todo": "requirements/{req_id}/todo.md",
         "delivery_report": "requirements/{req_id}/delivery-report.md",
+        "retrospective": "requirements/{req_id}/retrospective.md",
     },
     "sub_requirement_artifacts": {
         "requirement_slice": "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",
@@ -156,9 +161,36 @@ def _read_binding(repo_root: Path) -> dict | None:
 def load_layout(repo_root: Path) -> dict:
     """Read the `layout` section from project-binding.json, else fallback."""
     data = _read_binding(repo_root)
+    return _merge_layout(data)
+
+
+def _merge_layout(data: dict | None) -> dict:
+    """Merge a binding's layout over defaults without mutating either map."""
     if isinstance(data, dict) and isinstance(data.get("layout"), dict):
-        return data["layout"]
+        configured = data["layout"]
+        # Merge new optional maps so older bindings gain the canonical defaults
+        # without changing their existing paths.
+        merged = dict(DEFAULT_LAYOUT)
+        for key, value in configured.items():
+            if isinstance(value, dict) and isinstance(merged.get(key), dict):
+                merged[key] = {**merged[key], **value}
+            else:
+                merged[key] = value
+        return merged
     return dict(DEFAULT_LAYOUT)
+
+
+def load_layout_from_ai_delivery_dir(ai_delivery_dir: Path | str) -> dict:
+    """Read a binding directly when its configured path is nested or custom."""
+    try:
+        data = json.loads(
+            (Path(ai_delivery_dir) / "meta" / "project-binding.json").read_text(
+                encoding="utf-8"
+            )
+        )
+    except (OSError, json.JSONDecodeError):
+        data = None
+    return _merge_layout(data if isinstance(data, dict) else None)
 
 
 def ai_delivery_path(repo_root: Path) -> Path:
@@ -178,27 +210,55 @@ def _fmt(template: str, req_id: str, sr_id: str | None, unit_id: str | None, ts:
 def artifact_path(
     repo_root: Path | str,
     kind: str,
-    req_id: str,
+    req_id: str = "",
     sr_id: str | None = None,
     unit_id: str | None = None,
     ts: str | None = None,
 ) -> Path:
     """Resolve the canonical on-disk path of an artifact kind.
 
-    `kind` must be one of the keys in DEFAULT_LAYOUT's two artifact maps.
-    Requirement-level kinds ignore sr_id/unit_id/ts; sub-requirement kinds
+    `kind` must be one of the keys in the configured project, requirement, or
+    sub-requirement artifact maps. Project-level kinds ignore all identifiers;
+    requirement-level kinds ignore sr_id/unit_id/ts; sub-requirement kinds
     require sr_id (and ts for `manifest`).
     """
     layout = load_layout(Path(repo_root))
+    project_map = layout.get("project_artifacts", {})
     req_map = layout.get("requirement_artifacts", {})
     sub_map = layout.get("sub_requirement_artifacts", {})
-    if kind in req_map:
+    if kind in project_map:
+        rel = _fmt(project_map[kind], req_id, sr_id, unit_id, ts)
+    elif kind in req_map:
         rel = _fmt(req_map[kind], req_id, sr_id, unit_id, ts)
     elif kind in sub_map:
         rel = _fmt(sub_map[kind], req_id, sr_id, unit_id, ts)
     else:
         raise KeyError(f"unknown artifact kind: {kind!r}")
     return ai_delivery_path(Path(repo_root)) / rel
+
+
+def artifact_path_from_ai_delivery_dir(
+    ai_delivery_dir: Path | str,
+    kind: str,
+    req_id: str = "",
+    sr_id: str | None = None,
+    unit_id: str | None = None,
+    ts: str | None = None,
+) -> Path:
+    """Resolve an artifact from an already located governed directory."""
+    layout = load_layout_from_ai_delivery_dir(ai_delivery_dir)
+    project_map = layout.get("project_artifacts", {})
+    req_map = layout.get("requirement_artifacts", {})
+    sub_map = layout.get("sub_requirement_artifacts", {})
+    if kind in project_map:
+        rel = _fmt(project_map[kind], req_id, sr_id, unit_id, ts)
+    elif kind in req_map:
+        rel = _fmt(req_map[kind], req_id, sr_id, unit_id, ts)
+    elif kind in sub_map:
+        rel = _fmt(sub_map[kind], req_id, sr_id, unit_id, ts)
+    else:
+        raise KeyError(f"unknown artifact kind: {kind!r}")
+    return Path(ai_delivery_dir) / rel
 
 
 def requirement_dir(repo_root: Path | str, req_id: str) -> Path:
@@ -390,8 +450,9 @@ def iter_spec_artifacts(traceability: dict | None) -> list[dict]:
     return legacy
 
 
-def _repo_root_from_ai_delivery_dir(ad_dir: Path) -> Path:
+def repo_root_from_ai_delivery_dir(ad_dir: Path | str) -> Path:
     """Resolve the repository root from an ai_delivery_path binding."""
+    ad_dir = Path(ad_dir)
     try:
         data = json.loads(
             (ad_dir / "meta" / "project-binding.json").read_text(encoding="utf-8")
@@ -432,7 +493,7 @@ def _resolve_canonical(subreq_dir: Path, rel: str) -> Path:
         governed_relative = ad_dir / p
         if governed_relative.is_file():
             return governed_relative
-        repo_relative = _repo_root_from_ai_delivery_dir(ad_dir) / p
+        repo_relative = repo_root_from_ai_delivery_dir(ad_dir) / p
         if repo_relative.is_file():
             return repo_relative
     marker = "sub-requirements/"
@@ -516,6 +577,8 @@ def _selftest() -> int:
         )
         p = artifact_path(root, "spec", "REQ-9", sr_id="SR-002")
         assert p == root / "governed" / "requirements" / "REQ-9" / "sub-requirements" / "SR-002" / "spec" / "spec.md", p
+        assert artifact_path(root, "retrospective", "REQ-9") == root / "governed" / "requirements" / "REQ-9" / "retrospective.md"
+        assert artifact_path(root, "retrospective_index") == root / "governed" / "retrospectives" / "index.md"
 
     # 3) canonical_sha256 is stable across cosmetic whitespace
     a = canonical_sha256("line1\nline2  \n")

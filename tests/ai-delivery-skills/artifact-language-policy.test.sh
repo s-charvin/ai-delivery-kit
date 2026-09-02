@@ -22,6 +22,8 @@ for rel in \
   .agents/skills/ai-delivery-orchestrator/templates/design-template.md \
   .agents/skills/ai-delivery-orchestrator/templates/todo-template.md \
   .agents/skills/ai-delivery-orchestrator/templates/verification-template.md \
+  .agents/skills/ai-delivery-orchestrator/templates/retrospective-template.md \
+  .agents/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md \
   .agents/skills/requirement-breakdown/templates/requirement-slice-template.md
 do
   require_contains "$ROOT/$rel" 'ai-delivery-template-language'
@@ -76,6 +78,8 @@ for rel in \
   .agents-zh/skills/ai-delivery-orchestrator/templates/design-template.md \
   .agents-zh/skills/ai-delivery-orchestrator/templates/todo-template.md \
   .agents-zh/skills/ai-delivery-orchestrator/templates/verification-template.md \
+  .agents-zh/skills/ai-delivery-orchestrator/templates/retrospective-template.md \
+  .agents-zh/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md \
   .agents-zh/skills/requirement-breakdown/templates/requirement-slice-template-zh.md
 do
   require_contains "$ROOT/$rel" 'ai-delivery-template-language'

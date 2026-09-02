@@ -169,6 +169,7 @@ bash scripts/rehearse-release.sh
 
 - `merged` = 代码已集成到开发分支
 - `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
+- 可选的 `retrospective.md` 是需求级活复盘台账。归档时原样保留，并将其带稳定标记的问题地图登记到 `.ai-delivery/retrospectives/index.md`，供后续需求按场景渐进加载。
 - CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
 - 归档最后一个子需求时，先用用户当前对话语言实例化 `delivery-report-template.md`，删除语言指令注释，再通过 `--delivery-report-template <path>` 传入
 

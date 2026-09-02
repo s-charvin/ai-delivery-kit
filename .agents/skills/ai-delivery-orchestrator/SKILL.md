@@ -26,6 +26,23 @@ workflow's existing record or current action report. If a selected scenario's
 relationship is unclear, record `unknown` and ask rather than assuming
 compatibility. The reference does not replace the host workflow's own rules.
 
+## Retrospective ledger (optional)
+
+Use the requirement-level `retrospective.md` ledger as a lightweight memory aid
+when a delivery problem has reuse value. Read [references/retrospective-guidance.md](references/retrospective-guidance.md)
+before creating or updating it. Record a reusable failure, a wrong AI attempt,
+a user/review correction, or a verification failure while the evidence is
+available; record the failed attempt before trying the next approach. Do not
+record trivial mechanical fixes. Keep the marked summary problem map and the
+detailed problem records in summary-to-detail order.
+
+After every ledger update, tell the user the `RET-###` ID, what was added, and
+the file path. This is optional and never a gate. On resume, read the current
+problem map; when a new symptom appears, use the project retrospective index
+as a routing map and load only matching historical problem sections. Similar
+keywords are not sufficient: applicability conditions and current evidence
+must match.
+
 ## Artifact language
 
 - Treat bundled template prose as an English source default, not as the output language.
@@ -173,8 +190,11 @@ API docs pass directly to the spec pipeline and implementation. Gaps → `integr
 ## User entry
 
 1. Inspect `.ai-delivery/requirements/*`, `status.json`, run reconcile.
-2. Recommend `continue req-xxx` or `create req-yyy`.
-3. Pause for human confirmation before routing.
+2. Read `.ai-delivery/retrospectives/index.md` if it exists; select matching
+   problem rows and load only their linked sections. If the current requirement
+   has `retrospective.md`, read its problem map for unfinished investigation.
+3. Recommend `continue req-xxx` or `create req-yyy`.
+4. Pause for human confirmation before routing.
 
 | Intent | Mode |
 |--------|------|
@@ -193,7 +213,25 @@ Checkpoints: CP-UI (pre-enabled UI truth production code), CP-DESIGN (full solut
 
 ## Completion
 
-All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` as a temporary template in the user's current conversation language, remove its `ai-delivery-template-language` comment, and preserve its placeholders. Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json` and advance status to `archived`; pass the prepared template to the final command with `--delivery-report-template <path>`. Do not claim `completed` until the localized `delivery-report.md` exists. When every subreq is `archived`, the requirement is `completed` and the archive is immutable — any change requires a new `<req-id>/` directory.
+All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before
+the final archive command, instantiate `templates/delivery-report-template.md`
+as a temporary template in the user's current conversation language, remove its
+`ai-delivery-template-language` comment, and preserve its placeholders. Run
+`scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` +
+`MANIFEST.json` and advance status to `archived`; pass the prepared template to
+the final command with `--delivery-report-template <path>`. If the requirement
+has `retrospective.md`, also instantiate
+`templates/retrospective-index-template.md` in the user's current conversation
+language, remove its `ai-delivery-template-language` instruction, preserve its
+markers and placeholder, and pass it to the final command with
+`--retrospective-index-template <path>`. The archive command reads the marked
+problem map and idempotently updates `.ai-delivery/retrospectives/index.md`; it
+does not create, rewrite, summarize, or audit the ledger. If no ledger exists,
+no retrospective file or index row is created. Tell the user which problem rows
+were registered.
+Do not claim `completed` until the localized `delivery-report.md` exists. When
+every subreq is `archived`, the requirement is `completed` and the archive is
+immutable — any change requires a new `<req-id>/` directory.
 
 ## Orchestration shape (invariants)
 

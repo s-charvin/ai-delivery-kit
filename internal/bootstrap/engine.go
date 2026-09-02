@@ -76,6 +76,9 @@ func (e Engine) Run(cfg Config) error {
 		"layout": map[string]any{
 			"requirement_root":    "requirements/{req_id}",
 			"sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
+			"project_artifacts": map[string]any{
+				"retrospective_index": "retrospectives/index.md",
+			},
 			"requirement_artifacts": map[string]any{
 				"status":            "requirements/{req_id}/status.json",
 				"requirement":       "requirements/{req_id}/requirement.md",
@@ -85,6 +88,7 @@ func (e Engine) Run(cfg Config) error {
 				"progress":          "requirements/{req_id}/progress.md",
 				"todo":              "requirements/{req_id}/todo.md",
 				"delivery_report":   "requirements/{req_id}/delivery-report.md",
+				"retrospective":     "requirements/{req_id}/retrospective.md",
 			},
 			"sub_requirement_artifacts": map[string]any{
 				"requirement_slice": "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",

@@ -77,6 +77,11 @@ How each step is executed depends on the tier (superpowers skills, ECC agents, o
 
 ### Failure triage before editing code
 
+When a triage result is reusable, append the problem and the attempted solution
+to the requirement-level `retrospective.md` before trying another solution.
+Afterward tell the user the problem ID and the recorded conclusion. This is an
+optional memory aid, not a substitute for current evidence or a workflow gate.
+
 When a task stalls or a scenario fails, first classify the failure and verify
 the smallest candidate cause before changing business code. Check candidates in
 roughly this order: state propagation / wiring; copy vs. reference semantics;

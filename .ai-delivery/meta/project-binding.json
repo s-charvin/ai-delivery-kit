@@ -6,6 +6,9 @@
   "layout": {
     "requirement_root": "requirements/{req_id}",
     "sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
+    "project_artifacts": {
+      "retrospective_index": "retrospectives/index.md"
+    },
     "requirement_artifacts": {
       "status": "requirements/{req_id}/status.json",
       "requirement": "requirements/{req_id}/requirement.md",
@@ -14,7 +17,8 @@
       "dependency_graph": "requirements/{req_id}/dependency-graph.json",
       "progress": "requirements/{req_id}/progress.md",
       "todo": "requirements/{req_id}/todo.md",
-      "delivery_report": "requirements/{req_id}/delivery-report.md"
+      "delivery_report": "requirements/{req_id}/delivery-report.md",
+      "retrospective": "requirements/{req_id}/retrospective.md"
     },
     "sub_requirement_artifacts": {
       "requirement_slice": "requirements/{req_id}/sub-requirements/{sr_id}/requirement-slice.md",

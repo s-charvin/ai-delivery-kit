@@ -22,6 +22,17 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 已有记录或当前动作报告；选中场景的关系不清楚时记录 `unknown` 并询问，不要默认兼容。
 该参考不替代宿主工作流自身的规则。
 
+## 复盘台账（可选）
+
+当交付问题具有复用价值时，使用需求级 `retrospective.md` 作为轻量记忆辅助。
+创建或更新前阅读 [references/retrospective-guidance.md](references/retrospective-guidance.md)。
+在证据仍然可用时记录可复用的失败、错误的 AI 方案、用户/评审纠偏或验证失败；开始下一个方案前先记录失败方案。
+不要记录普通机械修正。保持带标记的问题地图与详细问题记录的总分结构。
+
+每次更新台账后，告诉用户 `RET-###` 编号、增加了什么以及文件路径。它是可选的，绝不是门禁。
+恢复会话时读取当前问题地图；出现新现象时，将项目复盘索引作为路由表，只加载匹配的历史问题章节。
+只有适用条件和当前证据都匹配才算命中，关键词相似不够。
+
 ## 产物语言
 
 - 内置模板文本只是英文源默认值，不是最终输出语言。
@@ -169,8 +180,10 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 ## 用户入口
 
 1. 检查 `.ai-delivery/requirements/*`、`status.json`，运行对账。
-2. 推荐 `continue req-xxx` 或 `create req-yyy`。
-3. 路由前暂停等待人工确认。
+2. 如果存在则读取 `.ai-delivery/retrospectives/index.md`，筛选匹配的问题行并只加载链接的章节。
+   当前需求有 `retrospective.md` 时，读取其问题地图以恢复未完成排查。
+3. 推荐 `continue req-xxx` 或 `create req-yyy`。
+4. 路由前暂停等待人工确认。
 
 | 意图 | 模式 |
 |------|------|
@@ -189,7 +202,7 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 ## 完成
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并将状态推进至 `archived`；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并将状态推进至 `archived`；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求有 `retrospective.md` 时，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档动作只读取台账带标记的问题地图，并幂等更新 `.ai-delivery/retrospectives/index.md`；不会创建、重写、总结或审计台账。没有台账时，不创建复盘文件或索引行，并告知用户登记了哪些问题行。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
 
 ## 编排形态（不变量）
 

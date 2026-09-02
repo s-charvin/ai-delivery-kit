@@ -19,6 +19,7 @@
     dependency-graph.json        # 依赖数据唯一 canonical 形态
     progress.md  todo.md
     delivery-report.md           # 新增：结项报告（archive 动作产出）
+    retrospective.md             # 可选：需求级活复盘台账，归档时原样保留
     sub-requirements/<SR-xxx>/
       requirement-slice.md  decisions.md  README.md  traceability.json
       design.md                  # 新增：规范方案设计文件（solution-design；替代 status.json notes 碎片）
@@ -29,6 +30,8 @@
       archive/<ISO-ts>/          # flow-forward 冻结区
         spec.md plan.md tasks.md design.md verification.md
         MANIFEST.json            # sha256 清单，不可变性的机器校验依据
+  retrospectives/
+    index.md                     # 可选：已归档问题的精简路由索引
 ```
 
 ## 2. 框架隔离（无派生治理视图）
@@ -67,6 +70,9 @@
 - skill 侧读取器：`.agents/skills/ai-delivery-orchestrator/scripts/layout.py`
 - coordination MCP（可选）：读取同一 `project-binding.json` layout 段（见 coordination 仓库 `config/paths.py`）
 - hash 规范化（两侧一致）：去 CRLF、去行尾空白、去文末空白后再算 sha256，避免误报。
+
+复盘台账与索引是可选学习产物：台账在需求开发中按需创建和更新；归档时只从带稳定标记的问题地图幂等登记索引，
+不重新生成或总结台账正文。新需求先读索引，再按触发信号和适用场景加载匹配的问题章节。
 
 ## 5. 能力模式与其他收敛规则
 

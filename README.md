@@ -173,6 +173,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 - `merged` = code integrated on the dev branch
 - `archived` = immutable freeze (`archive/` + `MANIFEST.json`); requirement completes when all executable subreqs are `archived`
+- Optional `retrospective.md` is a requirement-level living ledger. Archive keeps it as-is and registers its marked problem map in `.ai-delivery/retrospectives/index.md` for progressive, scenario-matched loading.
 - Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`
 - For the final sub-requirement, instantiate `delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and pass it with `--delivery-report-template <path>`
 

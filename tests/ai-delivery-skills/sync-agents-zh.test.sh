@@ -94,7 +94,7 @@ require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
 
 # Orchestrator reference parity (same filenames, zh tree translated)
-for ref in framework-adaptation.md workspace-policy.md handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md scenario-guidance.md; do
+for ref in framework-adaptation.md workspace-policy.md handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md scenario-guidance.md retrospective-guidance.md; do
   require_file "$SRC/ai-delivery-orchestrator/references/$ref"
   require_file "$DST/ai-delivery-orchestrator/references/$ref"
   require_han_content "$DST/ai-delivery-orchestrator/references/$ref"
@@ -112,6 +112,8 @@ for template in \
   status-template.json \
   todo-template.md \
   visual-acceptance-template.json \
+  retrospective-template.md \
+  retrospective-index-template.md \
   verification-template.md
 do
   source_template="$SRC/ai-delivery-orchestrator/templates/$template"
