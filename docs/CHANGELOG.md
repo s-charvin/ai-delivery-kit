@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- `ui-truth-mapping` now requires failure triage before adjusting code: classify the failing layer (compositing/geometry semantics, capture/preview tooling, resource availability, or implementation) and verify the smallest candidate cause first. A visually identical frame without a contrasting source is an evidence limitation, not proof of an effect bug; manufacturing a difference with shadows, fake content, or substitute visuals is prohibited.
+- Stage 4 implementation guidance adds a failure-class catalog: async restore must not overwrite live user state; debug gates must be explicit and distinguishable from empty results; runtime completion callbacks are candidate signals guarded by minimum elapsed time; visible-layer swaps need a single owner and atomic handover; one visual entity needs one layout source; distinct states must not collapse into one flag; telemetry must distinguish first entry from state change; intermediate work must stay compilable and never serve as acceptance evidence.
+- Stage 4 implementation guidance requires that mid-delivery decision corrections retire superseded tests, wiring, branches, cache behavior, and documentation statements in the same change batch. Temporary protocol assumptions (endpoints, token fields, expiry, error codes, migration facts) must be marked as such and never recorded as confirmed facts.
+- English source and the `.agents-zh` mirror are kept in sync for the above guidance.
+
 ## v0.4.0 — 2026-09-01
 
 ### Changed

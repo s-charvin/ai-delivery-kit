@@ -75,6 +75,61 @@ The `implement` action always follows this chain, regardless of framework tier:
 
 How each step is executed depends on the tier (superpowers skills, ECC agents, or native discipline): see [frameworks/superpowers.md](frameworks/superpowers.md), [frameworks/ecc.md](frameworks/ecc.md), [frameworks/native.md](frameworks/native.md).
 
+### Failure triage before editing code
+
+When a task stalls or a scenario fails, first classify the failure and verify
+the smallest candidate cause before changing business code. Check candidates in
+roughly this order: state propagation / wiring; copy vs. reference semantics;
+model representation; time and async ordering; resource availability or an
+as-yet-unconfirmed protocol. Then make the smallest change and re-run only the
+narrowest failing evidence.
+
+Common classes with their default fix path:
+
+- **Async restore racing live user state.** Delayed initialization or restore
+  must treat the user's already-advanced live state as the local truth: merge
+  configuration and appearance into it, but never overwrite live progress with
+  a later-arriving snapshot.
+- **Debug gates leaking into production.** A temporary early return, mock, or
+  disabled path must be explicit, observable, and isolated. Callers must be
+  able to distinguish "empty result" from "disabled"; never leave a silent
+  debug disable inside a shared production path.
+- **Runtime callbacks treated as proof of completion.** Completion or
+  transition events can fire early, on the wrong track, or out of order. Treat
+  them as candidate signals and guard visual/flow duration with a minimum
+  elapsed time plus a business-layer timeout fallback.
+- **Two visible layers overlapping during a swap.** Define a single
+  visible-layer owner and switch atomically once the real resource is ready;
+  delaying a few frames only lowers the repro rate.
+- **Parallel layout algorithms for one visual entity.** Unify geometry,
+  centering, and sizing in one layout/coordinate source of truth instead of
+  patching per-surface constants.
+- **Folding several states into one flag.** Do not collapse "request
+  triggered", "step entered", "server completed", "still needed locally", or
+  "credential still valid" into one boolean. Model request timing, lifecycle,
+  persistence semantics, one-time permissions, and restart behavior
+  separately; deduplicate same-session requests; do not fake success on
+  failure.
+- **Telemetry treats change as display.** First entry, restored entry,
+  re-render, and step switch have different meanings. Fire the initial
+  exposure explicitly, land event producers and consumers as pairs, and mark
+  unimplemented remote events as unfinished instead of emitting local
+  substitutes.
+- **Half-finished code polluting verification.** Keep every intermediate state
+  compilable, land producer/consumer pairs together, replace scattered string
+  literals with typed constants, and run static checks before the slice tests.
+  A partial state is not acceptance evidence.
+
+### Decision corrections retire superseded artifacts
+
+When the user confirms a new decision, correction, or scope narrowing
+mid-delivery, retire the superseded implementation assumptions, tests, wiring,
+branches, cache behavior, and documentation statements in the same change batch
+or the immediate follow-up. Do not keep the old path as a fallback or add a
+compatibility shim. A temporary assumption or guess — endpoint names, token
+fields, expiry, error codes, migration facts — must be marked as such in the
+record and must never be written as a confirmed fact.
+
 ## Review loop (task-level closed loop)
 
 Every task and every visual-acceptance failure closes through this loop, regardless of framework tier:

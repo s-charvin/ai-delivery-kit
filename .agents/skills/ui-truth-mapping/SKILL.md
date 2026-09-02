@@ -345,6 +345,26 @@ Web: open/build the component the way that repo already previews (Storybook, a l
 
 Do **not** claim freeze from "the widget looks right" without a preview path. Do **not** generate `contract-preview-*.png` as a substitute for the official golden.
 
+### 6b. Failure triage before adjusting code
+
+When a preview does not match expectations, classify which layer owns the
+failure before editing: compositing/geometry semantics, capture or preview
+tooling, resource availability, or component implementation. Verify each
+candidate with the smallest check first, then make the smallest code change and
+regenerate only the affected evidence with fresh hashes.
+
+- For mask/alpha/blend/clip effects, first verify geometry range, alpha curve,
+  composite semantics, and hit-test behavior. A visually identical frame when
+  no contrasting source is present is an evidence limitation, not proof of an
+  effect bug: do not add shadow, fake content, or substitute visuals to make the
+  frame look different; record the limitation instead.
+- For text geometry, verify wrap and line count under the real typography,
+  locale, direction, text scale, and constraints before changing sizes.
+- For motion, decode frame count, total duration, loop metadata, and the
+  trigger-to-settled timeline before re-encoding or editing animation code.
+- For input/IME visuals, confirm the control is driven by real focus, value,
+  validation, and IME state before changing icons or decorations.
+
 ### 7. Index and status
 
 Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v2 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, and confirmation metadata, never paint.
@@ -410,3 +430,5 @@ When a unit is deleted, replaced, or rebuilt under a new id: redirect active poi
 - Recording only animation keyframes while omitting trigger, interruption, reduced-motion, or resource/performance behavior.
 - Recording a content image without loading/error/offline, crop/focal point, density/scaling, cache, fixture, and semantics decisions when those cases apply.
 - Scanning every historical unit to "find" a match; rewriting an entire matched widget for a small requirement.
+- Changing business code, preview tooling, and acceptance evidence together for one symptom without first classifying which layer owns the failure.
+- Treating a visually identical frame as proof of a compositing/color defect when the frame has no contrasting source, then adding shadow, fake content, or substitute visuals to manufacture a difference.

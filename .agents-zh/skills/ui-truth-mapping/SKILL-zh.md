@@ -331,6 +331,22 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 **不要** 在没有预览路径时凭「Widget 看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方 golden。
 
+### 6b. 调整代码前的失败分级
+
+预览不符合预期时，先判定失败归属哪一层再改动：合成/几何语义、捕获或预览
+工具、资源可用性、或组件实现。先用最小检查逐项验证候选根因，再做最小代码
+改动，并只重新生成受影响证据与新的 hash。
+
+- mask/alpha/blend/clip 效果先验证几何范围、alpha 曲线、合成语义与
+  hit-test。画面没有对比源时「看起来没差异」是证据受限，不是效果缺陷的
+  证据：不要为了制造差异叠加阴影、假内容或替代视觉，而是记录证据受限。
+- 文字几何先按真实字体、locale、方向、文字缩放与约束检查换行和行数，
+  再决定是否改尺寸。
+- 动效先解码并核对帧数、总时长、循环元数据与 trigger→settled 时间线，
+  再重新编码或修改动画代码。
+- 输入/IME 视觉先确认控件由真实 focus、value、validation 与 IME 状态驱动，
+  再决定是否更换图标或装饰。
+
 ### 7. 索引与状态
 
 按 v2 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针、环境 profile、coverage、治理 hash/来源/确认元数据，绝不存绘制。
@@ -396,3 +412,5 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 - 动效只记录 keyframe，却漏掉 trigger、中断、reduced-motion 或资源/性能行为。
 - 对适用的内容图片漏掉 loading/error/offline、crop/focal point、density/scaling、cache、fixture 与 semantics 决策。
 - 扫描每一个历史单元来「找」匹配；为了小需求重写整个已匹配 Widget。
+- 同一症状同时改动业务代码、预览工具和验收证据，而没先分类失败归属层。
+- 画面没有对比源时，把「视觉上看不出差异」当作合成/颜色缺陷的证据，并用阴影、假内容或替代视觉制造差异。
