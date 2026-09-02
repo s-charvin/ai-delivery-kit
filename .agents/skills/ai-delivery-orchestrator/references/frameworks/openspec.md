@@ -31,7 +31,7 @@ Never initialize or install OpenSpec yourself; if detection is ambiguous, ask th
   - proposal accepted after all state/content/motion/assets/accessibility expectations map to unit/scenario ids → `spec_ready`
   - `design.md` audited for scenario implementation and verification ownership → `plan_ready`
   - `tasks.md` audited for granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage → `tasks_ready`
-- Do not run `openspec archive`; it writes a second governance copy outside `.ai-delivery`. The orchestrator `archive` action alone freezes the canonical three-piece spec set + `design.md` + `verification.md` into `.ai-delivery/requirements/<req>/sub-requirements/<SR>/archive/<ISO-ts>/` with `MANIFEST.json`.
+- Do not run `openspec archive`; it writes a second governance copy outside `.ai-delivery`. The orchestrator `archive` action only updates `status.json` in place; it does not copy the canonical spec set, `design.md`, or `verification.md`, and does not create `archive/` or `MANIFEST.json`.
 - If the change conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch` instead of editing the delta until it "passes".
 
 ## Traceability recording

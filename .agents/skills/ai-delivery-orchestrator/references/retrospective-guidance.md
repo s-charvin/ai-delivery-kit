@@ -63,7 +63,7 @@ ledger and no index entry. The index update copies existing summaries only; it
 does not infer missing problems or perform a memory audit.
 
 The requirement-level ledger remains next to its requirement artifacts as the
-full historical source. The archive snapshot for sub-requirements and the
-delivery report keep their existing responsibilities. Once the requirement is
+full historical source. The delivery report keeps its summary responsibility;
+there is no second sub-requirement artifact copy. Once the requirement is
 archived, treat its ledger and index entry as read-only; record later discoveries
 in a new requirement and link back to the old problem where useful.

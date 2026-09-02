@@ -126,7 +126,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 3. After a `design_mode=full` solution-design session — CP-DESIGN, explicit approval before `spec`
 4. After `tasks_ready` — CP-001, confirm before the remaining development work
 5. Review-loop budget exhausted — the task-level review loop (implement → review → fix → re-review) stopped without a clean round; report outstanding findings and wait for the user
-6. After all subreqs `merged` — CP-ARCHIVE, confirm freezing the immutable archive before marking `archived`
+6. After all subreqs `merged` — CP-ARCHIVE, confirm converging each subreq status in place to `archived`
 
 ## Hard boundary
 
@@ -144,7 +144,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - For `ui_truth_mode=figma` or `runtime-baseline`, do not set `acceptance_frozen` until each UI unit has a real host-stack component, complete applicability-gated runtime coverage, an official-stack preview for every visual scenario whose **absolute path** was shown to the user, a valid v2 `contracts/ui-truth-index.json` with matching SHA-256 hashes and confirmation bound to current preview hashes, separate static visual confirmation and motion confirmation/waiver (including an explicit confirmed static/no-motion decision), and a clean Stage 2 review. When the host can deterministically record the real motion, include the GIF preview path and hash; when it cannot, record the reason and defer that runtime acceptance to Stage 4. Stage 4 must record independent motion acceptance for every unit before `visual_acceptance_passed`. Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`. Do not use an unapproved placeholder, generic icon, dummy/fixture visual, painted input shell, or silent asset fallback; missing resources require an explicit user choice to render empty, defer, or block. A missing data-bound value must render the real empty/omitted state, never fabricated content.
 - Stage 4: for `ui_truth_mode=figma` or `runtime-baseline`, reuse the Stage 2 user-approved workspace; do not create a second workspace or re-draw the component. `existing` uses the existing component and ordinary behavior/semantic checks; `none` has no UI truth artifact. Do not re-query TemPad / run `figma-design-to-code` by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
 - Do not set `merged` for `ui_truth_mode=figma` or `runtime-baseline` without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid v2 `ui-truth-index.json` + structured `visual-acceptance.json` covering every indexed scenario. `none` and `existing` close through ordinary verification.
-- Do not set `archived` without a frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256 (run `scripts/archive-subrequirement.py` per subreq); `archived` is immutable — never edit its archived artifacts in place.
+- Set `archived` only through `scripts/archive-subrequirement.py` after CP-ARCHIVE confirmation. The action updates `status.json` in place and must not create an `archive/<ISO-ts>/` directory, copy canonical artifacts, or write `MANIFEST.json`. The completed requirement directory remains the historical source of truth; subsequent changes use a new `<req-id>` directory.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
 - Edit one file at a time during implementation; rebase branches (no merge commits).
 
@@ -155,7 +155,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 | `acceptance_frozen` | Required only for `ui_truth_mode=figma` or `runtime-baseline`: CP-UI recorded; user-approved workspace evidence recorded; real component compiles; Stage 2 TDD/review clean; all ten runtime dimensions are `covered` or reasoned `not_applicable`; preview paths, v2 index hashes/provenance/profile/scenario coverage, preview-bound static confirmations, and motion confirmations/waivers (with unavailable-preview reasons when needed) validate |
 | `spec/plan/tasks_ready` (UI truth) | Valid prior `acceptance_frozen`; v2 index paths, hashes, coverage, and confirmation bindings still validate |
 | `merged` (UI truth) | UI truth mode has prior `acceptance_frozen` + `visual_acceptance_passed` + valid v2 index + structured `visual-acceptance.json`; `existing` uses ordinary behavior/semantic evidence, and `none` skips visual acceptance |
-| `archived` | Frozen `archive/<ISO-ts>/` snapshot + `MANIFEST.json` sha256; immutable (verified by `--verify-archive`) |
+| `archived` | Status converged in place; canonical artifacts remain at their original paths and later changes use a new requirement directory |
 
 ## Split decision
 
@@ -217,8 +217,8 @@ All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before
 the final archive command, instantiate `templates/delivery-report-template.md`
 as a temporary template in the user's current conversation language, remove its
 `ai-delivery-template-language` comment, and preserve its placeholders. Run
-`scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` +
-`MANIFEST.json` and advance status to `archived`; pass the prepared template to
+`scripts/archive-subrequirement.py` per subreq to advance status to `archived` in
+place without copying canonical artifacts; pass the prepared template to
 the final command with `--delivery-report-template <path>`. If the requirement
 has `retrospective.md`, also instantiate
 `templates/retrospective-index-template.md` in the user's current conversation
@@ -230,8 +230,8 @@ does not create, rewrite, summarize, or audit the ledger. If no ledger exists,
 no retrospective file or index row is created. Tell the user which problem rows
 were registered.
 Do not claim `completed` until the localized `delivery-report.md` exists. When
-every subreq is `archived`, the requirement is `completed` and the archive is
-immutable — any change requires a new `<req-id>/` directory.
+every subreq is `archived`, the requirement is `completed`; canonical artifacts
+remain in place and any later change requires a new `<req-id>` directory.
 
 ## Orchestration shape (invariants)
 

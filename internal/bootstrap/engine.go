@@ -102,7 +102,6 @@ func (e Engine) Run(cfg Config) error {
 				"plan":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
 				"tasks":             "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
 				"ui_truth_index":    "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
-				"manifest":          "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
 			},
 		},
 		"updated_at": timestamp,
@@ -217,17 +216,17 @@ func (e Engine) Run(cfg Config) error {
 			"max_rounds": 3,
 		},
 		"spec_persistence": map[string]any{
-			"_doc":     "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work uses flow_forward with an immutable archive and a new requirement directory for changes",
+			"_doc":     "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work keeps canonical artifacts in place and uses a new requirement directory for changes",
 			"active":   "living",
-			"complete": "flow_forward",
+			"complete": "in_place",
 			"living": map[string]any{
 				"source_of_truth":   "spec/spec.md",
 				"derived":           []string{"spec/plan.md", "spec/tasks.md"},
 				"on_drift":          "downgrade_to_spec_ready",
 				"before_regenerate": "Record prior key decisions in decisions.md before regeneration",
 			},
-			"flow_forward": map[string]any{
-				"immutable_root":  "archive",
+			"in_place": map[string]any{
+				"source_of_truth": "canonical_artifacts",
 				"change_requires": "new_requirement_dir",
 			},
 		},
@@ -242,7 +241,7 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"archive": map[string]any{
-			"_doc":               "Flow-forward freeze: merged -> archived requires CP-ARCHIVE confirmation; archive/ is immutable and verified by MANIFEST.json SHA-256",
+			"_doc":               "In-place archive: merged -> archived requires CP-ARCHIVE confirmation; canonical artifacts remain in their original locations",
 			"require_checkpoint": "CP-ARCHIVE",
 			"immutable":          true,
 		},

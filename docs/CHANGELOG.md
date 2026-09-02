@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- Archive actions now converge sub-requirement status in place without creating duplicate `archive/<ISO-ts>/` directories or `MANIFEST.json` copies. Delivery reports reference canonical artifact locations, while legacy snapshots remain available for explicit compatibility checks.
+
 ## v0.4.1 — 2026-09-02
 
 ### Added

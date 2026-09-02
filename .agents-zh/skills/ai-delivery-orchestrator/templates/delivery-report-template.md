@@ -4,27 +4,27 @@
 
 # 交付报告 — <req-id>
 
-> 由 archive 动作自动生成（所有子需求已冻结归档）。本文件是需求交付的不可变总结，对应 `runtime_mode=completed`（全部子需求 `archived`）。
+> 由 archive 动作自动生成（所有子需求已归档）。本文件是 `runtime_mode=completed` 的交付摘要；canonical 产物保留在各自需求目录中。
 
 ## 概览
 
 - 需求 ID：<req-id>
 - 归档时间：<archived_at>
 - 子需求数：<subreq_count>
-- 冻结快照：各子需求 `archive/<ISO-ts>/` + `MANIFEST.json`（sha256 校验）
+- canonical 产物：各子需求产物保留在原目录中；本文件仅提供摘要。
 
 ## 子需求清单
 
-| 子需求 | 状态 | 归档快照 | verification |
+| 子需求 | 状态 | canonical 产物 | verification |
 |--------|------|----------|-------------|
 <subreq_rows>
 
 ## 验证摘要
 
 - 每个子需求的 `verification.md` 已签署，并包含评审轮次、验证命令与结果、签署对应的三个必备语言无关标记。
-- `validate-artifact-layout.py --verify-archive` 对全部归档快照通过 sha256 校验，无篡改。
+- `validate-artifact-layout.py --verify-archive` 仅在旧仓库存在历史快照时额外校验；当前原位归档不要求快照。
 
 ## 变更与后续
 
-- 需求后续变更须开新 `<req-id>/` 目录；本目录作为只读引用，不可变。
-- 归档不可变性的机器校验依据为各 `archive/<ISO-ts>/MANIFEST.json` 的 sha256 清单。
+- 需求后续变更须开新 `<req-id>/` 目录；已完成需求目录保留为历史事实源。
+- 归档期间不得复制第二份 canonical 需求产物。

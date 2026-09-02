@@ -116,7 +116,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 3. `design_mode=full` 方案设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
 4. `tasks_ready` 后 — CP-001，进入剩余开发工作前确认
 5. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
-6. 所有子需求 `merged` 后 — CP-ARCHIVE，标记 `archived` 前确认冻结不可变归档
+6. 所有子需求 `merged` 后 — CP-ARCHIVE，标记 `archived` 前确认原位收敛状态
 
 ## 硬边界
 
@@ -134,7 +134,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 - 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**、有效 v2 `contracts/ui-truth-index.json`（路径/hash/来源/profile/scenario/coverage 与当前预览 hash 绑定确认）、独立动效确认/豁免（静态 unit 必须确认无动效），或 Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
 - Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v2 `ui-truth-index.json`，以及覆盖全部已索引 scenario 的结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
-- 未生成冻结的 `archive/<ISO-ts>/` 快照及带 sha256 的 `MANIFEST.json` 前，不得设为 `archived`；归档不可原地修改。
+- 仅在 CP-ARCHIVE 确认后通过 `scripts/archive-subrequirement.py` 设置 `archived`。该动作只原位更新 `status.json`，不得创建 `archive/<ISO-ts>/`、复制 canonical 产物或写入 `MANIFEST.json`。已完成需求目录保留为历史事实源；后续变更须使用新的 `<req-id>` 目录。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；分支用 rebase 合并（禁止 merge commit）。
 
@@ -145,7 +145,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 | `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；用户已批准 workspace 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v2 index 路径/hash/来源/profile/scenario/coverage、预览绑定静态确认与动效确认/豁免（含不可用原因）均有效 |
 | `spec/plan/tasks_ready`（UI truth） | 曾有效 `acceptance_frozen`；v2 index 的路径、hash、coverage 与确认绑定仍有效 |
 | `merged`（UI truth） | UI truth 模式已有 `acceptance_frozen` + `visual_acceptance_passed` + 有效 v2 index + 结构化验收；`existing` 使用普通行为/语义证据，`none` 跳过视觉验收 |
-| `archived` | 冻结的 `archive/<ISO-ts>/` 快照 + 带 sha256 的 `MANIFEST.json`，且不可变（经 `--verify-archive` 校验） |
+| `archived` | 原位收敛状态；canonical 产物保留在原路径，后续变更须使用新的需求目录 |
 
 ## 拆分决策
 
@@ -198,11 +198,11 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 
 `bootstrap` | `resume` | `confirm_ui` | `confirm_solution_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
 
-检查点：CP-UI（启用 UI truth 的生产代码前）、CP-DESIGN（完整方案设计批准）、CP-001（剩余开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（冻结前，所有子需求均已 merged）。
+检查点：CP-UI（启用 UI truth 的生产代码前）、CP-DESIGN（完整方案设计批准）、CP-001（剩余开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（原位归档前，所有子需求均已 merged）。
 
 ## 完成
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并将状态推进至 `archived`；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求有 `retrospective.md` 时，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档动作只读取台账带标记的问题地图，并幂等更新 `.ai-delivery/retrospectives/index.md`；不会创建、重写、总结或审计台账。没有台账时，不创建复盘文件或索引行，并告知用户登记了哪些问题行。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`，归档区不可变 — 任何变更须新建 `<req-id>/` 目录。
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求有 `retrospective.md` 时，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档动作只读取台账带标记的问题地图，并幂等更新 `.ai-delivery/retrospectives/index.md`；不会创建、重写、总结或审计台账。没有台账时，不创建复盘文件或索引行，并告知用户登记了哪些问题行。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
 
 ## 编排形态（不变量）
 

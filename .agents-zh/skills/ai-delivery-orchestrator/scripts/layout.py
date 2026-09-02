@@ -56,7 +56,6 @@ DEFAULT_LAYOUT: dict = {
         "plan": "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
         "tasks": "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
         "ui_truth_index": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
-        "manifest": "requirements/{req_id}/sub-requirements/{sr_id}/archive/{ts}/MANIFEST.json",
     },
 }
 
@@ -220,7 +219,7 @@ def artifact_path(
     `kind` must be one of the keys in the configured project, requirement, or
     sub-requirement artifact maps. Project-level kinds ignore all identifiers;
     requirement-level kinds ignore sr_id/unit_id/ts; sub-requirement kinds
-    require sr_id (and ts for `manifest`).
+    require sr_id for sub-requirement artifacts.
     """
     layout = load_layout(Path(repo_root))
     project_map = layout.get("project_artifacts", {})
@@ -299,7 +298,7 @@ def file_sha256(path: Path) -> str | None:
 
 
 # --------------------------------------------------------------------------
-# Layout detection + spec persistence (spec-kit living/flow-forward support)
+# Layout detection + spec persistence (spec-kit living/in-place archive support)
 # --------------------------------------------------------------------------
 
 SPEC_KINDS = ("spec", "plan", "tasks")
@@ -363,13 +362,16 @@ DEFAULT_WORKFLOW_POLICY: dict = {
     "review_loop": {"max_rounds": 3},
     "spec_persistence": {
         "active": "living",
-        "complete": "flow_forward",
+        "complete": "in_place",
         "living": {
             "source_of_truth": "spec/spec.md",
             "derived": ["spec/plan.md", "spec/tasks.md"],
             "on_drift": "downgrade_to_spec_ready",
         },
-        "flow_forward": {"immutable_root": "archive", "change_requires": "new_requirement_dir"},
+        "in_place": {
+            "source_of_truth": "canonical_artifacts",
+            "change_requires": "new_requirement_dir",
+        },
     },
     "verification_policy": {
         "required_at": ["merged", "archived"],
@@ -549,9 +551,8 @@ def _selftest() -> int:
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "spec" / "spec.md", p
         p = artifact_path(root, "visual_acceptance", "REQ-1", sr_id="SR-001")
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "visual-acceptance.json", p
-        # ts placeholder
-        m = artifact_path(root, "manifest", "REQ-1", sr_id="SR-001", ts="2026-08-11T000000Z")
-        assert m.name == "MANIFEST.json" and "2026-08-11T000000Z" in str(m), m
+        # Current archives are status transitions; no manifest path is emitted.
+        assert "manifest" not in load_layout(root)["sub_requirement_artifacts"]
         # requirement dir + sub dir
         assert requirement_dir(root, "REQ-1").name == "REQ-1"
         assert sub_requirement_dir(root, "REQ-1", "SR-001").name == "SR-001"

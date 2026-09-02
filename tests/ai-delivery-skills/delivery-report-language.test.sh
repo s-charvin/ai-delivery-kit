@@ -77,6 +77,10 @@ grep -Fq '# Informe de entrega - report-language' "$REPORT" \
   || fail "localized report heading was not preserved"
 grep -Fq 'sub-requirements/SR-001/verification.md' "$REPORT" \
   || fail "verification cell should use a language-neutral path"
+grep -Fq 'sub-requirements/SR-001/' "$REPORT" \
+  || fail "report should reference canonical artifacts in place"
+[[ ! -e "$TMP/sub-requirements/SR-001/archive" ]] \
+  || fail "delivery report generation must not create an archive copy"
 if grep -Fq 'ai-delivery-template-language' "$REPORT"; then
   fail "finished report contains a template language instruction"
 fi

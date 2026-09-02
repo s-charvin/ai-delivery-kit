@@ -7,7 +7,7 @@ When instantiating this template, preserve the ai-delivery-meta comment and its 
 
 > This file is the **canonical solution-design record** for sub-requirement `{subreq_id}`. It replaces the design fragments previously stored in `status.json` `notes`.
 > - During active development (`status < archived`), this file is a **derived artifact** that may be regenerated with the spec in living-spec mode.
-> - After archival (`archived`), it is frozen as an immutable snapshot. Create a new requirement directory for subsequent changes.
+> - After archival (`archived`), the canonical artifacts remain in place as the historical source of truth. Create a new requirement directory for subsequent changes.
 
 ## 1. Context and Goals
 (Why this work is needed, including its constraints and boundaries.)

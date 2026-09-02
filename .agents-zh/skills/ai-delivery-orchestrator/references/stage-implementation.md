@@ -169,7 +169,7 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 
 切片完成 → `finish` 动作 → `merged`。见 [handoff-table.md](handoff-table.md)。
 
-所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `scripts/archive-subrequirement.py` 冻结 `archive/<ISO-ts>/` + `MANIFEST.json` 并推进到 `archived`；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
+所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `scripts/archive-subrequirement.py` 原位推进状态至 `archived`，不得生成快照或复制 canonical 产物；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
 
 ## 收尾 / PR
 

@@ -66,6 +66,12 @@
 
 所有可执行子需求达 `tasks_ready` 后，进入 CP-001，开发前与用户确认。
 
+## 归档后的产物
+
+子需求进入 `archived` 后，archive 动作只原位更新 `status.json`。canonical
+spec、plan、tasks、design 和 verification 继续保留在原路径，不生成快照或
+第二份副本；后续需求变更须新建 `<req-id>` 目录。
+
 ## API 策略
 
 API 文档直接传给 spec 管道与实现。无独立 API 映射阶段。缺口在 `notes` 记为 `integration_deferred`；不阻塞只读 UI 证据，但生产外壳工作仍等待 CP-UI。

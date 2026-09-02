@@ -188,7 +188,7 @@ Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to su
 
 Slice complete → `finish` action → `merged`. See [handoff-table.md](handoff-table.md).
 
-When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `scripts/archive-subrequirement.py` per subreq to freeze `archive/<ISO-ts>/` + `MANIFEST.json` and advance status to `archived`; pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
+When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `scripts/archive-subrequirement.py` per subreq to update status to `archived` in place; it must not create a snapshot or copy canonical artifacts. Pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
 
 ## Finishing / PR
 

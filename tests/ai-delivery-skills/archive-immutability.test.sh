@@ -1,13 +1,11 @@
 #!/bin/bash
-# Archive immutability gate (Phase 3): once a sub-requirement is frozen into
-# archive/<ISO-ts>/, any later byte change must be detected by
-# validate-artifact-layout.py --verify-archive (exit 1).
+# Archive behavior gate: archiving updates status in place and never creates a
+# second copy of canonical requirement artifacts.
 set -uo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 ARCHIVE="$ROOT/scripts/archive-subrequirement.py"
-VALIDATE="$ROOT/scripts/validate-artifact-layout.py"
 
 fail() {
   echo "[archive-immutability.test] $1" >&2
@@ -15,7 +13,6 @@ fail() {
 }
 
 [[ -f "$ARCHIVE" ]] || fail "Missing archive script: $ARCHIVE"
-[[ -f "$VALIDATE" ]] || fail "Missing layout validator: $VALIDATE"
 
 # Isolated requirement root in a temp dir; removed on exit.
 TMP=$(mktemp -d)
@@ -51,22 +48,17 @@ JSON
 NOW="2026-07-10T00:00:00+00:00"
 TS="2026-07-10T000000Z"
 
-# 1) Freeze the merged sub-req into the immutable archive.
+# 1) Archive the merged sub-req in place.
 python3 "$ARCHIVE" --req-root "$TMP" --subreq SR-001 --now "$NOW" --no-delivery-report \
-  || fail "archive-subrequirement.py failed to freeze SR-001"
+  || fail "archive-subrequirement.py failed to archive SR-001"
 
-# 2) A fresh, untampered snapshot must validate cleanly (exit 0).
-python3 "$VALIDATE" --verify-archive "$TMP" >/dev/null 2>&1 \
-  || fail "fresh archive should validate clean (--verify-archive must exit 0)"
+grep -Fq '"status": "archived"' "$TMP/status.json" \
+  || fail "archive did not update status in place"
+[[ ! -d "$SUB/archive" ]] || fail "archive created a duplicate artifact directory"
+[[ -f "$SUB/spec/spec.md" ]] || fail "canonical spec was moved or removed"
+[[ -f "$SUB/spec/plan.md" ]] || fail "canonical plan was moved or removed"
+[[ -f "$SUB/spec/tasks.md" ]] || fail "canonical tasks were moved or removed"
+[[ -f "$SUB/design.md" ]] || fail "canonical design was moved or removed"
+[[ -f "$SUB/verification.md" ]] || fail "canonical verification was moved or removed"
 
-# 3) Tamper one byte in the archived snapshot.
-TAMPER="$SUB/archive/$TS/spec/spec.md"
-[[ -f "$TAMPER" ]] || fail "archived snapshot missing: $TAMPER"
-printf '# spec\nTAMPERED content\n' > "$TAMPER"
-
-# 4) Re-verify: the hash mismatch must be detected (exit 1).
-if python3 "$VALIDATE" --verify-archive "$TMP" >/dev/null 2>&1; then
-  fail "tampered archive must be detected (--verify-archive should exit 1)"
-fi
-
-echo "PASS: archive snapshot is immutable under byte tamper."
+echo "PASS: archive updates status in place without duplicate artifacts."

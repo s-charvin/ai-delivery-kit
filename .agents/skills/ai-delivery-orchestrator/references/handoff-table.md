@@ -13,7 +13,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 | All executable subreqs at `tasks_ready` | CP-001 pause → user confirms | Silent entry to development |
 | CP-001 confirmed | Stage 4: `implement` | Parallel implementers on same slice files |
 | Slice implementation complete | `finish` → set `merged` | Subagent merge or gate promotion |
-| All subreqs `merged` | CP-ARCHIVE pause → `archive` (freeze immutable snapshot) | Editing archived artifacts in place |
+| All subreqs `merged` | CP-ARCHIVE pause → `archive` (converge status in place) | Creating a second copy of canonical artifacts |
 
 ## Status → next action mapping (for reconcile)
 
@@ -30,7 +30,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 | `tasks_ready` | any | gate satisfied | (await CP-001; reconcile emits `implement` after confirm) |
 | `in_dev` | any | gate satisfied | `implement` |
 | `visual_acceptance_passed` | `figma` or `runtime-baseline` | gate satisfied | `finish` |
-| `merged` | any | any | `archive` (freeze `archive/<ISO-ts>/` + `MANIFEST.json`, set `archived`) |
+| `merged` | any | any | `archive` (update status in place, set `archived`) |
 | `archived` | any | any | none |
 | `blocked_*` | any | any | `NEXT_ACTION=none`; resolve blocker; continue other runnable subreqs |
 

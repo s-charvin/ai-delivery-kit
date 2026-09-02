@@ -13,6 +13,7 @@
 | 所有可执行子需求达 `tasks_ready` | CP-001 暂停 → 用户确认 | 静默进入开发 |
 | CP-001 已确认 | Stage 4：`implement` | 同切片文件并行实现者 |
 | 切片实现完成 | `finish` → 设置 `merged` | 子代理合并或推进门禁 |
+| 所有子需求 `merged` | CP-ARCHIVE 暂停 → `archive`（原位收敛状态） | 复制第二份 canonical 产物 |
 
 ## 状态 → 下一站映射（供 reconcile 使用）
 
@@ -29,7 +30,7 @@
 | `tasks_ready` | 任意 | 门禁满足 |（等待 CP-001；确认后对账输出 `implement`）|
 | `in_dev` | 任意 | 门禁满足 | `implement` |
 | `visual_acceptance_passed` | `figma` 或 `runtime-baseline` | 门禁满足 | `finish` |
-| `merged` | 任意 | 任意 | 无 |
+| `merged` | 任意 | 任意 | `archive`（原位更新状态，设置 `archived`） |
 | `blocked_*` | 任意 | 任意 | `NEXT_ACTION=none`；先解决阻塞；继续其他可运行子需求 |
 
 ## 方案设计批准

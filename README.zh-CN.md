@@ -159,7 +159,7 @@ bash scripts/rehearse-release.sh
 
 本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
 
-- `design.md`（`design_mode` 为 `light` 或 `full` 时的规范方案设计产物）、`verification.md`、`visual-acceptance.json`（仅 UI truth 模式）、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`（仅 UI truth 模式）、`archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md`（`design_mode` 为 `light` 或 `full` 时的规范方案设计产物）、`verification.md`、`visual-acceptance.json`（仅 UI truth 模式）、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`（仅 UI truth 模式）
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
 - 外部框架只提供方法；其流程/治理产物直接写入 canonical `.ai-delivery` 路径，绝不写入框架自有派生视图
 
@@ -168,9 +168,9 @@ bash scripts/rehearse-release.sh
 ### 生命周期语义（`merged` → `archived`）
 
 - `merged` = 代码已集成到开发分支
-- `archived` = 不可变冻结（`archive/` + `MANIFEST.json`）；所有可执行子需求 `archived` 后需求 `completed`
+- `archived` = 原位收敛状态，canonical 产物保留在原路径；所有可执行子需求 `archived` 后需求 `completed`
 - 可选的 `retrospective.md` 是需求级活复盘台账。归档时原样保留，并将其带稳定标记的问题地图登记到 `.ai-delivery/retrospectives/index.md`，供后续需求按场景渐进加载。
-- CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`
+- CP-ARCHIVE 须先运行 `scripts/archive-subrequirement.py` 再置 `archived`；该动作不得复制第二份产物
 - 归档最后一个子需求时，先用用户当前对话语言实例化 `delivery-report-template.md`，删除语言指令注释，再通过 `--delivery-report-template <path>` 传入
 
 若需多方协同，另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在业务仓运行 `coordination-cli init`；kit 本身不包含协同逻辑。

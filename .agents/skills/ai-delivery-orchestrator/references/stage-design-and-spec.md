@@ -62,17 +62,17 @@ After each step:
 
 Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Each `artifacts[]` entry for `spec`, `plan`, and `tasks` MUST record its resolved repo-relative `canonical_path` and current `content_sha256` so the artifact-layout validator can detect drift. Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
 
-## Spec persistence (living ↔ flow-forward)
+## Spec persistence (living → in-place archive)
 
 While the sub-requirement is not yet `archived`, the spec is **living**:
 
 - The artifact resolved from layout key `spec` is the single source of truth; artifacts resolved from `plan` and `tasks` are derived and may be regenerated as the spec evolves.
 - Before regenerating any derived artifact, move the key decisions being overturned into `decisions.md` first (prevents rationale loss).
 
-Once the sub-requirement reaches `archived`, the spec is **flow-forward**:
+Once the sub-requirement reaches `archived`, the canonical spec remains in place:
 
-- The `archive/<ISO-ts>/` snapshot is frozen and immutable, verified by `MANIFEST.json` sha256 (see [artifact-layout.md](../../../../docs/artifact-layout.md)).
-- Any requirement change starts a new `<req-id>/` directory; the old directory is a read-only reference.
+- The archive action only updates `status.json`; it does not create a snapshot or duplicate canonical artifacts.
+- Any requirement change starts a new `<req-id>/` directory; the completed directory remains the historical source of truth.
 
 ## Pause
 

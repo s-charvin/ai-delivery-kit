@@ -12,7 +12,7 @@
     "in_dev": "Remaining implementation work is in progress - UI truth slices reuse the Stage 2 user-approved workspace and the TDD loop is active",
     "visual_acceptance_passed": "The implementation passed every indexed visual/runtime scenario and structured visual-acceptance.json binds the current UI truth index with independent motion_acceptance for every unit (including GIF evidence or runtime verification when applicable; ui_truth_mode=figma or runtime-baseline only; other modes skip this state)",
     "merged": "Code has been rebased and integrated into the development branch without a merge commit",
-    "archived": "Frozen archive - artifacts are snapshotted under archive/ with a MANIFEST.json and are immutable; requirement changes require a new <req-id>",
+    "archived": "Archived in place - status is converged while canonical artifacts remain in their original locations; requirement changes require a new <req-id>",
 
     "blocked_missing_requirement": "The source lacks critical business facts",
     "blocked_requirement_conflict": "Two approved sources conflict with each other",
@@ -39,7 +39,7 @@
     "CP-001": "tasks_ready_user_confirmation - all executable slices have reached tasks_ready and await user confirmation to enter development",
     "CP-002": "hard_blocker_pause - no safe runnable queue items remain for the current requirement; this checkpoint is allowed only when no runnable item exists",
     "CP-DESIGN": "solution_design_approval - a full solution design must pass review and receive user approval before entering the spec stage",
-    "CP-ARCHIVE": "archive_confirmation - all slices are merged and await user confirmation to freeze the immutable archive/ snapshots"
+    "CP-ARCHIVE": "archive_confirmation - all slices are merged and await user confirmation to archive their status in place"
   },
 
   "_runtime_modes": {
@@ -49,7 +49,7 @@
     "confirm_solution_design": "current_checkpoint=CP-DESIGN; a design_mode=full slice requires solution-design approval before entering the spec stage",
     "confirm_to_dev": "current_checkpoint=CP-001; all executable slices are tasks_ready and await user confirmation to enter development",
     "blocker_recovery": "current_checkpoint=CP-002; the user supplied the missing decision or the external blocker has cleared",
-    "closing": "current_checkpoint=CP-ARCHIVE; all executable slices are merged and await user confirmation to freeze the archive",
+    "closing": "current_checkpoint=CP-ARCHIVE; all executable slices are merged and await user confirmation to archive status in place",
     "completed": "All executable sub_requirements are archived"
   },
 

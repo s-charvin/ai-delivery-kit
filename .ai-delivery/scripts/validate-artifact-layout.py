@@ -311,16 +311,14 @@ def validate_subreq(subreq_id: str, entry: dict, subreq_dir: Path) -> tuple[list
 
 
 def verify_archive(subreq_dir: Path, status: str | None = None) -> list[str]:
-    """Validate archive immutability via MANIFEST.json sha256 (Phase 3 hook)."""
+    """Validate legacy archive snapshots when they are present.
+
+    Current archives are status transitions in place and have no snapshot to
+    verify. The manifest loop remains for repositories created by older kit
+    versions so ``--verify-archive`` can still detect tampering there.
+    """
     errors: list[str] = []
     manifests = sorted(subreq_dir.glob("archive/*/MANIFEST.json"))
-    # An archived sub-requirement MUST carry at least one immutable snapshot;
-    # without it the flow-forward guarantee (docs/artifact-layout.md §3) is void.
-    if status == "archived" and not manifests:
-        errors.append(
-            f"[ARCHIVE] {subreq_dir}: archived sub-requirement has no archive snapshot "
-            f"(expected archive/<ISO-ts>/MANIFEST.json)"
-        )
     for manifest in manifests:
         try:
             data = json.loads(manifest.read_text(encoding="utf-8"))
@@ -457,7 +455,7 @@ def _selftest() -> int:
         errs = validate_requirement(root)
         assert any("verification.md" in e for e in errs), errs
 
-        # Archive immutability: tamper with an archived file -> mismatch.
+        # Legacy archive snapshots remain verifiable when present.
         arch = new / "archive" / "2026-08-11T000000Z"
         arch.mkdir(parents=True)
         archived = arch / "spec" / "spec.md"
@@ -477,6 +475,33 @@ def _selftest() -> int:
         (new / "verification.md").write_text("# verification\n", encoding="utf-8")
         errs = validate_requirement(root, check_archive=True)
         assert any(e.startswith("[ARCHIVE]") for e in errs), errs
+
+
+    with tempfile.TemporaryDirectory() as td:
+        root = Path(td)
+        sr = root / "sub-requirements" / "SR-IN-PLACE"
+        (sr / "spec").mkdir(parents=True)
+        (sr / "spec" / "spec.md").write_text("# spec\n", encoding="utf-8")
+        (sr / "spec" / "plan.md").write_text("# plan\n", encoding="utf-8")
+        (sr / "spec" / "tasks.md").write_text("# tasks\n", encoding="utf-8")
+        (sr / "verification.md").write_text("# verification\n", encoding="utf-8")
+        (root / "status.json").write_text(
+            json.dumps(
+                {
+                    "sub_requirements": {
+                        "SR-IN-PLACE": {
+                            "status": "archived",
+                            "ui_bearing": False,
+                            "ui_truth_mode": "none",
+                            "design_mode": "none",
+                            "design_approved": False,
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert validate_requirement(root, check_archive=True) == [], "in-place archive should validate"
 
     # living-spec drift: recorded hash != on-disk content -> [DRIFT] at plan_ready
     with tempfile.TemporaryDirectory() as td:
@@ -544,6 +569,65 @@ def _selftest() -> int:
         )
         assert not any(e.startswith("[DRIFT]") for e in validate_requirement(root))
 
+    # A customized binding may place spec artifacts outside sub_requirement_dir.
+    # Drift checks must resolve the recorded repo-relative canonical path.
+    with tempfile.TemporaryDirectory() as td:
+        repo = Path(td)
+        ai_delivery = repo / ".ai-delivery"
+        meta = ai_delivery / "meta"
+        meta.mkdir(parents=True)
+        (meta / "project-binding.json").write_text(
+            json.dumps(
+                {
+                    "ai_delivery_path": ".ai-delivery",
+                    "layout": {
+                        "requirement_root": "requirements/{req_id}",
+                        "sub_requirement_dir": (
+                            "requirements/{req_id}/sub-requirements/{sr_id}"
+                        ),
+                        "requirement_artifacts": {},
+                        "sub_requirement_artifacts": {
+                            "spec": (
+                                "requirements/{req_id}/custom-artifacts/"
+                                "{sr_id}/spec.md"
+                            )
+                        },
+                    },
+                }
+            ),
+            encoding="utf-8",
+        )
+        sr = ai_delivery / "requirements" / "REQ-C" / "sub-requirements" / "SR-C"
+        sr.mkdir(parents=True)
+        custom_spec = (
+            ai_delivery / "requirements" / "REQ-C" / "custom-artifacts" / "SR-C" / "spec.md"
+        )
+        custom_spec.parent.mkdir(parents=True)
+        custom_spec.write_text("# custom spec\n", encoding="utf-8")
+        (sr / "traceability.json").write_text(
+            json.dumps(
+                {
+                    "spec_refs": {
+                        "tier": "native",
+                        "artifacts": [
+                            {
+                                "kind": "spec",
+                                "canonical_path": (
+                                    ".ai-delivery/requirements/REQ-C/"
+                                    "custom-artifacts/SR-C/spec.md"
+                                ),
+                                "derived_paths": [],
+                                "content_sha256": canonical_sha256("# custom spec\n"),
+                                "sync_state": "synced",
+                            }
+                        ],
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+        assert spec_drift(sr) == [], spec_drift(sr)
+
     # policy is readable and carries the spec_persistence contract
     policy = load_workflow_policy(Path(__file__).resolve().parents[1])
     assert policy.get("spec_persistence", {}).get("active") == "living", policy.get("spec_persistence")
@@ -555,7 +639,11 @@ def _selftest() -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("req_root", type=Path, nargs="?", help="Requirement root (parent of sub-requirements/)")
-    parser.add_argument("--verify-archive", action="store_true", help="Also verify archive immutability via MANIFEST.json")
+    parser.add_argument(
+        "--verify-archive",
+        action="store_true",
+        help="Also verify legacy archive snapshots via MANIFEST.json when present",
+    )
     parser.add_argument("--selftest", action="store_true", help="Run built-in assertions")
     args = parser.parse_args()
 

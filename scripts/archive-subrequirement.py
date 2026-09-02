@@ -1,25 +1,23 @@
 #!/usr/bin/env python3
-"""Freeze a merged sub-requirement into the immutable archive (the `archive` action).
+"""Archive a merged sub-requirement by converging its status in place.
 
 Run by the orchestrator as the `archive` action emitted by reconcile when a
 sub-requirement is `merged` and the requirement has reached `runtime_mode=closing`.
 It:
 
-1. Copies the canonical three-piece spec set plus ``design.md`` and
-   ``verification.md`` into ``<subreq>/archive/<ISO-ts>/``.
-2. Writes ``MANIFEST.json`` recording each archived file's sha256 (the machine
-   basis for later ``--verify-archive`` tamper detection).
-3. Advances the sub-requirement status ``merged`` -> ``archived``.
-4. When every executable sub-requirement is ``archived``, generates a
+1. Advances the sub-requirement status ``merged`` -> ``archived`` in place.
+2. When every executable sub-requirement is ``archived``, generates a
    requirement-level ``delivery-report.md`` from a caller-supplied template
    already localized to the user's current conversation language.
-5. If a requirement-level ``retrospective.md`` exists, registers its marked
+3. If a requirement-level ``retrospective.md`` exists, registers its marked
    problem map in the project-level retrospective index without rewriting the
    ledger.
 
-The archive snapshot is immutable: any later byte change is caught by
-``validate-artifact-layout.py --verify-archive``. Requirement changes must open a
-new ``<req-id>/`` directory; the archived one is a read-only reference.
+Canonical artifacts remain in their original locations. Historical repositories
+may still contain ``archive/<ISO-ts>/MANIFEST.json`` snapshots; the validator
+continues to check those legacy snapshots when explicitly requested, but new
+archives never create them. Requirement changes must open a new ``<req-id>``
+directory rather than modifying a completed requirement.
 """
 
 from __future__ import annotations
@@ -39,16 +37,6 @@ REPORT_PLACEHOLDERS = (
     "<subreq_count>",
     "<subreq_rows>",
 )
-
-# Canonical artifacts frozen into each archive snapshot, in on-disk form.
-ARTIFACT_RELS = (
-    "spec/spec.md",
-    "spec/plan.md",
-    "spec/tasks.md",
-    "design.md",
-    "verification.md",
-)
-
 
 def _locate_layout_dir() -> Path:
     """Find the orchestrator scripts dir by walking up from this file.
@@ -72,7 +60,6 @@ sys.path.insert(0, str(_locate_layout_dir()))
 from layout import (  # noqa: E402
     artifact_path,
     artifact_path_from_ai_delivery_dir,
-    canonical_sha256,
     find_ai_delivery_dir,
 )
 
@@ -82,43 +69,6 @@ PROJECT_INDEX_START = "<!-- ai-delivery-retrospective:index:v1 -->"
 PROJECT_INDEX_END = "<!-- /ai-delivery-retrospective:index:v1 -->"
 INDEX_TEMPLATE_MARKER = "ai-delivery-retrospective:index:v1"
 INDEX_TEMPLATE_PLACEHOLDER = "<retrospective_rows>"
-
-
-def freeze(subreq_dir: Path, req_id: str, subreq_id: str, now: datetime.datetime) -> tuple[Path, list[str]]:
-    """Copy canonical artifacts into a timestamped archive dir + write MANIFEST.json."""
-    stamp = now.strftime("%Y-%m-%dT%H%M%SZ")
-    archive_dir = subreq_dir / "archive" / stamp
-    archive_dir.mkdir(parents=True, exist_ok=True)
-
-    files: list[dict] = []
-    missing: list[str] = []
-    for rel in ARTIFACT_RELS:
-        src = subreq_dir / rel
-        if not src.is_file():
-            missing.append(rel)
-            continue
-        text = src.read_text(encoding="utf-8")
-        dst = archive_dir / rel
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(text, encoding="utf-8")
-        files.append({"path": rel, "sha256": canonical_sha256(text)})
-
-    if not files:
-        raise SystemExit(
-            f"ERROR: {subreq_id} has no canonical artifacts to archive (looked for: "
-            f"{', '.join(ARTIFACT_RELS)}); refusing to create an empty snapshot"
-        )
-
-    manifest = {
-        "req_id": req_id,
-        "subreq_id": subreq_id,
-        "archived_at": now.isoformat(),
-        "files": files,
-    }
-    (archive_dir / "MANIFEST.json").write_text(
-        json.dumps(manifest, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
-    )
-    return archive_dir, missing
 
 
 def load_status(req_root: Path) -> dict:
@@ -187,14 +137,13 @@ def render_delivery_report(
     for sid in sorted(subreqs):
         entry = subreqs[sid]
         subreq_dir = req_root / "sub-requirements" / sid
-        snapshots = sorted(subreq_dir.glob("archive/*/MANIFEST.json"))
-        latest = snapshots[-1].parent.name if snapshots else "-"
+        canonical_root = f"sub-requirements/{sid}/"
         verification = (
             f"sub-requirements/{sid}/verification.md"
             if (subreq_dir / "verification.md").is_file()
             else "-"
         )
-        rows.append(f"| {sid} | {entry.get('status', '-')} | {latest} | {verification} |")
+        rows.append(f"| {sid} | {entry.get('status', '-')} | {canonical_root} | {verification} |")
 
     rendered = (
         template.replace("<req-id>", req_id)
@@ -395,7 +344,7 @@ def main() -> int:
     parser.add_argument("--req-root", type=Path, required=True, help="Requirement root (parent of sub-requirements/)")
     parser.add_argument("--subreq", type=str, required=True, help="Sub-requirement id to archive")
     parser.add_argument("--now", type=str, default=None, help="Override archive timestamp (ISO8601, for tests)")
-    parser.add_argument("--no-status-write", action="store_true", help="Freeze only; do not touch status.json")
+    parser.add_argument("--no-status-write", action="store_true", help="Preview the archive action without changing status.json")
     parser.add_argument(
         "--retrospective-index-template",
         type=Path,
@@ -462,15 +411,14 @@ def main() -> int:
         else datetime.datetime.now(datetime.timezone.utc)
     )
     req_id = data.get("requirement_id", "")
-    archive_dir, missing = freeze(subreq_dir, req_id, args.subreq, now)
-
     if not args.no_status_write:
         entry["status"] = "archived"
         write_status(req_root, data)
 
-    print(f"ARCHIVED {args.subreq} -> {archive_dir.relative_to(req_root)}")
-    if missing:
-        print(f"WARNING: skipped missing canonical artifacts: {', '.join(missing)}", file=sys.stderr)
+    if args.no_status_write:
+        print(f"WOULD_ARCHIVE {args.subreq} (status unchanged; canonical artifacts stay in place)")
+    else:
+        print(f"ARCHIVED {args.subreq} (status updated in place)")
 
     if not args.no_delivery_report and all_archived(data):
         if report_template is None:

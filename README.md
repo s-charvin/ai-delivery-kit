@@ -163,7 +163,7 @@ If `goreleaser` or `pwsh` are available locally, it includes those checks too.
 
 Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
 
-- `design.md` (canonical solution-design artifact when `design_mode` is `light` or `full`), `verification.md`, `visual-acceptance.json` (UI truth modes only), `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json` (UI truth modes only), `archive/<ISO-ts>/` + `MANIFEST.json`
+- `design.md` (canonical solution-design artifact when `design_mode` is `light` or `full`), `verification.md`, `visual-acceptance.json` (UI truth modes only), `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json` (UI truth modes only)
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
 - External frameworks provide methods only; their process/governance artifacts write directly to canonical `.ai-delivery` paths, never to framework-owned derived views
 
@@ -172,9 +172,9 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 ### Lifecycle semantics (`merged` → `archived`)
 
 - `merged` = code integrated on the dev branch
-- `archived` = immutable freeze (`archive/` + `MANIFEST.json`); requirement completes when all executable subreqs are `archived`
+- `archived` = status converged in place while canonical artifacts remain in their original locations; requirement completes when all executable subreqs are `archived`
 - Optional `retrospective.md` is a requirement-level living ledger. Archive keeps it as-is and registers its marked problem map in `.ai-delivery/retrospectives/index.md` for progressive, scenario-matched loading.
-- Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`
+- Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`; it must not create duplicate artifact copies
 - For the final sub-requirement, instantiate `delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and pass it with `--delivery-report-template <path>`
 
 For multi-party work, install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination-cli init` in the repo; this kit does not embed coordination logic.

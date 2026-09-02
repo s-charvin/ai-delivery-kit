@@ -31,7 +31,7 @@
   - proposal 在全部 state/content/motion/assets/accessibility 预期均映射到 unit/scenario id 后被接受 → `spec_ready`
   - `design.md` 对 scenario 实现与验证归属审计通过 → `plan_ready`
   - `tasks.md` 对粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖审计通过 → `tasks_ready`
-- 不运行 `openspec archive`；它会在 `.ai-delivery` 外写第二份治理副本。只有编排器 `archive` 动作负责将 canonical 三件套 + `design.md` + `verification.md` 冻结到 `.ai-delivery/requirements/<req>/sub-requirements/<SR>/archive/<ISO-ts>/` 并生成 `MANIFEST.json`。
+- 不运行 `openspec archive`；它会在 `.ai-delivery` 外写第二份治理副本。归档由编排器 `archive` 动作负责，仅原位更新 `status.json`，不复制 canonical 三件套、`design.md` 或 `verification.md`，也不生成 `archive/` 或 `MANIFEST.json`。
 - change 与冻结契约或需求冲突时，开启 `blocked_spec_mismatch`，而不是反复改 delta 直到"通过"。
 
 ## 可追溯性记录

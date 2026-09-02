@@ -27,9 +27,6 @@
       spec/  spec.md plan.md tasks.md      # canonical 三件套
       contracts/  ui-truth-index.json   # 仅 ui_truth_mode=figma/runtime-baseline
       visual-acceptance.json      # 仅 UI truth 模式；绑定当前 UI index 与逐 scenario 的结构化验收证据
-      archive/<ISO-ts>/          # flow-forward 冻结区
-        spec.md plan.md tasks.md design.md verification.md
-        MANIFEST.json            # sha256 清单，不可变性的机器校验依据
   retrospectives/
     index.md                     # 可选：已归档问题的精简路由索引
 ```
@@ -62,7 +59,7 @@
 ## 3. spec 演进约定
 
 - **活跃开发期**（status < `archived`）= **living spec**：`spec/spec.md` 唯一事实源，`plan.md`/`tasks.md` 是派生物，可随 spec 再生。再生前，被推翻的关键决策必须先落入 `decisions.md`（防 rationale 丢失）。
-- **完结后**（status = `archived`）= **flow-forward**：`archive/` 区冻结不可变（由 `MANIFEST.json` 的 sha256 校验）；需求变更→开新 `<req-id>/`，旧目录只读引用。
+- **完结后**（status = `archived`）= **原位归档**：只收敛 `status.json`，canonical 产物继续保留在原路径；需求变更→开新 `<req-id>/`，已完成目录作为历史事实源。
 
 ## 4. 统一路径常量
 
@@ -111,5 +108,5 @@
 执行语义由 `workflow-policy.json` 的 `spec_persistence` 段声明（声明式，超前写入无害）：
 
 - `active: "living"` — 未 `archived` 前，`spec/spec.md` 唯一事实源，plan/tasks 可派生重生成（重生成前关键决策先入 `decisions.md`）。
-- `complete: "flow_forward"` — `archived` 后 `archive/<ISO-ts>/` 冻结只读；变更需求须开新 `<req-id>/`，旧目录仅作引用。
+- `complete: "in_place"` — `archived` 后 canonical 产物原位保留；变更需求须开新 `<req-id>/`，旧目录作为历史事实源。
 - drift 检测：当 `spec/spec.md` 内容 sha256 与 `traceability.json.spec_refs` 记录不一致时，活跃期派生状态（`plan_ready`/`tasks_ready`）降级为 `spec_ready`（`reconcile` 纯推导、不写 status.json；`validate-artifact-layout.py --verify-archive` 报告 `[DRIFT]`），由 skill 层重生成派生物。
