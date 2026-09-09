@@ -60,6 +60,29 @@ require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"artifact_type":"solution-design"'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"layout_key":"solution_design"'
 require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" '"canonical_path":"design.md"'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'Mermaid node, edge, and participant labels'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" 'Unexplained English prose or headings'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md" 'language review before CP-DESIGN'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md" 'Language boundary'
+require_contains "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-state-flow-example.md" 'Language boundary'
+
+unicode_text() {
+  python3 -c 'print("".join(chr(int(codepoint, 16)) for codepoint in __import__("sys").argv[1].split()))' "$1"
+}
+
+ZH_LANGUAGE_BOUNDARY=$(unicode_text '8BED 8A00 8FB9 754C')
+ZH_MERMAID_LABELS=$(unicode_text '004D 0065 0072 006D 0061 0069 0064 0020 8282 70B9 3001 8FDE 7EBF 548C 53C2 4E0E 8005 6807 7B7E')
+ZH_ENGLISH_LEAK=$(unicode_text '672A 89E3 91CA 7684 82F1 6587 6B63 6587')
+ZH_DESIGN_REVIEW=$(unicode_text '0043 0050 002D 0044 0045 0053 0049 0047 004E 0020 524D 7684 8BED 8A00 590D 6838')
+ZH_DOMAIN_STATE=$(unicode_text '4E1A 52A1 002F 9886 57DF 72B6 6001')
+ZH_REDUCER=$(unicode_text '5F52 7EA6 5668 FF08 0052 0065 0064 0075 0063 0065 0072 FF09')
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/SKILL-zh.md" "$ZH_MERMAID_LABELS"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/SKILL-zh.md" "$ZH_ENGLISH_LEAK"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md" "$ZH_DESIGN_REVIEW"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/templates/design-template.md" "$ZH_LANGUAGE_BOUNDARY"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/templates/design-template.md" "$ZH_DOMAIN_STATE"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/templates/design-template.md" "$ZH_REDUCER"
+require_contains "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/templates/design-state-flow-example.md" "$ZH_LANGUAGE_BOUNDARY"
 
 for marker in \
   ai-delivery-verification:review-rounds \

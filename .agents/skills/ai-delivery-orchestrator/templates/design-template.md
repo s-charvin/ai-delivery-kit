@@ -1,6 +1,8 @@
 <!-- ai-delivery-meta: {"version":2,"artifact_type":"solution-design","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
 <!-- ai-delivery-template-language
 When instantiating this template, preserve the ai-delivery-meta comment and its machine keys, replacing only its timestamp and author placeholders. Write every human-readable heading, label, and prose passage in the user's current conversation language. Keep IDs, paths, commands, code symbols, and literal protocol tokens unchanged. Remove this language-instruction comment from the finished artifact.
+
+Language boundary: localize Markdown headings, table headers/cells, explanatory prose, risk/open-question text, and Mermaid node, edge, and participant labels. Keep only machine syntax, keys, enum values, IDs, paths, commands, code/API/library/protocol names, and necessary standard technical terms in English. Mermaid keywords such as `flowchart`, `stateDiagram-v2`, and `sequenceDiagram` stay unchanged; their labels do not. Translate template labels such as `State set`, `Owner`, `Guard`, and `Risk`. If a technical term is retained for precision, introduce the localized term first and put the English original in parentheses. Unexplained English prose or headings must be fixed before approval.
 -->
 
 # Solution Design: {{subreq_id}}

@@ -2,6 +2,8 @@
 
 This example is a reusable Markdown reference, not a project contract. Copy only the sections that apply to the current slice.
 
+> Language boundary: this file is an English source reference. When the user's conversation is in another language, localize every human-readable heading, table header/cell, explanatory sentence, and Mermaid node, edge, or participant label. Keep machine syntax, IDs, code/API/library/protocol names, and required technical tokens unchanged.
+
 <!-- ai-delivery:state-flow:start -->
 <!-- ai-delivery:state-flow:taxonomy -->
 ## State ownership

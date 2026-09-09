@@ -1,6 +1,8 @@
 <!-- ai-delivery-meta: {"version":2,"artifact_type":"solution-design","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
 <!-- ai-delivery-template-language
 实例化本模板时，保留 ai-delivery-meta 注释及其机器键，仅替换时间戳和作者占位符。所有人类可读的标题、标签和正文都使用用户当前对话语言。ID、路径、命令、代码符号和协议字面量保持原样。完成产物前删除本语言指令注释。
+
+语言边界：Markdown 标题、表头/单元格、解释性正文、风险/待决问题说明，以及 Mermaid 节点、连线和参与者标签都必须本地化。只有机器语法、键、枚举值、ID、路径、命令、代码/API/库/协议名称和必要的标准技术术语保留英文。`flowchart`、`stateDiagram-v2`、`sequenceDiagram` 等 Mermaid 关键字保持原样，但其标签不保持英文。`State set`、`Owner`、`Guard`、`Risk` 等模板表头必须翻译。技术术语因精度需要保留时，先写本地化术语，再在括号中保留英文原词。未解释的英文正文或标题必须在批准前修正。
 -->
 
 # 方案设计：{{subreq_id}}
@@ -37,33 +39,35 @@
 ### 5.1 状态分类与所有权
 | 状态集合 | 所有者 | 事实源 | 生命周期 | 持久化 / 恢复 | 渲染或修改规则 |
 |----------|--------|--------|----------|---------------|----------------|
-| Business/Domain State | ... | ... | ... | ... | ... |
-| Operation State | ... | ... | ... | ... | ... |
-| Local Input State | ... | ... | ... | ... | ... |
+| 业务/领域状态（Business/Domain State） | ... | ... | ... | ... | ... |
+| 操作状态（Operation State） | ... | ... | ... | ... | ... |
+| 本地输入状态（Local Input State） | ... | ... | ... | ... | ... |
 | UiState（派生） | ... | ... | ... | ... | ... |
 | UiEffect（一次性） | ... | ... | ... | ... | ... |
-| Command / Side Effect | ... | ... | ... | ... | ... |
+| 命令 / 副作用（Command / Side Effect） | ... | ... | ... | ... | ... |
 
 <!-- ai-delivery:state-flow:mvi-loop -->
 ### 5.2 MVI / UDF 闭环
 ```mermaid
 flowchart LR
-  View[View] -->|Intent / Event| Reducer[Reducer / Decision]
-  Reducer -->|New state| Store[State holder]
+  View[视图] -->|意图 / 事件| Reducer[归约器（Reducer）/ 决策]
+  Reducer -->|新状态| Store[状态持有者]
   Store -->|UiState| View
-  Reducer -->|Command| Effects[Side-effect executor]
-  Effects -->|Result event| Reducer
-  Reducer -->|One-shot UiEffect| EffectHost[Effect host]
+  Reducer -->|命令| Effects[副作用执行器]
+  Effects -->|结果事件| Reducer
+  Reducer -->|一次性 UiEffect| EffectHost[Effect 宿主]
 ```
 
-Reducer 纯函数边界、Command 所有权、结果事件关联以及一次性 Effect 消费规则：…
+归约器（Reducer）纯函数边界、命令（Command）所有权、结果事件关联以及一次性 UiEffect（Effect）消费规则：…
 
 <!-- ai-delivery:state-flow:lifecycle -->
 ### 5.3 业务生命周期（State and Transition Model）
 ```mermaid
 stateDiagram-v2
-  [*] --> Initial: T-001 initialize
-  Initial --> Terminal: T-002 complete
+  state "初始" as Initial
+  state "终止" as Terminal
+  [*] --> Initial: T-001 初始化
+  Initial --> Terminal: T-002 完成
   Terminal --> [*]
 ```
 
@@ -73,7 +77,7 @@ stateDiagram-v2
 ### 5.4 UI 投影
 `UiState = project(BusinessState, OperationState, LocalInputState)`
 
-| Projection ID | 输入状态条件 | 可见 UI | 可用交互 | UiEffect |
+| 投影 ID（Projection ID） | 输入状态条件 | 可见 UI | 可用交互 | UiEffect |
 |---------------|--------------|---------|----------|----------|
 | P-001 | ... | ... | ... | none / ... |
 
@@ -81,12 +85,12 @@ stateDiagram-v2
 
 <!-- ai-delivery:state-flow:matrix -->
 ### 5.5 权威转换矩阵
-| Transition ID | From | Intent / Event | Guard | Decision | To | Command | Result event |
+| 转换 ID（Transition ID） | 起点（From） | 意图 / 事件 | 守卫条件（Guard） | 决策 | 终点（To） | 命令（Command） | 结果事件（Result event） |
 |---------------|------|----------------|-------|----------|----|---------|--------------|
 | T-001 | ... | ... | ... | ... | ... | none / ... | none / ... |
 | T-002 | ... | ... | ... | ... | ... | none / ... | none / ... |
 
-| Transition ID | UI 投影 | 失败 / 取消 / 过期行为 | 并发 / 幂等 | 持久化 / 恢复 | 需求 / 场景 / 测试 |
+| 转换 ID（Transition ID） | UI 投影 | 失败 / 取消 / 过期行为 | 并发 / 幂等 | 持久化 / 恢复 | 需求 / 场景 / 测试 |
 |---------------|----------|----------------------|-----------|---------------|--------------------|
 | T-001 | P-001 | ... | ... | ... | ... |
 | T-002 | P-001 | ... | ... | ... | ... |
@@ -97,15 +101,15 @@ stateDiagram-v2
 ### 5.6 关键异步时序
 ```mermaid
 sequenceDiagram
-  participant V as View
-  participant R as Reducer
-  participant E as Effect executor
+  participant V as 视图
+  participant R as 归约器（Reducer）
+  participant E as 副作用执行器
   participant API as Repository/API
-  V->>R: T-001 Intent
-  R->>E: Command with correlation id
-  E->>API: Request
-  API-->>E: Result / failure
-  E-->>R: Result event
+  V->>R: T-001 用户意图
+  R->>E: 带关联 ID 的命令
+  E->>API: 请求
+  API-->>E: 结果 / 失败
+  E-->>R: 结果事件
   R-->>V: UiState / UiEffect
 ```
 
@@ -123,7 +127,7 @@ sequenceDiagram
 
 <!-- ai-delivery:state-flow:traceability -->
 ### 5.8 状态流追踪
-| Transition / Projection ID | 需求来源 | UI scenario | 测试或验证命令 |
+| 转换 / 投影 ID（Transition / Projection ID） | 需求来源 | UI 场景（UI scenario） | 测试或验证命令 |
 |----------------------------|----------|-------------|----------------|
 | T-001 / P-001 | ... | ... | ... |
 

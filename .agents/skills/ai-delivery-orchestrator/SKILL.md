@@ -47,9 +47,11 @@ must match.
 
 ## Artifact language
 
-- Treat bundled template prose as an English source default, not as the output language.
-- Write headings, labels, explanations, review evidence, solution-design/spec/plan/task prose, and necessary code comments in the user's current conversation language. Apply the same rule when updating an existing artifact.
-- Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, and literal protocol tokens exactly.
+- Treat bundled template prose as an English source default, not as the output language. Resolve the output language from the user's current conversation, not from the repository, framework, or source template.
+- Human-readable content includes Markdown headings, table headers and cells, list labels, explanatory prose, review evidence, solution-design/spec/plan/task text, risk and open-question descriptions, and Mermaid node, edge, and participant labels. Write all of these in the user's current conversation language, including when updating an existing artifact.
+- Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, Mermaid syntax keywords, and literal protocol tokens exactly. Mermaid syntax such as `flowchart`, `stateDiagram-v2`, and `sequenceDiagram` stays English; the labels attached to those constructs are human-readable and must be localized.
+- Keep a standard technical term in English only when it is the actual API, library, protocol, code symbol, or a term whose English form is needed for precision. For other technical terms, write the localized term first and retain the original in parentheses on first use (for example, "reducer (`Reducer`)"). Do not treat an English template label such as `State set`, `Owner`, `Guard`, or `Risk` as a protected token.
+- Before a design/spec/plan/task gate or CP-DESIGN approval, perform a language review: scan headings, table headers, diagram labels, captions, prose, and review notes; translate unexplained English; confirm that retained English is a protected token or an explicitly introduced technical term. Unexplained English prose or headings are a localization defect and must be fixed before the gate.
 - For Markdown templates, localize all human-readable content and remove the `ai-delivery-template-language` instruction comment before writing the artifact. For JSON templates, preserve the structure and localize only human-readable descriptive values.
 
 ## Framework adaptation (run once per session)
