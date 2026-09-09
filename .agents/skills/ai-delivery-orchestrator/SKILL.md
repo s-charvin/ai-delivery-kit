@@ -84,13 +84,17 @@ The bracketed states are capability-gated. `ui_truth_mode=none` and `existing` s
 
 Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy the structure of [templates/status-template.json](templates/status-template.json) verbatim and localize its human-readable descriptive values; never regenerate the structure from memory. Instantiate [templates/todo-template.md](templates/todo-template.md) in the user's current conversation language (not source of truth).
 
+The current status template is schema `1.1`. On resume, an active unversioned or schema `1.0` entry missing the state-flow and review fields must be re-audited and migrated before routing; `merged`/`archived` legacy records remain read-only compatible.
+
 | Field | Purpose |
 |-------|---------|
 | `status` | Current state or `blocked_*` |
 | `ui_bearing` | `true` / `false` — whether the slice owns a UI surface; validators require consistency with `ui_truth_mode` |
 | `ui_truth_mode` | `none` / `existing` / `runtime-baseline` / `figma` — the UI truth capability required by the slice |
 | `design_mode` | `none` / `light` / `full` — the solution-design depth and approval policy |
-| `design_approved` | Solution-design gate satisfied: `light` after the AI self-review, `full` after explicit user approval; `none` remains `false` |
+| `state_flow_required` | Capability-audit result; `true` for MVI/UDF, shared mutable state, complex async/concurrency/recovery, or business-constrained effects, and it forces `design_mode=full` |
+| `design_approved` | Compatibility mirror for the solution-design gate; `light` follows AI self-review, `full` follows explicit user approval, and `none` remains `false` |
+| `design_review` | Structured review metadata (`review_mode`, `reviewed_design_sha256`, `reviewed_at`, `reviewed_by`) bound to the exact current `design.md` bytes |
 | `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
 | `resume_target_status` | Resume target after blocker cleared |
 
@@ -141,6 +145,8 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - Do not promote slice-local blockers to requirement-global while any runnable item exists.
 - Gate / blocker / status / merge decisions never go to subagents. Leaf skills may use subagents per their own rules (`ui-truth-mapping` per-unit, Stage 4 per the chosen execution tier).
 - Do not write solution-design docs into framework-owned directories during orchestrator solution-design mode; write the canonical artifact to subreq `design.md` and keep only a short pointer in `notes`.
+- For `state_flow_required=true`, Stage 3a is always `design_mode=full` and CP-DESIGN-gated. The canonical `design.md` must contain the state taxonomy, MVI loop, lifecycle chart, UI projection, authoritative transition matrix, applicable async sequences, invariants, and traceability. Use Mermaid Markdown only; do not create a second state index or HTML artifact.
+- A design approval is valid only when `design_review.reviewed_design_sha256` matches the exact UTF-8 bytes of the current `design.md`, the review mode matches `design_mode`, and the review timestamp/actor are present. A changed design file invalidates the gate and must reopen `solution-design` (CP-DESIGN for `full`).
 - For `ui_truth_mode=figma` or `runtime-baseline`, do not set `acceptance_frozen` until each UI unit has a real host-stack component, complete applicability-gated runtime coverage, an official-stack preview for every visual scenario whose **absolute path** was shown to the user, a valid v2 `contracts/ui-truth-index.json` with matching SHA-256 hashes and confirmation bound to current preview hashes, separate static visual confirmation and motion confirmation/waiver (including an explicit confirmed static/no-motion decision), and a clean Stage 2 review. When the host can deterministically record the real motion, include the GIF preview path and hash; when it cannot, record the reason and defer that runtime acceptance to Stage 4. Stage 4 must record independent motion acceptance for every unit before `visual_acceptance_passed`. Stage 2 authors via `ui-truth-mapping` only — never via `figma-design-to-code`, and never by generating `ui-contract.html`. Do not use an unapproved placeholder, generic icon, dummy/fixture visual, painted input shell, or silent asset fallback; missing resources require an explicit user choice to render empty, defer, or block. A missing data-bound value must render the real empty/omitted state, never fabricated content.
 - Stage 4: for `ui_truth_mode=figma` or `runtime-baseline`, reuse the Stage 2 user-approved workspace; do not create a second workspace or re-draw the component. `existing` uses the existing component and ordinary behavior/semantic checks; `none` has no UI truth artifact. Do not re-query TemPad / run `figma-design-to-code` by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not re-draw Flutter from HTML.
 - Do not set `merged` for `ui_truth_mode=figma` or `runtime-baseline` without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid v2 `ui-truth-index.json` + structured `visual-acceptance.json` covering every indexed scenario. `none` and `existing` close through ordinary verification.

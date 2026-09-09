@@ -42,6 +42,7 @@ require_no_han_content() {
 for rel in \
   ai-delivery-orchestrator/agents/openai.yaml \
   ai-delivery-orchestrator/scripts/reconcile-delivery.py \
+  ai-delivery-orchestrator/scripts/design_contract.py \
   ai-delivery-orchestrator/scripts/layout.py \
   requirement-breakdown/agents/openai.yaml \
   ui-truth-mapping/agents/openai.yaml \

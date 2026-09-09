@@ -28,7 +28,7 @@
 
 - 以 `requirement-slice.md` 为种子起草 canonical spec；UI truth 切片中，冻结宿主组件 + 已确认 previews 仍是视觉真值。引用每个 v2 unit/scenario id 及其证据来源；描述运行时行为与验收，不重复 Runtime Coverage 细节。
 - 推进状态前先对照切片范围人工审计并运行 kit validator。只有 `openspec validate` 能直接验证 canonical 文件且不会创建或更新 `openspec/**` 时才运行；否则跳过并在 `decisions.md` 记录原因。
-  - proposal 在全部 state/content/motion/assets/accessibility 预期均映射到 unit/scenario id 后被接受 → `spec_ready`
+  - proposal 在全部 state/content/motion/assets/accessibility 预期均映射到 unit/scenario id，且所需状态流设计具有有效评审哈希后被接受 → `spec_ready`
   - `design.md` 对 scenario 实现与验证归属审计通过 → `plan_ready`
   - `tasks.md` 对粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖审计通过 → `tasks_ready`
 - 不运行 `openspec archive`；它会在 `.ai-delivery` 外写第二份治理副本。归档由编排器 `archive` 动作负责，仅原位更新 `status.json`，不复制 canonical 三件套、`design.md` 或 `verification.md`，也不生成 `archive/` 或 `MANIFEST.json`。

@@ -10,7 +10,15 @@
       "ui_truth_mode": "existing",
       "design_mode": "light",
       "design_approved": false,
-      "notes": "Existing frozen component; behavior-only change"
+      "notes": "Existing frozen component; behavior-only change",
+      "state_flow_required": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      }
     }
-  }
+  },
+  "_schema": "1.1"
 }

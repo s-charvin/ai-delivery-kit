@@ -18,7 +18,8 @@ Bootstrap copies may use `.ai-delivery/scripts/` validators; skill-local path wo
 2. Re-check guards (contract validators for post-freeze statuses).
 3. Classify every blocker by `blocker_scope`.
 4. If a guard is already satisfied, do not re-run the stage.
-5. If outputs exist but guard fails, re-run or open narrowest blocker.
+5. If outputs exist but guard fails, re-run or open narrowest blocker. A missing/stale `design_review` hash reopens `solution-design`; it never authorizes the spec pipeline.
+   Active unversioned or schema 1.0 entries missing `state_flow_required` or `design_review` require a capability re-audit and schema 1.1 migration. Only `merged`/`archived` legacy records remain read-only compatible.
 6. Keep blocked items in queue; continue later items that do not depend on them.
 7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`, `BLOCKER_SCOPES`, `NEXT_ACTION`, `NEXT_SUBREQ`. Actions are abstract (`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish` / `archive`, plus kit-owned skills); map them to the selected framework tier via [framework-adaptation.md](framework-adaptation.md).
 

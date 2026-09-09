@@ -18,7 +18,8 @@ Bootstrap 后可用 `.ai-delivery/scripts/` 下的校验器；本 kit 仓库内�
 2. 重检守卫（post-freeze 状态的契约校验）。
 3. 按 `blocker_scope` 分类每个阻塞。
 4. 守卫已满足则不重跑该阶段。
-5. 产物存在但守卫失败 → 重跑或开最窄阻塞。
+5. 产物存在但守卫失败 → 重跑或开最窄阻塞。`design_review` 缺失或哈希过期会重新打开 `solution-design`，绝不能据此授权 spec 管道。
+   未版本化或 schema 1.0 的活跃条目若缺少 `state_flow_required` 或 `design_review`，必须重新做能力审计并迁移到 schema 1.1。只有 `merged`/`archived` 历史记录保持只读兼容。
 6. 阻塞项留在队列；不依赖它的后续项继续。
 7. 输出 `RUNTIME_MODE`、`CHECKPOINT`、`RUNNABLE`、`BLOCKED`、`BLOCKER_SCOPES`、`NEXT_ACTION`、`NEXT_SUBREQ`。动作是抽象的（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`，另含 kit 自有技能）；按 [framework-adaptation.md](framework-adaptation.md) 映射到所选框架档位。
 

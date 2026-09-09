@@ -71,6 +71,7 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     )
 
     status = {
+        "_schema": "1.1",
         "requirement_id": "REQ-UI",
         "sub_requirements": {
             "SR-001": {
@@ -78,7 +79,14 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
                 "ui_bearing": True,
                 "ui_truth_mode": "figma",
                 "design_mode": "full",
+                "state_flow_required": False,
                 "design_approved": True,
+                "design_review": {
+                    "review_mode": "human",
+                    "reviewed_design_sha256": sha256(subreq / "design.md"),
+                    "reviewed_at": "2026-09-09T00:00:00Z",
+                    "reviewed_by": "fixture-user",
+                },
             }
         },
     }
@@ -240,6 +248,25 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         acceptance_path.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
 
     def run() -> subprocess.CompletedProcess[str]:
+        entry = status["sub_requirements"]["SR-001"]
+        design_path = subreq / "design.md"
+        if entry.get("design_approved") is True and design_path.is_file():
+            entry["design_review"] = {
+                "review_mode": "human" if entry.get("design_mode") == "full" else "self",
+                "reviewed_design_sha256": sha256(design_path),
+                "reviewed_at": "2026-09-09T00:00:00Z",
+                "reviewed_by": "fixture-user",
+            }
+        else:
+            entry["design_review"] = {
+                "review_mode": "none",
+                "reviewed_design_sha256": None,
+                "reviewed_at": None,
+                "reviewed_by": None,
+            }
+        (req_root / "status.json").write_text(
+            json.dumps(status, indent=2) + "\n", encoding="utf-8"
+        )
         return subprocess.run(
             [
                 sys.executable,

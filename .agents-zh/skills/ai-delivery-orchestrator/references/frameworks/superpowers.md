@@ -29,8 +29,8 @@
 ## `solution-design` 使用意见
 
 - 喂给 brainstorming 流程：`requirement-slice.md`、每个启用 UI truth 的单元的冻结宿主组件 / `ui-truth-index.json`、API 文档和依赖图。
-- 产出：架构、组件分解、状态/转换模型、scenario ID 引用和关键取舍。Runtime Coverage 保留在 UI truth index。
-- 规范方案设计写入子需求 `design.md`，`notes` 只保留指针；完成所需评审后设置 `design_approved: true`（`design_mode=light` 在 AI 自审后设置，`design_mode=full` 仅在用户明确批准后设置）。`design_mode=none` 保持 `false`。不要把方案设计文档写进框架自有目录。
+- 产出：架构、组件分解、状态/转换模型、scenario ID 引用和关键取舍。`state_flow_required=true` 时，按 `design-template.md` 补齐状态分类、MVI 闭环、生命周期/投影图、权威转换矩阵、适用异步时序、不变量和追踪。Runtime Coverage 保留在 UI truth index。
+- 规范方案设计写入子需求 `design.md`，`notes` 只保留指针；完成所需评审后设置 `design_approved: true`（`design_mode=light` 在 AI 自审后设置，`design_mode=full` 仅在用户明确批准后设置）。记录包含精确文件 SHA-256、评审模式、时间戳和评审者的 `design_review`。`design_mode=none` 保持 `false`。不要把方案设计文档写进框架自有目录。
 
 ## `implement` 使用意见（按切片）
 

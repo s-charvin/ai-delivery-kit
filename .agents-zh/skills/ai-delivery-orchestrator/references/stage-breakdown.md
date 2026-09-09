@@ -17,6 +17,7 @@
 
 - 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
 - 在能力审计中为每个子需求设置 `ui_truth_mode` 与 `design_mode`：`ui_truth_mode` 使用 `none`、`existing`、`runtime-baseline` 或 `figma`；`design_mode` 使用 `none`、`light` 或 `full`。
+- 当切片使用 MVI/UDF/Redux/Reducer/Store，跨组件或跨页面共享可变状态，呈现多阶段异步操作状态，需要重试/取消/并发/过期结果/幂等/恢复规则，或存在业务约束的导航与一次性 UI effect 时，设置 `state_flow_required=true`。这会自动要求 `design_mode=full` 和 CP-DESIGN。纯静态页面以及不承载业务规则的局部控件保持 `false`。
 - 保留 `ui_bearing` 作为一致性字段：仅 `ui_truth_mode=none` 时为 `false`，其他 UI truth 模式为 `true`。
 - 初始化 `status.json`：复制 `templates/status-template.json` 的结构，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键和机器值；其中人类可读的描述值改为用户当前对话语言。
 - 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。

@@ -1,6 +1,6 @@
 {
-  "_schema": "1.0",
-  "_description": "Requirement-level state tracking in a single file. Each sub-requirement independently tracks status, capability modes, blocker details, and resume target.",
+  "_schema": "1.1",
+  "_description": "Requirement-level state tracking in a single file. Each sub-requirement independently tracks status, capability modes, design-flow complexity, approval evidence, blocker details, and resume target.",
 
   "_status_meanings": {
     "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
@@ -68,7 +68,14 @@
       "ui_bearing": false,
       "ui_truth_mode": "none",
       "design_mode": "none",
+      "state_flow_required": false,
       "design_approved": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      },
       "notes": null
     }
   }

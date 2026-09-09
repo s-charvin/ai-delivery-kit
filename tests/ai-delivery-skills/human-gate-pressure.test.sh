@@ -42,6 +42,37 @@ new_scenario() {
 
 reconcile_output() {
   local dir=$1
+  python3 - "$dir" <<'PY'
+import hashlib
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+root = Path(sys.argv[1])
+status_path = root / "status.json"
+data = json.loads(status_path.read_text(encoding="utf-8"))
+data["_schema"] = "1.1"
+for subreq_id, entry in data.get("sub_requirements", {}).items():
+    entry.setdefault("state_flow_required", False)
+    if entry.get("design_approved") is True:
+        design = root / "sub-requirements" / subreq_id / "design.md"
+        if design.is_file():
+            entry["design_review"] = {
+                "review_mode": "human" if entry.get("design_mode") == "full" else "self",
+                "reviewed_design_sha256": hashlib.sha256(design.read_bytes()).hexdigest(),
+                "reviewed_at": "2026-09-09T00:00:00Z",
+                "reviewed_by": "fixture-user",
+            }
+    else:
+        entry["design_review"] = {
+            "review_mode": "none",
+            "reviewed_design_sha256": None,
+            "reviewed_at": None,
+            "reviewed_by": None,
+        }
+status_path.write_text(json.dumps(data), encoding="utf-8")
+PY
   python3 "$RECONCILE" "$dir/status.json" --req-root "$dir" 2>/dev/null || true
 }
 

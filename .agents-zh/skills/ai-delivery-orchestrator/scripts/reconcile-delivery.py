@@ -13,6 +13,7 @@ from pathlib import Path
 # and for the one normalize/hash implementation behind drift detection).
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from layout import resolve_validator_script, spec_drift  # noqa: E402
+from design_contract import validate_design_entry  # noqa: E402
 
 TERMINAL_STATUSES = frozenset({"archived"})
 BLOCKED_PREFIX = "blocked_"
@@ -98,7 +99,7 @@ def infer_ui_bearing(entry: dict, subreq_dir: Path | None = None) -> bool:
     return entry.get("ui_bearing") is True
 
 
-def mode_errors(entry: dict) -> list[str]:
+def mode_errors(entry: dict, *, strict_design: bool = False) -> list[str]:
     """Return deterministic mode/legacy-field errors for one status entry."""
     errors: list[str] = []
     def legacy_keys(value: object) -> set[str]:
@@ -138,6 +139,14 @@ def mode_errors(entry: dict) -> list[str]:
         errors.append("[MODE] design_approved must be a boolean")
     elif design == "none" and entry.get("design_approved") is True:
         errors.append("[MODE] design_mode=none cannot set design_approved=true")
+    if strict_design or "state_flow_required" in entry:
+        state_flow_required = entry.get("state_flow_required")
+        if type(state_flow_required) is not bool:
+            errors.append("[MODE] state_flow_required must be a boolean")
+        elif state_flow_required and design != "full":
+            errors.append("[MODE] state_flow_required=true requires design_mode=full")
+    if strict_design and "design_review" not in entry:
+        errors.append("[MODE] design_review object is required")
     if isinstance(bearing, bool) and isinstance(truth, str) and truth in UI_TRUTH_MODES:
         expected = truth != "none"
         if bearing != expected:
@@ -158,7 +167,14 @@ def design_gate_satisfied(entry: dict, subreq_dir: Path | None = None) -> bool:
     # A status flag cannot stand in for the canonical artifact. This check is
     # kept in reconcile as well as the validator so an unseeded invocation
     # cannot silently skip the solution-design action.
-    return subreq_dir is None or (subreq_dir / "design.md").is_file()
+    if subreq_dir is None or not (subreq_dir / "design.md").is_file():
+        return subreq_dir is None
+    return not validate_design_entry(
+        entry,
+        subreq_dir,
+        status=entry.get("status", ""),
+        legacy_allowed=entry.get("status") in {"merged", "archived"},
+    )
 
 
 def solution_design_pending(entry: dict, subreq_dir: Path | None = None) -> bool:
@@ -181,6 +197,13 @@ def design_artifact_errors(entry: dict, subreq_dir: Path, status: str) -> list[s
         return [f"status={status} requires design.md"]
     if entry.get("design_approved") is True and not design_path.is_file():
         return ["design_approved=true requires design.md"]
+    if entry.get("design_approved") is True:
+        return validate_design_entry(
+            entry,
+            subreq_dir,
+            status=status,
+            legacy_allowed=status in {"merged", "archived"},
+        )
     return []
 
 
@@ -338,8 +361,17 @@ def next_action_for_entry(
         # solution-design action so it can create the missing artifact and
         # complete its review. Contradictory none-mode artifacts and forged
         # approvals remain fail-closed.
+        recoverable_design_error = any(
+            "hash does not match" in message
+            or "review_mode" in message
+            or "reviewed_design_sha256" in message
+            or "reviewed_at" in message
+            or "reviewed_by" in message
+            for message in artifact_errors
+        )
         if artifact_errors and not (
-            mode in {"light", "full"} and entry.get("design_approved") is False
+            mode in {"light", "full"}
+            and (entry.get("design_approved") is False or recoverable_design_error)
         ):
             return None
 
@@ -482,7 +514,18 @@ def reconcile(
         # Validate mode fields before blocker/dependency short-circuits. A
         # blocked or waiting slice must not become a storage path for removed
         # bypass fields or an invalid capability combination.
-        entry_mode_errors = mode_errors(entry)
+        entry_mode_errors = mode_errors(
+            entry,
+            strict_design=status_data.get("_schema") == "1.1",
+        )
+        if (
+            status_data.get("_schema", "legacy") in {"legacy", "1.0"}
+            and status not in {"merged", "archived"}
+            and ("state_flow_required" not in entry or "design_review" not in entry)
+        ):
+            entry_mode_errors.append(
+                "active legacy status requires migration to schema 1.1"
+            )
         if entry_mode_errors:
             invalid_mode_subreqs.add(subreq_id)
             errors.extend(f"[MODE] {subreq_id}: {message}" for message in entry_mode_errors)

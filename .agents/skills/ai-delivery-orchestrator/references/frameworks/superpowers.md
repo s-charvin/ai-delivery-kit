@@ -29,8 +29,8 @@ Never clone or symlink superpowers yourself.
 ## `solution-design` usage advice
 
 - Feed the brainstorming flow: `requirement-slice.md`, each enabled UI truth unit's host component + `ui-truth-index.json`, API docs, and the dependency graph.
-- Produce architecture, component decomposition, a state/transition model, scenario ID references, and key trade-offs. Runtime Coverage remains in the UI truth index.
-- Store the canonical solution design in subreq `design.md` and keep only a pointer in `notes`; set `design_approved: true` after the required review (`design_mode=light` after AI self-review, `design_mode=full` only after explicit user approval). Keep it `false` for `design_mode=none`. Do not write solution-design docs into framework-owned directories.
+- Produce architecture, component decomposition, a state/transition model, scenario ID references, and key trade-offs. When `state_flow_required=true`, include the taxonomy, MVI loop, lifecycle/projection diagrams, authoritative transition matrix, applicable async sequences, invariants, and traceability from `design-template.md`. Runtime Coverage remains in the UI truth index.
+- Store the canonical solution design in subreq `design.md` and keep only a pointer in `notes`; set `design_approved: true` after the required review (`design_mode=light` after AI self-review, `design_mode=full` only after explicit user approval). Record `design_review` with the exact file SHA-256, review mode, timestamp, and actor. Keep it `false` for `design_mode=none`. Do not write solution-design docs into framework-owned directories.
 
 ## `implement` usage advice (per slice)
 

@@ -14,7 +14,15 @@
       "ui_truth_mode": "existing",
       "design_mode": "none",
       "design_approved": false,
-      "notes": null
+      "notes": null,
+      "state_flow_required": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      }
     }
-  }
+  },
+  "_schema": "1.1"
 }

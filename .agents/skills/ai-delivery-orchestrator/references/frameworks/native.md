@@ -18,9 +18,9 @@ Before the spec pipeline, resolve the binding layout keys `spec`, `plan`, and `t
 Inline in the main session (no separate tool):
 
 1. Read `requirement-slice.md`, the enabled UI truth artifact when present, API docs, and the dependency graph.
-2. Produce: architecture sketch, component decomposition, data/state-transition model, scenario ID references, and key trade-offs. Runtime Coverage details remain in `contracts/ui-truth-index.json`.
+2. Produce: architecture sketch, component decomposition, data/state-transition model, scenario ID references, and key trade-offs. When `state_flow_required=true`, include the complete state-flow contract from `design-template.md`: taxonomy, MVI loop, lifecycle, projection, transition matrix, applicable async sequences, invariants, and traceability. Runtime Coverage details remain in `contracts/ui-truth-index.json`.
 3. Write the solution design to the path resolved from layout key `solution_design` (default `design.md`) and present a compact summary to the user. Keep the `notes` field for short status markers only.
-4. Set `design_approved: true` after the required review: `design_mode=full` only after explicit user approval through CP-DESIGN; `design_mode=light` after the short design and AI self-review without CP-DESIGN. Keep it `false` for `design_mode=none`.
+4. Set `design_approved: true` after the required review: `design_mode=full` only after explicit user approval through CP-DESIGN; `design_mode=light` after the short design and AI self-review without CP-DESIGN. Record `design_review` with the exact design SHA-256, review mode, timestamp, and actor. Keep it `false` for `design_mode=none`.
 
 ## `spec` action
 

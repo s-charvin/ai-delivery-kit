@@ -28,7 +28,7 @@ Never initialize or install OpenSpec yourself; if detection is ambiguous, ask th
 
 - Seed the canonical spec from `requirement-slice.md`; for UI truth slices the frozen host component + confirmed previews remain the visual source of truth. Reference every v2 unit/scenario id and its evidence origin; describe runtime behavior and acceptance without restating Runtime Coverage details.
 - Validate before advancing status with a manual audit against the slice scope and the kit validators. Run `openspec validate` only if it can validate canonical files without creating or updating `openspec/**`; otherwise skip it and record the reason in `decisions.md`.
-  - proposal accepted after all state/content/motion/assets/accessibility expectations map to unit/scenario ids → `spec_ready`
+- proposal accepted after all state/content/motion/assets/accessibility expectations map to unit/scenario ids and any required state-flow design has a valid review hash → `spec_ready`
   - `design.md` audited for scenario implementation and verification ownership → `plan_ready`
   - `tasks.md` audited for granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage → `tasks_ready`
 - Do not run `openspec archive`; it writes a second governance copy outside `.ai-delivery`. The orchestrator `archive` action only updates `status.json` in place; it does not copy the canonical spec set, `design.md`, or `verification.md`, and does not create `archive/` or `MANIFEST.json`.

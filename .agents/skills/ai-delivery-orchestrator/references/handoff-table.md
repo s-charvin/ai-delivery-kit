@@ -9,7 +9,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 | CP-UI confirmed | Resolve the user-approved workspace, then run `ui-truth-mapping` (TDD + golden + review) | Treat Stage 2 as implementation-free mapping, or treat CP-UI as worktree consent |
 | `split_ready` + light audit with `ui_truth_mode=none` or `existing` | `solution-design` when `design_mode=light` or `full`; otherwise `spec` | Require a UI gate for an existing/no-truth slice |
 | `acceptance_frozen` (validator OK) | `solution-design` according to `design_mode` | `spec` before the solution-design gate is satisfied |
-| Solution design gate satisfied (`design_mode=none`, or `design_approved: true` for `light`/`full`) | `spec` → `plan` → `tasks` | Business code before `tasks_ready` |
+| Solution design gate satisfied (`design_mode=none`, or a hash-bound `design_approved: true` for `light`/`full`) | `spec` → `plan` → `tasks` | Business code before `tasks_ready`, or proceeding with a stale design hash |
 | All executable subreqs at `tasks_ready` | CP-001 pause → user confirms | Silent entry to development |
 | CP-001 confirmed | Stage 4: `implement` | Parallel implementers on same slice files |
 | Slice implementation complete | `finish` → set `merged` | Subagent merge or gate promotion |
@@ -36,7 +36,7 @@ Each stage has exactly one legal next action. Do not improvise jumps. Actions ar
 
 ## Solution-design approval
 
-- Set `design_approved: true` after the required solution-design artifact is complete: `design_mode=light` after the AI self-review, or `design_mode=full` only after an explicit user approval. Keep it `false` for `design_mode=none`.
+- Set `design_approved: true` after the required solution-design artifact is complete: `design_mode=light` after the AI self-review, or `design_mode=full` only after an explicit user approval. Record matching `design_review` metadata and the exact file SHA-256. Keep it `false` for `design_mode=none`.
 - For `design_mode=light`, record the short solution-design artifact and satisfy the gate without CP-DESIGN. For `design_mode=none`, do not create `design.md`.
 - Store only a short pointer in `notes`; the canonical artifact remains `design.md` when required.
 - Do not enter `spec`/`plan`/`tasks` while a `design_mode=full` gate is pending.

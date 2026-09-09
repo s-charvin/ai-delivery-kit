@@ -80,7 +80,9 @@ draft → split_ready → [acceptance_frozen] → [design_approved] → spec_rea
 | `ui_bearing` | `true` / `false` — 切片是否拥有 UI 表面；校验器要求它与 `ui_truth_mode` 一致 |
 | `ui_truth_mode` | `none` / `existing` / `runtime-baseline` / `figma` — 切片所需的 UI truth 能力 |
 | `design_mode` | `none` / `light` / `full` — 方案设计深度与审批策略 |
-| `design_approved` | 方案设计门禁已满足：`light` 在 AI 自审后，`full` 在用户明确批准后；`none` 保持 `false` |
+| `state_flow_required` | 能力审计结果；MVI/UDF、共享可变状态、复杂异步/并发/恢复或业务约束 effect 时为 `true`，并强制 `design_mode=full` |
+| `design_approved` | 方案设计门禁兼容字段；`light` 在 AI 自审后，`full` 在用户明确批准后；`none` 保持 `false` |
+| `design_review` | 结构化评审元数据（`review_mode`、`reviewed_design_sha256`、`reviewed_at`、`reviewed_by`），绑定当前 `design.md` 的精确字节 |
 | `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
 | `resume_target_status` | 阻塞清除后的恢复目标 |
 
@@ -95,6 +97,8 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 ```
 
 reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`，另含 kit 自有技能）— 绝不输出第三方技能名。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
+
+当前状态模板为 schema `1.1`。恢复时，缺少状态流与评审字段的未版本化或 schema `1.0` 活跃条目必须重新审计并迁移后才能路由；`merged`/`archived` 历史记录保持只读兼容。
 
 ## Handoff 表
 
@@ -131,6 +135,8 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
 - 编排器方案设计模式不要把文档写进框架自有目录；规范方案设计写入子需求 `design.md`，`notes` 只保留短指针。
+- `state_flow_required=true` 时，Stage 3a 始终为 `design_mode=full` 并受 CP-DESIGN 门禁约束。canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用的异步时序、不变量和追踪。只使用 Markdown 中的 Mermaid，不创建第二份状态索引或 HTML 产物。
+- 设计批准仅在 `design_review.reviewed_design_sha256` 匹配当前 `design.md` 精确 UTF-8 字节、评审模式与 `design_mode` 匹配且时间戳/评审者存在时有效。文件改变会使门禁失效并重新打开 `solution-design`（`full` 走 CP-DESIGN）。
 - 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**、有效 v2 `contracts/ui-truth-index.json`（路径/hash/来源/profile/scenario/coverage 与当前预览 hash 绑定确认）、独立动效确认/豁免（静态 unit 必须确认无动效），或 Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
 - Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v2 `ui-truth-index.json`，以及覆盖全部已索引 scenario 的结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。

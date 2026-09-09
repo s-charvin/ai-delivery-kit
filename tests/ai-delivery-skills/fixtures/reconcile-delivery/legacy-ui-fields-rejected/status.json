@@ -11,7 +11,15 @@
       "design_mode": "light",
       "design_approved": true,
       "ui_contract_exempt": true,
-      "notes": "deprecated bypass must be rejected"
+      "notes": "deprecated bypass must be rejected",
+      "state_flow_required": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      }
     }
-  }
+  },
+  "_schema": "1.1"
 }

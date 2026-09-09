@@ -198,6 +198,7 @@ for late_status in ("tasks_ready", "in_dev", "visual_acceptance_passed", "merged
         status_path.write_text(
             json.dumps(
                 {
+                    "_schema": "1.1",
                     "sub_requirements": {
                         "SR-001": {
                             "status": late_status,
@@ -205,6 +206,13 @@ for late_status in ("tasks_ready", "in_dev", "visual_acceptance_passed", "merged
                             "ui_truth_mode": "figma" if figma_status else "none",
                             "design_mode": "full",
                             "design_approved": False,
+                            "state_flow_required": False,
+                            "design_review": {
+                                "review_mode": "none",
+                                "reviewed_design_sha256": None,
+                                "reviewed_at": None,
+                                "reviewed_by": None,
+                            },
                         }
                     }
                 }
@@ -229,15 +237,23 @@ with tempfile.TemporaryDirectory() as td:
     status_path = root / "status.json"
     status_path.write_text(
         json.dumps(
-            {
-                "current_checkpoint": "CP-001",
+                {
+                    "_schema": "1.1",
+                    "current_checkpoint": "CP-001",
                 "sub_requirements": {
                     "SR-001": {
                         "status": "tasks_ready",
                         "ui_bearing": False,
                         "ui_truth_mode": "none",
                         "design_mode": "full",
-                        "design_approved": True,
+                        "design_approved": False,
+                        "state_flow_required": False,
+                        "design_review": {
+                            "review_mode": "none",
+                            "reviewed_design_sha256": None,
+                            "reviewed_at": None,
+                            "reviewed_by": None,
+                        },
                     },
                     "SR-002": {
                         "status": "tasks_ready",
@@ -245,6 +261,13 @@ with tempfile.TemporaryDirectory() as td:
                         "ui_truth_mode": "none",
                         "design_mode": "full",
                         "design_approved": False,
+                        "state_flow_required": False,
+                        "design_review": {
+                            "review_mode": "none",
+                            "reviewed_design_sha256": None,
+                            "reviewed_at": None,
+                            "reviewed_by": None,
+                        },
                     },
                 },
             }

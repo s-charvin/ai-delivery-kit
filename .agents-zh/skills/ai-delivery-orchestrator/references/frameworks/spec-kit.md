@@ -65,5 +65,5 @@ spec-kit 项目可能定义了 constitution。在不与 `.ai-delivery` 治理真
 
 - 不要在仓库内 fork 或复述官方 `speckit-*` 技能。
 - 不得让 spec-kit 在 `.ai-delivery/` 之外持久化流程/治理产物。
-- `design_mode=full` 审批未满足（`design_approved: false`）前不得启动 `speckit-*` 步骤；UI truth 切片还必须先 `acceptance_frozen`。
+- `design_mode=full` 审批未满足（`design_approved: false`）或 `design_review` 哈希过期前不得启动 `speckit-*` 步骤；`state_flow_required=true` 还必须完成状态流契约。UI truth 切片还必须先 `acceptance_frozen`。
 - spec-kit 只覆盖规格类动作；`implement` / `finish` 按 [../framework-adaptation.md](../framework-adaptation.md) 分发给 superpowers、ECC 或原生档。

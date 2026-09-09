@@ -89,6 +89,8 @@ require "$EN_UI" "Static golden confirmation and motion confirmation/waiver are 
 
 require "$EN_SKILL" "do not re-query TemPad / run \`figma-design-to-code\` by default" "EN SKILL Stage 4"
 require "$EN_SKILL" "structured \`visual-acceptance.json\`" "EN structured acceptance gate"
+require "$EN_SKILL" "state_flow_required" "EN state-flow trigger"
+require "$EN_SKILL" "design_review" "EN design review binding"
 require "$EN_BRIDGE" "exactly one result for every indexed scenario id" "EN exact scenario acceptance"
 require "$EN_DESIGN_STAGE" "every frozen unit/scenario id" "EN scenario-linked spec"
 require "$EN_DESIGN_STAGE" "which task implements or verifies each scenario id" "EN scenario-linked plan"
@@ -96,6 +98,8 @@ require "$EN_DESIGN_STAGE" "complete scenario-to-test/acceptance coverage" "EN s
 require "$EN_DESIGN_STAGE" "solution-design" "EN solution-design stage"
 require "$EN_DESIGN_STAGE" "ui_truth_mode" "EN UI truth mode routing"
 require "$EN_DESIGN_STAGE" "design_mode" "EN design mode routing"
+require "$EN_DESIGN_STAGE" "reviewed_design_sha256" "EN design hash binding"
+require "$EN_DESIGN_STAGE" "state-flow contract" "EN state-flow design contract"
 require "$EN_DESIGN_TEMPLATE" "UI Scenario References" "EN UI scenario references"
 require "$EN_DESIGN_TEMPLATE" "Scenario IDs" "EN scenario ID references"
 for forbidden in "Responsive" "Reduced motion" "Figma source"; do
@@ -103,6 +107,9 @@ for forbidden in "Responsive" "Reduced motion" "Figma source"; do
 done
 require "$EN_DESIGN_TEMPLATE" "does not duplicate their Runtime Coverage Plan" "EN design template delegates runtime coverage"
 require "$EN_DESIGN_TEMPLATE" "State and Transition Model" "EN design state model"
+require "$EN_DESIGN_TEMPLATE" "ai-delivery:state-flow:start" "EN state-flow marker"
+require "$EN_DESIGN_TEMPLATE" "authoritative Transition Matrix" "EN transition matrix"
+require "$EN_DESIGN_TEMPLATE" "sequenceDiagram" "EN async sequence diagram"
 
 # Frameworks contribute methods only. Every process/governance artifact stays
 # in the current sub-requirement's canonical .ai-delivery tree.

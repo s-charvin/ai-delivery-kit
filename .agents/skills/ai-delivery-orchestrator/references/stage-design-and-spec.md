@@ -14,7 +14,7 @@ Before dispatching any framework action, apply the [artifact containment protoco
 <HARD-GATE>
 For `design_mode=full`, after the solution-design session do NOT write plan/spec artifacts of your own before the user approves the design.
 Do NOT write solution-design docs into framework-owned directories.
-Write the canonical solution design to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. For `design_mode=light`, set `design_approved=true` after the short record and AI self-review. For `design_mode=full`, set it only after explicit user approval. Then proceed to the `spec` action.
+Write the canonical solution design to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. For `design_mode=light`, set `design_approved=true` after the short record and AI self-review, and bind `design_review.reviewed_design_sha256` to the exact file bytes. For `design_mode=full`, set it only after explicit user approval of the current file, with `design_review.review_mode=human` and the same hash. When `state_flow_required=true`, the design must include the complete state-flow contract: state ownership taxonomy, MVI loop, business lifecycle, UI projection, authoritative transition matrix, applicable async sequences, invariants, and traceability. Then proceed to the `spec` action.
 </HARD-GATE>
 
 <HARD-GATE>
@@ -28,6 +28,8 @@ Feed the solution-design session (native flow or the installed framework's desig
 - API docs (if available)
 - Dependency graph
 
+For the reusable Markdown shape, load `templates/design-state-flow-example.md` only when `state_flow_required=true`; it is a generic reference and must be adapted to the current requirement rather than copied as project truth.
+
 The solution-design session should produce:
 
 - Architecture (component tree, data flow, state management)
@@ -38,7 +40,9 @@ The solution-design session should produce:
 - References to the indexed UI scenario IDs that own runtime coverage; do not duplicate the Runtime Coverage Plan in `design.md`
 - Key technical decisions and trade-offs
 
-Write the solution-design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). For `design_mode=full`, set `design_approved: true` only on user approval; for `design_mode=light`, set it after recording the short design and self-review result without CP-DESIGN.
+For a stateful client slice, treat the transition matrix as authoritative and use Mermaid `flowchart`, `stateDiagram-v2`, and applicable `sequenceDiagram` blocks as review views. Keep diagrams bounded with composite/parallel states instead of enumerating a state Cartesian product. Every transition must account for guards, success, failure, cancellation, stale results, concurrency/idempotency, persistence, and recovery where applicable; explicitly record `not_applicable` when a sequence does not apply. A design is not ready for approval while any state-flow decision remains unresolved.
+
+Write the solution-design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). For `design_mode=full`, set `design_approved: true` only on user approval and record the current file hash in `design_review`; for `design_mode=light`, set it after recording the short design and self-review result and record the same hash. Any later design.md change invalidates the approval and reopens this action.
 
 If the solution design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
 

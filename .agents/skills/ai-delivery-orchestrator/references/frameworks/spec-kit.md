@@ -65,5 +65,5 @@ Also add one `source_index.spec` entry per artifact with `ref_type` `spec` / `pl
 
 - Do not fork or restate official `speckit-*` skills inside the repo.
 - Do not let spec-kit create process/governance artifacts outside `.ai-delivery/`.
-- Do not start `speckit-*` steps while a `design_mode=full` approval is pending (`design_approved: false`); UI truth slices additionally require `acceptance_frozen`.
+- Do not start `speckit-*` steps while a `design_mode=full` approval is pending (`design_approved: false`) or its `design_review` hash is stale; `state_flow_required=true` additionally requires the complete state-flow contract. UI truth slices additionally require `acceptance_frozen`.
 - spec-kit covers spec-producing actions only; `implement` / `finish` dispatch to superpowers, ECC, or the native tier per [../framework-adaptation.md](../framework-adaptation.md).

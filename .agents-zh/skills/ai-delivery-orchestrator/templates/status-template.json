@@ -1,6 +1,6 @@
 {
-  "_schema": "1.0",
-  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪状态、能力模式、阻塞详情和恢复目标。",
+  "_schema": "1.1",
+  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪状态、能力模式、状态流复杂度、审批证据、阻塞详情和恢复目标。",
 
   "_status_meanings": {
     "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
@@ -68,7 +68,14 @@
       "ui_bearing": false,
       "ui_truth_mode": "none",
       "design_mode": "none",
+      "state_flow_required": false,
       "design_approved": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      },
       "notes": null
     }
   }

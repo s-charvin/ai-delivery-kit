@@ -22,6 +22,7 @@ for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
 done
 
 copy_identical "ai-delivery-orchestrator/scripts/reconcile-delivery.py"
+copy_identical "ai-delivery-orchestrator/scripts/design_contract.py"
 copy_identical "ai-delivery-orchestrator/scripts/layout.py"
 copy_identical "ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
 copy_identical "ui-truth-mapping/templates/ui-truth-index-template.json"

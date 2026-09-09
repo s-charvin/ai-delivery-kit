@@ -10,7 +10,15 @@
       "ui_truth_mode": "none",
       "design_mode": "light",
       "design_approved": false,
-      "notes": "Small API extension with an explicit light solution design"
+      "notes": "Small API extension with an explicit light solution design",
+      "state_flow_required": false,
+      "design_review": {
+        "review_mode": "none",
+        "reviewed_design_sha256": null,
+        "reviewed_at": null,
+        "reviewed_by": null
+      }
     }
-  }
+  },
+  "_schema": "1.1"
 }

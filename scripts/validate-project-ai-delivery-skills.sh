@@ -255,7 +255,9 @@ validate_orchestrator_skill() {
     references/scenario-guidance.md \
     references/handoff-table.md \
     references/reconcile-rules.md \
-    scripts/reconcile-delivery.py
+    scripts/reconcile-delivery.py \
+    scripts/design_contract.py \
+    templates/design-state-flow-example.md
 
   require_contains "$skill_file" 'Runtime modes'
   require_contains "$skill_file" 'reconcile-delivery.py'

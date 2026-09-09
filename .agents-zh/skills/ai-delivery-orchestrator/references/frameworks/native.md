@@ -18,9 +18,9 @@
 在主会话内联完成（无需单独工具）：
 
 1. 读取 `requirement-slice.md`、启用时的 UI truth 产物、API 文档与依赖图。
-2. 产出：架构草图、组件分解、数据/状态转换模型、scenario ID 引用与关键取舍。Runtime Coverage 细节留在 `contracts/ui-truth-index.json`。
+2. 产出：架构草图、组件分解、数据/状态转换模型、scenario ID 引用与关键取舍。`state_flow_required=true` 时，按 `design-template.md` 补齐状态分类、MVI 闭环、生命周期/投影图、权威转换矩阵、适用异步时序、不变量和追踪。Runtime Coverage 细节留在 `contracts/ui-truth-index.json`。
 3. 将方案设计写入 layout key `solution_design` 解析出的路径（默认 `design.md`），并向用户展示精简摘要；`notes` 只保留短状态标记。
-4. 完成所需评审后设置 `design_approved: true`：`design_mode=full` 仅经 CP-DESIGN 用户明确批准后设置；`design_mode=light` 完成短方案并通过 AI 自审后设置，不触发 CP-DESIGN。`design_mode=none` 保持 `false`。
+4. 完成所需评审后设置 `design_approved: true`：`design_mode=full` 仅经 CP-DESIGN 用户明确批准后设置；`design_mode=light` 完成短方案并通过 AI 自审后设置，不触发 CP-DESIGN。记录包含精确 design SHA-256、评审模式、时间戳和评审者的 `design_review`。`design_mode=none` 保持 `false`。
 
 ## `spec` 动作
 

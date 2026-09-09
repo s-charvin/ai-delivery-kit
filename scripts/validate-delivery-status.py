@@ -73,9 +73,11 @@ _layout_dir = _locate_layout_dir()
 if _layout_dir is not None:
     sys.path.insert(0, str(_layout_dir))
     from layout import is_new_layout, load_workflow_policy  # noqa: E402
+    from design_contract import validate_design_entry  # noqa: E402
 else:  # pragma: no cover
     is_new_layout = None  # type: ignore[assignment]
     load_workflow_policy = None  # type: ignore[assignment]
+    validate_design_entry = None  # type: ignore[assignment]
 
 POST_FREEZE_STATUSES = frozenset(
     {
@@ -196,7 +198,7 @@ def infer_ui_bearing(entry: dict, subreq_dir: Path | None = None) -> bool:
     return entry.get("ui_bearing") is True
 
 
-def mode_errors(entry: dict) -> list[str]:
+def mode_errors(entry: dict, *, strict_design: bool = False) -> list[str]:
     errors: list[str] = []
     def legacy_keys(value: Any) -> set[str]:
         if isinstance(value, dict):
@@ -237,6 +239,14 @@ def mode_errors(entry: dict) -> list[str]:
         errors.append("design_approved must be a boolean")
     elif design == "none" and entry.get("design_approved") is True:
         errors.append("design_mode=none cannot set design_approved=true")
+    if strict_design or "state_flow_required" in entry:
+        state_flow_required = entry.get("state_flow_required")
+        if type(state_flow_required) is not bool:
+            errors.append("state_flow_required must be a boolean")
+        elif state_flow_required and design != "full":
+            errors.append("state_flow_required=true requires design_mode=full")
+    if strict_design and "design_review" not in entry:
+        errors.append("design_review object is required")
     return errors
 
 
@@ -1727,6 +1737,9 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     sub_requirements = status_data.get("sub_requirements")
     if not isinstance(sub_requirements, dict):
         return ["[STATUS] sub_requirements must be a mapping"]
+    status_schema = status_data.get("_schema", "legacy")
+    if status_schema not in {"legacy", "1.0", "1.1"}:
+        return ["[STATUS] _schema must be 1.0 or 1.1"]
 
     verification_markers = verification_required_markers(req_root)
     repo_root = find_repo_root(req_root)
@@ -1746,9 +1759,18 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
             errors.append(f"[STATUS] sub_requirements.{subreq_id}.status missing")
             continue
 
+        legacy_design = status_schema in {"legacy", "1.0"} and status in {"merged", "archived"}
+        if status_schema in {"legacy", "1.0"} and not legacy_design and (
+            "state_flow_required" not in entry or "design_review" not in entry
+        ):
+            errors.append(
+                f"[DESIGN] {subreq_id} active schema 1.0 requires migration to schema 1.1 "
+                "before it can continue"
+            )
+
         errors.extend(
             f"[STATUS] sub_requirements.{subreq_id}: {message}"
-            for message in mode_errors(entry)
+            for message in mode_errors(entry, strict_design=status_schema == "1.1")
         )
 
         subreq_dir = req_root / "sub-requirements" / subreq_id
@@ -1762,6 +1784,16 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
                 subreq_id, subreq_dir, status, entry, index
             )
         )
+        if validate_design_entry is not None:
+            errors.extend(
+                f"[DESIGN] {subreq_id}: {message}"
+                for message in validate_design_entry(
+                    entry,
+                    subreq_dir,
+                    status=status,
+                    legacy_allowed=legacy_design,
+                )
+            )
 
         truth_mode = entry.get("ui_truth_mode")
 

@@ -14,7 +14,7 @@
 <HARD-GATE>
 对 `design_mode=full`：方案设计会话结束后，在用户批准设计之前，不要自行撰写 plan/spec 产物。
 不要把方案设计文档写进框架自有目录。
-用用户当前对话语言把规范方案设计写入 `design.md`（模板：`templates/design-template.md`，删除其中的语言指令注释）；`notes` 只保留单行指针。`design_mode=light` 在完成短方案记录并通过 AI 自审后设 `design_approved=true`；`design_mode=full` 仅在用户明确批准后设置。然后进入 `spec` 动作。
+用用户当前对话语言把规范方案设计写入 `design.md`（模板：`templates/design-template.md`，删除其中的语言指令注释）；`notes` 只保留单行指针。`design_mode=light` 在完成短方案记录并通过 AI 自审后设 `design_approved=true`，并将 `design_review.reviewed_design_sha256` 绑定到文件精确字节；`design_mode=full` 仅在用户明确批准当前文件后设置，并使用 `design_review.review_mode=human` 与同一哈希。`state_flow_required=true` 时，设计必须包含完整状态流契约：状态所有权分类、MVI 闭环、业务生命周期、UI 投影、权威转换矩阵、适用的异步时序、不变量和追踪。然后进入 `spec` 动作。
 </HARD-GATE>
 
 <HARD-GATE>
@@ -28,6 +28,8 @@
 - API 文档（若有）
 - 依赖图
 
+可复用的 Markdown 结构见 `templates/design-state-flow-example.md`；仅在 `state_flow_required=true` 时按需读取。它只是通用参考，必须根据当前需求改写，不能复制成项目事实。
+
 方案设计会话应产出：
 
 - 架构（组件树、数据流、状态管理）
@@ -38,7 +40,9 @@
 - 引用负责运行时 coverage 的 UI scenario ID；不要在 `design.md` 重复 Runtime Coverage Plan
 - 关键技术决策与权衡
 
-用用户当前对话语言把方案设计摘要写入 `design.md`，`notes` 只保留单行指针。`design_mode=full` 仅在用户批准后设 `design_approved: true`；`light` 记录短方案并自审后设置该字段，不触发 CP-DESIGN。
+对于有状态客户端切片，将转换矩阵视为权威事实源，并用 Mermaid `flowchart`、`stateDiagram-v2` 及适用的 `sequenceDiagram` 作为验收视图。使用复合/并行状态拆解复杂流程，禁止枚举状态笛卡尔积。每个转换在适用时都必须覆盖 guard、成功、失败、取消、过期结果、并发/幂等、持久化与恢复；不适用的时序必须明确写出 `not_applicable`。仍有未决状态流决策时不得批准设计。
+
+用用户当前对话语言把方案设计摘要写入 `design.md`，`notes` 只保留单行指针。`design_mode=full` 仅在用户批准后设 `design_approved: true`，并在 `design_review` 记录当前文件哈希；`light` 记录短方案并自审后设置该字段并记录同一哈希。之后任何 `design.md` 修改都会使批准失效并重新打开此动作。
 
 若方案设计与冻结组件 / 已确认预览或需求冲突 → `blocked_spec_mismatch`。
 
