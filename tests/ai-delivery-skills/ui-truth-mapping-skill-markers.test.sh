@@ -180,24 +180,32 @@ require "$MOTION_EXAMPLE" "Process.runSync" "motion example GIF encoder"
 require "$MOTION_EXAMPLE" "totalDuration" "motion example covers total duration"
 require "$MOTION_EXAMPLE" "could not be decoded" "motion example validates GIF"
 require "$MOTION_EXAMPLE" "at least two keyframes" "motion example minimum frames"
-require "$MOTION_EXAMPLE" "must use exactly 40 ms intervals" "motion example strict timing"
+require "$MOTION_EXAMPLE" "must be strictly increasing cumulative keyframes" "motion example strict timing"
 require "$MOTION_EXAMPLE" "NETSCAPE2.0" "motion example automatic loop"
 require "$MOTION_EXAMPLE" "record why the preview is" "motion example records unavailable reason"
 require "$MOTION_EXAMPLE" "obtain motion confirmation or an explicit waiver" "motion example requires disposition"
 require "$MOTION_EXAMPLE" "25 FPS" "motion example high cadence"
 require "$MOTION_EXAMPLE" "40,000 microseconds" "motion example frame interval"
 require "$MOTION_EXAMPLE" "_elapsedTimesForMotion" "motion example samples every frame"
-require "$MOTION_EXAMPLE" "'-framerate'" "motion example explicit input rate"
-require "$MOTION_EXAMPLE" "'-r'" "motion example explicit output rate"
-require "$MOTION_EXAMPLE" "unit_%05d.png" "motion example numbered frame input"
-require "$MOTION_EXAMPLE" "'cfr'" "motion example constant frame rate"
+require "$MOTION_EXAMPLE" "'-f'" "motion example concat input format"
+require "$MOTION_EXAMPLE" "'concat'" "motion example concat demuxer"
+require "$MOTION_EXAMPLE" "'-fps_mode'" "motion example explicit VFR mode"
+require "$MOTION_EXAMPLE" "'vfr'" "motion example duration-preserving output"
+require "$MOTION_EXAMPLE" "padLeft(5, '0')" "motion example numbered frame input"
+require "$MOTION_EXAMPLE" "Directory.systemTemp" "motion example temporary frame directory"
+require "$MOTION_EXAMPLE" "deleteSync(recursive: true)" "motion example frame cleanup"
+require "$MOTION_EXAMPLE" "finally" "motion example cleanup finally"
 require "$ZH_MOTION_EXAMPLE" "25 FPS" "localized motion example high cadence"
 require "$ZH_MOTION_EXAMPLE" "40000" "localized motion example frame interval"
 require "$ZH_MOTION_EXAMPLE" "_elapsedTimesForMotion" "localized motion example samples every frame"
-require "$ZH_MOTION_EXAMPLE" "'-framerate'" "localized motion example explicit input rate"
-require "$ZH_MOTION_EXAMPLE" "'-r'" "localized motion example explicit output rate"
-require "$ZH_MOTION_EXAMPLE" "unit_%05d.png" "localized motion example numbered frame input"
-require "$ZH_MOTION_EXAMPLE" "'cfr'" "localized motion example constant frame rate"
+require "$ZH_MOTION_EXAMPLE" "'-f'" "localized motion example concat input format"
+require "$ZH_MOTION_EXAMPLE" "'concat'" "localized motion example concat demuxer"
+require "$ZH_MOTION_EXAMPLE" "'-fps_mode'" "localized motion example explicit VFR mode"
+require "$ZH_MOTION_EXAMPLE" "'vfr'" "localized motion example duration-preserving output"
+require "$ZH_MOTION_EXAMPLE" "padLeft(5, '0')" "localized motion example numbered frame input"
+require "$ZH_MOTION_EXAMPLE" "Directory.systemTemp" "localized motion example temporary frame directory"
+require "$ZH_MOTION_EXAMPLE" "deleteSync(recursive: true)" "localized motion example frame cleanup"
+require "$ZH_MOTION_EXAMPLE" "finally" "localized motion example cleanup finally"
 require "$ZH_MOTION_EXAMPLE" "NETSCAPE2.0" "localized motion example automatic loop"
 require "$ZH_MOTION_EXAMPLE" "ffprobe" "localized motion example verifies GIF"
 
@@ -208,11 +216,11 @@ for f in "$MOTION_EXAMPLE" "$ZH_MOTION_EXAMPLE"; do
   if grep -Fq '30 FPS' "$f"; then
     fail "motion example must use the 25 FPS contract in $(basename "$f")"
   fi
-  if grep -Fq "'concat'" "$f"; then
-    fail "motion example must not rely on concat's default time base in $(basename "$f")"
+  if grep -Fq "'cfr'" "$f"; then
+    fail "motion example must preserve declared durations with VFR in $(basename "$f")"
   fi
-  if grep -Fq "'vfr'" "$f"; then
-    fail "motion example must use constant frame rate output in $(basename "$f")"
+  if ! grep -Fq "'concat'" "$f" || ! grep -Fq "'vfr'" "$f"; then
+    fail "motion example must use concat/VFR duration-preserving encoding in $(basename "$f")"
   fi
 done
 

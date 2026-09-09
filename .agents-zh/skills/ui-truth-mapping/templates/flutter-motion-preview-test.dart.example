@@ -5,13 +5,13 @@
 // 官方 Flutter 路径：
 //   1. 按明确的累计 elapsed keyframe pump 真实 Widget；
 //   2. 每个 PNG 帧使用 matchesGoldenFile（运行 --update-goldens）；
-//   3. 用宿主已批准的 GIF 编码器编码帧目录；
+//   3. 用宿主已批准的 GIF 编码器编码临时帧目录；
 //   4. 在 motion_decision 记录动效预览路径和 SHA-256。
 //
 // 本示例刻意使用严格均匀的 25 FPS 捕获节奏（每帧 40000 微秒）。GIF 以厘秒
 // 存储时间，因此 40 ms 可以精确得到 25 FPS。校验器会拒绝任何非均匀
-// keyframe，以免 CFR 编码器悄悄改时长。有意停顿或可变帧时长时，改用保留
-// 时长的 VFR/concat 编码器，不要改写本 CFR 命令。不要把连续动效用 100 ms
+// keyframe，以免编码器悄悄改时长。有意停顿或可变帧时长时，使用保留时长的
+// VFR/concat 编码器。不要把连续动效用 100 ms
 // 以上的稀疏步进替代。把占位 totalDuration 换成完整的 trigger→settled
 // 转场或一个完整循环，只保留短暂终态停留。不要发布截断 GIF 或过长空等尾巴。
 //
@@ -19,6 +19,7 @@
 // 调用未知 controller 或发明 trigger。禁止 dummy Widget、外部视觉 slot
 // 或伪造动效文件。GIF 已足够，也是本契约唯一的动效预览格式。没有 GIF
 // 编码器时记录预览不可用原因，取得动效确认或明确豁免，并把运行时验证延后。
+// 中间 PNG 帧只是构建输入：GIF 编码和解码校验完成后，成功或失败都必须清理。
 
 import 'dart:io';
 
@@ -44,34 +45,41 @@ void main() {
 
     final output = Directory('build/motion-preview')
       ..createSync(recursive: true);
-    final frameDirectory = Directory('${output.path}/unit')
-      ..createSync(recursive: true);
+    final frameDirectory = Directory.systemTemp.createTempSync(
+      'ui-truth-motion-frames-',
+    );
     final elapsedTimes = _elapsedTimesForMotion(
       const Duration(milliseconds: 240),
     );
     _validateElapsedTimes(elapsedTimes);
 
-    for (var index = 0; index < elapsedTimes.length; index++) {
-      final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
-      await tester.binding.pump(
-        elapsedTimes[index] - previous,
-        EnginePhase.paint,
-      );
-      await expectLater(
-        find.byKey(repaintKey),
-        matchesGoldenFile(
-          Uri.file(
-            '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    try {
+      for (var index = 0; index < elapsedTimes.length; index++) {
+        final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
+        await tester.binding.pump(
+          elapsedTimes[index] - previous,
+          EnginePhase.paint,
+        );
+        await expectLater(
+          find.byKey(repaintKey),
+          matchesGoldenFile(
+            Uri.file(
+              '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+            ),
           ),
-        ),
-      );
-    }
+        );
+      }
 
-    _encodeGif(
-      frameDirectory: frameDirectory,
-      outputFile: File('${output.absolute.path}/unit.gif'),
-      elapsedTimes: elapsedTimes,
-    );
+      _encodeGif(
+        frameDirectory: frameDirectory,
+        outputFile: File('${output.absolute.path}/unit.gif'),
+        elapsedTimes: elapsedTimes,
+      );
+    } finally {
+      if (frameDirectory.existsSync()) {
+        frameDirectory.deleteSync(recursive: true);
+      }
+    }
   });
 }
 
@@ -99,15 +107,8 @@ List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
       '必须至少覆盖一帧 40 ms',
     );
   }
-  final remainder = totalDuration - elapsedTimes.last;
-  if (remainder == _frameInterval) {
+  if (elapsedTimes.last != totalDuration) {
     elapsedTimes.add(totalDuration);
-  } else if (remainder != Duration.zero) {
-    throw ArgumentError.value(
-      totalDuration,
-      'totalDuration',
-      '本均匀 CFR 示例要求时长必须是 40 ms 的整数倍',
-    );
   }
   return elapsedTimes;
 }
@@ -128,22 +129,36 @@ void _encodeGif({
       throw StateError('缺少动效帧：${frameFile.path}');
     }
   }
+  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
+  final manifest = StringBuffer();
+  for (var index = 0; index < elapsedTimes.length; index++) {
+    final frameFile = File(
+      '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    );
+    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
+    manifest.writeln('duration ${_frameDuration(elapsedTimes, index)}');
+  }
+  final lastFrame = File(
+    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
+  );
+  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
+  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
   try {
     final result = Process.runSync('ffmpeg', [
       '-hide_banner',
       '-loglevel',
       'error',
       '-y',
-      '-framerate',
-      '25',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
       '-i',
-      '${frameDirectory.absolute.path}/unit_%05d.png',
+      manifestFile.absolute.path,
       '-frames:v',
       '${elapsedTimes.length}',
       '-fps_mode',
-      'cfr',
-      '-r',
-      '25',
+      'vfr',
       '-vf',
       'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
       '-loop',
@@ -163,11 +178,25 @@ void _encodeGif({
       outputFile.deleteSync();
     }
     rethrow;
+  } finally {
+    if (manifestFile.existsSync()) {
+      manifestFile.deleteSync();
+    }
   }
   if (!outputFile.existsSync()) {
     throw StateError('GIF 编码器没有产出文件：${outputFile.path}');
   }
-  _verifyGif(outputFile, elapsedTimes.length);
+  _verifyGif(outputFile, elapsedTimes);
+}
+
+String _escapeConcatPath(String path) =>
+    path.replaceAll('\\', '/').replaceAll("'", "'\\''");
+
+double _frameDuration(List<Duration> elapsedTimes, int index) {
+  final duration = index + 1 < elapsedTimes.length
+      ? elapsedTimes[index + 1] - elapsedTimes[index]
+      : elapsedTimes[index] - elapsedTimes[index - 1];
+  return duration.inMicroseconds / 1000000;
 }
 
 void _validateElapsedTimes(List<Duration> elapsedTimes) {
@@ -182,21 +211,21 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
     throw ArgumentError.value(
       elapsedTimes,
       'elapsedTimes',
-      '本均匀 CFR 示例必须从零时刻开始',
+      '必须从零时刻开始',
     );
   }
   for (var index = 1; index < elapsedTimes.length; index++) {
-    if (elapsedTimes[index] - elapsedTimes[index - 1] != _frameInterval) {
+    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
       throw ArgumentError.value(
         elapsedTimes,
         'elapsedTimes',
-        '必须使用精确 40 ms 间隔；可变时长请改用保留时长的 VFR 编码器',
+        '必须是严格递增的累计 keyframe',
       );
     }
   }
 }
 
-void _verifyGif(File outputFile, int expectedFrameCount) {
+void _verifyGif(File outputFile, List<Duration> elapsedTimes) {
   try {
     final result = Process.runSync('ffprobe', [
       '-v',
@@ -224,12 +253,14 @@ void _verifyGif(File outputFile, int expectedFrameCount) {
     final frameCount = int.tryParse(metadata['nb_read_frames'] ?? '') ??
         int.tryParse(metadata['nb_frames'] ?? '');
     final durationSeconds = double.tryParse(metadata['duration'] ?? '');
-    final expectedSeconds =
-        expectedFrameCount * _frameInterval.inMicroseconds / 1000000;
-    if (frameCount != expectedFrameCount) {
+    var expectedSeconds = 0.0;
+    for (var index = 0; index < elapsedTimes.length; index++) {
+      expectedSeconds += _frameDuration(elapsedTimes, index);
+    }
+    if (frameCount != elapsedTimes.length) {
       throw StateError(
         '编码后的 GIF 时长不匹配：frames=$frameCount, '
-        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'duration=$durationSeconds, expectedFrames=${elapsedTimes.length}, '
         'expectedDuration=$expectedSeconds',
       );
     }
@@ -237,7 +268,7 @@ void _verifyGif(File outputFile, int expectedFrameCount) {
         (durationSeconds - expectedSeconds).abs() > 0.05) {
       throw StateError(
         '编码后的 GIF 时长不匹配：frames=$frameCount, '
-        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
+        'duration=$durationSeconds, expectedFrames=${elapsedTimes.length}, '
         'expectedDuration=$expectedSeconds',
       );
     }

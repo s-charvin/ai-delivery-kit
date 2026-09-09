@@ -11,7 +11,9 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 1 — 禁止二次转换。** 写项目已经在用的 Widget/组件。不要先冻一份 HTML（或任何平行赝品）再翻译成 Flutter/React。
 
-**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。动效捕获目标为 25 FPS（每帧 40 ms），覆盖连续变化区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。均匀捕获必须显式声明目标速率；带有意停顿或可变帧间隔的捕获必须保留这些时长，不得被恒定帧率选项压缩或拉长时间轴。编码器必须显式接收 25 FPS 的输入/输出速率。每份动效预览必须包含完整的 trigger→settled 转场或至少一个完整循环，只允许简短可审阅的片头/片尾停留，并自动重播。展示前必须解码并核验帧数、总时长与循环元数据。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
+**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。先检查并复用宿主已经跑通的动效捕获 helper 与编码器；不得用未经验证的新抽象替换可工作的 `pump`/栅格回读链路。Flutter 参考链路是：累计 elapsed `pump` keyframe → `matchesGoldenFile` 写 PNG 帧 → 保留时长的 concat/VFR GIF 编码 → 解码校验。动效捕获目标为 25 FPS（每帧 40 ms），覆盖连续变化区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。均匀捕获必须显式声明目标速率；带有意停顿或可变帧间隔的捕获必须保留这些时长，不得被恒定帧率选项压缩或拉长时间轴。每份动效预览必须包含完整的 trigger→settled 转场或至少一个完整循环，只允许简短可审阅的片头/片尾停留，并自动重播。展示前必须解码并核验帧数、总时长与循环元数据。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
+
+**中间帧生命周期。** 用于编码 GIF 的 PNG 帧和 concat manifest 是临时构建输入，不是交付证据。它们必须写入临时目录或被忽略的构建目录，不得放在 GIF 旁边或受版本控制的证据目录中。编码和解码校验完成前保留它们；成功和失败都必须在 `finally`/等价清理路径中删除帧目录与 manifest。只有明确审阅过的关键帧 PNG 可以作为静态证据保留。交付前检查没有未编入索引的帧 PNG、manifest、调色板或编码器临时文件残留。
 
 **原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
 
@@ -77,7 +79,7 @@ templates/
 └── ui-truth-index-template.json
 ```
 
-静态示例教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens` 及注释中的预览规则（PNG 画布 ≠ 运行时尺寸、每个视觉 scenario 一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。动效示例要求先通过真实 Widget API 触发动效，再按累计 keyframe 写 PNG 并使用已有 GIF 编码器；GIF 已足够，不要新增 WebP/MP4 编码器或依赖。**它们都不是 Widget 模板。** 不要把教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
+静态示例教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens` 及注释中的预览规则（PNG 画布 ≠ 运行时尺寸、每个视觉 scenario 一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。动效示例要求先通过真实 Widget API 触发动效，再按累计 keyframe 将 PNG 写入临时/忽略目录，调用已有且保留时长的 GIF 编码器，完成解码校验后删除全部中间帧和 manifest；GIF 已足够，不要新增 WebP/MP4 编码器或依赖。**它们都不是 Widget 模板。** 不要把教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
 
 ## 快速参考 — 场景 → 单元拆分
 

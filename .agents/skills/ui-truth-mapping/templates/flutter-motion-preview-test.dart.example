@@ -7,15 +7,14 @@
 // The official Flutter path is:
 //   1. pump the REAL widget at explicit cumulative elapsed keyframes;
 //   2. use matchesGoldenFile for each PNG frame (run with --update-goldens);
-//   3. encode the frame directory with a host-approved GIF encoder;
+//   3. encode the temporary frame directory with a host-approved GIF encoder;
 //   4. record the motion preview path and SHA-256 in motion_decision.
 //
 // This example intentionally uses a strictly uniform 25 FPS capture cadence
 // (40,000 microseconds per frame). GIF stores delays in centiseconds, so 40 ms
 // maps exactly to 25 FPS. The validator rejects any non-uniform keyframes
-// before the CFR encoder can silently change their timing. For intentional
-// holds or variable frame durations, use a duration-preserving VFR/concat
-// encoder instead of adapting this CFR command. Do not replace continuous
+// before encoding can silently change their timing. For intentional holds or
+// variable frame durations, preserve them with a VFR/concat encoder. Do not replace continuous
 // motion with sparse 100+ ms steps. Replace the placeholder totalDuration
 // with the complete trigger-to-settled transition or one full loop, plus only
 // a short terminal hold. Do not publish a truncated GIF or a long idle tail.
@@ -26,7 +25,8 @@
 // file. GIF is sufficient and is the only motion-preview format in this
 // contract. If the host has no GIF encoder, record why the preview is
 // unavailable, obtain motion confirmation or an explicit waiver, and defer
-// runtime verification.
+// runtime verification. Intermediate PNG frames are temporary build inputs:
+// remove them after GIF encode and decode verification, including on failure.
 
 import 'dart:io';
 
@@ -53,34 +53,41 @@ void main() {
 
     final output = Directory('build/motion-preview')
       ..createSync(recursive: true);
-    final frameDirectory = Directory('${output.path}/unit')
-      ..createSync(recursive: true);
+    final frameDirectory = Directory.systemTemp.createTempSync(
+      'ui-truth-motion-frames-',
+    );
     final elapsedTimes = _elapsedTimesForMotion(
       const Duration(milliseconds: 240),
     );
     _validateElapsedTimes(elapsedTimes);
 
-    for (var index = 0; index < elapsedTimes.length; index++) {
-      final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
-      await tester.binding.pump(
-        elapsedTimes[index] - previous,
-        EnginePhase.paint,
-      );
-      await expectLater(
-        find.byKey(repaintKey),
-        matchesGoldenFile(
-          Uri.file(
-            '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    try {
+      for (var index = 0; index < elapsedTimes.length; index++) {
+        final previous = index == 0 ? Duration.zero : elapsedTimes[index - 1];
+        await tester.binding.pump(
+          elapsedTimes[index] - previous,
+          EnginePhase.paint,
+        );
+        await expectLater(
+          find.byKey(repaintKey),
+          matchesGoldenFile(
+            Uri.file(
+              '${frameDirectory.absolute.path}/unit_${index.toString().padLeft(5, '0')}.png',
+            ),
           ),
-        ),
-      );
-    }
+        );
+      }
 
-    _encodeGif(
-      frameDirectory: frameDirectory,
-      outputFile: File('${output.absolute.path}/unit.gif'),
-      elapsedTimes: elapsedTimes,
-    );
+      _encodeGif(
+        frameDirectory: frameDirectory,
+        outputFile: File('${output.absolute.path}/unit.gif'),
+        elapsedTimes: elapsedTimes,
+      );
+    } finally {
+      if (frameDirectory.existsSync()) {
+        frameDirectory.deleteSync(recursive: true);
+      }
+    }
   });
 }
 
@@ -108,15 +115,8 @@ List<Duration> _elapsedTimesForMotion(Duration totalDuration) {
       'must cover at least one 40 ms frame',
     );
   }
-  final remainder = totalDuration - elapsedTimes.last;
-  if (remainder == _frameInterval) {
+  if (elapsedTimes.last != totalDuration) {
     elapsedTimes.add(totalDuration);
-  } else if (remainder != Duration.zero) {
-    throw ArgumentError.value(
-      totalDuration,
-      'totalDuration',
-      'must be a multiple of 40 ms for this uniform-CFR example',
-    );
   }
   return elapsedTimes;
 }
@@ -137,22 +137,36 @@ void _encodeGif({
       throw StateError('Missing motion frame: ${frameFile.path}');
     }
   }
+  final manifestFile = File('${frameDirectory.path}/unit.concat.txt');
+  final manifest = StringBuffer();
+  for (var index = 0; index < elapsedTimes.length; index++) {
+    final frameFile = File(
+      '${frameDirectory.path}/unit_${index.toString().padLeft(5, '0')}.png',
+    );
+    manifest.writeln("file '${_escapeConcatPath(frameFile.absolute.path)}'");
+    manifest.writeln('duration ${_frameDuration(elapsedTimes, index)}');
+  }
+  final lastFrame = File(
+    '${frameDirectory.path}/unit_${(elapsedTimes.length - 1).toString().padLeft(5, '0')}.png',
+  );
+  manifest.writeln("file '${_escapeConcatPath(lastFrame.absolute.path)}'");
+  manifestFile.writeAsStringSync(manifest.toString(), flush: true);
   try {
     final result = Process.runSync('ffmpeg', [
       '-hide_banner',
       '-loglevel',
       'error',
       '-y',
-      '-framerate',
-      '25',
+      '-f',
+      'concat',
+      '-safe',
+      '0',
       '-i',
-      '${frameDirectory.absolute.path}/unit_%05d.png',
+      manifestFile.absolute.path,
       '-frames:v',
       '${elapsedTimes.length}',
       '-fps_mode',
-      'cfr',
-      '-r',
-      '25',
+      'vfr',
       '-vf',
       'split[s0][s1];[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=new=1',
       '-loop',
@@ -172,11 +186,25 @@ void _encodeGif({
       outputFile.deleteSync();
     }
     rethrow;
+  } finally {
+    if (manifestFile.existsSync()) {
+      manifestFile.deleteSync();
+    }
   }
   if (!outputFile.existsSync()) {
     throw StateError('GIF encoder produced no output: ${outputFile.path}');
   }
-  _verifyGif(outputFile, elapsedTimes.length);
+  _verifyGif(outputFile, elapsedTimes);
+}
+
+String _escapeConcatPath(String path) =>
+    path.replaceAll('\\', '/').replaceAll("'", "'\\''");
+
+double _frameDuration(List<Duration> elapsedTimes, int index) {
+  final duration = index + 1 < elapsedTimes.length
+      ? elapsedTimes[index + 1] - elapsedTimes[index]
+      : elapsedTimes[index] - elapsedTimes[index - 1];
+  return duration.inMicroseconds / 1000000;
 }
 
 void _validateElapsedTimes(List<Duration> elapsedTimes) {
@@ -191,22 +219,21 @@ void _validateElapsedTimes(List<Duration> elapsedTimes) {
     throw ArgumentError.value(
       elapsedTimes,
       'elapsedTimes',
-      'must start at zero for this uniform-CFR example',
+      'must start at zero',
     );
   }
   for (var index = 1; index < elapsedTimes.length; index++) {
-    if (elapsedTimes[index] - elapsedTimes[index - 1] != _frameInterval) {
+    if (elapsedTimes[index] <= elapsedTimes[index - 1]) {
       throw ArgumentError.value(
         elapsedTimes,
         'elapsedTimes',
-        'must use exactly 40 ms intervals; use a duration-preserving VFR '
-            'encoder for variable timing',
+        'must be strictly increasing cumulative keyframes',
       );
     }
   }
 }
 
-void _verifyGif(File outputFile, int expectedFrameCount) {
+void _verifyGif(File outputFile, List<Duration> elapsedTimes) {
   try {
     final result = Process.runSync('ffprobe', [
       '-v',
@@ -234,21 +261,23 @@ void _verifyGif(File outputFile, int expectedFrameCount) {
     final frameCount = int.tryParse(metadata['nb_read_frames'] ?? '') ??
         int.tryParse(metadata['nb_frames'] ?? '');
     final durationSeconds = double.tryParse(metadata['duration'] ?? '');
-    final expectedSeconds =
-        expectedFrameCount * _frameInterval.inMicroseconds / 1000000;
-    if (frameCount != expectedFrameCount) {
+    var expectedDuration = 0.0;
+    for (var index = 0; index < elapsedTimes.length; index++) {
+      expectedDuration += _frameDuration(elapsedTimes, index);
+    }
+    if (frameCount != elapsedTimes.length) {
       throw StateError(
         'Encoded GIF timing mismatch: frames=$frameCount, '
-        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
-        'expectedDuration=$expectedSeconds',
+        'duration=$durationSeconds, expectedFrames=${elapsedTimes.length}, '
+        'expectedDuration=$expectedDuration',
       );
     }
     if (durationSeconds != null &&
-        (durationSeconds - expectedSeconds).abs() > 0.05) {
+        (durationSeconds - expectedDuration).abs() > 0.05) {
       throw StateError(
         'Encoded GIF timing mismatch: frames=$frameCount, '
-        'duration=$durationSeconds, expectedFrames=$expectedFrameCount, '
-        'expectedDuration=$expectedSeconds',
+        'duration=$durationSeconds, expectedFrames=${elapsedTimes.length}, '
+        'expectedDuration=$expectedDuration',
       );
     }
     if (!String.fromCharCodes(
