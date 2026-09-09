@@ -50,10 +50,7 @@ require "$EN" "Preserve the required resource class" "EN resource class preserva
 require "$EN" "do not use a poster frame or static substitute" "EN no poster fallback"
 require "$EN" "This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage" "EN Stage 2 freeze gate"
 require "$EN" "Static golden confirmation alone never advances \`acceptance_frozen\`" "EN golden cannot advance freeze"
-require "$EN" "test/motion/<unit>.gif" "EN GIF output path"
-require "$EN" "25 FPS" "EN motion capture cadence"
-require "$EN" "100+ ms keyframe gaps" "EN sparse keyframe ban"
-require "$EN" "Uniform captures must declare the intended rate explicitly" "EN explicit encoder rate"
+require "$EN" "motion preview" "EN generic motion output"
 
 # ZH — motion and resource guardrails stay explicit in the localized entrypoint
 unicode_text() {
@@ -77,22 +74,33 @@ ZH_COMPOSED_ASSETS=$(unicode_text '5728 8BED 4E49 7EC4 4EF6 8FB9 754C 89E3 6790 
 ZH_CONTROL_STATE_VARIANTS=$(unicode_text '4ECE 771F 5B9E 63A7 4EF6 72B6 6001 63A8 5BFC 89C6 89C9 53D8 4F53')
 ZH_MEASUREMENT_FONT=$(unicode_text '4F7F 7528 4E0E 5B9E 9645 6E32 67D3 76F8 540C 7684 5DF2 89E3 6790 5B57 4F53 65CF')
 
+ZH_GENERIC_GIF=$(unicode_text '4E0D 8981 4E3A 5176 4ED6 683C 5F0F 65B0 589E')
+ZH_ADAPTER=$(unicode_text '6846 67B6 9002 914D 5668')
+ZH_REAL_COMPONENT=$(unicode_text '771F 5B9E 7EC4 4EF6 884C 4E3A')
+ZH_MOTION_OUTPUT=$(unicode_text '53EF 9009 7684 0020 0047 0049 0046 0020 52A8 6548 5BA1 9605 5A92 4ECB')
+
 require "$ZH" "static / no motion" "ZH explicit static motion decision"
 require "$ZH" "$ZH_SEPARATE_MOTION_CONFIRMATION" "ZH separate motion confirmation"
-require "$ZH" "$ZH_GIF_SCOPE WebP/MP4 $ZH_GIF_ENCODER" "ZH GIF scope"
-require "$ZH" "$ZH_REAL_WIDGET_API Widget API" "ZH real motion trigger"
-require "$EN" "strictly" "EN strict motion keyframes"
-require "$EN" "increasing cumulative" "EN cumulative motion keyframes"
-require "$EN" "at least two for a GIF" "EN minimum GIF keyframes"
-require "$ZH" "$ZH_STRICT_KEYFRAMES" "ZH strict motion keyframes"
-require "$ZH" "GIF $ZH_MINIMUM_GIF_FRAMES" "ZH minimum GIF keyframes"
+require "$ZH" "$ZH_GENERIC_GIF" "ZH GIF scope"
+require "$EN" "strictly increasing cumulative keyframes" "EN strict motion keyframes"
+require "$EN" "temporary or ignored build directory" "EN temporary frame lifecycle"
+require "$EN" "framework adapter" "EN adapter abstraction"
+require "$ZH" "$ZH_ADAPTER" "ZH adapter abstraction"
+require "$ZH" "$ZH_REAL_COMPONENT" "ZH adapter trigger reference"
 require "$ZH" "$ZH_RESOURCE_CLASS" "ZH resource class preservation"
 require "$ZH" "$ZH_NO_POSTER_FALLBACK" "ZH no poster fallback"
 require "$ZH" "$ZH_STAGE2_FREEZE_GATE" "ZH Stage 2 freeze gate"
 require "$ZH" "$ZH_GOLDEN_CANNOT_FREEZE" "ZH golden cannot advance freeze"
-require "$ZH" "test/motion/<unit>.gif" "ZH GIF output path"
-require "$ZH" "25 FPS" "ZH motion capture cadence"
-require "$ZH" "$ZH_EXPLICIT_ENCODER_RATE" "ZH explicit encoder rate"
+require "$ZH" "$ZH_MOTION_OUTPUT" "ZH generic motion output"
+
+for forbidden in "flutter-golden-preview" "matchesGoldenFile" "testWidgets" "RenderRepaintBoundary"; do
+  if grep -Fq -- "$forbidden" "$EN"; then
+    fail "core EN skill contains framework-specific token: $forbidden"
+  fi
+  if grep -Fq -- "$forbidden" "$ZH"; then
+    fail "core ZH skill contains framework-specific token: $forbidden"
+  fi
+done
 
 for f in "$EN" "$ZH"; do
   if grep -Fq 'test/motion/<unit>.*' "$f"; then
@@ -146,19 +154,17 @@ require "$EN" "Never copy TemPad \`data-hint-*\`" "EN strip data-hint"
 require "$EN" "Do not invent visual truth" "EN anti invent"
 
 # EN — native stack freeze
-require "$EN" "matchesGoldenFile" "EN golden matcher"
-require "$EN" "--update-goldens" "EN update-goldens"
 require "$EN" "absolute path" "EN absolute path"
 require "$EN" "ui-truth-index.json" "EN truth index"
 require "$EN" "generate \`ui-contract.html\`" "EN ban html contract"
-require "$EN" "translate HTML into Flutter" "EN ban HTML→Flutter"
+require "$EN" "translate between host stacks" "EN ban cross-stack translation"
 require "$EN" "Anti-patterns" "EN anti-patterns"
 
 if grep -E '^description:.*Auto-detects' "$EN" >/dev/null; then
   fail "EN description summarizes workflow (Auto-detects) — SDO violation"
 fi
 
-EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
+EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example"
 [[ -f "$EXAMPLE" ]] || fail "Missing golden example: $EXAMPLE"
 require "$EXAMPLE" "matchesGoldenFile" "example golden matcher"
 require "$EXAMPLE" "RepaintBoundary" "example repaint boundary"
@@ -168,9 +174,9 @@ require "$EXAMPLE" "state-switcher" "example bans in-widget switcher"
 require "$EXAMPLE" "viewPadding" "example strips system chrome"
 require "$EXAMPLE" "per reviewable visual scenario" "example one test per visual scenario"
 
-MOTION_EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+MOTION_EXAMPLE="$ROOT/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
 [[ -f "$MOTION_EXAMPLE" ]] || fail "Missing motion example: $MOTION_EXAMPLE"
-ZH_MOTION_EXAMPLE="$ROOT/.agents-zh/skills/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+ZH_MOTION_EXAMPLE="$ROOT/.agents-zh/skills/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
 [[ -f "$ZH_MOTION_EXAMPLE" ]] || fail "Missing localized motion example: $ZH_MOTION_EXAMPLE"
 require "$MOTION_EXAMPLE" "matchesGoldenFile" "motion example golden matcher"
 require "$MOTION_EXAMPLE" "cumulative elapsed keyframes" "motion example cumulative keyframes"

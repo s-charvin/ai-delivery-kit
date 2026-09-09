@@ -1,8 +1,15 @@
 # Retrospective Guidance
 
-Retrospective is an optional, requirement-level learning ledger for reducing
-repeat rework in client requirement delivery. It is framework-neutral and does
+Retrospective is a requirement-level learning ledger for reducing repeat
+rework in client requirement delivery. The file is required before archive,
+even when no reusable problem has been found. It is framework-neutral and does
 not define product behavior, architecture, or a lifecycle gate.
+
+The ledger must contain exactly one machine-readable marker in this form:
+`<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->`. Update it during
+the final review. Archive accepts the ledger only when the marker parses and
+its calendar date matches the archive date. This date-level check deliberately
+avoids requiring a human to predict the exact archive timestamp.
 
 ## Record only reusable problems
 
@@ -33,8 +40,9 @@ what is the narrowest verification? State a stop condition when evidence is
 ambiguous or the applicability boundary is not met.
 
 After every update, tell the user the recorded ID, what was added, and the
-ledger path. This is a visibility aid, not a gate. The user may request an
-omission or correction before archive.
+ledger path. This is a visibility aid. The user may request an omission or
+correction before archive. A ledger with no problem rows is valid, but it still
+needs the reviewed-at marker.
 
 ## Progressive loading
 
@@ -56,11 +64,12 @@ architecture constraints, product requirements, or unconfirmed external facts.
 
 ## Archive behavior
 
-Archive does not generate or rewrite retrospective content. If the ledger
-exists, the archive action reads its marked problem map and idempotently replaces
-that requirement's rows in the project index. If no ledger exists, it creates no
-ledger and no index entry. The index update copies existing summaries only; it
-does not infer missing problems or perform a memory audit.
+Archive does not generate or rewrite retrospective content. The archive action
+requires the ledger and its current reviewed-at marker, then reads its marked
+problem map and idempotently replaces that requirement's rows in the project
+index. A ledger with no problem rows produces no index rows. A missing or stale
+ledger blocks archive; the command does not infer missing problems or perform a
+memory audit.
 
 The requirement-level ledger remains next to its requirement artifacts as the
 full historical source. The delivery report keeps its summary responsibility;

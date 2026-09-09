@@ -60,7 +60,7 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
-[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]

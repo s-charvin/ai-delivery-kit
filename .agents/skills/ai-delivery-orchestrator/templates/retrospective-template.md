@@ -7,15 +7,19 @@ unchanged. Remove this comment from the instantiated document.
 
 # Retrospective - <req-id>
 
-> This is an optional, living requirement-level ledger. Record reusable
-> delivery failures and corrections while they happen. It is not a framework,
-> product, or implementation specification.
+> This is a required, living requirement-level ledger. The file must exist at
+> archive time even when there are no problem records. Record reusable delivery
+> failures and corrections while they happen. It is not a framework, product,
+> or implementation specification.
 
 ## 1. Summary
 
 - Requirement: <req-id>
 - Scope: <short scope>
 - Status: active
+- Last reviewed at: <reviewed-at>
+
+<!-- ai-delivery-retrospective:reviewed-at:<reviewed-at> -->
 
 ### 1.1 Problem Map
 

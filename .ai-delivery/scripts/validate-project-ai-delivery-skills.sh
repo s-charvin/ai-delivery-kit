@@ -227,7 +227,10 @@ validate_ui_truth_mapping_skill() {
 
   validate_skill_local_assets \
     ui-truth-mapping \
-    templates/flutter-golden-preview-test.dart.example \
+    references/framework-adapters/flutter/golden-preview-test.dart.example \
+    references/framework-adapters/flutter/motion-preview-test.dart.example \
+    references/framework-adapters/flutter/README.md \
+    references/framework-adapters/README.md \
     templates/ui-truth-index-template.json
 
   require_contains "$skill_file" 'requirement-slice'
@@ -240,7 +243,9 @@ validate_ui_truth_mapping_skill() {
   require_contains "$skill_file" 'fill detection rule'
   require_contains "$skill_file" 'Runtime Coverage Plan'
   require_contains "$skill_file" 'There is no HTML validator and no v1 compatibility path'
-  require_contains "$skill_file" '--update-goldens'
+  require_contains "$skill_file" 'Framework adapters'
+  require_contains "$skill_file" 'temporary or ignored build directory'
+  require_contains "$skill_file" 'official preview'
 }
 
 validate_orchestrator_skill() {

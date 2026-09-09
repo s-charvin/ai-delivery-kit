@@ -14,14 +14,20 @@ fail() {
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
-SUB="$TMP/sub-requirements/SR-001"
+REQ="$TMP/.ai-delivery/requirements/report-language"
+SUB="$REQ/sub-requirements/SR-001"
 mkdir -p "$SUB/spec"
 printf '# spec\n' > "$SUB/spec/spec.md"
 printf '# plan\n' > "$SUB/spec/plan.md"
 printf '# tasks\n' > "$SUB/spec/tasks.md"
 printf '# verification\n' > "$SUB/verification.md"
+mkdir -p "$TMP/.ai-delivery/meta"
+printf '{"layout": {}}\n' > "$TMP/.ai-delivery/meta/project-binding.json"
+cat > "$REQ/retrospective.md" <<'EOF'
+<!-- ai-delivery-retrospective:reviewed-at:2026-08-25 -->
+EOF
 
-cat > "$TMP/status.json" <<'JSON'
+cat > "$REQ/status.json" <<'JSON'
 {
   "requirement_id": "report-language",
   "sub_requirements": {
@@ -37,7 +43,7 @@ cat > "$TMP/status.json" <<'JSON'
 JSON
 
 if python3 "$ARCHIVE" \
-  --req-root "$TMP" \
+  --req-root "$REQ" \
   --subreq SR-001 \
   --now "2026-08-25T00:00:00+00:00" \
   --delivery-report-template "$DEFAULT_TEMPLATE" \
@@ -46,7 +52,7 @@ if python3 "$ARCHIVE" \
 fi
 grep -Fq 'still contains its language instruction' "$TMP/default.err" \
   || fail "missing language-instruction rejection"
-grep -Fq '"status": "merged"' "$TMP/status.json" \
+grep -Fq '"status": "merged"' "$REQ/status.json" \
   || fail "failed preflight must not advance status"
 [[ ! -e "$SUB/archive" ]] || fail "failed preflight must not create an archive"
 
@@ -64,14 +70,14 @@ cat > "$TMP/report-template.md" <<'TEMPLATE'
 TEMPLATE
 
 python3 "$ARCHIVE" \
-  --req-root "$TMP" \
+  --req-root "$REQ" \
   --subreq SR-001 \
   --now "2026-08-25T00:00:00+00:00" \
   --delivery-report-template "$TMP/report-template.md" \
   >"$TMP/localized.out" 2>"$TMP/localized.err" \
   || fail "localized delivery report template should archive successfully"
 
-REPORT="$TMP/delivery-report.md"
+REPORT="$REQ/delivery-report.md"
 [[ -f "$REPORT" ]] || fail "localized delivery report was not generated"
 grep -Fq '# Informe de entrega - report-language' "$REPORT" \
   || fail "localized report heading was not preserved"
@@ -79,7 +85,7 @@ grep -Fq 'sub-requirements/SR-001/verification.md' "$REPORT" \
   || fail "verification cell should use a language-neutral path"
 grep -Fq 'sub-requirements/SR-001/' "$REPORT" \
   || fail "report should reference canonical artifacts in place"
-[[ ! -e "$TMP/sub-requirements/SR-001/archive" ]] \
+[[ ! -e "$REQ/sub-requirements/SR-001/archive" ]] \
   || fail "delivery report generation must not create an archive copy"
 if grep -Fq 'ai-delivery-template-language' "$REPORT"; then
   fail "finished report contains a template language instruction"

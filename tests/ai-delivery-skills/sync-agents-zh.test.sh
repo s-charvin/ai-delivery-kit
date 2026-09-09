@@ -46,14 +46,13 @@ for rel in \
   ai-delivery-orchestrator/scripts/layout.py \
   requirement-breakdown/agents/openai.yaml \
   ui-truth-mapping/agents/openai.yaml \
-  ui-truth-mapping/templates/flutter-golden-preview-test.dart.example \
   ui-truth-mapping/templates/ui-truth-index-template.json
 do
   require_identical "$rel"
 done
 
-require_file "$DST/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
-require_han_content "$DST/ui-truth-mapping/templates/flutter-motion-preview-test.dart.example"
+require_file "$DST/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
+require_han_content "$DST/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
 
 # Localized skill entrypoints
 for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do

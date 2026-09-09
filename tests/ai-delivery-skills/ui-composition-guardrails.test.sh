@@ -33,7 +33,7 @@ REQ_SKILL="$SKILL_ROOT/requirement-breakdown/SKILL.md"
 REQ_TEMPLATE="$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 UI_SKILL="$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 ORCH_SKILL="$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
-UI_EXAMPLE="$SKILL_ROOT/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
+UI_EXAMPLE="$SKILL_ROOT/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example"
 UI_INDEX_TEMPLATE="$SKILL_ROOT/ui-truth-mapping/templates/ui-truth-index-template.json"
 
 require_file "$REQ_SKILL"
@@ -55,7 +55,7 @@ require_contains "$UI_SKILL" 'fill detection rule'
 require_contains "$UI_SKILL" 'Paint compositing / mask scan'
 require_contains "$UI_SKILL" 'not a second visible wash'
 require_contains "$UI_SKILL" 'ui-truth-index.json'
-require_contains "$UI_SKILL" '--update-goldens'
+require_contains "$UI_SKILL" 'host-native'
 require_contains "$UI_SKILL" 'CP-UI'
 require_contains "$ORCH_SKILL" 'ui_truth_mode'
 require_contains "$ORCH_SKILL" 'Capability-gated'

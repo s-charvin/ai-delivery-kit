@@ -9,7 +9,8 @@ It:
 2. When every executable sub-requirement is ``archived``, generates a
    requirement-level ``delivery-report.md`` from a caller-supplied template
    already localized to the user's current conversation language.
-3. If a requirement-level ``retrospective.md`` exists, registers its marked
+3. Requires a requirement-level ``retrospective.md`` with a current
+   ``reviewed-at`` marker. If it has problem records, registers its marked
    problem map in the project-level retrospective index without rewriting the
    ledger.
 
@@ -26,6 +27,7 @@ import argparse
 import datetime
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -69,6 +71,9 @@ PROJECT_INDEX_START = "<!-- ai-delivery-retrospective:index:v1 -->"
 PROJECT_INDEX_END = "<!-- /ai-delivery-retrospective:index:v1 -->"
 INDEX_TEMPLATE_MARKER = "ai-delivery-retrospective:index:v1"
 INDEX_TEMPLATE_PLACEHOLDER = "<retrospective_rows>"
+RETROSPECTIVE_REVIEWED_AT_RE = re.compile(
+    r"<!--\s*ai-delivery-retrospective:reviewed-at:(?P<value>[^\s]+)\s*-->"
+)
 
 
 def load_status(req_root: Path) -> dict:
@@ -174,6 +179,14 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
         start = lines.index(RETROSPECTIVE_INDEX_START)
         end = lines.index(RETROSPECTIVE_INDEX_END, start + 1)
     except ValueError:
+        meaningful = [
+            line.strip()
+            for line in lines
+            if line.strip()
+            and not RETROSPECTIVE_REVIEWED_AT_RE.fullmatch(line.strip())
+        ]
+        if not meaningful:
+            return []
         raise SystemExit(
             "ERROR: retrospective is missing the stable problem-index markers"
         )
@@ -194,6 +207,36 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
             }
         )
     return entries
+
+
+def validate_retrospective_reviewed_at(
+    retrospective: Path, archive_at: datetime.datetime
+) -> None:
+    """Require a parseable review marker from the same calendar day as archive."""
+    try:
+        text = retrospective.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise SystemExit(f"ERROR: cannot read retrospective {retrospective}: {exc}")
+
+    matches = list(RETROSPECTIVE_REVIEWED_AT_RE.finditer(text))
+    if len(matches) != 1:
+        raise SystemExit(
+            "ERROR: retrospective must contain exactly one marker "
+            "<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->"
+        )
+    raw = matches[0].group("value")
+    try:
+        parsed = datetime.datetime.fromisoformat(raw.replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise SystemExit(
+            f"ERROR: retrospective reviewed-at marker is not valid ISO-8601: {raw}"
+        ) from exc
+    if parsed.date() != archive_at.date():
+        raise SystemExit(
+            "ERROR: retrospective reviewed-at date "
+            f"{parsed.date().isoformat()} is stale for archive date "
+            f"{archive_at.date().isoformat()}; update retrospective.md first"
+        )
 
 
 def retrospective_ledger_path(req_root: Path, req_id: str) -> Path:
@@ -240,14 +283,21 @@ def load_retrospective_index_template(path: Path) -> str:
 
 
 def preflight_retrospective_index(
-    req_root: Path, req_id: str, template_path: Path | None
+    req_root: Path,
+    req_id: str,
+    archive_at: datetime.datetime,
+    template_path: Path | None,
+    require_index_template: bool,
 ) -> str | None:
     """Validate ledger/index inputs before archive state or bytes are changed."""
     retrospective = retrospective_ledger_path(req_root, req_id)
     if not retrospective.is_file():
-        return None
+        raise SystemExit(
+            f"ERROR: requirement retrospective is required before archive: {retrospective}"
+        )
+    validate_retrospective_reviewed_at(retrospective, archive_at)
     entries = read_retrospective_entries(retrospective)
-    if not entries:
+    if not entries or not require_index_template:
         return None
 
     index = retrospective_index_path(req_root, req_id)
@@ -384,6 +434,12 @@ def main() -> int:
         )
         return 2
 
+    now = (
+        datetime.datetime.fromisoformat(args.now)
+        if args.now
+        else datetime.datetime.now(datetime.timezone.utc)
+    )
+
     report_template = None
     index_template = None
     will_complete = not args.no_status_write and all_archived_after(data, args.subreq)
@@ -396,20 +452,17 @@ def main() -> int:
             )
             return 2
         report_template = load_delivery_report_template(args.delivery_report_template)
-    if will_complete:
-        try:
-            index_template = preflight_retrospective_index(
-                req_root, data.get("requirement_id", ""), args.retrospective_index_template
-            )
-        except SystemExit as exc:
-            print(str(exc), file=sys.stderr)
-            return 2
-
-    now = (
-        datetime.datetime.fromisoformat(args.now)
-        if args.now
-        else datetime.datetime.now(datetime.timezone.utc)
-    )
+    try:
+        index_template = preflight_retrospective_index(
+            req_root,
+            data.get("requirement_id", ""),
+            now,
+            args.retrospective_index_template,
+            will_complete,
+        )
+    except SystemExit as exc:
+        print(str(exc), file=sys.stderr)
+        return 2
     req_id = data.get("requirement_id", "")
     if not args.no_status_write:
         entry["status"] = "archived"

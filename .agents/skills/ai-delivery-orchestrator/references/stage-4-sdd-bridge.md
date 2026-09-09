@@ -26,8 +26,9 @@ One execution cycle per task: fresh context (subagent when the tier supports it)
 When a review or implementation cycle produces a reusable problem, record it in
 the requirement-level `retrospective.md` before starting the next attempted
 solution, then tell the user what was recorded. Follow
-[retrospective-guidance.md](retrospective-guidance.md); this remains optional
-and does not add a gate.
+[retrospective-guidance.md](retrospective-guidance.md). The ledger is required
+before archive, although it may contain no problem rows; this does not add an
+implementation-stage gate.
 
 ## progress.md ↔ ledger
 

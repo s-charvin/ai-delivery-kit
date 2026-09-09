@@ -10,16 +10,16 @@ Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是�
 
 - 阅读 `.ai-delivery/requirements/<req-id>/sub-requirements/<subreq-id>/requirement-slice.md`。
 - `figma` 模式收集 Figma file key 与目标 node id；`runtime-baseline` 模式收集定义运行时基线的 requirement、project 或 user-decision 来源，不得伪造 Figma 来源。
-- 从仓库判断宿主栈（优先 Flutter）。拿不准就停下问用户。
+- 从仓库判断宿主栈，并在有匹配项时使用框架适配器。拿不准就停下问用户。
 - 按 [workspace-policy.md](workspace-policy.md) 解析用户已批准 workspace。除非用户为当前子需求明确批准了准确的项目内 worktree，否则使用当前 checkout；在 `decisions.md` 或 `progress.md` 记录选择，并贯穿 Stage 3 与 Stage 4 复用。
 
 ## 仅运行受控的 `ui-truth-mapping`（Stage 2）
 
 Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code`。Stage 2 混用会搞乱归属。**Stage 4 默认也不再跑** — 接线已经写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
 
-传入需求切片与模式对应的真值来源。每个独立 unit 产出 **真实宿主栈组件**（Flutter：邻接生产文件旁的 Widget + golden/behavior tests），并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。绑定数据无真实值时保持空/省略，fixture 只能用于测试夹具。每个 UI unit 都必须明确记录动效契约，或记录并确认「static / no motion」；静态 golden 确认与动效确认/豁免是两道独立门禁。
+传入需求切片与模式对应的真值来源。每个独立 unit 产出 **真实宿主栈组件**，并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。绑定数据无真实值时保持空/省略，fixture 只能用于测试夹具。每个 UI unit 都必须明确记录动效契约，或记录并确认「static / no motion」；静态预览确认与动效确认/豁免是两道独立门禁。
 
-v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把 HTML 翻译成 Flutter。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
+v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把平行预览翻译进宿主栈。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
@@ -28,7 +28,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 **冻结门槛（全部满足）：**
 
 1. 组件能编过 / 宿主预览能打开。
-2. 官方预览文件存在；对话出示了其 **绝对路径**（Flutter：`flutter test --update-goldens` 产出的 golden PNG；宿主可录制时，动态 unit 还需 GIF；无法录制 GIF 时索引必须记录原因并延后运行时验证）。
+2. 官方预览文件存在；对话出示了其 **绝对路径**（宿主静态预览；宿主可录制时，动态 unit 还需 GIF；无法录制 GIF 时索引必须记录原因并延后运行时验证）。
 3. v2 `contracts/ui-truth-index.json` 校验通过：仓内相对路径不会逃出 **仓库根**、hash 与当前文件一致、id/type/stack/dependency 合法、profile 与带来源的 state 完整、每个视觉 scenario 都有独立预览，且十个 coverage 维度全部解决。
 4. 范围匹配需求切片 **In Scope**（最小祖先；不是无关整页 dump）。
 5. 每个 icon/图片和交互控件都是真实且有证据。手绘 glyph、涂绘输入壳、外部视觉 slot、dummy/fixture visual、伪造数据和静默 fallback 都不通过。资源不可用时，必须由用户明确选择为空、延后或阻塞；技能不得自行选择。如果确实需要临时占位来辅助评审，必须另行询问用户明确批准其确切作用域，并让它留在生产 UI/数据路径之外；没有该批准一律禁止。

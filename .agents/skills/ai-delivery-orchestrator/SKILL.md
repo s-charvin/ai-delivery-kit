@@ -26,18 +26,20 @@ workflow's existing record or current action report. If a selected scenario's
 relationship is unclear, record `unknown` and ask rather than assuming
 compatibility. The reference does not replace the host workflow's own rules.
 
-## Retrospective ledger (optional)
+## Retrospective ledger
 
 Use the requirement-level `retrospective.md` ledger as a lightweight memory aid
-when a delivery problem has reuse value. Read [references/retrospective-guidance.md](references/retrospective-guidance.md)
-before creating or updating it. Record a reusable failure, a wrong AI attempt,
-a user/review correction, or a verification failure while the evidence is
+for delivery problems and final review. Read [references/retrospective-guidance.md](references/retrospective-guidance.md)
+before creating or updating it. The file is required before archive, even when
+there are no problem records. Record a reusable failure, a wrong AI attempt, a
+user/review correction, or a verification failure while the evidence is
 available; record the failed attempt before trying the next approach. Do not
 record trivial mechanical fixes. Keep the marked summary problem map and the
-detailed problem records in summary-to-detail order.
+detailed problem records in summary-to-detail order, and update the reviewed-at
+marker during the final review.
 
 After every ledger update, tell the user the `RET-###` ID, what was added, and
-the file path. This is optional and never a gate. On resume, read the current
+the file path. On resume, read the current
 problem map; when a new symptom appears, use the project retrospective index
 as a routing map and load only matching historical problem sections. Similar
 keywords are not sufficient: applicability conditions and current evidence
@@ -225,16 +227,18 @@ as a temporary template in the user's current conversation language, remove its
 `ai-delivery-template-language` comment, and preserve its placeholders. Run
 `scripts/archive-subrequirement.py` per subreq to advance status to `archived` in
 place without copying canonical artifacts; pass the prepared template to
-the final command with `--delivery-report-template <path>`. If the requirement
-has `retrospective.md`, also instantiate
+the final command with `--delivery-report-template <path>`. The requirement
+must have `retrospective.md`; instantiate
 `templates/retrospective-index-template.md` in the user's current conversation
 language, remove its `ai-delivery-template-language` instruction, preserve its
 markers and placeholder, and pass it to the final command with
-`--retrospective-index-template <path>`. The archive command reads the marked
-problem map and idempotently updates `.ai-delivery/retrospectives/index.md`; it
-does not create, rewrite, summarize, or audit the ledger. If no ledger exists,
-no retrospective file or index row is created. Tell the user which problem rows
-were registered.
+`--retrospective-index-template <path>`. The archive command requires exactly
+one parseable `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker
+whose calendar date matches the archive date, then reads the marked problem map
+and idempotently updates `.ai-delivery/retrospectives/index.md`; it does not
+create, rewrite, summarize, or audit the ledger. A ledger with no problem rows
+is valid and creates no index rows. A missing or stale ledger blocks archive.
+Tell the user which problem rows were registered.
 Do not claim `completed` until the localized `delivery-report.md` exists. When
 every subreq is `archived`, the requirement is `completed`; canonical artifacts
 remain in place and any later change requires a new `<req-id>` directory.

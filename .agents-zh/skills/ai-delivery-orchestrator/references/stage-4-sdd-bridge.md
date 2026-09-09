@@ -25,7 +25,8 @@ CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT
 
 当评审或实现循环产生具有复用价值的问题时，在开始下一个方案前记录到需求级
 `retrospective.md`，然后告诉用户记录了什么。遵循
-[retrospective-guidance.md](retrospective-guidance.md)；这仍然是可选辅助，不增加门禁。
+[retrospective-guidance.md](retrospective-guidance.md)。归档前台账必须存在，
+但可以没有问题行；这不增加实现阶段门禁。
 
 ## progress.md ↔ 台账
 

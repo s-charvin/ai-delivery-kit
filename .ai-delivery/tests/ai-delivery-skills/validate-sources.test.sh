@@ -69,7 +69,7 @@ fi
 require_file "$SKILL_ROOT/requirement-breakdown/SKILL.md"
 require_file "$SKILL_ROOT/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
-require_file "$SKILL_ROOT/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example"
+require_file "$SKILL_ROOT/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example"
 require_file "$SKILL_ROOT/ui-truth-mapping/templates/ui-truth-index-template.json"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md"
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/status-template.json"

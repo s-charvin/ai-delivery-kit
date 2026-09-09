@@ -12,7 +12,7 @@ func TestEmbeddedAssetsContainGovernedSources(t *testing.T) {
 		".agents/skills/requirement-breakdown/SKILL.md",
 		".agents/skills/requirement-breakdown/templates/requirement-slice-template.md",
 		".agents/skills/ui-truth-mapping/SKILL.md",
-		".agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example",
+		".agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example",
 		"scripts/validate-project-ai-delivery-skills.sh",
 		"scripts/validate-delivery-status.py",
 		"scripts/validate-artifact-layout.py",

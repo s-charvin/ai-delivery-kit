@@ -1,6 +1,6 @@
 ---
 name: ui-truth-mapping
-description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需求切片处于 Stage 2、CP-UI 已确认，且必须把 Figma 或 runtime-baseline UI 真值冻结为真实宿主栈组件（优先 Flutter）与官方栈验收预览时使用。适用于作用域子树、多状态、Spine/Lottie/shimmer 动效、蒙版/alpha 合成，或修复先前 HTML 契约/整页 dump。泛化 Figma 实现请求不要触发本技能，使用宿主项目惯例或 `figma-design-to-code`。
+description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需求切片处于 Stage 2、CP-UI 已确认，且必须把 Figma 或 runtime-baseline UI 真值冻结为真实宿主栈组件与官方栈验收预览时使用。适用于作用域子树、多状态、Spine/Lottie/shimmer 动效、蒙版/alpha 合成，或修复先前 HTML 契约/整页 dump。泛化 Figma 实现请求不要触发本技能，使用宿主项目惯例或 `figma-design-to-code`。
 ---
 
 # UI 真值映射
@@ -9,9 +9,9 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 编排器在 Figma 提供视觉证据时选择 `ui_truth_mode=figma`；没有稳定 Figma、由需求/项目/明确用户决策提供基线时选择 `ui_truth_mode=runtime-baseline`。本技能绝不把 runtime baseline 说成 Figma 1:1 真值。
 
-**原则 1 — 禁止二次转换。** 写项目已经在用的 Widget/组件。不要先冻一份 HTML（或任何平行赝品）再翻译成 Flutter/React。
+**原则 1 — 禁止二次转换。** 写项目已经在用的组件。不要先冻一份平行赝品再翻译成宿主栈。
 
-**原则 2 — 官方预览。** 使用宿主栈可确定性生成的官方预览。Flutter 静态 scenario 使用 `flutter test --update-goldens` 产出的 golden PNG；动态 scenario 在宿主能生成时还应额外生成测试 GIF。先检查并复用宿主已经跑通的动效捕获 helper 与编码器；不得用未经验证的新抽象替换可工作的 `pump`/栅格回读链路。Flutter 参考链路是：累计 elapsed `pump` keyframe → `matchesGoldenFile` 写 PNG 帧 → 保留时长的 concat/VFR GIF 编码 → 解码校验。动效捕获目标为 25 FPS（每帧 40 ms），覆盖连续变化区间；不得使用 100 ms 以上的稀疏 keyframe。GIF 以厘秒存储时间，因此 40 ms 可以精确得到 25 FPS。均匀捕获必须显式声明目标速率；带有意停顿或可变帧间隔的捕获必须保留这些时长，不得被恒定帧率选项压缩或拉长时间轴。每份动效预览必须包含完整的 trigger→settled 转场或至少一个完整循环，只允许简短可审阅的片头/片尾停留，并自动重播。展示前必须解码并核验帧数、总时长与循环元数据。GIF 是本技能唯一治理的动效预览格式：不要新增 WebP/MP4 编码器，也不要把其他格式设为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。Web 使用该仓已有的预览方式。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
+**原则 2 — 官方预览。** 使用宿主框架可确定性生成的官方渲染测试链路。先检查并复用宿主已经跑通的组件挂载、时钟推进、栅格捕获与编码器；不得用未经验证的新抽象替换可工作的链路。静态 scenario 使用宿主原生静态预览；动态 scenario 在宿主能生成时使用 GIF。按已声明的节奏捕获累计时间 keyframe，保留有意的可变时长，不得让编码器静默压缩或拉伸时间轴。每份动效预览必须包含完整的 trigger→settled 转场或至少一个完整循环，只允许简短可审阅的片头/片尾停留，并自动重播。展示前必须解码并核验帧数、总时长、终态/循环状态与循环元数据。GIF 是本技能唯一治理的动效预览格式：不要新增其他编码器或格式作为门槛。宿主无法录制 GIF 时不得伪造文件：先取得动效决定、记录预览不可用原因，并把运行时验证延后到 Stage 4。对话里给用户 **每份预览的绝对路径**。交付索引里只存 **仓内相对路径**。
 
 **中间帧生命周期。** 用于编码 GIF 的 PNG 帧和 concat manifest 是临时构建输入，不是交付证据。它们必须写入临时目录或被忽略的构建目录，不得放在 GIF 旁边或受版本控制的证据目录中。编码和解码校验完成前保留它们；成功和失败都必须在 `finally`/等价清理路径中删除帧目录与 manifest。只有明确审阅过的关键帧 PNG 可以作为静态证据保留。交付前检查没有未编入索引的帧 PNG、manifest、调色板或编码器临时文件残留。
 
@@ -23,7 +23,17 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 - 需求切片（范围、字段、验收信号）
 - 真值源定位符：`figma` 使用 Figma 文件 key + 节点 id；`runtime-baseline` 使用 requirement/project/user-decision 引用
-- 后续需求：目标单元的任何线索（路径、Widget 名，或「尚无已知单元」）
+- 后续需求：目标单元的任何线索（路径、组件名，或「尚无已知单元」）
+
+## 框架适配器
+
+核心契约与框架无关。框架特定的捕获方案放在
+`references/framework-adapters/<framework>/`。适配器是可选且可插拔的，
+不得改变治理规则，也不得把自身框架设为默认。使用前必须确认它匹配宿主
+项目真实渲染器及既有测试/编码链路。每个适配器必须说明原生测试入口、真实
+组件挂载与触发方式、确定性静态/动态捕获、时序与编码语义、解码和元数据
+校验、临时产物清理、已知限制，以及适配器证据如何映射到通用索引字段。
+没有匹配适配器时使用宿主官方工具或停下询问，不得猜测框架路径。
 
 ## 输出
 
@@ -31,10 +41,10 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 ```
 <宿主项目>
-├── lib/…/<unit>.dart          # Flutter：真实 Widget（跟邻接文件）
-├── test/…/<unit>_golden_test.dart
-├── test/goldens/<unit>.png    # 静态审阅媒介
-└── test/motion/<unit>.gif     # 可选的 GIF 动效审阅媒介
+├── production component       # 真实宿主栈组件（跟邻接文件）
+├── host-native visual/behavior tests
+├── static preview             # 官方静态审阅媒介
+└── motion preview             # 可选的 GIF 动效审阅媒介
 
 .ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/
 └── ui-truth-index.json        # 只做指针 — 不是绘制
@@ -49,10 +59,10 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 | `schema_version` | 整数 `2` |
 | `ui_truth_mode` | `figma` 或 `runtime-baseline`，必须与子需求状态一致 |
 | `design_source` | `figma` 的 file key/root node/revision，或 `runtime-baseline` 的 evidence origin/source reference，及采集时间 |
-| `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component`、`flutter`/`web` |
+| `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component` 与宿主栈标识 |
 | `source_node` / `dependencies` | Figma 源节点与 unit 依赖 id |
 | `component_path` / `component_sha256` | 真实组件仓内相对路径与当前内容 hash |
-| `golden_test` / `golden_test_sha256` | Flutter golden 测试与当前内容 hash |
+| `golden_test` / `golden_test_sha256` | 宿主原生静态预览测试及当前内容 hash（宿主具有 golden 类测试时） |
 | `motion_decision` | 每个 unit 必填：`animated` 或 `static`、验证方式、独立确认/豁免说明；可选动效预览路径/hash；无法录制时必须写明原因 |
 | `profiles[]` | 测试 surface、尺寸、orientation、theme、locale、text scale、reduced motion 与 input mode |
 | `states[]` | `state_id`、`evidence_origin`、`source_ref`；Figma 来源 state 还必须有 `source_node` |
@@ -60,26 +70,18 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 | `coverage[]` | 每个必需运行时维度恰好一条适用性记录 |
 | `confirmation` | `confirmed` 或 `waived`、时间/人员；视觉确认绑定 `reviewed_preview_sha256` |
 
-**禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 把 HTML 翻译成 Flutter。runtime-baseline 只能使用 `requirement`、`project` 或 `user-decision` 来源，不得伪造 Figma 元数据。
+**禁止** 生成 `ui-contract.html`。**禁止** 拷贝 `ui-contract-template.html`（已删除）。**禁止** 在宿主栈之间翻译平行预览。runtime-baseline 只能使用 `requirement`、`project` 或 `user-decision` 来源，不得伪造 Figma 元数据。
 
-## 技术栈
+## 宿主栈
 
 根据仓库自行判断。不要跑复杂探测。
 
-- 看起来像 Flutter（Dart Widget、`pubspec.yaml` 含 Flutter SDK、已有 `test/` golden）→ **Flutter**。本技能按这条路径写。
-- 看起来像 Web 应用（该仓已有页面/组件树）→ **Web**。跟 **该仓** 架构（React/Vue/Svelte/纯 HTML — 邻接文件用什么就用什么）。不要假设「契约就是 HTML」。
-- 拿不准 → **停下问用户**。不要默认冻一份 HTML 契约。
+- 根据已有组件树和测试工具判断宿主框架。有匹配项时使用 `references/framework-adapters/` 下的适配器。
+- 遵循宿主架构和官方渲染测试 API。不要假设固定语言、Widget 系统、浏览器或文件布局，也不要假设「契约就是 HTML」。
+- 拿不准 → **停下问**。不要默认冻一份 HTML 契约或任何框架适配器。
 
-## 模板（Flutter 静态与动效预览骨架）
-
-```
-templates/
-├── flutter-golden-preview-test.dart.example
-├── flutter-motion-preview-test.dart.example
-└── ui-truth-index-template.json
-```
-
-静态示例教 `MaterialApp` / `RepaintBoundary` / `matchesGoldenFile` / `--update-goldens` 及注释中的预览规则（PNG 画布 ≠ 运行时尺寸、每个视觉 scenario 一个 `testWidgets`、不要系统栏、不要 Widget 内状态切换器）。动效示例要求先通过真实 Widget API 触发动效，再按累计 keyframe 将 PNG 写入临时/忽略目录，调用已有且保留时长的 GIF 编码器，完成解码校验后删除全部中间帧和 manifest；GIF 已足够，不要新增 WebP/MP4 编码器或依赖。**它们都不是 Widget 模板。** 不要把教学注释复制进项目代码；只保留必要注释，并改用用户当前对话语言。Widget 代码必须仿邻接生产文件。不要加宿主项目没有的依赖。
+通用索引模板仍在 `templates/`。框架示例只属于参考资料，特意放在该
+模板目录之外。
 
 ## 快速参考 — 场景 → 单元拆分
 
@@ -108,7 +110,7 @@ templates/
 - **缺资源必须取得用户决定。** 必需字体、图标、图片、动画或 effect 无法获取/渲染时，在该边界停下并让用户选择：渲染为空、延后资源并保持 scenario 阻塞，或阻塞 unit。只有用户选择后才能渲染为空并记录受影响 scenario；不得静默 fallback。缺失动效资源时，未经该明确决定不得使用海报帧或静态替代。如果确实需要临时占位来辅助评审，必须另行询问用户是否允许；明确批准必须写明资源与作用域，且占位不得进入生产 UI/数据路径。没有该批准仍然严禁占位。
 - **保留所需资源类别。** 必需的矢量/SVG 图标不能用位图、字体字形、平台图标或视觉近似替代；必需的 Spine/Lottie 资源不能用静态图片或手绘动画替代。证据要求的资源类别不可用时，必须按上述缺资源决策处理，不得静默降级资源类别。
 - **使用真实交互原语。** 输入必须是可编辑的宿主控件，并具备所需 focus、键盘/IME、校验与语义行为。图标和图片必须来自有证据的项目/设计资源；缺失资源时，熟悉的字形或平台图标也不是授权替身。
-- **不要发明布局。** 把几何机械迁入宿主布局系统（Flutter 约束、CSS 等）。不要手写语义化整页而丢掉证据。
+- **不要发明布局。** 把几何机械迁入宿主布局系统。不要手写语义化整页而丢掉证据。
 - 预览 px 是画板快照，不是运行时尺寸。分类 **fill / hug / fixed**（§5b）。可变文案是 hug 或 fill 加 overflow / min / max — 禁止按样品写成 fixed。
 - 禁止把 TemPad `data-hint-*` 拷进产品代码或索引。
 - Figma 蒙版 / 仅 alpha 渐变 **不是第二层可见罩色**。跑 §3b。
@@ -227,7 +229,7 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 | `layout` | 最小/目标/最大约束、container/viewport breakpoint、orientation、安全区、fixed/sticky 共存、overlay、IME、scroll、z-order、clip、hit testing |
 | `content` | 空/短/长/多行/不可断字符串、列表数量、大数字与本地格式、RTL、locale 切换、text scaling/browser zoom、wrap/truncation/expand |
 | `interaction` | idle、hover、focus、pressed、selected、expanded、keyboard、pointer/touch、drag/swipe 替代、快速重复、重入、focus trap/return、disabled 行为 |
-| `motion` | trigger、from/to 或 keyframes、timing、捕获节奏（目标 25 FPS / 每帧 40 ms）、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
+| `motion` | trigger、from/to 或 keyframes、timing、由适配器声明的捕获节奏、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
 | `assets` | static/content-bound/motion 角色、来源/所有权、vector palette/themeability、fit/crop/focal point、aspect ratio、density、loading/error/empty/offline fallback、cache、semantics |
 | `theme` | Figma variable modes、宿主 semantic tokens、支持的 light/dark/high-contrast、contrast 与交互态一致性 |
 | `accessibility` | 原生 semantics、name/role/state/value、reading/focus order、可见 focus、screen-reader 更新、平台点击热区、非颜色提示、Web WCAG AA、reduced motion/text scaling |
@@ -250,16 +252,15 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 
 选择能保留证据的最低复杂度宿主原生路径：已有/原生 primitive → 项目既有依赖 → custom painter/shader → 仅对缩放、主题、无障碍仍正确的真正静态输出使用预渲染资源。缺失字体、字重、vector semantics、effect 或运行时资源时阻止冻结；不得静默替换成近似实现。
 
-### 4. 写真实组件（Flutter 优先）
+### 4. 写真实组件（宿主栈）
 
-**创建：** 把 Widget 加在邻接文件旁。对齐它们的构造函数风格、主题、间距助手和目录布局。**不要** 拷一份 Dart 模板再填空。
+**创建：** 把组件加在邻接文件旁。对齐宿主栈 API、主题、间距助手和目录布局。**不要** 拷适配器示例再填空。
 
 **增量修补：** 打开匹配到的文件；不要重写无关子树。
 
 把证据映射进宿主布局系统：
 
-- Flutter：按几何需要用 `Row`/`Column`/`Stack`/`Positioned`/`Expanded`/`Flexible`/`Wrap`/`SizedBox`/`AspectRatio`。图片：测试里用项目已有的 fixture/`ImageProvider` 惯例 — **golden 测试禁止打真网**。
-- Web：在该仓组件里遵守同一纪律。
+- 使用宿主框架原生布局、图片和测试原语。静态及动态测试禁止访问网络，遵循宿主已有夹具和依赖惯例。
 
 通过组件真实 API 实现每个 covered scenario。优先使用原生交互 primitive 与项目既有组件；保留 semantic role/name/state、键盘或手势替代、focus order/trap/return、平台点击热区与 screen-reader 播报。宿主已有能力时补聚焦的 behavior/semantics 测试。不得仅为满足本技能新增依赖。
 
@@ -277,11 +278,11 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 
 `get_code` 的 px 是 **预览几何**。给每个范围内盒子分类（单元根必做；子级不同时也做）：
 
-| 类别 | 含义 | Flutter（典型） | Web（典型） |
+| 类别 | 含义 | 宿主实现指引 |
 |---|---|---|---|
-| `fill` | 伸展到父级剩余空间 | `Expanded` / 紧父约束 | `width: 100%` / flex-grow — **不是** 快照 px |
-| `hug` | 随内容尺寸 | 子级固有尺寸，可选夹紧 | `width: fit-content` / auto |
-| `fixed` | 设计锁定 | `SizedBox` / 显式约束 | 仅锁定时才写死 px |
+| `fill` | 伸展到父级剩余空间 | 使用宿主的填充/弹性/约束原语，不能使用快照 px |
+| `hug` | 随内容尺寸 | 使用宿主的内容自适应原语，必要的限制必须有证据 |
+| `fixed` | 设计锁定 | 只有设计锁定时才使用显式宿主约束 |
 
 **fill 判定规则：** 满足任一即 `fill`：Figma FILL / 拉伸约束；测得 px 等于 **父宽减去对称水平内边距**（1px 容差）；节点在视觉上铺满剩余内容列。
 
@@ -293,45 +294,50 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 
 实现消费分类，不消费快照 `w×h`。把每个快照盒子倒进布局常量是过程失败。fill/hug 的测试断言约束行为，不断言快照相等。
 
-### 6. 官方预览（Flutter golden）
+### 6. 官方预览（宿主原生）
 
-把 `templates/flutter-golden-preview-test.dart.example` 只当 **骨架**，动效捕获使用 `templates/flutter-motion-preview-test.dart.example`。两者都只是骨架。宿主已有 `flutter_test` 惯例则跟它。
-
-```bash
-flutter test <golden_test.dart> --update-goldens
-```
+有匹配项时使用 `references/framework-adapters/` 下的框架适配器。适配器
+只是方案参考，不是组件模板。否则使用宿主官方静态/动态渲染测试命令，
+并记录准确命令与产物路径。
 
 当请求的审阅范围是完整预览矩阵时，必须执行每个已索引 scenario，并重新生成或重新哈希该矩阵中的每份产物。测试对照已有基线通过，并不证明产物由当前代码写出；未变的 hash 也必须显式记录。
 
-动效要先通过真实 Widget API 触发，再按目标 25 FPS（每帧 40 ms）严格递增的累计 `pump` keyframe 覆盖整个动效区间（GIF 至少两个），并用 `matchesGoldenFile` 写出每个采样 PNG 帧。不得只捕获间隔很大的关键帧后宣称预览流畅。这个官方 matcher 路径优先于重复直接 `RenderRepaintBoundary.toImage` 调用，因为它负责测试绑定的栅格读回生命周期。捕获时间轴必须足够早以展示 trigger，跑完整段转场或一个完整循环，并以短暂 settled 停留结束。帧写出后调用宿主已有 GIF 编码器。均匀 40 ms 采样必须显式接收 25 FPS 的输入/输出速率；有意停顿或可变间隔必须保留声明的每帧时长，不得强制恒定帧率。GIF 已足够。发布前必须解码并核验期望帧数、总时长、终态或完整循环，以及自动循环元数据。没有编码器时记录不可用原因，不得伪造动效文件。
+动效要通过宿主 API 触发真实组件行为，再按适配器声明的节奏以严格递增
+的累计时间 keyframe 覆盖整个动效区间，并通过宿主官方渲染器捕获每个采样
+帧。不得只捕获间隔很大的关键帧后宣称预览流畅。捕获时间轴必须足够早以
+展示 trigger，跑完整段转场或一个完整循环，并以短暂 settled 停留结束。
+帧写出后调用宿主已有 GIF 编码器。有意停顿或可变间隔必须保留声明的每帧
+时长，不得强制恒定帧率。GIF 已足够。发布前必须解码并核验期望帧数、总
+时长、终态或完整循环，以及自动循环元数据。没有编码器时记录不可用原因，
+不得伪造动效文件。
 
 然后把每个静态 preview，以及已生成的每个 GIF 动效 preview 的 **绝对路径** 打印给用户。多个 state/profile 组合 → 多个 golden 与 GIF 动效录制（或宿主已有的 GIF 产出方式）。如果无法录制 GIF，打印已记录的不可用原因，不得发明替代路径。
 
 骨架注释是约束，不是可选装饰。特别是：
 
-- `setSurfaceSize` 是 **PNG 画布**（画板快照），不是运行时宽度锁。fill / hug / fixed 写在 Widget 里。
-- 每个可审阅视觉 scenario 一个 `testWidgets`。测试按记录的 profile 配置环境，但不得把画布尺寸变成 Widget 运行时锁定。**禁止** 在 Widget 里做状态切换器或审阅面板（那是已退役的 HTML 预览铬）。
-- **禁止** 画状态栏 / 手势条 / 输入法，除非它们是范围内的产品 UI。`MediaQuery` padding / `viewPadding` 置零。
+- 预览 surface 是证据画布/容器，不是运行时尺寸锁。fill / hug / fixed 写在组件里。
+- 每个可审阅视觉 scenario 使用一个宿主原生测试用例。测试按记录的 profile 配置环境，但不得把预览尺寸变成组件运行时锁定。**禁止** 在组件里做状态切换器或审阅面板。
+- 不要绘制系统铬或输入法，除非它们是范围内的产品 UI；使用宿主安全区/输入 API。
 - 动效 = 具名 **关键帧** PNG 加独立确认的动效契约。golden 里循环播放是错的。静态 golden 绝不能替代动效验收。宿主能录制时，确定性 GIF 是动效审阅媒介；动效表留在注释 / 冻结对话，golden 只确认指定静态帧。
 - 邻接 golden 已有宿主 Theme / 本地化 / 图片夹具 / golden 脚手架时，跟它们。
 
-本技能的动效审阅格式固定为 GIF。不要为 WebP、WebM、MP4 或其他格式新增编码器、依赖或验收门槛；旧说明中的其他格式不适用于当前契约。
+本技能的动效审阅格式固定为 GIF。不要为其他格式新增编码器、依赖或验收门槛；旧说明中的其他格式不适用于当前契约。
 
 冻结条中的动态 unit 同样只要求 GIF；不存在 GIF 时记录原因并延后运行时验收，不得以其他格式替代。
 
-Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由、静态文件）。打印该 **绝对路径**。不要仅为这个技能加 Playwright。
+按该仓已有方式打开/构建组件预览（官方测试运行器、故事系统、本地路由或静态文件）。打印该 **绝对路径**。不要仅为这个技能新增运行器。
 
 **冻结条：**
 
 1. 组件能编过 / 宿主预览能打开。
-2. 官方预览文件存在；对话出示了其 **绝对路径**（Flutter：golden PNG；宿主可录制时，动态 unit 还需确定性 GIF；无法录制时索引必须写原因并延后运行时验证）。
+2. 官方预览文件存在；对话出示了其 **绝对路径**（宿主可录制时，动态 unit 还需确定性 GIF；无法录制时索引必须写原因并延后运行时验证）。
 3. v2 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖、profile、带来源 state、scenario 与十个 coverage 维度校验。
 4. 每个视觉 scenario 都有确定性 preview，以及绑定当前 `preview_sha256` 的静态确认/豁免；适用的动效 scenario 另有动效确认/豁免、原因和后续运行时验证方式。能录制时 `motion_decision` 必须记录并向用户出示路径/hash；不能录制时索引必须写原因，Stage 4 用项目原生行为/人工证据验收。
 5. 范围匹配切片；图标/图片和交互控件都是真实且有证据；缺失数据呈现真实空/省略状态；不得有未经批准的占位或视觉 fallback；运行时 coverage 已解决；适用时有动效/资源计划；尺寸已分类；§3b 触发时记录了合成。
 6. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录用户已批准 workspace 与可选分支供 Stage 4 复用。Stage 4 必须为每个索引 unit 另行记录动效验收。
 7. 若单元集合变了，在同一次变更里清扫需求目录中的陈旧指针。
 
-**不要** 在没有预览路径时凭「Widget 看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方 golden。
+**不要** 在没有预览路径时凭「组件看起来对」宣称冻结。**不要** 用 `contract-preview-*.png` 代替官方静态预览。
 
 ### 6b. 调整代码前的失败分级
 
@@ -361,7 +367,7 @@ Web：按该仓已有方式打开/构建组件预览（Storybook、本地路由�
 
 ### 8. 实现之后（Stage 4 消费者）
 
-Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从 HTML 再画一遍 Flutter，也禁止再查 TemPad。
+Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从平行预览再画一遍宿主组件，也禁止再查 TemPad。
 
 Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scenario，然后写结构化 `visual-acceptance.json`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
 
@@ -374,8 +380,8 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 ## 反模式（过程失败）
 
 - 生成 `ui-contract.html` 或拷任何 HTML 契约模板当冻结媒介。
-- **禁止把 HTML 翻译成 Flutter**（或翻译进宿主 Web 栈）。
-- 因为旧 HTML 预览有状态切换器和审阅面板，就把它做进 Flutter Widget。
+- **禁止把平行预览翻译进宿主栈。**
+- 因为旧预览有状态切换器和审阅面板，就把它做进组件。
 - 写一份伴生 YAML/JSON/markdown 来装 **绘制**。
 - 整页 dump；整页 `get_code` 再裁剪；跳过 §1b。
 - 把断开的范围内产物塌成一个页面 Widget。
@@ -401,7 +407,7 @@ Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scena
 - 跳过 §2c；文本提示扫描只扫 `source_node`；截断多条款 SECTION 备注；悄悄改写动效覆盖。
 - 交出的动效预览力学与用户点名的参考实现不一致。
 - golden 测试里打真网。
-- 添加宿主项目没有的 Flutter/Web 依赖。
+- 添加宿主项目没有的框架依赖。
 - 没有绝对预览路径和用户显式确认就宣称冻结。
 - 在 CP-UI 前 dispatch 本技能、在记录的用户已批准 workspace 外写生产代码，或在 Stage 4 为同一切片创建第二个 workspace。
 - 把 `ui-truth-index.json` 的路径写成文件系统绝对路径（索引必须是仓内相对路径）。

@@ -52,6 +52,8 @@ printf '# verification\n' > "$SUB/verification.md"
 cat > "$REQ/retrospective.md" <<'EOF'
 # Retrospective
 
+<!-- ai-delivery-retrospective:reviewed-at:2026-09-02 -->
+
 <!-- ai-delivery-retrospective:problem-index:v1 -->
 | ID | Observable trigger | Applicable scenario | Shortest path | Status | Details |
 | --- | --- | --- | --- | --- | --- |
@@ -193,7 +195,7 @@ python3 "$ARCHIVE" --req-root "$CUSTOM_REQ" --subreq SR-001 --now "2026-09-02T00
 grep -Fq '../requirements/req-custom/knowledge/retrospective.md#ret-001' \
   "$CUSTOM_AD/retrospectives/index.md" || fail "custom ledger link is incorrect"
 
-# A requirement without a ledger keeps the optional feature absent.
+# A missing ledger blocks archive before status changes.
 NO_ROOT=$(mktemp -d)
 trap 'rm -rf "$TMP" "$PRE_ROOT" "$NO_ROOT"' EXIT
 NO_RET="$NO_ROOT/.ai-delivery/requirements/req-without-retrospective"
@@ -209,9 +211,49 @@ cat > "$NO_RET/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+if python3 "$ARCHIVE" --req-root "$NO_RET" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
+  >"$NO_ROOT/out" 2>"$NO_ROOT/err"; then
+  fail "archive without retrospective unexpectedly succeeded"
+fi
+grep -Fq 'retrospective is required before archive' "$NO_ROOT/err" \
+  || fail "missing retrospective error not reported"
+grep -Fq '"status": "merged"' "$NO_RET/status.json" \
+  || fail "missing retrospective changed status"
+
+# An empty ledger is valid when its reviewed-at marker is current.
+cat > "$NO_RET/retrospective.md" <<'EOF'
+<!-- ai-delivery-retrospective:reviewed-at:2026-09-02 -->
+EOF
 python3 "$ARCHIVE" --req-root "$NO_RET" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
-  >/dev/null
-[[ ! -e "$NO_ROOT/.ai-delivery/retrospectives/index.md" ]] || fail "optional ledger created an index"
+  >/dev/null || fail "empty reviewed retrospective should archive"
+[[ ! -e "$NO_ROOT/.ai-delivery/retrospectives/index.md" ]] || fail "empty ledger created an index"
+
+# A stale marker blocks archive and leaves status unchanged.
+STALE_ROOT=$(mktemp -d)
+STALE_RET="$STALE_ROOT/.ai-delivery/requirements/req-stale"
+STALE_SUB="$STALE_RET/sub-requirements/SR-001"
+mkdir -p "$STALE_SUB/spec"
+printf '# spec\n' > "$STALE_SUB/spec/spec.md"
+printf '# plan\n' > "$STALE_SUB/spec/plan.md"
+printf '# tasks\n' > "$STALE_SUB/spec/tasks.md"
+printf '# verification\n' > "$STALE_SUB/verification.md"
+cat > "$STALE_RET/retrospective.md" <<'EOF'
+<!-- ai-delivery-retrospective:reviewed-at:2026-09-01 -->
+EOF
+cat > "$STALE_RET/status.json" <<'EOF'
+{
+  "requirement_id": "req-stale",
+  "sub_requirements": {"SR-001": {"status": "merged"}}
+}
+EOF
+if python3 "$ARCHIVE" --req-root "$STALE_RET" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
+  >"$STALE_ROOT/out" 2>"$STALE_ROOT/err"; then
+  fail "stale retrospective unexpectedly succeeded"
+fi
+grep -Fq 'reviewed-at date 2026-09-01 is stale' "$STALE_ROOT/err" \
+  || fail "stale retrospective error not reported"
+grep -Fq '"status": "merged"' "$STALE_RET/status.json" \
+  || fail "stale retrospective changed status"
 
 python3 - "$LAYOUT" <<'PY'
 import importlib.util

@@ -79,8 +79,8 @@ How each step is executed depends on the tier (superpowers skills, ECC agents, o
 
 When a triage result is reusable, append the problem and the attempted solution
 to the requirement-level `retrospective.md` before trying another solution.
-Afterward tell the user the problem ID and the recorded conclusion. This is an
-optional memory aid, not a substitute for current evidence or a workflow gate.
+Afterward tell the user the problem ID and the recorded conclusion. This is a
+memory aid, not a substitute for current evidence or an implementation-stage gate.
 
 When a task stalls or a scenario fails, first classify the failure and verify
 the smallest candidate cause before changing business code. Check candidates in

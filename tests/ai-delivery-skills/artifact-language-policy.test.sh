@@ -38,7 +38,7 @@ for rel in \
   .agents/skills/ai-delivery-orchestrator/references/stage-breakdown.md \
   .agents/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md \
   .agents/skills/ai-delivery-orchestrator/references/stage-implementation.md \
-  .agents/skills/ui-truth-mapping/templates/flutter-golden-preview-test.dart.example
+  .agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example
 do
   require_contains "$ROOT/$rel" "user's current conversation language"
 done
