@@ -21,6 +21,14 @@ Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code
 
 v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、证据范围、宿主能力判定、支持时的宿主绑定、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把平行预览翻译进宿主栈。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
 
+保持设计证据层级独立。层级/结构响应只能证明节点关系和边界；子资源 URL
+只能证明该子资源；父组件的字节、尺寸或哈希只能由父组件实际导出物或复制出的
+文件证明。在比较或采用资源前，记录来源层级、状态、边界/viewBox、导出操作和
+实际参与比较的本地文件。如果工具无法提供目标父组件导出物，应将比较标记为
+未解决并停在该边界；绝不能根据子资源 URL、文件名、渲染结果或尺寸不匹配的哈希
+推断父组件一致。设计来源发生修订时，在重新读取当前来源和目标文件前，先使此前
+的比较结论失效。
+
 生成 preview 前，必须为每个 scenario 执行宿主能力判定，并冻结且仅冻结一种范围：`component-only`、`host-static` 或 `host-runtime`。检查宿主组合是否在视觉范围内、是否已有可运行宿主入口、该入口是否挂载生产宿主、所需状态/资源能否确定性准备，以及能否输出边界明确且可复核的截图。任一关键条件失败都选择 `component-only` 并记录未覆盖风险。禁止把组件手工拼成虚构页面来制造宿主证据。`host-static` 与 `host-runtime` 必须绑定生产 `host_binding`；`component-only` 没有宿主绑定，也不宣称宿主视觉通过。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。

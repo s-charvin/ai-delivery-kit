@@ -42,6 +42,29 @@ component behavior only and must be classified `component-only`.
    indexed native test evidence directory. Both files stay outside
    `.ai-delivery/`.
 
+## Unicode-safe incremental text
+
+When a production `Text` grows one visible character at a time (typewriter,
+streaming, truncation, or preview), count and take grapheme clusters rather
+than UTF-16 code units. In Flutter, prefer the host's existing `characters`
+API (or another already-approved Unicode-aware utility); do not use
+`String.length` plus `substring` as a character iterator. Add a widget
+regression test that advances through an emoji surrogate pair, a combining
+mark, and a multi-code-point joined character, and assert that no framework
+rendering exception is raised and the completed text is unchanged. This is a
+rendering-safety requirement, not a visual placeholder or a reason to add a
+parallel text component.
+
+## Test resource lifecycle
+
+Release test-only handles and controllers at the point the final assertion is
+complete, using a lifecycle pattern already proven by the host project's
+binding. Do not assume a deferred teardown callback runs before the binding's
+end-of-test checks. For example, when a test enables the Flutter semantics
+tree, dispose its `SemanticsHandle` explicitly before the test returns, then
+run the whole test file to catch binding-order failures. This is test cleanup,
+not permission to change production accessibility behavior.
+
 ## Device and media preflight
 
 Before a `host-runtime` run, perform a cheap preflight and stop before compiling

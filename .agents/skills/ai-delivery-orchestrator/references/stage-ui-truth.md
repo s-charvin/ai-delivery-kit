@@ -21,6 +21,17 @@ Feed the requirement slice and the mode-appropriate truth source. Produce a **re
 
 Record governance metadata in the v3 `contracts/ui-truth-index.json`: truth mode and source, design revision when applicable, unit type/source/dependencies, environment profiles, sourced states, concrete scenarios, evidence scopes, host capability decisions, host bindings when supported, complete applicability coverage, repo-relative paths, SHA-256 hashes, and preview-hash-bound confirmation. This metadata is not a second paint truth. Do not generate `ui-contract.html` or translate a parallel preview into the host stack. Figma-origin scenarios preserve evidenced pixels; runtime scenarios from other sources must not be described as 1:1 to Figma.
 
+Keep design evidence layers distinct. A hierarchy/structure response proves node
+relationships and bounds; a child asset URL proves only that child asset; an
+actual parent export or copied file is the only evidence for that parent's
+bytes, dimensions, or hash. Before comparing or adopting an asset, record the
+source layer, state, bounds/viewBox, export operation, and local file being
+compared. If the tool cannot provide the intended parent export, mark the
+comparison unresolved and stop at that boundary; never infer parent equality
+from a child URL, a filename, a renderer result, or a mismatched-size hash.
+When the design source is revised, invalidate earlier comparison claims until
+the current source and target file are re-read.
+
 Before preview generation, make a host capability decision for every scenario and freeze exactly one scope: `component-only`, `host-static`, or `host-runtime`. Check whether host composition is in visual scope, an existing runnable host entrypoint exists, it mounts the production host, required state/resources are deterministic, and it emits a reviewable bounded screenshot. Any critical failure selects `component-only` with an explicit uncovered risk. Do not assemble a synthetic page from components to manufacture host evidence. `host-static` and `host-runtime` require a production `host_binding`; `component-only` has no host binding and makes no host-visual pass claim.
 
 `ui-truth-mapping` may dispatch per-unit subagents per its own rules. Orchestrator does not override leaf subagent policy.

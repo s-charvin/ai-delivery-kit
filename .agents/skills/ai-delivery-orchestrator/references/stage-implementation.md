@@ -81,6 +81,15 @@ The `implement` action always follows this chain, regardless of framework tier:
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
+Before claiming a clean verification gate, classify every failure as an
+introduced regression, pre-existing baseline, environment/tooling failure, or
+test/spec contradiction. Re-run the narrowest failing evidence against the
+unchanged baseline when possible, and record the command, observed result, and
+classification. A baseline or environment failure is not a pass; it requires an
+explicit user waiver or a scoped blocker. If a test contradicts the approved
+contract, stop and resolve the contract/test decision before weakening
+production behavior.
+
 How each step is executed depends on the tier (superpowers skills, ECC agents, or native discipline): see [frameworks/superpowers.md](frameworks/superpowers.md), [frameworks/ecc.md](frameworks/ecc.md), [frameworks/native.md](frameworks/native.md).
 
 ### Failure triage before editing code
@@ -103,6 +112,12 @@ Common classes with their default fix path:
   must treat the user's already-advanced live state as the local truth: merge
   configuration and appearance into it, but never overwrite live progress with
   a later-arriving snapshot.
+- **State writes not reaching the rendered owner.** After asynchronous
+  initialization or hydration, verify that the state mutation notifies the
+  actual rendered owner and that a changed content identity resets any
+  stateful renderer that must not be reused. Test empty-to-loaded, re-entry,
+  and stale-instance paths; changing a model without observing the view is not
+  a successful transition.
 - **Debug gates leaking into production.** A temporary early return, mock, or
   disabled path must be explicit, observable, and isolated. Callers must be
   able to distinguish "empty result" from "disabled"; never leave a silent
@@ -123,6 +138,27 @@ Common classes with their default fix path:
   persistence semantics, one-time permissions, and restart behavior
   separately; deduplicate same-session requests; do not fake success on
   failure.
+- **Source data replaced by local defaults.** Preserve source-owned identity,
+  value, and ordering at the UI and protocol boundaries. Do not hardcode a
+  label or identifier, sort or normalize a source-ordered list, or fabricate a
+  fallback when the contract does not authorize it. Test a non-default source
+  value through selection, state projection, and the outgoing boundary.
+- **Preparation work coupled to a presentation toggle.** Keep resource
+  preparation/upload identity and its result independent from a later display
+  or publish toggle. Key reusable results by the source identity, and let the
+  toggle change only the outgoing projection. A generation token can prevent
+  stale completion from being applied; it cannot cancel an already-sent
+  request. Test completed, in-flight, and toggle-round-trip cases with request
+  counts and resource identities, and verify any reuse, detach, or cleanup
+  semantics at the protocol boundary before choosing re-upload or deletion.
+- **Capability classification split across entry points.** When several views
+  expose the same source resource or capability, compute one identity-keyed
+  result with an explicit source, loading/error/empty state, and platform
+  boundary, then have each view project that result. Do not let each entry
+  point derive a local boolean or use evidence from one platform to claim
+  another platform's native behavior. Test the same identity through every
+  applicable entry point and keep unsupported platform cases explicitly
+  unproven.
 - **Telemetry treats change as display.** First entry, restored entry,
   re-render, and step switch have different meanings. Fire the initial
   exposure explicitly, land event producers and consumers as pairs, and mark
@@ -132,6 +168,12 @@ Common classes with their default fix path:
   compilable, land producer/consumer pairs together, replace scattered string
   literals with typed constants, and run static checks before the slice tests.
   A partial state is not acceptance evidence.
+- **Incremental text sliced by storage units.** A byte/code-unit index is not a
+  user-visible character boundary. Typewriter, truncation, preview, and
+  streaming paths must use the host's grapheme-aware API (or an equivalent
+  Unicode-safe representation) and include a regression case for surrogate
+  pairs, combining marks, and other multi-code-unit characters. Never pass a
+  partial character to a renderer.
 
 ### Decision corrections retire superseded artifacts
 
@@ -200,7 +242,14 @@ When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` 
 
 ## Finishing / PR
 
-After the `finish` action (rebase-merge):
+Before the `finish` action creates a commit (rebase-merge), inspect
+`git diff --cached --name-status` and compare
+it with the task's declared file scope. Stage only task-owned paths; pre-existing
+staged, unstaged, untracked, ignored, or generated files are not consent to
+include them. Never use a broad add/commit command to inherit another user's
+staging area. If the staged set is contaminated, remove only the unrelated
+paths from the index while preserving their worktree contents, then re-check the
+staged diff before committing.
 
 | Environment | Recommended next step |
 |-------------|----------------------|
