@@ -51,7 +51,14 @@ Both stages run through the [Review loop](stage-implementation.md#review-loop-ta
 
 Before setting `visual_acceptance_passed`, instantiate `templates/visual-acceptance-template.json` as `sub-requirements/<subreq-id>/visual-acceptance.json`. Preserve machine keys/enums and write summaries/notes in the user's current conversation language.
 
-The artifact must bind the current `ui-truth-index.json` SHA-256 and contain exactly one result for every indexed scenario id. `passed` scenarios need evidence appropriate to `review_mode`: preview/image-diff for visual, test/manual for behavior, and both categories for `both`. `waived` requires user identity, timestamp, and reason. Every file path is repo-relative and hash-verified.
+The schema v2 artifact must bind the current v3 `ui-truth-index.json` SHA-256 and contain exactly one result for every indexed scenario id. `passed` evidence follows the frozen `evidence_scope` as well as `review_mode`:
+
+- `component-only` accepts the indexed frozen preview for visual review and a component test or explicit manual behavior review when behavior is required. It must not include `runtime-capture` or claim host composition passed.
+- `host-static` and `host-runtime` require `runtime-capture`: screenshot path/hash, producing test path/hash, geometry/landmark assertion report path/hash, command, reviewer binding to the capture hash, and host provenance matching `host_binding`.
+
+Runtime screenshot paths must be inside the indexed project-native test evidence root and must stay outside `.ai-delivery/`. A `manual` summary that names or mentions a screenshot file is still only text; it cannot replace `runtime-capture`. `waived` requires user identity, timestamp, and reason. Every file path is repo-relative and hash-verified.
+
+A no-golden waiver applies only to the corresponding component preview. It does not automatically require or waive host capture. A motion waiver applies only to motion acceptance and does not alter static component or host evidence scope.
 
 For UI truth slices, the artifact must also contain `motion_acceptance` with exactly one row for every indexed `unit_id`. The row's `result` is `passed` or `waived`; a static unit must be `passed` with explicit `test` or `manual` evidence and can never be waived. An animated unit with an indexed motion preview must include matching `motion` evidence (path and SHA-256); when no deterministic motion preview was available, `passed` requires independent Stage 4 runtime `test` or `manual` evidence, and `waived` requires the user's identity, timestamp, and reason. Static golden evidence never substitutes for this per-unit motion acceptance.
 

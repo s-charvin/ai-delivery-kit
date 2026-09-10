@@ -1,27 +1,58 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "ui_truth_index_sha256": "<64-lowercase-hex-sha256>",
   "generated_at": "<ISO8601-with-timezone>",
   "scenarios": [
+    {
+      "scenario_id": "loading-phone",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "preview",
+          "path": "test/goldens/profile-card-loading.png",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<项目原生组件预览命令>",
+          "summary": "<使用用户当前对话语言填写组件预览结果摘要>"
+        },
+        {
+          "kind": "test",
+          "path": "test/features/profile/profile_card_test.dart",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<项目原生组件行为测试命令>",
+          "summary": "<使用用户当前对话语言填写组件行为结果摘要>"
+        }
+      ],
+      "note": "<component-only 验收说明；不得声称已覆盖宿主视觉>"
+    },
     {
       "scenario_id": "default-phone",
       "result": "passed",
       "evidence": [
         {
-          "kind": "preview",
-          "path": "test/goldens/profile-card-default.png",
-          "sha256": "<64-lowercase-hex-sha256>",
-          "command": "<宿主项目原生预览或 golden 命令>",
-          "summary": "<使用用户当前对话语言填写结果摘要>"
-        },
-        {
-          "kind": "manual",
+          "kind": "runtime-capture",
+          "path": "test/screenshots/profile/profile-page.png",
+          "sha256": "<64-lowercase-hex-capture-sha256>",
+          "test_path": "test/features/profile/profile_page_capture_test.dart",
+          "test_sha256": "<64-lowercase-hex-test-sha256>",
+          "assertion_report_path": "test/screenshots/profile/profile-page.assertions.json",
+          "assertion_report_sha256": "<64-lowercase-hex-report-sha256>",
+          "command": "<项目原生宿主截图命令>",
+          "host_component_path": "lib/features/profile/profile_page.dart",
+          "entrypoint_ref": "ProfilePage",
+          "capture_boundary_ref": "profile-page-viewport",
+          "verified_landmarks": [
+            "profile-card"
+          ],
+          "verified_constraints": [
+            "profile-card-visible"
+          ],
           "reviewed_by": "<reviewer>",
           "reviewed_at": "<ISO8601-with-timezone>",
-          "summary": "<使用用户当前对话语言填写人工检查摘要>"
+          "reviewed_capture_sha256": "<64-lowercase-hex-capture-sha256>",
+          "summary": "<使用用户当前对话语言填写生产宿主截图结果摘要>"
         }
       ],
-      "note": "<使用用户当前对话语言填写 scenario 说明>"
+      "note": "<host-static 或 host-runtime 验收说明>"
     }
   ],
   "motion_acceptance": [

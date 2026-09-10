@@ -1,27 +1,58 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "ui_truth_index_sha256": "<64-lowercase-hex-sha256>",
   "generated_at": "<ISO8601-with-timezone>",
   "scenarios": [
+    {
+      "scenario_id": "loading-phone",
+      "result": "passed",
+      "evidence": [
+        {
+          "kind": "preview",
+          "path": "test/goldens/profile-card-loading.png",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<project-native preview command>",
+          "summary": "<component preview result summary in the user's current conversation language>"
+        },
+        {
+          "kind": "test",
+          "path": "test/features/profile/profile_card_test.dart",
+          "sha256": "<64-lowercase-hex-sha256>",
+          "command": "<project-native behavior test command>",
+          "summary": "<component behavior result summary in the user's current conversation language>"
+        }
+      ],
+      "note": "<component-only acceptance note; do not claim host visual coverage>"
+    },
     {
       "scenario_id": "default-phone",
       "result": "passed",
       "evidence": [
         {
-          "kind": "preview",
-          "path": "test/goldens/profile-card-default.png",
-          "sha256": "<64-lowercase-hex-sha256>",
-          "command": "<project-native preview or golden command>",
-          "summary": "<result summary in the user's current conversation language>"
-        },
-        {
-          "kind": "manual",
+          "kind": "runtime-capture",
+          "path": "test/screenshots/profile/profile-page.png",
+          "sha256": "<64-lowercase-hex-capture-sha256>",
+          "test_path": "test/features/profile/profile_page_capture_test.dart",
+          "test_sha256": "<64-lowercase-hex-test-sha256>",
+          "assertion_report_path": "test/screenshots/profile/profile-page.assertions.json",
+          "assertion_report_sha256": "<64-lowercase-hex-report-sha256>",
+          "command": "<project-native host capture command>",
+          "host_component_path": "lib/features/profile/profile_page.dart",
+          "entrypoint_ref": "ProfilePage",
+          "capture_boundary_ref": "profile-page-viewport",
+          "verified_landmarks": [
+            "profile-card"
+          ],
+          "verified_constraints": [
+            "profile-card-visible"
+          ],
           "reviewed_by": "<reviewer>",
           "reviewed_at": "<ISO8601-with-timezone>",
-          "summary": "<manual review summary in the user's current conversation language>"
+          "reviewed_capture_sha256": "<64-lowercase-hex-capture-sha256>",
+          "summary": "<production-host capture result summary in the user's current conversation language>"
         }
       ],
-      "note": "<scenario note in the user's current conversation language>"
+      "note": "<host-static or host-runtime acceptance note>"
     }
   ],
   "motion_acceptance": [

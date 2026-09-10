@@ -37,7 +37,7 @@ Never clone or symlink superpowers yourself.
 1. **Workspace** — use the current checkout by default. Reuse the Stage 2 user-approved workspace for UI slices. If this slice has no approved choice and a worktree is proposed, stop and ask with the exact project-local path; do not invoke `using-git-worktrees` before approval.
 2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
 3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
-4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 profile/state/scenario entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write `visual-acceptance.json`; failures re-enter the same review loop.
+4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 profile/state/scenario/scope entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write schema v2 `visual-acceptance.json`; failures re-enter the same review loop.
 5. `verification-before-completion` — integration checks before merge.
 6. Full analyze + full test must pass clean before `finish`.
 

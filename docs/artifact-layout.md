@@ -87,7 +87,7 @@
 
 ### 5.2 UI truth 索引
 
-- **ui-truth 索引**（已完成）：v2 `contracts/ui-truth-index.json` 只存仓内相对指针与治理信息（truth mode/source、`component_path` / `preview_path` / Flutter `golden_test`、profile/state/scenario/coverage、SHA-256 与预览绑定确认）。不再解析 `#ui-contract-meta`，不再 rglob `ui-contract.html`，也不保留 v1 兼容分支。
+- **ui-truth 索引**（已完成）：v3 `contracts/ui-truth-index.json` 只存仓内相对指针与治理信息（truth mode/source、`component_path` / `preview_path`、profile/state/scenario/coverage、`evidence_scope` / `scope_decision`、适用的 `host_binding`、SHA-256 与预览绑定确认）。进行中的交付不再解析 `#ui-contract-meta`、不再 rglob `ui-contract.html`，也不兼容旧 schema；已归档记录仍保持可读。
 - **UI 验收**：`visual-acceptance.json` 绑定当前 `ui-truth-index.json` 哈希，逐 scenario 保存 `passed | waived` 与模式对应的 preview/test/manual/image-diff 证据；旧 Markdown/截图目录存在性不再构成 gate。
 - **依赖数据收敛**（已完成）：`dependency-graph.json` 为唯一 canonical；缺失时 reconcile 才 fallback 读 per-subreq `dependency.json` 并输出 `[WARN]`。
 - **验证器去重**（已完成）：bootstrap 播种到 `.ai-delivery/scripts/`；reconcile 经 `layout.py` 的 `resolve_validator_script` 单一入口解析。

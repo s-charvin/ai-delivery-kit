@@ -141,9 +141,9 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 - 编排器方案设计模式不要把文档写进框架自有目录；规范方案设计写入子需求 `design.md`，`notes` 只保留短指针。
 - `state_flow_required=true` 时，Stage 3a 始终为 `design_mode=full` 并受 CP-DESIGN 门禁约束。canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用的异步时序、不变量和追踪。只使用 Markdown 中的 Mermaid，不创建第二份状态索引或 HTML 产物。
 - 设计批准仅在 `design_review.reviewed_design_sha256` 匹配当前 `design.md` 精确 UTF-8 字节、评审模式与 `design_mode` 匹配且时间戳/评审者存在时有效。文件改变会使门禁失效并重新打开 `solution-design`（`full` 走 CP-DESIGN）。
-- 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**、有效 v2 `contracts/ui-truth-index.json`（路径/hash/来源/profile/scenario/coverage 与当前预览 hash 绑定确认）、独立动效确认/豁免（静态 unit 必须确认无动效），或 Stage 2 评审未干净之前，不得设置 `acceptance_frozen`。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
-- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止从 HTML 再画一遍 Flutter。
-- `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v2 `ui-truth-index.json`，以及覆盖全部已索引 scenario 的结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
+- 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**，以及有效 v3 `contracts/ui-truth-index.json` 之前，不得设置 `acceptance_frozen`。每个 scenario 必须冻结 `evidence_scope` 与 `scope_decision`；只有 `host-static` 和 `host-runtime` 可以携带有效 `host_binding`，`component-only` 明确把宿主组合排除在验收声明外。路径/hash/来源/profile/scenario/coverage、当前预览 hash 绑定确认、独立动效确认/豁免（静态 unit 必须确认无动效）与干净的 Stage 2 评审仍为必需。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
+- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`component-only` 复用组件 preview 与行为测试，不宣称宿主视觉通过；`host-static` 通过项目原生确定性工具捕获索引中的生产宿主；`host-runtime` 在昂贵的原生生命周期检查前先做设备/资源/视觉 smoke。运行时截图必须位于 `.ai-delivery/` 外、索引声明的原生测试证据根目录，并绑定索引宿主 provenance。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止把平行预览翻译到另一宿主栈。
+- `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v3 `ui-truth-index.json`，以及按冻结证据范围覆盖全部已索引 scenario 的 schema v2 结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
 - 仅在 CP-ARCHIVE 确认后通过 `scripts/archive-subrequirement.py` 设置 `archived`。该动作只原位更新 `status.json`，不得创建 `archive/<ISO-ts>/`、复制 canonical 产物或写入 `MANIFEST.json`。已完成需求目录保留为历史事实源；后续变更须使用新的 `<req-id>` 目录。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
 - 实现阶段一次只改一个文件；分支用 rebase 合并（禁止 merge commit）。
@@ -152,9 +152,9 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 
 | 目标状态 | 硬要求 |
 |----------|--------|
-| `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；用户已批准 workspace 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v2 index 路径/hash/来源/profile/scenario/coverage、预览绑定静态确认与动效确认/豁免（含不可用原因）均有效 |
-| `spec/plan/tasks_ready`（UI truth） | 曾有效 `acceptance_frozen`；v2 index 的路径、hash、coverage 与确认绑定仍有效 |
-| `merged`（UI truth） | UI truth 模式已有 `acceptance_frozen` + `visual_acceptance_passed` + 有效 v2 index + 结构化验收；`existing` 使用普通行为/语义证据，`none` 跳过视觉验收 |
+| `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；用户已批准 workspace 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v3 index 路径/hash/来源/profile/scenario/coverage、证据范围、能力判定、必需宿主绑定、预览绑定静态确认与动效确认/豁免均有效 |
+| `spec/plan/tasks_ready`（UI truth） | 曾有效 `acceptance_frozen`；v3 index 的路径、hash、coverage、证据范围、宿主绑定与确认绑定仍有效 |
+| `merged`（UI truth） | UI truth 模式已有 `acceptance_frozen` + `visual_acceptance_passed` + 有效 v3 index + schema v2 结构化验收；`existing` 使用普通行为/语义证据，`none` 跳过视觉验收 |
 | `archived` | 原位收敛状态；canonical 产物保留在原路径，后续变更须使用新的需求目录 |
 
 ## 拆分决策

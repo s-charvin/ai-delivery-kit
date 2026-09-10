@@ -49,7 +49,14 @@ CP-001 用户确认后，当对账输出 `RUNTIME_MODE=confirm_to_dev` 且 `NEXT
 
 设置 `visual_acceptance_passed` 前，使用 `templates/visual-acceptance-template.json` 实例化 `sub-requirements/<subreq-id>/visual-acceptance.json`。保持机器键/枚举不变，并用用户当前对话语言填写摘要和说明。
 
-该产物必须绑定当前 `ui-truth-index.json` 的 SHA-256，并恰好为每个已索引 scenario id 提供一条结果。`passed` scenario 需要与 `review_mode` 匹配的证据：visual 使用 preview/image-diff，behavior 使用 test/manual，`both` 同时需要两类。`waived` 必须记录用户身份、时间戳与理由。所有文件路径均为仓内相对路径并校验 hash。
+schema v2 产物必须绑定当前 v3 `ui-truth-index.json` 的 SHA-256，并恰好为每个已索引 scenario id 提供一条结果。`passed` 证据必须同时匹配冻结的 `evidence_scope` 与 `review_mode`：
+
+- `component-only` 的视觉验收使用索引中的冻结 preview；需要行为验收时使用组件测试或明确的人工行为审阅。不得包含 `runtime-capture`，也不得声称宿主组合通过。
+- `host-static` 与 `host-runtime` 必须提供 `runtime-capture`：截图路径/hash、产出截图的测试路径/hash、几何/landmark 断言报告路径/hash、命令、绑定截图 hash 的评审者信息，以及与 `host_binding` 一致的宿主 provenance。
+
+运行时截图路径必须位于索引声明的项目原生测试证据根目录，并且必须在 `.ai-delivery/` 外。`manual` 摘要即使写了截图文件名也仍只是文字，不能替代 `runtime-capture`。`waived` 必须记录用户身份、时间戳与理由。所有文件路径均为仓内相对路径并校验 hash。
+
+no-golden waiver 只作用于对应组件 preview，不会自动要求或豁免宿主截图。motion waiver 只作用于动效验收，不改变静态组件或宿主证据范围。
 
 对于 UI truth 切片，该产物还必须包含 `motion_acceptance`，并为每个已索引 `unit_id` 恰好提供一条记录。记录的 `result` 为 `passed` 或 `waived`；静态 unit 必须以明确的 `test` 或 `manual` 证据通过，绝不能豁免。已索引动效预览的动态 unit 必须提供路径和 SHA-256 一致的 `motion` 证据；宿主无法确定性生成动效预览时，`passed` 必须提供独立的 Stage 4 运行时 `test` 或 `manual` 证据，`waived` 必须记录用户身份、时间戳和理由。静态 golden 证据不能替代每个 unit 独立的动效验收。
 

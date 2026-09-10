@@ -78,6 +78,7 @@ require_file "$SKILL_ROOT/ai-delivery-orchestrator/templates/visual-acceptance-t
 
 # Framework adaptation model: dispatch table + one usage guide per tier
 require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/framework-adaptation.md"
+require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/framework-adapters/flutter.md"
 for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   require_file "$SKILL_ROOT/ai-delivery-orchestrator/references/frameworks/$guide"
 done

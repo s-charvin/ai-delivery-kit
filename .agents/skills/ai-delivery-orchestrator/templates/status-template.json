@@ -5,7 +5,7 @@
   "_status_meanings": {
     "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
     "split_ready": "Complete source_ref coverage, normalized statements, explicit scope, and dependencies - ready to enter the next stage",
-    "acceptance_frozen": "The enabled UI truth capability has a CP-UI-authorized host component, runtime coverage matrix, and official previews frozen in the user-approved workspace; v2 contracts/ui-truth-index.json provenance, profiles, scenarios, coverage, paths, SHA-256 hashes, preview-bound static confirmations, and a separate motion_decision for every unit (confirmed animated motion or confirmed static / no motion; GIF path/hash or recorded unavailability reason when applicable) are valid (ui_truth_mode=figma or runtime-baseline only)",
+    "acceptance_frozen": "The enabled UI truth capability has a CP-UI-authorized real component, runtime coverage matrix, official previews, and per-scenario evidence scopes frozen in the user-approved workspace; v3 contracts/ui-truth-index.json provenance, profiles, scenarios, scope decisions, required host bindings, coverage, paths, SHA-256 hashes, preview-bound static confirmations, and a separate motion_decision for every unit are valid (ui_truth_mode=figma or runtime-baseline only)",
     "spec_ready": "spec.md has been generated and audited against the contract",
     "plan_ready": "plan.md has been generated and audited against delivery-slice ordering",
     "tasks_ready": "tasks.md has been generated with suitable task granularity, dependency ordering, and file-level scope - awaiting user confirmation to enter the remaining development work",

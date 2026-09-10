@@ -90,7 +90,7 @@
 ## `finish` 动作 — 内置合并清单
 
 1. 完整静态分析 + 完整测试干净通过。
-2. 结构化视觉/运行时验收已落档（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）：layout key `visual_acceptance` 解析出的产物绑定当前 v2 index，并以模式对应证据通过或明确豁免每个 scenario。
+2. 结构化视觉/运行时验收已落档（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）：layout key `visual_acceptance` 解析出的 schema v2 产物绑定当前 v3 index，并以范围对应证据通过或明确豁免每个 scenario。
 3. 变基到开发分支（无 merge commit）；解决冲突后重跑测试。
 4. 开/合并 PR；只有使用用户当前对话语言写完并签署 layout key `verification` 解析出的产物后才设置 `merged`。保留 `templates/verification-template.md` 的三个 `ai-delivery-verification:*` 标记；缺少时状态 validator 会拒绝 `merged`。
 

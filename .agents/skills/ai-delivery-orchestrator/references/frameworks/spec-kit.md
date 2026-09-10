@@ -27,7 +27,7 @@ If `.specify/` exists but the CLI is missing or broken, degrade to the native ti
 ## Usage advice
 
 - Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each enabled UI truth unit's frozen host component + `ui-truth-index.json`, API docs if available, and the dependency graph.
-- For UI truth slices, spec-kit's input is the reviewed host component + v2 `ui-truth-index.json`; reference each unit/scenario id and its evidence origin instead of authoring a second visual description that could drift from the contract.
+- For UI truth slices, spec-kit's input is the reviewed host component + v3 `ui-truth-index.json`; reference each unit/scenario id, evidence scope, and evidence origin instead of authoring a second visual description that could drift from the contract.
 - Audit each output before advancing status:
   - `spec.md` → audit state transitions, content policies, motion, assets, accessibility, and acceptance criteria against every frozen unit/scenario id (UI) → `spec_ready`
   - `plan.md` → audit delivery slice ordering and scenario implementation/verification ownership → `plan_ready`

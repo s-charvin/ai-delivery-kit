@@ -53,6 +53,8 @@ done
 
 require_file "$DST/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
 require_han_content "$DST/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example"
+require_file "$DST/ai-delivery-orchestrator/references/framework-adapters/flutter.md"
+require_han_content "$DST/ai-delivery-orchestrator/references/framework-adapters/flutter.md"
 
 # Localized skill entrypoints
 for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do

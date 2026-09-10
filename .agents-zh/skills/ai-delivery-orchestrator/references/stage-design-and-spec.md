@@ -24,7 +24,7 @@
 向方案设计会话（原生流程或已安装框架的设计流程，见 [framework-adaptation.md](framework-adaptation.md)）提供：
 
 - `requirement-slice.md`
-- 启用 UI truth 的 unit 在记录的用户已批准 workspace 中由 Stage 2 产出的组件 + 有效 v2 `ui-truth-index.json` 的 profile/state/scenario/coverage 与预览/hash 指针（`ui_truth_mode=figma` 或 `runtime-baseline`）
+- 启用 UI truth 的 unit 在记录的用户已批准 workspace 中由 Stage 2 产出的组件 + 有效 v3 `ui-truth-index.json` 的 profile/state/scenario/coverage/evidence-scope 与预览/hash/host-binding 指针（`ui_truth_mode=figma` 或 `runtime-baseline`）
 - API 文档（若有）
 - 依赖图
 

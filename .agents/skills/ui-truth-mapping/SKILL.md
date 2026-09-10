@@ -17,7 +17,7 @@ The orchestrator selects `ui_truth_mode=figma` when Figma supplies visual eviden
 
 **Principle 3 — separate visible design truth from runtime truth.** Figma owns only the pixels and transitions it actually evidences. Requirements own product behavior; established project rules own implementation conventions; explicit user decisions close material gaps. A runtime state that Figma does not show is never called "1:1 to Figma". Never silently let a runtime convention overwrite evidenced Figma pixels.
 
-This skill does one thing: after CP-UI authorization, use the **user-approved workspace** supplied by the orchestrator throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth and approved runtime coverage there, show each visual scenario preview path, and record a v2 pointer/governance index. It does not choose or create a workspace, own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
+This skill does one thing: after CP-UI authorization, use the **user-approved workspace** supplied by the orchestrator throughout governed Stage 2, locate or create the matching unit in the **project source tree**, freeze visual truth and approved runtime coverage there, show each visual scenario preview path, and record a v3 pointer/governance index. It does not choose or create a workspace, own pipeline status beyond that index, decide the next stage, or invent a second visual-truth file (YAML/JSON/markdown must not be used as pixels).
 
 ## Input
 
@@ -59,7 +59,7 @@ Write review notes, freeze packets, and necessary production/test code comments 
 
 | Field | Meaning |
 |---|---|
-| `schema_version` | Integer `2` |
+| `schema_version` | Integer `3` |
 | `ui_truth_mode` | `figma` or `runtime-baseline`; must match the sub-requirement status |
 | `design_source` | Figma file key/root node/revision for `figma`, or evidence origin/source reference for `runtime-baseline`, plus capture timestamp |
 | `unit_id` / `type` / `stack` | Kebab-case id, `page`/`component`/`modal`/`shared-component`, and the host stack identifier |
@@ -70,6 +70,9 @@ Write review notes, freeze packets, and necessary production/test code comments 
 | `profiles[]` | Test surface, size, orientation, theme, locale, text scale, reduced motion, and input mode |
 | `states[]` | `state_id`, `evidence_origin`, `source_ref`; Figma-origin states also require `source_node` |
 | `scenarios[]` | State + profile + coverage dimensions + review mode + source; visual scenarios point to a deterministic preview |
+| `evidence_scope` | Per-scenario scope: `component-only`, `host-static`, or `host-runtime` |
+| `scope_decision` | Why that scope is supported, the host-capture capability result, and any boundary not covered by the acceptance claim |
+| `host_binding` | Required only for host scopes: production host path/hash, entrypoint, capture boundary, evidence root, required landmarks, and spatial constraints |
 | `coverage[]` | Exactly one applicability row for every required runtime dimension |
 | `confirmation` | `confirmed` or `waived`, timestamp/by; visual confirmation binds `reviewed_preview_sha256` |
 
@@ -103,7 +106,7 @@ Do not map the entire Figma evidence by default. Match the **requirement size** 
 
 ## Hard Boundary
 
-- Invoke only from a governed Stage 2 slice after CP-UI is recorded for `ui_truth_mode=figma` or `runtime-baseline`. This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage. Static golden confirmation alone never advances `acceptance_frozen`. This skill writes production code, golden tests, previews, and the v2 index inside the recorded user-approved workspace; it is not an implementation-free preflight. Workspace choice remains owned by the orchestrator's `workspace-policy.md`.
+- Invoke only from a governed Stage 2 slice after CP-UI is recorded for `ui_truth_mode=figma` or `runtime-baseline`. This is the Stage 2 UI Truth Mapping freeze gate; it is not a separate stage. Static golden confirmation alone never advances `acceptance_frozen`. This skill writes production code, host-native tests, previews, and the v3 index inside the recorded user-approved workspace; it is not an implementation-free preflight. Workspace choice remains owned by the orchestrator's `workspace-policy.md`.
 - **Requirement-scoped extract:** In Scope artifacts decide the root — smallest ancestor covering artifacts that belong to **one** unit. Disconnected artifacts → split units. Never dump the full page.
 - **Unit Split Plan before evidence:** fill §1b before any `get_code` or component code.
 - **Scoped `get_code` only.** The `get_code` target **must equal** the planned `source_node`. Full-page `get_code` then prune is a process failure.
@@ -255,6 +258,24 @@ Resolve asset composition at the semantic component boundary, not from leaf expo
 
 Use the least complex host-native path that preserves the evidence: existing/native primitive → established project dependency → custom painter/shader → pre-rendered asset only for truly static output whose scaling, theme, and accessibility behavior remain correct. Missing fonts, weights, vector semantics, effects, or runtime assets block freeze until the user chooses an explicit disposition; do not silently substitute a close-enough implementation.
 
+### 3e. Host Capability Decision (REQUIRED before preview generation)
+
+Assign every scenario exactly one evidence scope: `component-only`, `host-static`, or `host-runtime`. Decide from observed project capability, not from the theoretical ability to write a new harness. Check all five questions:
+
+1. Is the host composition part of the requirement's visual truth?
+2. Does the project already have an existing runnable host test entrypoint?
+3. Can that entrypoint mount the real production host rather than a reconstructed surface?
+4. Can it deterministically prepare the required state, data, and visible resources?
+5. Can it emit a reviewable screenshot with an explicit capture boundary?
+
+Choose `component-only` when the host is outside visual scope or any critical capability check fails. Record `host_capture_supported: false`, the reason, and a non-empty `uncovered_risk`. The real component, its component-level preview, and behavior tests remain valid evidence; shrink the acceptance claim to that boundary and do not imply host composition was reviewed.
+
+Choose `host-static` when all checks pass through the project's deterministic official test stack. Choose `host-runtime` when the real host and reviewable capture require a device, native surface, media, or runtime-only resource. Both host scopes require `host_binding` with the production host path/hash, existing entrypoint, exact capture boundary, native test evidence root, required landmarks, and source-backed spatial constraints.
+
+A test shell assembled from otherwise real components is not a production host. Do not assemble, redraw, or manually position a synthetic page merely to satisfy a host scope. If later execution disproves a frozen capability decision, stop, record the reduced boundary, return to UI truth review, and obtain confirmation for the corrected scope.
+
+A no-preview or no-golden waiver waives only the corresponding preview medium; it neither requires nor waives a host screenshot. A motion waiver affects only motion evidence and never changes the static evidence scope.
+
 ### 4. Write the real component (host stack)
 
 **Create:** add the component next to neighbors. Match its host-stack API, theme, spacing helpers, and folder layout. **Do not** copy an adapter example and fill blanks.
@@ -344,7 +365,7 @@ Do not add a new runner just for this skill.
 
 1. Component compiles / the host preview opens.
 2. Official preview file exists; chat showed its **absolute path**.
-3. The v2 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, profiles, sourced states, scenarios, and all ten coverage dimensions.
+3. The v3 `contracts/ui-truth-index.json` validates repo-relative containment, file types, SHA-256 hashes, dependencies, profiles, sourced states, scenarios, evidence scopes, capability decisions, required host bindings, and all ten coverage dimensions.
 4. Every visual scenario has a deterministic preview plus static visual confirmation/waiver bound to its current `preview_sha256`; every applicable motion scenario additionally has motion confirmation or an explicit motion waiver with a reason and a later runtime verification mode. A confirmed motion decision must include a deterministic GIF path and hash when the host can produce one; when it cannot, record the unavailability reason and defer runtime verification. A unit with unresolved motion disposition cannot freeze.
 5. Scope matches the slice; icons/images and interactive controls are evidence-backed and real; absent data renders the real empty/omitted state; no unapproved placeholder or visual fallback is present; runtime coverage is resolved; motion/asset plans and the static-vs-motion confirmation split are recorded; sizing is classified; compositing is recorded when §3b fired.
 6. Stage 2 tests pass and the latest fresh-context review is clean; record the user-approved workspace and optional branch for Stage 4 reuse. Stage 4 must later record independent motion acceptance for every unit.
@@ -374,19 +395,19 @@ regenerate only the affected evidence with fresh hashes.
 
 ### 7. Index and status
 
-Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v2 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, and confirmation metadata, never paint.
+Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v3 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, evidence scopes, host bindings, and confirmation metadata, never paint.
 
 For `ui_truth_mode=runtime-baseline`, set `ui_truth_mode` in the index, use a `requirement`, `project`, or `user-decision` `design_source`, and omit Figma-only identifiers. For `ui_truth_mode=figma`, the top-level source must be Figma; runtime gaps may still use the other allowed origins on individual states and scenarios.
 
 Set `acceptance_frozen` only after the freeze bar. On failure → `blocked_verification_failure`.
 
-There is no HTML validator and no v1 compatibility path. Kit status validation checks the complete v2 matrix, confirmation-to-preview hash binding, and that listed relative paths resolve from the **repository root**.
+There is no HTML validator and no active-delivery compatibility path for earlier schemas. Kit status validation checks the complete v3 matrix, confirmation-to-preview hash binding, evidence-scope rules, host provenance, and that listed relative paths resolve from the **repository root**. Archived records remain readable under their legacy schema.
 
 ### 8. After implementation (Stage 4 consumers)
 
 Stage 4 **wires** the already-written component (API, route, state, mount) in the same user-approved workspace. It must not create a second workspace, redraw the component from a parallel format, or re-query TemPad by default.
 
-Stage 4 verifies every indexed scenario using the recorded profile and project-native tools, then writes structured `visual-acceptance.json`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
+Stage 4 verifies every indexed scenario according to its frozen evidence scope, then writes schema v2 structured `visual-acceptance.json`. `component-only` reuses the frozen component preview and component behavior tests without adding a host-visual pass. `host-static` uses the indexed production host and official deterministic screenshot facility. `host-runtime` performs a cheap device/resource/visual smoke first, then runs expensive native lifecycle verification only after the smoke passes. Host evidence uses `runtime-capture` with hash-bound screenshot, test, assertion report, command, and matching host provenance; the screenshot must live in the project's declared native test evidence root, never under `.ai-delivery/`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
 
 **Reference check:** run a reference/usage search before writing any "implemented at" claim. Definition-only is not enough.
 

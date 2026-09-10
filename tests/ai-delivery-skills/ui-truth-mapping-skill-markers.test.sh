@@ -93,7 +93,7 @@ require "$ZH" "$ZH_STAGE2_FREEZE_GATE" "ZH Stage 2 freeze gate"
 require "$ZH" "$ZH_GOLDEN_CANNOT_FREEZE" "ZH golden cannot advance freeze"
 require "$ZH" "$ZH_MOTION_OUTPUT" "ZH generic motion output"
 
-for forbidden in "flutter-golden-preview" "matchesGoldenFile" "testWidgets" "RenderRepaintBoundary"; do
+for forbidden in "flutter-golden-preview" "matchesGoldenFile" "testWidgets" "RenderRepaintBoundary" "RepaintBoundary" "AssetEntity" "xc_video_player"; do
   if grep -Fq -- "$forbidden" "$EN"; then
     fail "core EN skill contains framework-specific token: $forbidden"
   fi
@@ -124,6 +124,15 @@ require "$EN" "all ten coverage dimensions" "EN complete coverage"
 require "$EN" 'reviewed_preview_sha256' "EN preview-bound confirmation"
 require "$EN" 'structured `visual-acceptance.json`' "EN structured Stage 4 acceptance"
 require "$EN" "A static golden never substitutes for motion acceptance" "EN golden cannot replace motion"
+require "$EN" '`component-only`, `host-static`, or `host-runtime`' "EN evidence scope enum"
+require "$EN" "Host Capability Decision (REQUIRED before preview generation)" "EN host capability decision"
+require "$EN" "part of the requirement's visual truth" "EN host visual scope check"
+require "$EN" "existing runnable host test entrypoint" "EN existing host entrypoint check"
+require "$EN" "real production host" "EN production host check"
+require "$EN" "deterministically prepare" "EN deterministic state check"
+require "$EN" "reviewable screenshot" "EN reviewable screenshot check"
+require "$EN" "A test shell assembled from otherwise real components is not a production host" "EN fake host ban"
+require "$EN" "shrink the acceptance claim" "EN component-only claim boundary"
 require "$EN" "Every editable input must have an explicit state/IME matrix" "EN input IME matrix"
 require "$EN" "Resolve asset composition at the semantic component boundary" "EN composed assets"
 require "$EN" "derive visual variants from the real control state" "EN input icon from control state"

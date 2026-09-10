@@ -19,7 +19,9 @@ Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code
 
 传入需求切片与模式对应的真值来源。每个独立 unit 产出 **真实宿主栈组件**，并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。绑定数据无真实值时保持空/省略，fixture 只能用于测试夹具。每个 UI unit 都必须明确记录动效契约，或记录并确认「static / no motion」；静态预览确认与动效确认/豁免是两道独立门禁。
 
-v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把平行预览翻译进宿主栈。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
+v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、适用时的设计 revision、unit 类型/源节点/依赖、环境 profile、带来源的 state、具体 scenario、证据范围、宿主能力判定、支持时的宿主绑定、完整适用性 coverage、仓内相对路径、SHA-256，以及绑定预览 hash 的确认。这些元数据不是第二份绘制真值。禁止生成 `ui-contract.html`。禁止把平行预览翻译进宿主栈。Figma 来源的 scenario 保留有证据的像素；其他来源的运行时 scenario 不得称为 1:1 还原 Figma。
+
+生成 preview 前，必须为每个 scenario 执行宿主能力判定，并冻结且仅冻结一种范围：`component-only`、`host-static` 或 `host-runtime`。检查宿主组合是否在视觉范围内、是否已有可运行宿主入口、该入口是否挂载生产宿主、所需状态/资源能否确定性准备，以及能否输出边界明确且可复核的截图。任一关键条件失败都选择 `component-only` 并记录未覆盖风险。禁止把组件手工拼成虚构页面来制造宿主证据。`host-static` 与 `host-runtime` 必须绑定生产 `host_binding`；`component-only` 没有宿主绑定，也不宣称宿主视觉通过。
 
 `ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
 
@@ -29,7 +31,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 1. 组件能编过 / 宿主预览能打开。
 2. 官方预览文件存在；对话出示了其 **绝对路径**（宿主静态预览；宿主可录制时，动态 unit 还需 GIF；无法录制 GIF 时索引必须记录原因并延后运行时验证）。
-3. v2 `contracts/ui-truth-index.json` 校验通过：仓内相对路径不会逃出 **仓库根**、hash 与当前文件一致、id/type/stack/dependency 合法、profile 与带来源的 state 完整、每个视觉 scenario 都有独立预览，且十个 coverage 维度全部解决。
+3. v3 `contracts/ui-truth-index.json` 校验通过：仓内相对路径不会逃出 **仓库根**、hash 与当前文件一致、id/type/stack/dependency 合法、profile 与带来源的 state 完整、每个 scenario 有合法证据范围/能力判定、宿主范围绑定真实生产宿主、每个视觉 scenario 都有独立预览，且十个 coverage 维度全部解决。
 4. 范围匹配需求切片 **In Scope**（最小祖先；不是无关整页 dump）。
 5. 每个 icon/图片和交互控件都是真实且有证据。手绘 glyph、涂绘输入壳、外部视觉 slot、dummy/fixture visual、伪造数据和静默 fallback 都不通过。资源不可用时，必须由用户明确选择为空、延后或阻塞；技能不得自行选择。如果确实需要临时占位来辅助评审，必须另行询问用户明确批准其确切作用域，并让它留在生产 UI/数据路径之外；没有该批准一律禁止。
 6. 每个视觉 scenario 都记录静态视觉确认或带理由的明确豁免，且 `reviewed_preview_sha256` 与当前 preview hash 一致。适用的动效 scenario 还要记录动效确认或有理由的动效豁免与后续运行时验证方式。能确定性录制 GIF 时，在 `motion_decision` 写入并向用户出示路径/hash；不能录制 GIF 时，索引必须说明原因，Stage 4 用项目原生行为/人工证据验收。GIF 已足够，不要新增其他动效格式或编码器。官方预览就是复审媒介 — 不要用 `contract-preview-*.png` 代替。
@@ -40,7 +42,7 @@ v2 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 ## 完成后
 
-没有 HTML 校验器，也没有 v1 兼容分支。Kit 状态校验检查 v2 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、完整 coverage 与预览绑定确认凭证：
+没有 HTML 校验器，进行中的交付也不兼容旧 schema。Kit 状态校验检查 v3 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、证据范围、宿主绑定、完整 coverage 与预览绑定确认凭证；已归档记录保持旧 schema 可读：
 
 ```bash
 python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \

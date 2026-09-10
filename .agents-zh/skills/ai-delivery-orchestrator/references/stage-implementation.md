@@ -10,7 +10,7 @@ CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输
 
 按子需求依赖图以及 `ui-truth-index.json` 持久化的 UI unit 类型/依赖执行：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当列出的依赖 unit 已在切片工作区完成，该 unit 才能启动。
 
-`ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 使用的同一个用户已批准 workspace**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v2 profile/state/scenario coverage 与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止从 HTML 再画一遍 Flutter。
+`ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 使用的同一个用户已批准 workspace**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v3 profile/state/scenario coverage、证据范围、宿主绑定与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止把一个宿主栈的平行预览翻译到另一宿主栈。
 
 新增集成抽象之前，先追溯宿主对同类操作的既有所有权与调用路径：API/client、transport、序列化、repository/use-case、依赖注入和测试缝。路径仍匹配时就扩展它。不要仅为一次新操作或更容易测试而平行引入 adapter、client、repository、transport 或注入架构；新层必须有既有项目边界或明确需求决策。
 
@@ -46,7 +46,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 
 ### 运行时 scenario 验证
 
-使用 v2 index 中精确记录的 profile 与 scenario；不得发明通用设备/主题笛卡尔积。对 covered 维度采用项目原生检查：
+使用 v3 index 中精确记录的 profile 与 scenario；不得发明通用设备/主题笛卡尔积。对 covered 维度采用项目原生检查：
 
 - state/数据生命周期、可达的 error/offline/permission/disabled 路径，以及快速重复进入；
 - container/viewport 边界、orientation、安全区、fixed/sticky overlay、IME、scroll、clip 与 hit testing；每个可编辑输入在适用时都要覆盖未输入/未编辑、编辑中、已完成/未编辑、IME 隐藏与 IME 显示，视觉由真实控件状态驱动；
@@ -57,6 +57,14 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 - 支持的主题、contrast/state parity、平台语义、输入模式与原生无障碍要求。
 
 不得仅为执行矩阵新增依赖。使用项目已有 golden/screenshot、widget/component、semantics/accessibility、integration 与 performance 工具。只有用户给出身份、时间戳和理由时才能明确 waived 某个 scenario。
+
+### 按证据范围执行
+
+- `component-only`：复用已冻结真实组件 preview 与组件行为测试。记录宿主未覆盖边界，不得新增或暗示宿主视觉通过。
+- `host-static`：通过索引中已有测试入口进入，挂载索引中的生产宿主，确定性准备状态/资源，捕获索引边界，并验证全部必见元素和空间约束。
+- `host-runtime`：先执行低成本环境、资源与视觉 smoke。只有视觉 smoke 通过后才执行昂贵的原生生命周期套件。捕获索引中的生产宿主，并验证同一组必见元素/空间约束。
+
+禁止为满足宿主证据而构造虚构页面。真实宿主无法按冻结方式挂载或截图时，停止并把 scenario 退回修正能力判定；不得静默降级或伪造通过截图。宿主截图与断言报告必须放在 `.ai-delivery/` 外、索引声明的项目原生测试证据根目录。
 
 若组件代码变化，但重新生成的所有视觉 preview hash 均不变，可更新组件 hash 并保留现有预览绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认；陈旧 `reviewed_preview_sha256` 必须阻止推进。
 
@@ -69,7 +77,7 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 1. **解析 workspace** — 遵循 [workspace-policy.md](workspace-policy.md)。`ui_truth_mode=figma` 或 `runtime-baseline` 复用已记录的 Stage 2 用户已批准 workspace；其他切片默认使用当前 checkout。只有为当前子需求取得明确确认后，才能创建或复用项目内 worktree。
 2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
 3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
-4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 下执行每个 v2 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录结构化 `visual-acceptance.json`，且为每个索引 unit 写一条独立动效验收；静态 golden 不能满足该记录。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。绑定数据无真实值时必须验收为空/省略，而不是伪造 fixture 内容。
+4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 与证据范围下执行每个 v3 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录 schema v2 结构化 `visual-acceptance.json`，且为每个索引 unit 写一条独立动效验收。宿主范围必须有 hash 绑定的 `runtime-capture` 证据；`component-only` 不得宣称宿主覆盖。静态 golden 不能满足动效记录。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。绑定数据无真实值时必须验收为空/省略，而不是伪造 fixture 内容。
 5. **验证** — 合并前集成检查；在 `verification.md` 中使用用户当前对话语言记录人类可读证据（模板：`templates/verification-template.md`，删除其中的语言指令注释）。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
 
@@ -150,7 +158,7 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 ## 状态更新
 
 - 开始实现时设 `in_dev`。
-- 仅当 `ui_truth_mode=figma` 或 `runtime-baseline`，且 `visual-acceptance.json` 绑定当前 v2 index、每个 scenario 均带所需证据通过或明确 waived 后，才设 `visual_acceptance_passed`。
+- 仅当 `ui_truth_mode=figma` 或 `runtime-baseline`，且 schema v2 `visual-acceptance.json` 绑定当前 v3 index、每个 scenario 均按冻结范围带所需证据通过或明确 waived 后，才设 `visual_acceptance_passed`。
 - rebase 成功后设 `merged`。
 
 ## 进度账本（可选）

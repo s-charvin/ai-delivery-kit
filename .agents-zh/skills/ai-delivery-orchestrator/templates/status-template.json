@@ -5,7 +5,7 @@
   "_status_meanings": {
     "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
     "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
-    "acceptance_frozen": "已启用的 UI truth 能力已在用户批准 workspace 中冻结 CP-UI 授权的宿主组件、运行时覆盖矩阵与官方预览；v2 contracts/ui-truth-index.json 的来源、profile、scenario、coverage、路径、SHA-256、预览绑定的静态确认，以及每个 unit 独立的 motion_decision（确认动效或确认 static / no motion；适用时记录 GIF 路径/hash 或不可用原因）均有效（仅 ui_truth_mode=figma 或 runtime-baseline）",
+    "acceptance_frozen": "已启用的 UI truth 能力已在用户批准 workspace 中冻结 CP-UI 授权的真实组件、运行时覆盖矩阵、官方预览与每个 scenario 的证据范围；v3 contracts/ui-truth-index.json 的来源、profile、scenario、范围判定、必需宿主绑定、coverage、路径、SHA-256、预览绑定静态确认，以及每个 unit 独立的 motion_decision 均有效（仅 ui_truth_mode=figma 或 runtime-baseline）",
     "spec_ready": "spec.md 已生成并对照契约审计通过",
     "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
     "tasks_ready": "tasks.md 已生成，任务粒度合适、按依赖排序且文件级范围 — 等待用户确认进入剩余开发工作",

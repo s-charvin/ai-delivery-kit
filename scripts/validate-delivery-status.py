@@ -15,9 +15,11 @@ from typing import Any
 
 LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
 UI_TRUTH_INDEX = Path("contracts") / "ui-truth-index.json"
-UI_TRUTH_SCHEMA_VERSION = 2
+UI_TRUTH_SCHEMA_VERSION = 3
+LEGACY_UI_TRUTH_SCHEMA_VERSION = 2
 VISUAL_ACCEPTANCE_ARTIFACT = "visual-acceptance.json"
-VISUAL_ACCEPTANCE_SCHEMA_VERSION = 1
+VISUAL_ACCEPTANCE_SCHEMA_VERSION = 2
+LEGACY_VISUAL_ACCEPTANCE_SCHEMA_VERSION = 1
 KEBAB_CASE_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 UNIT_TYPES = frozenset({"page", "component", "modal", "shared-component"})
@@ -36,6 +38,14 @@ LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
 SURFACE_KINDS = frozenset({"viewport", "container"})
 ORIENTATIONS = frozenset({"portrait", "landscape", "not-applicable"})
 REVIEW_MODES = frozenset({"visual", "behavior", "both"})
+EVIDENCE_SCOPES = frozenset({"component-only", "host-static", "host-runtime"})
+HOST_EVIDENCE_SCOPES = frozenset({"host-static", "host-runtime"})
+NON_PRODUCTION_HOST_ROOTS = frozenset(
+    {".ai-delivery", "test", "tests", "integration_test", "integration-tests", "__tests__"}
+)
+SPATIAL_CONSTRAINT_KINDS = frozenset(
+    {"visible", "contains", "relative-position", "edge-insets", "spacing", "size-mode"}
+)
 COVERAGE_STATUSES = frozenset({"covered", "not_applicable"})
 COVERAGE_DIMENSIONS = frozenset(
     {
@@ -52,8 +62,10 @@ COVERAGE_DIMENSIONS = frozenset(
     }
 )
 ACCEPTANCE_RESULTS = frozenset({"passed", "waived"})
-ACCEPTANCE_EVIDENCE_KINDS = frozenset({"preview", "test", "manual", "image-diff"})
-VISUAL_EVIDENCE_KINDS = frozenset({"preview", "image-diff"})
+ACCEPTANCE_EVIDENCE_KINDS = frozenset(
+    {"preview", "test", "manual", "image-diff", "runtime-capture"}
+)
+VISUAL_EVIDENCE_KINDS = frozenset({"preview", "image-diff", "runtime-capture"})
 BEHAVIOR_EVIDENCE_KINDS = frozenset({"test", "manual"})
 WEB_PREVIEW_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".html"})
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp"})
@@ -354,6 +366,34 @@ def _resolve_repo_relative_file(
         expected = " or ".join(sorted(allowed_suffixes))
         return None, [f"{prefix} must end with {expected}: {rel}"]
     return resolved, []
+
+
+def _check_repo_relative_root(
+    repo_root: Path,
+    rel: Any,
+    *,
+    field: str,
+    subreq_id: str,
+    unit_id: str,
+) -> list[str]:
+    prefix = f"[GATE] {subreq_id} unit {unit_id} {field}"
+    if not _is_non_empty_string(rel):
+        return [f"{prefix} must be a repo-relative path"]
+    rel_path = Path(rel)
+    windows_path = PureWindowsPath(rel)
+    if rel_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+        return [f"{prefix} must be a repo-relative path"]
+    if ".." in rel_path.parts or ".." in windows_path.parts:
+        return [f"{prefix} must stay within repository root ('..' is forbidden): {rel}"]
+    if rel_path.parts and rel_path.parts[0] == ".ai-delivery":
+        return [f"{prefix} must stay outside .ai-delivery"]
+    try:
+        resolved_root = repo_root.resolve(strict=True)
+        resolved = (resolved_root / rel_path).resolve(strict=False)
+        resolved.relative_to(resolved_root)
+    except (OSError, RuntimeError, ValueError):
+        return [f"{prefix} resolves outside repository root: {rel}"]
+    return []
 
 
 def _check_content_hash(
@@ -667,11 +707,18 @@ def check_ui_truth_index(
             f"must match status.json ({expected_mode})"
         )
     effective_mode = index_mode if index_mode in UI_TRUTH_CAPABILITY_MODES else expected_mode
-    if type(data.get("schema_version")) is not int or data["schema_version"] != UI_TRUTH_SCHEMA_VERSION:
+    schema_version = data.get("schema_version")
+    allowed_schema_versions = (
+        {UI_TRUTH_SCHEMA_VERSION, LEGACY_UI_TRUTH_SCHEMA_VERSION}
+        if status == "archived"
+        else {UI_TRUTH_SCHEMA_VERSION}
+    )
+    if type(schema_version) is not int or schema_version not in allowed_schema_versions:
         errors.append(
             f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} schema_version "
             f"must equal {UI_TRUTH_SCHEMA_VERSION}"
         )
+    enforce_evidence_scope = schema_version == UI_TRUTH_SCHEMA_VERSION
 
     design_source = data.get("design_source")
     if not isinstance(design_source, dict):
@@ -1039,6 +1086,123 @@ def check_ui_truth_index(
                     f"{prefix} review_mode must be one of: "
                     f"{', '.join(sorted(REVIEW_MODES))}"
                 )
+
+            if enforce_evidence_scope:
+                evidence_scope = scenario.get("evidence_scope")
+                if evidence_scope not in EVIDENCE_SCOPES:
+                    errors.append(
+                        f"{prefix} evidence_scope must be one of: "
+                        f"{', '.join(sorted(EVIDENCE_SCOPES))}"
+                    )
+                scope_decision = scenario.get("scope_decision")
+                if not isinstance(scope_decision, dict):
+                    errors.append(f"{prefix} scope_decision must be an object")
+                    scope_decision = {}
+                if not _is_non_empty_string(scope_decision.get("reason")):
+                    errors.append(f"{prefix} scope_decision.reason is required")
+                capture_supported = scope_decision.get("host_capture_supported")
+                if type(capture_supported) is not bool:
+                    errors.append(
+                        f"{prefix} scope_decision.host_capture_supported must be a boolean"
+                    )
+
+                host_binding = scenario.get("host_binding")
+                if evidence_scope == "component-only":
+                    if capture_supported is not False:
+                        errors.append(
+                            f"{prefix} component-only requires host_capture_supported=false"
+                        )
+                    if not _is_non_empty_string(scope_decision.get("uncovered_risk")):
+                        errors.append(
+                            f"{prefix} component-only requires a non-empty uncovered_risk"
+                        )
+                    if host_binding is not None:
+                        errors.append(
+                            f"{prefix} component-only must not declare host_binding"
+                        )
+                elif evidence_scope in HOST_EVIDENCE_SCOPES:
+                    if capture_supported is not True:
+                        errors.append(
+                            f"{prefix} {evidence_scope} requires host_capture_supported=true"
+                        )
+                    if not isinstance(host_binding, dict):
+                        errors.append(f"{prefix} host_binding must be an object")
+                    else:
+                        host_file, host_file_errors = _resolve_repo_relative_file(
+                            repo_root,
+                            host_binding.get("host_component_path"),
+                            field="host_component_path",
+                            subreq_id=subreq_id,
+                            unit_id=f"{unit_id} scenario {scenario_id} host_binding",
+                        )
+                        errors.extend(host_file_errors)
+                        host_component_path = host_binding.get("host_component_path")
+                        if _is_non_empty_string(host_component_path):
+                            host_parts = Path(host_component_path).parts
+                            if host_parts and host_parts[0] in NON_PRODUCTION_HOST_ROOTS:
+                                errors.append(
+                                    f"{prefix} host_binding.host_component_path must reference "
+                                    "production source, not test evidence"
+                                )
+                        errors.extend(
+                            _check_content_hash(
+                                host_file,
+                                host_binding.get("host_component_sha256"),
+                                field="host_component_sha256",
+                                subreq_id=subreq_id,
+                                unit_id=f"{unit_id} scenario {scenario_id} host_binding",
+                            )
+                        )
+                        for field in ("entrypoint_ref", "capture_boundary_ref"):
+                            if not _is_non_empty_string(host_binding.get(field)):
+                                errors.append(f"{prefix} host_binding.{field} is required")
+                        errors.extend(
+                            _check_repo_relative_root(
+                                repo_root,
+                                host_binding.get("evidence_root"),
+                                field="host_binding.evidence_root",
+                                subreq_id=subreq_id,
+                                unit_id=f"{unit_id} scenario {scenario_id}",
+                            )
+                        )
+                        landmarks = host_binding.get("required_landmarks")
+                        if (
+                            not isinstance(landmarks, list)
+                            or not landmarks
+                            or any(not _is_non_empty_string(item) for item in landmarks)
+                        ):
+                            errors.append(
+                                f"{prefix} host_binding.required_landmarks must be a non-empty string array"
+                            )
+                        constraints = host_binding.get("spatial_constraints")
+                        if not isinstance(constraints, list) or not constraints:
+                            errors.append(
+                                f"{prefix} host_binding.spatial_constraints must be a non-empty array"
+                            )
+                        else:
+                            seen_constraint_ids: set[str] = set()
+                            for constraint_index, constraint in enumerate(constraints):
+                                constraint_prefix = (
+                                    f"{prefix} host_binding.spatial_constraints[{constraint_index}]"
+                                )
+                                if not isinstance(constraint, dict):
+                                    errors.append(f"{constraint_prefix} must be an object")
+                                    continue
+                                constraint_id = constraint.get("constraint_id")
+                                if not _is_non_empty_string(constraint_id):
+                                    errors.append(f"{constraint_prefix}.constraint_id is required")
+                                elif constraint_id in seen_constraint_ids:
+                                    errors.append(f"{constraint_prefix}.constraint_id is duplicated")
+                                else:
+                                    seen_constraint_ids.add(constraint_id)
+                                if constraint.get("kind") not in SPATIAL_CONSTRAINT_KINDS:
+                                    errors.append(
+                                        f"{constraint_prefix}.kind must be one of: "
+                                        f"{', '.join(sorted(SPATIAL_CONSTRAINT_KINDS))}"
+                                    )
+                                for field in ("subject_ref", "source_ref"):
+                                    if not _is_non_empty_string(constraint.get(field)):
+                                        errors.append(f"{constraint_prefix}.{field} is required")
             errors.extend(
                 _check_evidence_source(
                     scenario,
@@ -1201,6 +1365,7 @@ def _check_acceptance_file_evidence(
     scenario_id: str,
     indexed_preview_path: Any | None,
     indexed_preview_sha256: Any | None,
+    host_binding: dict[str, Any] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     kind = evidence.get("kind")
@@ -1281,6 +1446,92 @@ def _check_acceptance_file_evidence(
                 errors.append(f"{prefix} actual must not exceed threshold")
         if not _is_non_empty_string(evidence.get("command")):
             errors.append(f"{prefix} command is required")
+    elif kind == "runtime-capture":
+        capture_rel = evidence.get("path")
+        capture_file, file_errors = _resolve_repo_relative_file(
+            repo_root,
+            capture_rel,
+            field="path",
+            subreq_id=subreq_id,
+            unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+            allowed_suffixes=IMAGE_SUFFIXES,
+        )
+        errors.extend(file_errors)
+        errors.extend(
+            _check_content_hash(
+                capture_file,
+                evidence.get("sha256"),
+                field="sha256",
+                subreq_id=subreq_id,
+                unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+            )
+        )
+        if _is_non_empty_string(capture_rel):
+            capture_path = Path(capture_rel)
+            if capture_path.parts and capture_path.parts[0] == ".ai-delivery":
+                errors.append(f"{prefix} runtime capture must stay outside .ai-delivery")
+
+        for path_field, hash_field, suffixes in (
+            ("test_path", "test_sha256", None),
+            ("assertion_report_path", "assertion_report_sha256", frozenset({".json"})),
+        ):
+            evidence_file, evidence_errors = _resolve_repo_relative_file(
+                repo_root,
+                evidence.get(path_field),
+                field=path_field,
+                subreq_id=subreq_id,
+                unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+                allowed_suffixes=suffixes,
+            )
+            errors.extend(evidence_errors)
+            errors.extend(
+                _check_content_hash(
+                    evidence_file,
+                    evidence.get(hash_field),
+                    field=hash_field,
+                    subreq_id=subreq_id,
+                    unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+                )
+            )
+
+        if not _is_non_empty_string(evidence.get("command")):
+            errors.append(f"{prefix} command is required")
+        if not _is_non_empty_string(evidence.get("reviewed_by")):
+            errors.append(f"{prefix} reviewed_by is required")
+        if not _is_iso8601_timestamp(evidence.get("reviewed_at")):
+            errors.append(f"{prefix} reviewed_at must be an ISO-8601 timestamp with timezone")
+        if evidence.get("reviewed_capture_sha256") != evidence.get("sha256"):
+            errors.append(f"{prefix} reviewed_capture_sha256 must match sha256")
+
+        if not isinstance(host_binding, dict):
+            errors.append(f"{prefix} runtime-capture requires indexed host_binding")
+        else:
+            for field in (
+                "host_component_path",
+                "entrypoint_ref",
+                "capture_boundary_ref",
+            ):
+                if evidence.get(field) != host_binding.get(field):
+                    errors.append(f"{prefix} {field} must match indexed host_binding")
+            evidence_root = host_binding.get("evidence_root")
+            if _is_non_empty_string(capture_rel) and _is_non_empty_string(evidence_root):
+                capture_parts = Path(capture_rel).parts
+                root_parts = Path(evidence_root).parts
+                if capture_parts[: len(root_parts)] != root_parts:
+                    errors.append(f"{prefix} runtime capture must be inside indexed evidence_root")
+
+            required_landmarks = set(host_binding.get("required_landmarks", []))
+            verified_landmarks = set(evidence.get("verified_landmarks", []))
+            for landmark in sorted(required_landmarks - verified_landmarks):
+                errors.append(f"{prefix} missing required landmark {landmark}")
+            required_constraints = {
+                row.get("constraint_id")
+                for row in host_binding.get("spatial_constraints", [])
+                if isinstance(row, dict) and _is_non_empty_string(row.get("constraint_id"))
+            }
+            verified_constraints = set(evidence.get("verified_constraints", []))
+            for constraint in sorted(required_constraints - verified_constraints):
+                errors.append(f"{prefix} missing required constraint {constraint}")
     return errors
 
 
@@ -1350,6 +1601,7 @@ def _check_motion_acceptance_evidence(
                 scenario_id=f"unit {unit_id} motion",
                 indexed_preview_path=None,
                 indexed_preview_sha256=None,
+                host_binding=None,
             )
         )
         test_path = evidence.get("path")
@@ -1391,10 +1643,13 @@ def check_visual_acceptance(
         return [f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} must be an object"]
 
     errors: list[str] = []
-    if (
-        type(data.get("schema_version")) is not int
-        or data["schema_version"] != VISUAL_ACCEPTANCE_SCHEMA_VERSION
-    ):
+    schema_version = data.get("schema_version")
+    allowed_schema_versions = (
+        {VISUAL_ACCEPTANCE_SCHEMA_VERSION, LEGACY_VISUAL_ACCEPTANCE_SCHEMA_VERSION}
+        if status == "archived"
+        else {VISUAL_ACCEPTANCE_SCHEMA_VERSION}
+    )
+    if type(schema_version) is not int or schema_version not in allowed_schema_versions:
         errors.append(
             f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} schema_version "
             f"must equal {VISUAL_ACCEPTANCE_SCHEMA_VERSION}"
@@ -1447,6 +1702,8 @@ def check_visual_acceptance(
                 if _is_non_empty_string(scenario_id) and review_mode in REVIEW_MODES:
                     expected_scenarios[scenario_id] = {
                         "review_mode": review_mode,
+                        "evidence_scope": scenario.get("evidence_scope"),
+                        "host_binding": scenario.get("host_binding"),
                         "preview_path": scenario.get("preview_path"),
                         "preview_sha256": scenario.get("preview_sha256"),
                     }
@@ -1525,6 +1782,7 @@ def check_visual_acceptance(
                     indexed_preview_sha256=expected_scenarios[scenario_id].get(
                         "preview_sha256"
                     ),
+                    host_binding=expected_scenarios[scenario_id].get("host_binding"),
                 )
             )
 
@@ -1532,6 +1790,11 @@ def check_visual_acceptance(
             if not evidence_rows:
                 errors.append(f"{prefix} passed result requires evidence")
             review_mode = expected_scenarios[scenario_id]["review_mode"]
+            evidence_scope = expected_scenarios[scenario_id].get("evidence_scope")
+            if evidence_scope in HOST_EVIDENCE_SCOPES and "runtime-capture" not in evidence_kinds:
+                errors.append(f"{prefix} requires runtime-capture evidence")
+            if evidence_scope == "component-only" and "runtime-capture" in evidence_kinds:
+                errors.append(f"{prefix} component-only must not use runtime-capture evidence")
             if review_mode in {"visual", "both"} and not (
                 evidence_kinds & VISUAL_EVIDENCE_KINDS
             ):

@@ -10,7 +10,7 @@ Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile 
 
 Follow the sub-requirement dependency graph and each UI unit's type/dependencies persisted in `ui-truth-index.json`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are complete in the slice workspace.
 
-For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v2 profile/state/scenario coverage and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never re-draw Flutter from HTML.
+For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v3 profile/state/scenario coverage, evidence scopes, host bindings, and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never translate a parallel preview from one host stack into another.
 
 Before adding an integration abstraction, trace the host's existing ownership and call path for the same kind of operation: API/client, transport, serialization, repository/use-case, dependency injection, and test seam. Extend that path when it fits. Do not introduce a parallel adapter, client, repository, transport, or injection architecture solely for one new operation or for easier testing; a new layer requires an established project boundary or an explicit requirement decision.
 
@@ -46,7 +46,7 @@ Tests and visual acceptance for `fill`/`hug` boxes assert constraint behavior (s
 
 ### Runtime scenario verification
 
-Use the exact profiles and scenarios from the v2 index; do not invent a universal device/theme Cartesian matrix. Apply project-native checks for the covered dimensions:
+Use the exact profiles and scenarios from the v3 index; do not invent a universal device/theme Cartesian matrix. Apply project-native checks for the covered dimensions:
 
 - state/data lifecycle, reachable error/offline/permission/disabled paths, and rapid re-entry;
 - container/viewport boundaries, orientation, safe areas, fixed/sticky overlays, IME, scroll, clipping, and hit testing; every editable input exercises empty/not-editing, active-editing, completed/not-editing, IME-hidden, and IME-shown states when applicable, with visuals driven by real control state;
@@ -57,6 +57,14 @@ Use the exact profiles and scenarios from the v2 index; do not invent a universa
 - supported themes, contrast/state parity, platform semantics, input modes, and native accessibility expectations.
 
 Do not add packages merely to run this matrix. Use existing golden/screenshot, widget/component, semantics/accessibility, integration, and performance facilities. A scenario may be explicitly waived only by the user with timestamp and reason.
+
+### Evidence-scope execution
+
+- `component-only`: reuse the frozen real-component preview and component behavior tests. Record the uncovered host boundary and do not add or imply a host-visual pass.
+- `host-static`: enter through the indexed existing test entrypoint, mount the indexed production host, prepare deterministic state/resources, capture the indexed boundary, and verify every required landmark and spatial constraint.
+- `host-runtime`: run cheap environment, resource, and visual smoke checks first. Only after visual smoke passes may the expensive native lifecycle suite run. Capture the indexed production host and verify the same landmark/constraint contract.
+
+Never construct a synthetic page to satisfy host evidence. If the real host cannot be mounted or captured as frozen, stop and return the scenario for a corrected capability decision; do not silently downgrade or forge a passing screenshot. Host screenshots and assertion reports belong under the indexed project-native test evidence root outside `.ai-delivery/`.
 
 If component code changes while all regenerated visual preview hashes remain identical, update the component hash and keep existing preview-bound confirmations. If any preview hash changes, regenerate that preview and obtain fresh confirmation; a stale `reviewed_preview_sha256` must block progress.
 
@@ -69,7 +77,7 @@ The `implement` action always follows this chain, regardless of framework tier:
 1. **Resolve workspace** — follow [workspace-policy.md](workspace-policy.md). Reuse the recorded Stage 2 user-approved workspace for `ui_truth_mode=figma` or `runtime-baseline`; otherwise default to the current checkout. Creating or reusing a project-local worktree is allowed only after explicit confirmation for this sub-requirement.
 2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
 3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
-4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v2 scenario under its recorded profile with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record structured `visual-acceptance.json` with one independent motion acceptance record for every indexed unit. Static golden evidence never satisfies that motion record. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes. Data-bound visuals with no real value must be accepted as empty/omitted, not as fabricated fixture content.
+4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 scenario under its recorded profile and evidence scope with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record schema v2 structured `visual-acceptance.json` with one independent motion acceptance record for every indexed unit. Host scopes require hash-bound `runtime-capture` evidence; `component-only` must not claim host coverage. Static golden evidence never satisfies the motion record. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes. Data-bound visuals with no real value must be accepted as empty/omitted, not as fabricated fixture content.
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
@@ -169,7 +177,7 @@ Gate / blocker / status / merge decisions stay in the main session always.
 ## Status updates
 
 - `in_dev` when implementation starts.
-- Set `visual_acceptance_passed` only for `ui_truth_mode=figma` or `runtime-baseline`, after `visual-acceptance.json` binds the current v2 index and every scenario is passed or explicitly waived with the required evidence.
+- Set `visual_acceptance_passed` only for `ui_truth_mode=figma` or `runtime-baseline`, after schema v2 `visual-acceptance.json` binds the current v3 index and every scenario is passed or explicitly waived with evidence appropriate to its frozen scope.
 - `merged` after successful rebase, and only when `verification.md` is signed (the validate-delivery-status gate rejects `merged` without it).
 
 ## Progress ledger (optional)

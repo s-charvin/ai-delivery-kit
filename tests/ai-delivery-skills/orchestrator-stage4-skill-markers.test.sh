@@ -20,6 +20,8 @@ ZH="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-implementa
 EN_UI="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-ui-truth.md"
 EN_SKILL="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
 EN_BRIDGE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-4-sdd-bridge.md"
+EN_FLUTTER_ADAPTER="$ROOT/.agents/skills/ai-delivery-orchestrator/references/framework-adapters/flutter.md"
+ZH_FLUTTER_ADAPTER="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/framework-adapters/flutter.md"
 EN_DESIGN_STAGE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md"
 ZH_DESIGN_STAGE="$ROOT/.agents-zh/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md"
 EN_DESIGN_TEMPLATE="$ROOT/.agents/skills/ai-delivery-orchestrator/templates/design-template.md"
@@ -77,7 +79,7 @@ require "$EN" "fill / hug / fixed" "EN follow sizing classification"
 require "$EN" "not a runtime constant" "EN preview px ≠ runtime"
 require "$EN" "stop and ask" "EN ask overflow at implement"
 require "$EN" "snapshot \`w×h\` equality" "EN VA not snapshot px"
-require "$EN" "execute every v2 scenario" "EN complete runtime scenario execution"
+require "$EN" "execute every v3 scenario" "EN complete runtime scenario execution"
 require "$EN" "preview hashes remain identical" "EN preview hash invalidation"
 require "$EN" "reference/candidate/diff hashes" "EN deterministic image diff evidence"
 require "$EN" "one independent motion acceptance record for every indexed unit" "EN independent motion acceptance"
@@ -167,6 +169,22 @@ for guide in spec-kit.md openspec.md native.md; do
 done
 
 require "$EN_UI" "artifact-boundary path audit" "EN Stage 2 path audit"
+require "$EN_UI" '`component-only`, `host-static`, or `host-runtime`' "EN Stage 2 evidence scopes"
+require "$EN_UI" "host capability decision" "EN Stage 2 host capability decision"
+require "$EN_UI" "Do not assemble a synthetic page" "EN Stage 2 synthetic host ban"
+require "$EN_BRIDGE" "component-only" "EN component-only acceptance"
+require "$EN_BRIDGE" "runtime-capture" "EN runtime capture evidence"
+require "$EN_BRIDGE" 'must stay outside `.ai-delivery/`' "EN runtime capture directory boundary"
+require "$EN" "visual smoke" "EN visual smoke before lifecycle"
+require "$EN" "native lifecycle" "EN native lifecycle phase"
+require "$EN_FLUTTER_ADAPTER" "RepaintBoundary" "Flutter adapter capture boundary"
+require "$EN_FLUTTER_ADAPTER" "geometry assertions" "Flutter adapter geometry checks"
+require "$EN_FLUTTER_ADAPTER" "battery" "Flutter adapter battery preflight"
+require "$EN_FLUTTER_ADAPTER" "visual smoke" "Flutter adapter smoke phase"
+require "$EN_FLUTTER_ADAPTER" "native lifecycle" "Flutter adapter lifecycle phase"
+require "$EN_FLUTTER_ADAPTER" "AssetEntity" "Flutter adapter media projection boundary"
+require "$ZH_FLUTTER_ADAPTER" "RepaintBoundary" "ZH Flutter adapter capture boundary"
+require "$ZH_FLUTTER_ADAPTER" "AssetEntity" "ZH Flutter adapter media projection boundary"
 require "$EN_UI" "status/content fingerprint ledger" "EN Stage 2 dirty-path fingerprint"
 require "$EN_UI" 'new or modified process/governance artifact outside `.ai-delivery/`' "EN Stage 2 escape detection"
 require "$EN_UI" "blocked_verification_failure" "EN Stage 2 containment failure"
@@ -226,6 +244,12 @@ for f in "$EN" "$ZH"; do
   if grep -E '343|375[[:space:]]*artboard|343\.w|left: 35|x=46' "$f" >/dev/null; then
     fail "project-specific anecdote in $(basename "$f")"
   fi
+done
+
+for core in "$EN_SKILL" "$EN_UI" "$EN_BRIDGE" "$EN" "$ZH_SKILL" "$ZH_UI" "$ZH"; do
+  for token in RepaintBoundary AssetEntity xc_video_player; do
+    forbid "$core" "$token" "framework-specific token in core guidance"
+  done
 done
 
 echo "PASS: orchestrator Stage 4 skill markers"

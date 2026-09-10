@@ -37,7 +37,7 @@
 1. **Workspace** —— 默认使用当前 checkout。UI 切片复用 Stage 2 用户已批准 workspace。如果该切片尚无已批准选择且准备建议 worktree，必须先展示准确的项目内路径并询问；批准前不得调用 `using-git-worktrees`。
 2. `subagent-driven-development`（默认）—— 每任务一个实现者子代理，串行执行；每个子代理内部经 `test-driven-development` 走 TDD。仅对相互独立、文件不重叠的测试/缺陷域并行派发；绝不允许两个实现者同时改同一批切片文件。
 3. `requesting-code-review` 驱动[评审循环](../stage-implementation.md#评审循环任务级闭环)：评审者始终是新鲜上下文的子代理；finding 作为修复简报交回实现者并重复评审，直到干净或 `review_loop.max_rounds` 预算耗尽，然后升级给用户。
-4. 视觉/运行时验收（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）—— 执行每个 v2 profile/state/scenario 条目，视觉证据对照已确认 preview，使用项目原生工具验证 behavior，并写入 `visual-acceptance.json`；失败重新进入同一评审循环。
+4. 视觉/运行时验收（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）—— 执行每个 v3 profile/state/scenario/scope 条目，视觉证据对照已确认 preview，使用项目原生工具验证 behavior，并写入 schema v2 `visual-acceptance.json`；失败重新进入同一评审循环。
 5. `verification-before-completion` —— 合并前做集成检查。
 6. 进入 `finish` 前，完整静态分析 + 完整测试必须干净通过。
 

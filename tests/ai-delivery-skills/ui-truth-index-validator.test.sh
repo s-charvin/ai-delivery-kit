@@ -55,16 +55,20 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     subreq = req_root / "sub-requirements" / "SR-001"
     contracts = subreq / "contracts"
     component = repo / "lib" / "profile_card.dart"
+    host_component = repo / "lib" / "profile_page.dart"
+    synthetic_host = repo / "test" / "fixtures" / "synthetic_profile_page.dart"
     golden_test = repo / "test" / "profile_card_golden_test.dart"
     default_preview = repo / "test" / "goldens" / "profile-card-default.png"
     loading_preview = repo / "test" / "goldens" / "profile-card-loading.png"
     motion_preview = repo / "test" / "motion" / "profile-card-default.gif"
     index_path = contracts / "ui-truth-index.json"
 
-    for path in (contracts, component.parent, golden_test.parent, default_preview.parent, motion_preview.parent):
+    for path in (contracts, component.parent, golden_test.parent, synthetic_host.parent, default_preview.parent, motion_preview.parent):
         path.mkdir(parents=True, exist_ok=True)
     (repo / ".git").mkdir()
     component.write_text("class ProfileCard {}\n", encoding="utf-8")
+    host_component.write_text("class ProfilePage {}\n", encoding="utf-8")
+    synthetic_host.write_text("class SyntheticProfilePage {}\n", encoding="utf-8")
     golden_test.write_text("void main() {}\n", encoding="utf-8")
     default_preview.write_bytes(b"default-png")
     loading_preview.write_bytes(b"loading-png")
@@ -103,7 +107,7 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     )
 
     valid_index = {
-        "schema_version": 2,
+        "schema_version": 3,
         "ui_truth_mode": "figma",
         "design_source": {
             "evidence_origin": "figma",
@@ -185,6 +189,12 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
                 "scenarios": [
                     {
                         "scenario_id": "default-phone",
+                        "evidence_scope": "component-only",
+                        "scope_decision": {
+                            "reason": "The component has a deterministic native preview.",
+                            "host_capture_supported": False,
+                            "uncovered_risk": "Host composition is outside this scenario's acceptance claim.",
+                        },
                         "state_id": "default",
                         "profile_id": "phone-portrait-light",
                         "dimensions": [
@@ -210,6 +220,12 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
                     },
                     {
                         "scenario_id": "loading-phone",
+                        "evidence_scope": "component-only",
+                        "scope_decision": {
+                            "reason": "The loading state is verified at the component boundary.",
+                            "host_capture_supported": False,
+                            "uncovered_risk": "Host composition is outside this scenario's acceptance claim.",
+                        },
                         "state_id": "loading",
                         "profile_id": "phone-portrait-light",
                         "dimensions": ["state", "interaction", "assets"],
@@ -228,6 +244,12 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
                     },
                     {
                         "scenario_id": "reduced-motion",
+                        "evidence_scope": "component-only",
+                        "scope_decision": {
+                            "reason": "Reduced motion is component behavior.",
+                            "host_capture_supported": False,
+                            "uncovered_risk": "Host composition is outside this scenario's acceptance claim.",
+                        },
                         "state_id": "default",
                         "profile_id": "phone-reduced-motion",
                         "dimensions": ["motion"],
@@ -362,13 +384,13 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
         require(result.returncode != 0, f"{label}: validator unexpectedly passed")
         require(needle in output, f"{label}: missing {needle!r} in:\n{output}")
 
-    # Schema v2 runtime coverage remains required at every explicit post-freeze UI status.
+    # Schema v3 runtime coverage and evidence scope remain required at every active post-freeze UI status.
     expect_pass("valid runtime coverage spec_ready", valid_index)
     expect_fail("missing index at spec_ready", None, "requires contracts/ui-truth-index.json")
 
     wrong_schema = copy.deepcopy(valid_index)
-    wrong_schema["schema_version"] = 1
-    expect_fail("wrong schema version", wrong_schema, "schema_version must equal 2")
+    wrong_schema["schema_version"] = 2
+    expect_fail("wrong schema version", wrong_schema, "schema_version must equal 3")
 
     missing_design_revision = copy.deepcopy(valid_index)
     del missing_design_revision["design_source"]["revision"]
@@ -429,6 +451,93 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
         copy.deepcopy(duplicate_scenarios["units"][0]["scenarios"][0])
     )
     expect_fail("duplicate scenario", duplicate_scenarios, "duplicate scenario_id")
+
+    missing_evidence_scope = copy.deepcopy(valid_index)
+    del missing_evidence_scope["units"][0]["scenarios"][0]["evidence_scope"]
+    expect_fail(
+        "missing evidence scope",
+        missing_evidence_scope,
+        "evidence_scope must be one of",
+    )
+
+    missing_scope_decision = copy.deepcopy(valid_index)
+    del missing_scope_decision["units"][0]["scenarios"][0]["scope_decision"]
+    expect_fail(
+        "missing scope decision",
+        missing_scope_decision,
+        "scope_decision must be an object",
+    )
+
+    invalid_component_scope = copy.deepcopy(valid_index)
+    invalid_component_scope["units"][0]["scenarios"][0]["scope_decision"][
+        "host_capture_supported"
+    ] = True
+    expect_fail(
+        "component-only cannot claim host capture",
+        invalid_component_scope,
+        "component-only requires host_capture_supported=false",
+    )
+
+    missing_host_binding = copy.deepcopy(valid_index)
+    missing_host_binding["units"][0]["scenarios"][0]["evidence_scope"] = "host-static"
+    missing_host_binding["units"][0]["scenarios"][0]["scope_decision"] = {
+        "reason": "The production host has a deterministic native mount.",
+        "host_capture_supported": True,
+        "uncovered_risk": None,
+    }
+    expect_fail(
+        "host scope requires binding",
+        missing_host_binding,
+        "host_binding must be an object",
+    )
+
+    valid_host_scope = copy.deepcopy(missing_host_binding)
+    valid_host_scope["units"][0]["scenarios"][0]["host_binding"] = {
+        "host_component_path": "lib/profile_page.dart",
+        "host_component_sha256": sha256(host_component),
+        "entrypoint_ref": "ProfilePage",
+        "capture_boundary_ref": "profile-page-viewport",
+        "evidence_root": "integration_test/screenshots/profile",
+        "required_landmarks": ["profile-card"],
+        "spatial_constraints": [
+            {
+                "constraint_id": "profile-card-visible",
+                "kind": "visible",
+                "subject_ref": "profile-card",
+                "source_ref": "figma:12:41",
+            }
+        ],
+    }
+    expect_pass("valid host-static scope", valid_host_scope)
+
+    synthetic_host_scope = copy.deepcopy(valid_host_scope)
+    synthetic_host_scope["units"][0]["scenarios"][0]["host_binding"].update(
+        {
+            "host_component_path": "test/fixtures/synthetic_profile_page.dart",
+            "host_component_sha256": sha256(synthetic_host),
+            "entrypoint_ref": "SyntheticProfilePage",
+        }
+    )
+    expect_fail(
+        "test-only synthetic host cannot prove production host",
+        synthetic_host_scope,
+        "host_component_path must reference production source, not test evidence",
+    )
+
+    component_with_host_binding = copy.deepcopy(valid_host_scope)
+    component_with_host_binding["units"][0]["scenarios"][0][
+        "evidence_scope"
+    ] = "component-only"
+    component_with_host_binding["units"][0]["scenarios"][0]["scope_decision"] = {
+        "reason": "Only the component preview is accepted.",
+        "host_capture_supported": False,
+        "uncovered_risk": "Host composition is not covered.",
+    }
+    expect_fail(
+        "component-only forbids host binding",
+        component_with_host_binding,
+        "component-only must not declare host_binding",
+    )
 
     missing_coverage = copy.deepcopy(valid_index)
     missing_coverage["units"][0]["coverage"] = [
@@ -851,5 +960,5 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
         "must reference indexed scenario_id default-phone",
     )
 
-print("PASS: ui-truth-index v2 rejects incomplete runtime coverage and stale visual evidence.")
+print("PASS: ui-truth-index v3 rejects incomplete runtime coverage, false host evidence, and stale visual evidence.")
 PY

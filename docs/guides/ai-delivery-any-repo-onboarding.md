@@ -195,7 +195,7 @@ bootstrap 完成后，目标仓库至少具备：
 要求：
 - 基于结构化 node payload 完成映射
 - 每个独立 unit 在用户已批准 workspace 的宿主项目里写真实组件（Flutter：Widget + golden/behavior tests），并在写组件代码前完成 Runtime Coverage Plan
-- v2 `contracts/ui-truth-index.json` 记录 profile、带来源的 state、具体 scenario、十个维度的适用性 coverage、依赖、仓内路径、SHA-256，以及绑定当前预览哈希的确认/豁免证据
+- v3 `contracts/ui-truth-index.json` 记录 profile、带来源的 state、具体 scenario、`component-only`/`host-static`/`host-runtime` 证据范围与能力判定、适用的生产宿主绑定、十个维度的适用性 coverage、依赖、仓内路径、SHA-256，以及绑定当前预览哈希的确认/豁免证据
 - 每个 unit 必须写入独立 `motion_decision`；动态 unit 适用时生成并向用户展示 GIF，静态 unit 明确确认 `static / no motion`。Stage 4 必须在 `visual-acceptance.json` 为每个 unit 写独立 `motion_acceptance`，不能用 golden 代替
 - 只有 Figma 实际展示的视觉场景可称为 1:1；未展示的响应式、内容、交互、动效、资源、主题、无障碍、平台与性能行为必须来自 requirement、project 或 user-decision
 - 禁止生成 ui-contract.html；禁止把 HTML 翻译成 Flutter

@@ -24,7 +24,7 @@ Do not run `spec`, `plan`, or `tasks` actions while a `design_mode=full` solutio
 Feed the solution-design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
 
 - `requirement-slice.md`
-- each enabled UI truth unit's Stage 2 component in the recorded user-approved workspace + valid v2 `ui-truth-index.json` profile/state/scenario/coverage and preview/hash pointers (if `ui_truth_mode=figma` or `runtime-baseline`)
+- each enabled UI truth unit's Stage 2 component in the recorded user-approved workspace + valid v3 `ui-truth-index.json` profile/state/scenario/coverage/evidence-scope and preview/hash/host-binding pointers (if `ui_truth_mode=figma` or `runtime-baseline`)
 - API docs (if available)
 - Dependency graph
 

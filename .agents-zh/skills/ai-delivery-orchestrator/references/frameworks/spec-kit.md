@@ -27,7 +27,7 @@
 ## 使用意见
 
 - 喂给 spec-kit 的是治理输入而非自由文本：`requirement-slice.md`、每个启用 UI truth 的单元的冻结宿主组件 / `ui-truth-index.json`、可用时的 API 文档，以及依赖图。
-- UI truth 切片的 spec-kit 输入就是已评审的冻结宿主组件 + v2 `ui-truth-index.json`；引用每个 unit/scenario id 及其证据来源，不要再写第二份可能与契约漂移的视觉描述。
+- UI truth 切片的 spec-kit 输入就是已评审的冻结宿主组件 + v3 `ui-truth-index.json`；引用每个 unit/scenario id、证据范围及证据来源，不要再写第二份可能与契约漂移的视觉描述。
 - 推进状态前逐一审计输出：
   - `spec.md` → 对照每个已冻结 unit/scenario id 审计状态转换、内容策略、动效、资源、无障碍与验收标准（UI）→ `spec_ready`
   - `plan.md` → 审计交付切片顺序与 scenario 的实现/验证归属 → `plan_ready`

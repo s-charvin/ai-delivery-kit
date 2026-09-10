@@ -13,7 +13,7 @@ ECC 演进很快。一次 run 中首次使用前，先列出本地实际可用�
 
 | 动作 | ECC 用法 |
 |------|----------|
-| `solution-design` | ECC 规划/架构代理或 plan 命令 —— 以 `requirement-slice.md`、启用 UI truth 的宿主组件 / v2 profile-state-scenario `ui-truth-index.json`、API 文档为种子 |
+| `solution-design` | ECC 规划/架构代理或 plan 命令 —— 以 `requirement-slice.md`、启用 UI truth 的宿主组件 / v3 profile-state-scenario-scope `ui-truth-index.json`、API 文档为种子 |
 | `implement` | ECC 任务执行代理，由其 rules/hooks 强制约定；把其评审代理作为每任务评审步骤 |
 | `finish` | 变基合并前先跑 ECC 评审/验证命令 |
 

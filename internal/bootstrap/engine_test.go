@@ -105,7 +105,9 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		t.Fatalf("expected artifact language policy in AGENTS.md, got %s", string(agentsEntry))
 	}
 	for _, marker := range []string{
-		"v2 profiles",
+		"v3 profiles",
+		"component-only",
+		"host-runtime",
 		"runtime coverage",
 		"visual-acceptance.json",
 		"Worktrees are optional",

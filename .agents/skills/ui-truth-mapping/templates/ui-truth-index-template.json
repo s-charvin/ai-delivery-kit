@@ -1,5 +1,5 @@
 {
-  "schema_version": 2,
+  "schema_version": 3,
   "ui_truth_mode": "figma",
   "design_source": {
     "evidence_origin": "figma",
@@ -82,6 +82,30 @@
       "scenarios": [
         {
           "scenario_id": "default-phone",
+          "evidence_scope": "host-static",
+          "scope_decision": {
+            "reason": "The host composition is part of the accepted visual truth and the project has a deterministic production-host capture path.",
+            "host_capture_supported": true,
+            "uncovered_risk": null
+          },
+          "host_binding": {
+            "host_component_path": "lib/features/profile/profile_page.dart",
+            "host_component_sha256": "<64-lowercase-hex-host-component-sha256>",
+            "entrypoint_ref": "ProfilePage",
+            "capture_boundary_ref": "profile-page-viewport",
+            "evidence_root": "test/screenshots/profile",
+            "required_landmarks": [
+              "profile-card"
+            ],
+            "spatial_constraints": [
+              {
+                "constraint_id": "profile-card-visible",
+                "kind": "visible",
+                "subject_ref": "profile-card",
+                "source_ref": "figma:<default-state-node>"
+              }
+            ]
+          },
           "state_id": "default",
           "profile_id": "phone-portrait-light",
           "dimensions": [
@@ -107,6 +131,12 @@
         },
         {
           "scenario_id": "loading-phone",
+          "evidence_scope": "component-only",
+          "scope_decision": {
+            "reason": "The loading appearance and behavior are accepted at the real component boundary.",
+            "host_capture_supported": false,
+            "uncovered_risk": "This scenario does not claim that the surrounding production host composition was visually accepted."
+          },
           "state_id": "loading",
           "profile_id": "phone-portrait-light",
           "dimensions": [
@@ -129,6 +159,12 @@
         },
         {
           "scenario_id": "reduced-motion",
+          "evidence_scope": "component-only",
+          "scope_decision": {
+            "reason": "Reduced-motion behavior is deterministic at the real component boundary.",
+            "host_capture_supported": false,
+            "uncovered_risk": "This scenario does not cover host-level motion coordination."
+          },
           "state_id": "default",
           "profile_id": "phone-reduced-motion",
           "dimensions": [

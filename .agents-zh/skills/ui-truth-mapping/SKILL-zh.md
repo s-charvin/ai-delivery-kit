@@ -17,7 +17,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **原则 3 — 分离可见设计真值与运行时真值。** Figma 只拥有其实际展示的像素与转场。需求拥有产品行为；既有项目规范拥有实现约定；明确用户决策补齐关键缺口。Figma 未展示的运行时 state 绝不称为「1:1 还原 Figma」。不得静默用运行时惯例覆盖 Figma 已展示的像素。
 
-此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用编排器传入的**用户已批准 workspace**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值与已批准的运行时 coverage 冻在那里，出示每个视觉 scenario 的预览路径，并记录 v2 指针/治理索引。它不选择或创建 workspace、不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
+此技能只做一件事：CP-UI 授权后，在受治理 Stage 2 全程使用编排器传入的**用户已批准 workspace**，给定需求切片 + 设计源，在**项目源码树**里定位或创建匹配单元，把视觉真值与已批准的运行时 coverage 冻在那里，出示每个视觉 scenario 的预览路径，并记录 v3 指针/治理索引。它不选择或创建 workspace、不拥有索引以外的流水线状态、不决定下一阶段，也不发明第二份视觉真值文件（YAML/JSON/markdown 不得当像素用）。
 
 ## 输入
 
@@ -56,7 +56,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 | 字段 | 含义 |
 |---|---|
-| `schema_version` | 整数 `2` |
+| `schema_version` | 整数 `3` |
 | `ui_truth_mode` | `figma` 或 `runtime-baseline`，必须与子需求状态一致 |
 | `design_source` | `figma` 的 file key/root node/revision，或 `runtime-baseline` 的 evidence origin/source reference，及采集时间 |
 | `unit_id` / `type` / `stack` | kebab-case id、`page`/`component`/`modal`/`shared-component` 与宿主栈标识 |
@@ -67,6 +67,9 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 | `profiles[]` | 测试 surface、尺寸、orientation、theme、locale、text scale、reduced motion 与 input mode |
 | `states[]` | `state_id`、`evidence_origin`、`source_ref`；Figma 来源 state 还必须有 `source_node` |
 | `scenarios[]` | State + profile + coverage dimensions + review mode + 来源；视觉 scenario 指向确定性 preview |
+| `evidence_scope` | 每个 scenario 的证据范围：`component-only`、`host-static` 或 `host-runtime` |
+| `scope_decision` | 选择该范围的依据、宿主截图能力结论及验收声明未覆盖边界 |
+| `host_binding` | 仅宿主范围必填：生产宿主路径/hash、入口、截图边界、证据根目录、必见元素与空间约束 |
 | `coverage[]` | 每个必需运行时维度恰好一条适用性记录 |
 | `confirmation` | `confirmed` 或 `waived`、时间/人员；视觉确认绑定 `reviewed_preview_sha256` |
 
@@ -100,7 +103,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 ## 硬边界
 
-- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。这是 Stage 2 UI Truth Mapping 内的冻结门槛，不是独立 Stage。仅静态 golden 确认绝不能推进到 `acceptance_frozen`。本技能会在记录的用户已批准 workspace 内写生产代码、golden 测试、预览与 v2 索引，不是无实现的前置检查。Workspace 选择仍归编排器 `workspace-policy.md` 所有。
+- 仅能由受治理 Stage 2 且对 `ui_truth_mode=figma` 或 `runtime-baseline` 已记录 CP-UI 的切片调用。这是 Stage 2 UI Truth Mapping 内的冻结门槛，不是独立 Stage。仅静态 golden 确认绝不能推进到 `acceptance_frozen`。本技能会在记录的用户已批准 workspace 内写生产代码、宿主原生测试、预览与 v3 索引，不是无实现的前置检查。Workspace 选择仍归编排器 `workspace-policy.md` 所有。
 - **按需求作用域抽取：** 范围内产物决定根 — 覆盖属于 **一个** 单元的产物的最小祖先。断开的产物 → 拆单元。永远不要整页 dump。
 - **先写单元拆分计划再取证：** 任何 `get_code` 或组件代码之前填 §1b。
 - **只对作用域调 `get_code`。** `get_code` 目标 **必须等于** 计划中的 `source_node`。整页 `get_code` 再裁剪是过程失败。
@@ -252,6 +255,24 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 
 选择能保留证据的最低复杂度宿主原生路径：已有/原生 primitive → 项目既有依赖 → custom painter/shader → 仅对缩放、主题、无障碍仍正确的真正静态输出使用预渲染资源。缺失字体、字重、vector semantics、effect 或运行时资源时阻止冻结；不得静默替换成近似实现。
 
+### 3e. 宿主能力判定（生成 preview 前必做）
+
+每个 scenario 必须且只能选择一种证据范围：`component-only`、`host-static` 或 `host-runtime`。依据项目中已经观察到的能力判断，不能因为理论上能新写测试壳就判定支持。逐项回答：
+
+1. 宿主组合是否属于需求视觉真值。
+2. 项目是否已有可运行的宿主测试入口。
+3. 该入口能否挂载真实生产宿主，而不是重建表面。
+4. 能否确定性准备所需状态、数据和可见资源。
+5. 能否输出捕获边界明确、可复核的截图。
+
+宿主不在视觉范围内，或任一关键能力不满足时选择 `component-only`。记录 `host_capture_supported: false`、选择理由和非空 `uncovered_risk`。真实组件、组件级 preview 与行为测试仍是有效证据；必须缩小验收声明，不得暗示已经审阅宿主组合。
+
+全部条件能通过项目官方确定性测试栈满足时选择 `host-static`。真实宿主与截图依赖设备、原生视图、媒体或仅运行时资源时选择 `host-runtime`。两种宿主范围都必须有 `host_binding`，绑定生产宿主路径/hash、已有入口、精确捕获边界、原生测试证据根目录、必见元素及有来源的空间约束。
+
+即使使用的组件都是真实的，手工拼装测试壳也不是生产宿主。不得为满足宿主范围而组装、重画或手工定位一张不存在的页面。后续执行若推翻已冻结的能力结论，必须停止，记录缩小后的边界，返回 UI truth 复审并重新确认。
+
+no-preview 或 no-golden waiver 只豁免对应 preview 媒介，不会自动要求或豁免宿主截图。motion waiver 只影响动效证据，不改变静态证据范围。
+
 ### 4. 写真实组件（宿主栈）
 
 **创建：** 把组件加在邻接文件旁。对齐宿主栈 API、主题、间距助手和目录布局。**不要** 拷适配器示例再填空。
@@ -331,7 +352,7 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 
 1. 组件能编过 / 宿主预览能打开。
 2. 官方预览文件存在；对话出示了其 **绝对路径**（宿主可录制时，动态 unit 还需确定性 GIF；无法录制时索引必须写原因并延后运行时验证）。
-3. v2 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖、profile、带来源 state、scenario 与十个 coverage 维度校验。
+3. v3 `contracts/ui-truth-index.json` 通过仓内路径 containment、文件类型、SHA-256、依赖、profile、带来源 state、scenario、证据范围、能力判定、必需宿主绑定与十个 coverage 维度校验。
 4. 每个视觉 scenario 都有确定性 preview，以及绑定当前 `preview_sha256` 的静态确认/豁免；适用的动效 scenario 另有动效确认/豁免、原因和后续运行时验证方式。能录制时 `motion_decision` 必须记录并向用户出示路径/hash；不能录制时索引必须写原因，Stage 4 用项目原生行为/人工证据验收。
 5. 范围匹配切片；图标/图片和交互控件都是真实且有证据；缺失数据呈现真实空/省略状态；不得有未经批准的占位或视觉 fallback；运行时 coverage 已解决；适用时有动效/资源计划；尺寸已分类；§3b 触发时记录了合成。
 6. Stage 2 测试通过且最新一轮新鲜上下文评审干净；记录用户已批准 workspace 与可选分支供 Stage 4 复用。Stage 4 必须为每个索引 unit 另行记录动效验收。
@@ -357,19 +378,19 @@ Figma 来源 scenario 精确保留有证据的 font family/可用 weight、line 
 
 ### 7. 索引与状态
 
-按 v2 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针、环境 profile、coverage、治理 hash/来源/确认元数据，绝不存绘制。
+按 v3 模板写/更新 `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json`。其中只存指针、环境 profile、coverage、治理 hash/来源、证据范围、宿主绑定与确认元数据，绝不存绘制。
 
 对 `ui_truth_mode=runtime-baseline`，索引中的 `ui_truth_mode` 必须一致，`design_source` 只能使用 `requirement`、`project` 或 `user-decision`，并省略 Figma 专属标识。对 `ui_truth_mode=figma`，顶层来源必须是 Figma；单个 state/scenario 的运行时缺口仍可使用其他允许来源。
 
 仅在冻结条满足后设置 `acceptance_frozen`。失败 → `blocked_verification_failure`。
 
-没有 HTML 校验器，也没有 v1 兼容路径。Kit 状态校验检查完整 v2 矩阵、confirmation 与 preview hash 绑定，以及列出的相对路径能从 **仓库根** 解析。
+没有 HTML 校验器，进行中的交付也不兼容旧 schema。Kit 状态校验检查完整 v3 矩阵、confirmation 与 preview hash 绑定、证据范围、宿主 provenance，以及列出的相对路径能从 **仓库根** 解析。已归档记录仍可按其旧 schema 读取。
 
 ### 8. 实现之后（Stage 4 消费者）
 
 Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从平行预览再画一遍宿主组件，也禁止再查 TemPad。
 
-Stage 4 使用记录的 profile 与项目原生工具验证每个已索引 scenario，然后写结构化 `visual-acceptance.json`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
+Stage 4 按冻结的证据范围验证每个已索引 scenario，然后写 schema v2 结构化 `visual-acceptance.json`。`component-only` 复用冻结组件 preview 与组件行为测试，不追加宿主视觉通过声明；`host-static` 使用索引中的生产宿主与官方确定性截图设施；`host-runtime` 先执行低成本的设备/资源/视觉 smoke，只有 smoke 通过后才执行昂贵的原生生命周期验证。宿主证据使用 `runtime-capture`，必须绑定截图、测试、断言报告、命令与匹配的宿主 provenance；截图必须放在项目声明的原生测试证据根目录，绝不能放在 `.ai-delivery/`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
 
 **引用核实：** 写任何「实现于」声明之前跑引用/用法搜索。只查定义不够。
 

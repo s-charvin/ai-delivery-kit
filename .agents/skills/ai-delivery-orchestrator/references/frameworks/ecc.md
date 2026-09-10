@@ -13,7 +13,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 
 | Action | ECC usage |
 |--------|-----------|
-| `solution-design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, enabled UI truth host component / v2 profile-state-scenario `ui-truth-index.json`, and API docs |
+| `solution-design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, enabled UI truth host component / v3 profile-state-scenario-scope `ui-truth-index.json`, and API docs |
 | `implement` | ECC task-execution agents with its rules/hooks enforcing conventions; treat its review agents as the per-task review step |
 | `finish` | ECC review/verification commands before rebase-merge |
 

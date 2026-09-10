@@ -49,18 +49,29 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     subreq = req_root / "sub-requirements" / "SR-001"
     contracts = subreq / "contracts"
     component = repo / "lib" / "profile_card.dart"
+    host_component = repo / "lib" / "profile_page.dart"
     golden_test = repo / "test" / "profile_card_golden_test.dart"
+    runtime_test = repo / "integration_test" / "profile_page_test.dart"
+    runtime_capture = repo / "integration_test" / "screenshots" / "profile" / "profile-page.png"
+    assertion_report = repo / "integration_test" / "screenshots" / "profile" / "profile-page.assertions.json"
     preview = repo / "test" / "goldens" / "profile-card-default.png"
     motion_preview = repo / "test" / "motion" / "profile-card-default.gif"
     unrelated_preview = repo / "test" / "goldens" / "unrelated.png"
     index_path = contracts / "ui-truth-index.json"
     acceptance_path = subreq / "visual-acceptance.json"
 
-    for path in (contracts, component.parent, golden_test.parent, preview.parent, motion_preview.parent):
+    for path in (contracts, component.parent, golden_test.parent, preview.parent, motion_preview.parent, runtime_test.parent, runtime_capture.parent):
         path.mkdir(parents=True, exist_ok=True)
     (repo / ".git").mkdir()
     component.write_text("class ProfileCard {}\n", encoding="utf-8")
+    host_component.write_text("class ProfilePage {}\n", encoding="utf-8")
     golden_test.write_text("void main() {}\n", encoding="utf-8")
+    runtime_test.write_text("void main() {}\n", encoding="utf-8")
+    runtime_capture.write_bytes(b"runtime-capture-png")
+    assertion_report.write_text(
+        json.dumps({"passed": ["profile-card-visible"]}) + "\n",
+        encoding="utf-8",
+    )
     preview.write_bytes(b"default-png")
     motion_preview.write_bytes(TWO_FRAME_GIF)
     unrelated_preview.write_bytes(b"unrelated-png")
@@ -107,7 +118,7 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         "performance",
     ]
     index = {
-        "schema_version": 2,
+        "schema_version": 3,
         "ui_truth_mode": "figma",
         "design_source": {
             "evidence_origin": "figma",
@@ -169,6 +180,12 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
                 "scenarios": [
                     {
                         "scenario_id": "default-phone",
+                        "evidence_scope": "component-only",
+                        "scope_decision": {
+                            "reason": "The component has a deterministic native preview.",
+                            "host_capture_supported": False,
+                            "uncovered_risk": "Host composition is outside this scenario's acceptance claim.",
+                        },
                         "state_id": "default",
                         "profile_id": "phone-portrait-light",
                         "dimensions": dimensions,
@@ -201,7 +218,7 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
 
     valid_acceptance = {
-        "schema_version": 1,
+        "schema_version": 2,
         "ui_truth_index_sha256": sha256(index_path),
         "generated_at": "2026-08-25T01:00:00Z",
         "scenarios": [
@@ -298,6 +315,109 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     expect_pass("valid structured visual acceptance", valid_acceptance)
     expect_fail("missing acceptance", None, "requires visual-acceptance.json")
 
+    host_index = copy.deepcopy(index)
+    host_scenario = host_index["units"][0]["scenarios"][0]
+    host_scenario["evidence_scope"] = "host-runtime"
+    host_scenario["scope_decision"] = {
+        "reason": "The production host requires a runtime renderer.",
+        "host_capture_supported": True,
+        "uncovered_risk": None,
+    }
+    host_scenario["host_binding"] = {
+        "host_component_path": "lib/profile_page.dart",
+        "host_component_sha256": sha256(host_component),
+        "entrypoint_ref": "ProfilePage",
+        "capture_boundary_ref": "profile-page-viewport",
+        "evidence_root": "integration_test/screenshots/profile",
+        "required_landmarks": ["profile-card"],
+        "spatial_constraints": [
+            {
+                "constraint_id": "profile-card-visible",
+                "kind": "visible",
+                "subject_ref": "profile-card",
+                "source_ref": "figma:12:41",
+            }
+        ],
+    }
+    index_path.write_text(json.dumps(host_index, indent=2) + "\n", encoding="utf-8")
+    runtime_acceptance = copy.deepcopy(valid_acceptance)
+    runtime_acceptance["ui_truth_index_sha256"] = sha256(index_path)
+    runtime_acceptance["scenarios"][0]["evidence"][0] = {
+        "kind": "runtime-capture",
+        "path": "integration_test/screenshots/profile/profile-page.png",
+        "sha256": sha256(runtime_capture),
+        "test_path": "integration_test/profile_page_test.dart",
+        "test_sha256": sha256(runtime_test),
+        "assertion_report_path": "integration_test/screenshots/profile/profile-page.assertions.json",
+        "assertion_report_sha256": sha256(assertion_report),
+        "command": "run-runtime-capture",
+        "host_component_path": "lib/profile_page.dart",
+        "entrypoint_ref": "ProfilePage",
+        "capture_boundary_ref": "profile-page-viewport",
+        "verified_landmarks": ["profile-card"],
+        "verified_constraints": ["profile-card-visible"],
+        "reviewed_by": "user",
+        "reviewed_at": "2026-08-25T01:00:00Z",
+        "reviewed_capture_sha256": sha256(runtime_capture),
+        "summary": "The production runtime host passed visual review.",
+    }
+    expect_pass("valid runtime host capture", runtime_acceptance)
+
+    missing_runtime_capture = copy.deepcopy(runtime_acceptance)
+    missing_runtime_capture["scenarios"][0]["evidence"] = [
+        missing_runtime_capture["scenarios"][0]["evidence"][1]
+    ]
+    expect_fail(
+        "host scope requires runtime capture",
+        missing_runtime_capture,
+        "requires runtime-capture evidence",
+    )
+
+    governed_capture = copy.deepcopy(runtime_acceptance)
+    governed_path = subreq / "evidence" / "profile-page.png"
+    governed_path.parent.mkdir(parents=True, exist_ok=True)
+    governed_path.write_bytes(b"governed-capture")
+    governed_capture["scenarios"][0]["evidence"][0]["path"] = str(
+        governed_path.relative_to(repo)
+    )
+    governed_capture["scenarios"][0]["evidence"][0]["sha256"] = sha256(
+        governed_path
+    )
+    governed_capture["scenarios"][0]["evidence"][0][
+        "reviewed_capture_sha256"
+    ] = sha256(governed_path)
+    expect_fail(
+        "runtime capture cannot live in governance tree",
+        governed_capture,
+        "runtime capture must stay outside .ai-delivery",
+    )
+
+    missing_landmark = copy.deepcopy(runtime_acceptance)
+    missing_landmark["scenarios"][0]["evidence"][0]["verified_landmarks"] = []
+    expect_fail(
+        "runtime capture must verify landmarks",
+        missing_landmark,
+        "missing required landmark profile-card",
+    )
+
+    manual_visual_claim = copy.deepcopy(runtime_acceptance)
+    manual_visual_claim["scenarios"][0]["evidence"] = [
+        {
+            "kind": "manual",
+            "reviewed_by": "reviewer",
+            "reviewed_at": "2026-08-25T01:00:00Z",
+            "summary": "The screenshot filename is profile-page.png.",
+        }
+    ]
+    expect_fail(
+        "manual text cannot prove host visual",
+        manual_visual_claim,
+        "requires runtime-capture evidence",
+    )
+
+    index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
+    valid_acceptance["ui_truth_index_sha256"] = sha256(index_path)
+
     missing_motion_acceptance = copy.deepcopy(valid_acceptance)
     del missing_motion_acceptance["motion_acceptance"]
     expect_fail(
@@ -317,8 +437,8 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     )
 
     wrong_schema = copy.deepcopy(valid_acceptance)
-    wrong_schema["schema_version"] = 2
-    expect_fail("wrong schema", wrong_schema, "schema_version must equal 1")
+    wrong_schema["schema_version"] = 1
+    expect_fail("wrong schema", wrong_schema, "schema_version must equal 2")
 
     stale_index = copy.deepcopy(valid_acceptance)
     stale_index["ui_truth_index_sha256"] = "0" * 64
