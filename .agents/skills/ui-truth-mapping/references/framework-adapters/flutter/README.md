@@ -13,6 +13,17 @@ mount the real widget, configure one deterministic visual scenario, use a
 normal test command. The example's canvas and profile are evidence settings,
 not runtime layout constants.
 
+## Text fidelity in golden previews
+
+When glyph fidelity is part of the review, use the project's real text-style,
+locale, direction, and scale setup, and verify that production text actually
+selects the intended family and weight. Loading font bytes into a test font
+loader does not change a widget whose text style selects another family. If
+Flutter's test renderer falls back to its test font (Ahem), the image may still
+prove geometry, but it must not be presented as production glyph-fidelity
+evidence. An unavailable required font blocks glyph-level confirmation rather
+than authorizing a visual substitute.
+
 ## Motion capture
 
 `motion-preview-test.dart.example` shows the host-supported motion path:

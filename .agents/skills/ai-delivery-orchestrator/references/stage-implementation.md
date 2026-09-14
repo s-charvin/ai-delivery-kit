@@ -50,7 +50,8 @@ Use the exact profiles and scenarios from the v3 index; do not invent a universa
 
 - state/data lifecycle, reachable error/offline/permission/disabled paths, and rapid re-entry;
 - container/viewport boundaries, orientation, safe areas, fixed/sticky overlays, IME, scroll, clipping, and hit testing; every editable input exercises empty/not-editing, active-editing, completed/not-editing, IME-hidden, and IME-shown states when applicable, with visuals driven by real control state;
-- long/unbroken/localized/RTL content, text scaling or zoom, list-count and numeric/date boundaries;
+- long/unbroken/localized/RTL content, text scaling or zoom, list-count and numeric/date boundaries; for locale- or data-dependent length, exercise representative supported values including a layout-risk case, then assert rendered geometry and the approved overflow behavior rather than only confirming that a text node exists;
+- position-dependent edge fades, masks, gradients, or overlays at leading/interior/trailing scroll states; verify they follow actual scroll state and do not obscure text or hit targets contrary to the approved contract;
 - hover/focus/pressed/selected/expanded, keyboard/pointer/touch/gesture alternatives, focus trap/return, and semantics announcements;
 - motion trigger/keyframes/timing/interruption/reduced-motion/resource lifecycle and applicable performance checks; the review artifact must show the complete transition or loop without excessive idle time, replay automatically, and decode to the expected frame count and total duration; use the indexed motion preview when available and project-native behavior/manual evidence when it is unavailable;
 - image/vector loading/error/offline, crop/focal/aspect/density/theme/cache/semantics behavior;

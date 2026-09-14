@@ -229,8 +229,8 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 | 维度 | 适用性扫描 |
 |---|---|
 | `state` | 数据/交互模型可达的 initial、loading、refreshing、populated、empty、partial、error、offline、authentication、permission、disabled |
-| `layout` | 最小/目标/最大约束、container/viewport breakpoint、orientation、安全区、fixed/sticky 共存、overlay、IME、scroll、z-order、clip、hit testing |
-| `content` | 空/短/长/多行/不可断字符串、列表数量、大数字与本地格式、RTL、locale 切换、text scaling/browser zoom、wrap/truncation/expand |
+| `layout` | 最小/目标/最大约束、container/viewport breakpoint、orientation、安全区、fixed/sticky 共存、overlay、IME、scroll、依赖位置的边缘效果在起始/中间/末尾滚动位置的表现、z-order、clip、hit testing |
+| `content` | 空/短/长/多行/不可断字符串、来自已支持语言和数据源的代表值、列表数量、大数字与本地格式、RTL、locale 切换、text scaling/browser zoom，以及明确的换行/截断/展开/滚动策略 |
 | `interaction` | idle、hover、focus、pressed、selected、expanded、keyboard、pointer/touch、drag/swipe 替代、快速重复、重入、focus trap/return、disabled 行为 |
 | `motion` | trigger、from/to 或 keyframes、timing、由适配器声明的捕获节奏、easing、delay、repeat、interrupt/reverse/cancel、reduced-motion 结果、确定性测试关键帧、repaint/资源生命周期 |
 | `assets` | static/content-bound/motion 角色、来源/所有权、vector palette/themeability、fit/crop/focal point、aspect ratio、density、loading/error/empty/offline fallback、cache、semantics |
@@ -238,6 +238,8 @@ Figma 常只展示一个最终样例，但生产代码必须承受真实的 stat
 | `accessibility` | 原生 semantics、name/role/state/value、reading/focus order、可见 focus、screen-reader 更新、平台点击热区、非颜色提示、Web WCAG AA、reduced motion/text scaling |
 | `platform` | 支持的平台与输入模式、系统栏/安全区、返回/导航、IME、pointer/touch 惯例、平台原生组件 |
 | `performance` | 稳定 loading layout、适用时列表虚拟化、正确图片尺寸、animation/repaint 隔离、controller/资源释放、离屏暂停、项目原生预算 |
+
+本地化样例应来自产品已支持的语言或数据源，适用时包含会压测布局的代表值，并绑定预期溢出策略。仅有默认语言样例不能覆盖本地化约束；不得用产品不支持的文本伪造极端值。对依赖滚动位置变化的边缘效果，在可达时覆盖起始、中间代表位置和末尾，并记录邻接内容应保持可读还是按设计淡出。
 
 每个可编辑输入都必须有明确的状态/IME 矩阵。至少覆盖：未输入且未编辑；已聚焦且正在编辑；已完成且未编辑；平台可展示时的 IME 隐藏与 IME 显示。可达时再补校验、disabled/只读、提交或多行状态。每一行必须绑定可见值、focus、可审阅时的选区/光标、随状态变化的图标/装饰、IME/inset 条件、底部操作布局、滚动/避让行为，以及收起/提交转场。不得仅因字段同页或同布局就从另一行推断。
 

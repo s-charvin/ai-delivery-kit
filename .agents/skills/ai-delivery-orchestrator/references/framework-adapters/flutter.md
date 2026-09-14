@@ -42,6 +42,18 @@ component behavior only and must be classified `component-only`.
    indexed native test evidence directory. Both files stay outside
    `.ai-delivery/`.
 
+## Locale and scroll-edge checks
+
+- Mount the app's real localization and text-style setup. Exercise representative
+  values from supported locales or source data, and assert rendered text/parent
+  rectangles plus the approved wrap, truncation, expansion, or scrolling policy;
+  finding the string alone does not prove it fits.
+- For scroll-dependent fades, masks, gradients, or overlays, drive the real
+  scrollable to leading, representative interior, and trailing positions. Check
+  that the treatment tracks actual overflow and does not unintentionally wash
+  out text or reduce an interactive item's hit region. Change child sizing and
+  edge treatment independently when diagnosing a mismatch.
+
 ## Unicode-safe incremental text
 
 When a production `Text` grows one visible character at a time (typewriter,
@@ -64,6 +76,24 @@ end-of-test checks. For example, when a test enables the Flutter semantics
 tree, dispose its `SemanticsHandle` explicitly before the test returns, then
 run the whole test file to catch binding-order failures. This is test cleanup,
 not permission to change production accessibility behavior.
+
+## Test-suite isolation diagnosis
+
+When a widget test passes by itself but fails in its containing file or a
+combined run, keep production code unchanged while locating the failure:
+
+1. Run the exact case, the full file, and the same related files together; keep
+   the first exception and command from each run.
+2. At the failing point, inspect the actual widget tree and verify the expected
+   root, localization setup, and dependencies before relying on leaf finders.
+3. Narrow the interaction to preceding tests and inspect shared/static state,
+   binding setup, locale/theme overrides, clocks, controllers, handles, and
+   teardown.
+4. Moving the case to another file is an isolation probe, not a root-cause
+   finding. If the outcome changes, record only that the test-file boundary
+   matters; identify and fix the leaked state, or justify a separate harness
+   when the project requires one. Do not retain a split as an unexplained
+   workaround or change production UI to mask a test-setup failure.
 
 ## Device and media preflight
 

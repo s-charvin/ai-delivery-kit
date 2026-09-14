@@ -50,7 +50,8 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 
 - state/数据生命周期、可达的 error/offline/permission/disabled 路径，以及快速重复进入；
 - container/viewport 边界、orientation、安全区、fixed/sticky overlay、IME、scroll、clip 与 hit testing；每个可编辑输入在适用时都要覆盖未输入/未编辑、编辑中、已完成/未编辑、IME 隐藏与 IME 显示，视觉由真实控件状态驱动；
-- 长文本/不可断词/本地化/RTL、text scaling 或 zoom、列表数量与数值/日期边界；
+- 长文本/不可断词/本地化/RTL、text scaling 或 zoom、列表数量与数值/日期边界；长度受语言或数据影响时，使用已支持的代表值（包括一个布局风险值），并断言实际渲染几何与批准的溢出策略，而不只是确认文字节点存在；
+- 在起始/中间/末尾滚动状态检查依赖位置的边缘渐隐、蒙版、渐变或 overlay；确认它们随真实滚动状态变化，且没有违背批准契约地遮住文字或点击热区；
 - hover/focus/pressed/selected/expanded、keyboard/pointer/touch/gesture 替代、focus trap/return 与语义播报；
 - 动效 trigger/keyframe/timing/interruption/reduced-motion/资源生命周期，以及适用的性能检查；审阅产物必须展示完整转场或循环、没有过长空等、自动重播，并能解码出期望帧数与总时长；有索引动效预览时必须使用它，无法录制时用项目原生行为/人工证据；
 - 图片/矢量的 loading/error/offline、crop/focal/aspect/density/theme/cache/semantics 行为；

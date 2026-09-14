@@ -11,6 +11,14 @@ Widget，配置一个确定性视觉 scenario，使用 `RepaintBoundary` 和
 `matchesGoldenFile`，并用宿主正常测试命令更新 golden。示例的画布和 profile
 是证据设置，不是运行时布局常量。
 
+## Golden 预览的文字保真度
+
+文字字形也属于本次审阅范围时，应使用项目真实的文字样式、locale、方向与缩放配置，
+并确认生产文字确实选择了预期字体族和字重。仅把字体字节加载到测试 FontLoader，
+不会改变仍选择其他字体族的组件。如果 Flutter 测试渲染器回退到了测试字体（Ahem），
+截图仍可用于证明几何布局，但不能宣称它证明了生产字形保真。所需字体不可用时，
+字形级确认应保持阻塞，而不是授权使用视觉替代物。
+
 ## 动效捕获
 
 `motion-preview-test.dart.example` 展示宿主已走通的动效链路：

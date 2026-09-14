@@ -232,8 +232,8 @@ For each unit, classify every dimension below as `covered` with scenario ids or 
 | Dimension | Applicability scan |
 |---|---|
 | `state` | Initial, loading, refreshing, populated, empty, partial, error, offline, authentication, permission, and disabled states that the data/interaction model can reach |
-| `layout` | Minimum/target/maximum constraints, container or viewport breakpoints, orientation, safe areas, fixed/sticky coexistence, overlays, IME, scroll behavior, z-order, clipping, and hit testing |
-| `content` | Empty/short/long/multiline/unbroken strings, list counts, large numbers and localized formats, RTL, locale changes, text scaling or browser zoom, wrapping/truncation/expand behavior |
+| `layout` | Minimum/target/maximum constraints, container or viewport breakpoints, orientation, safe areas, fixed/sticky coexistence, overlays, IME, scroll behavior, position-dependent edge treatments at leading/interior/trailing scroll positions, z-order, clipping, and hit testing |
+| `content` | Empty/short/long/multiline/unbroken strings, representative values from supported locales and data, list counts, large numbers and localized formats, RTL, locale changes, text scaling or browser zoom, and explicit wrapping/truncation/expand/scroll behavior |
 | `interaction` | Idle, hover, focus, pressed, selected, expanded, keyboard, pointer/touch, drag/swipe alternatives, rapid repeat, re-entry, focus trap/return, and disabled behavior |
 | `motion` | Trigger, from/to or keyframes, timing, adapter-declared capture cadence, easing, delay, repeat, interruption/reversal/cancel, reduced-motion result, deterministic test keyframe, and repaint/resource lifecycle |
 | `assets` | Static vs content-bound vs motion, source/ownership, vector palette/themeability, fit/crop/focal point, aspect ratio, density, loading/error/empty/offline fallback, cache, and semantics |
@@ -241,6 +241,8 @@ For each unit, classify every dimension below as `covered` with scenario ids or 
 | `accessibility` | Native semantics, name/role/state/value, reading/focus order, visible focus, screen-reader updates, platform touch targets, non-color cues, WCAG AA on web, and reduced motion/text scaling |
 | `platform` | Supported platforms and input modes, system bars/safe areas, back/navigation behavior, IME, pointer vs touch conventions, and platform-specific primitives |
 | `performance` | Stable loading layout, list virtualization when applicable, correctly sized images, animation/repaint isolation, controller/resource disposal, off-screen pausing, and project-native budgets |
+
+Choose locale-sensitive examples from supported product localization or data sources, including a value that stresses the layout when applicable; bind the expected overflow behavior. A default-locale sample alone does not cover a localized constraint, and unsupported text must not be invented to manufacture an extreme. For scroll-position-dependent edge treatments, cover leading, representative interior, and trailing states where reachable, and record whether adjacent content should remain legible or intentionally fade.
 
 Every editable input must have an explicit state/IME matrix. At minimum cover: empty and not editing; focused and actively editing; completed and not editing; IME hidden and IME shown wherever the platform can display it. Add validation, disabled/read-only, submission, or multiline states when reachable. Each row must bind the visible value, focus, selection/caret when reviewable, state-dependent icon/decoration, IME/inset condition, bottom-action layout, scrolling/avoidance behavior, and dismissal/submit transition. Do not infer one row from another merely because the field shares a page or layout.
 
