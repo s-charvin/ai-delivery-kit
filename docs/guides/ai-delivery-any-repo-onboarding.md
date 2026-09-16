@@ -173,7 +173,7 @@ bootstrap 完成后，目标仓库至少具备：
 
 ### 第 2 步：能力审计与 UI Truth Mapping（按需）
 
-每个子需求在 `status.json` 中声明两条独立模式轴：`ui_truth_mode=none|existing|runtime-baseline|figma` 与 `design_mode=none|light|full`。只有 `figma` 或 `runtime-baseline` 启用 CP-UI、Stage 2、`acceptance_frozen`、UI truth index 与视觉验收；`none`/`existing` 不进入 UI gate。`full` 才需要 CP-DESIGN，`light` 记录短方案并自审，`none` 跳过方案设计产物。`ui_bearing` 只用于模式一致性校验。
+每个子需求在 `status.json` 中声明 `ui_truth_mode=none|existing|runtime-baseline|figma`、`state_flow_required` 与 `user_decision_required`。只有 `figma` 或 `runtime-baseline` 启用 CP-UI、Stage 2、`acceptance_frozen`、UI truth index 与视觉验收；`none`/`existing` 不进入 UI gate。所有活跃 schema 2.0 切片都有 `design.md`；复杂状态流只增加设计深度，只有实质用户决策触发 CP-DESIGN。
 
 启用 UI truth 的每个 unit 都必须在 `contracts/ui-truth-index.json` 记录独立的 `motion_decision`：有动效时记录动效契约、独立确认或豁免及后续运行时验证方式；无动效时也必须取得明确的 `static / no motion` 确认。静态 golden 只证明静态帧，不能代替动效验收。宿主能够确定性产出动效时，只使用 GIF 作为动效审阅媒介，并记录 GIF 的仓内相对路径和 SHA-256；GIF 已足够，不得新增 WebP、MP4 或其他编码器/验收门槛。宿主无法生成 GIF 时，记录不可用原因并把动效验证延后到 Stage 4，绝不伪造文件。
 
@@ -205,35 +205,33 @@ bootstrap 完成后，目标仓库至少具备：
 - Stage 4 复用该用户已批准 workspace，不要重新创建工作区或重画组件
 ```
 
-如果 `ui_truth_mode=none` 或 `existing`，跳过这一步；既有 UI 只做行为/语义验证，非 UI 切片按 `design_mode` 直接进入方案设计或 spec。
+如果 `ui_truth_mode=none` 或 `existing`，跳过这一步；既有 UI 只做行为/语义验证，然后进入统一设计契约。
 
-### 第 3 步：Solution Design + Spec 管道（框架无关）
+### 第 3 步：统一设计契约
 
-方案设计阶段（`solution-design` 动作）：基于 `requirement-slice.md`、已启用 UI truth 的宿主组件、v2 `ui-truth-index.json` 与 API 文档做方案决策。`design.md` 只引用 unit/scenario ID、状态机、责任与验证归属，不重复维护 Runtime Coverage；`notes` 只保留短指针。`design_mode=full` 时须用户明确批准后才进入 spec 阶段（检查点 CP-DESIGN），`light` 自审通过，`none` 不生成该文件。
+`solution-design` 基于 `requirement-slice.md`、项目架构、API、依赖图以及启用
+UI truth 时的冻结组件和 v3 `ui-truth-index.json`，产出唯一 canonical
+`design.md`。它合并行为契约与方案设计，只保留范围、`B-###`、`AC-###`、
+追踪、实现相关决策、适用状态流、风险和验证策略；不得加入文件级机械步骤。
 
-spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
+- 简单状态流使用紧凑表；真正静态时写明理由。
+- `state_flow_required=true` 时才展开状态分类、MVI/UDF 闭环、生命周期、UI
+  投影、权威转换矩阵、异步时序和不变量。
+- `user_decision_required=false` 时 AI 自审并绑定当前 SHA-256；为 `true` 时
+  CP-DESIGN 只解决命名的实质用户决策，批准同时授权该范围内的开发。该字段
+  在当前设计版本获批后仍保持 `true`；有效的 hash-bound human review 表示它
+  已完成确认，字段只有在当前版本不再包含用户授权决策时才设为 `false`。
+- Spec Kit / OpenSpec / superpowers / ECC 只提供推理方法，不得生成各自的
+  spec/plan/tasks 或框架目录产物。
+- canonical 设计路径/hash 和方法记录在 `traceability.json`
+  `source_index.design`。
 
-- 已装 spec-kit：`$speckit-specify` → `$speckit-plan` → `$speckit-tasks`（详见 frameworks/spec-kit.md）
-- 已装 OpenSpec：一个子需求对应一个 change，产出 proposal.md / design.md / tasks.md（详见 frameworks/openspec.md）
-- 都没装：走原生档，在子需求目录写轻量 `spec.md`（问题/目标/范围/验收四段式）与 `tasks.md`（详见 frameworks/native.md）
-
-上游输入必须以这些文件为准：
-
-- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/requirement-slice.md`
-- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/contracts/ui-truth-index.json`（如有 UI）
-- `.ai-delivery/requirements/req-project-rename/sub-requirements/SR-001/traceability.json`
-
-要求：
-
-- 不要重新发明需求
-- UI 的 spec/plan/tasks 必须引用 unit/scenario ID，并把每个 scenario 映射到实现与验证任务
-- 产物要保留 requirement_id=req-project-rename 和 subreq_id=SR-001 的反向追踪信息
-- 产物路径记入 `traceability.json` 的 `spec_refs`
-- 这一阶段只产出规格，不直接开始实现
+文件 hash 当前有效后设置 `design_ready`。无依赖切片可立即进入实现，不等待
+其他切片设计完成。
 
 ### 第 4 步：Implementation
 
-所有可执行子需求达到 `tasks_ready` 后，经 CP-001 用户确认进入实现（`implement` 动作）。执行方式按已安装框架：
+每个依赖就绪的 `design_ready` 切片直接进入 `implement`，不需要第二次开发授权。执行方式按已安装框架：
 
 - 已装 superpowers：可选且经用户确认的项目内 worktree 操作 + 子代理驱动 + TDD + 评审（详见 frameworks/superpowers.md）
 - 已装 ECC：ECC 任务执行代理 + 其 rules/hooks（详见 frameworks/ecc.md）
@@ -242,7 +240,7 @@ spec 管道（`spec` → `plan` → `tasks`）按已安装的框架执行：
 执行约束（与框架无关）：
 
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；`none`/`existing` 默认使用当前 checkout
-- 严格按 tasks 与上游 .ai-delivery 产物实现
+- 从当前 `design.md`、依赖、代码与测试动态形成最小执行 brief；需要跨会话恢复时才在 `progress.md` 记录已完成、待完成、阻塞和验证结果
 - 启用 UI truth 的切片逐 scenario 执行宿主项目原生验证，并写入绑定当前 index 哈希的 `visual-acceptance.json`；`existing` 只做行为/语义验证，旧 Markdown/截图存在性不构成验收
 - 不允许跳过测试、review 和完成前验证
 - 切片完成并验收后走 `finish` 动作：rebase 合并（无 merge commit），设置 `merged`

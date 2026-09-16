@@ -25,7 +25,7 @@
 
 | 阻塞 | 触发条件 |
 |------|----------|
-| `blocked_spec_mismatch` | Spec 产出与治理真值冲突 |
+| `blocked_design_mismatch` | canonical 设计契约与治理真值冲突 |
 | `blocked_dependency_slice` | 上游切片未合并 |
 | `blocked_merge_conflict` | rebase/集成失败 |
 | `blocked_verification_failure` | 自动修复后测试/评审/视觉验收仍失败 |

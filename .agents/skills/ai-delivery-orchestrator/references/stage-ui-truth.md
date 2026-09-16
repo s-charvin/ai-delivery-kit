@@ -72,4 +72,6 @@ python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/s
 
 ## Next handoff
 
-`acceptance_frozen` → `solution-design` according to `design_mode`. See [handoff-table.md](handoff-table.md).
+`acceptance_frozen` → `solution-design` for the canonical `design.md`. CP-DESIGN
+is used only when `user_decision_required=true`. See
+[handoff-table.md](handoff-table.md).

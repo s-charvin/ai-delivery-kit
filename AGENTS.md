@@ -3,7 +3,7 @@
 
 After explicit CP-UI authorization, Stage 2 implements and freezes **real host-stack components** in the user-approved workspace, using the host's official rendering tests and fresh-context review. Before component code, resolve applicability-gated runtime coverage for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Stage 4 reuses that workspace. Do not generate `ui-contract.html` or translate a parallel preview into the host stack.
 
-Worktrees are optional and the current checkout is the default. Creating or reusing one requires explicit user confirmation for the current sub-requirement; CP-UI, CP-001, framework defaults, and legacy mandatory-isolation flags are not consent. The only allowed worktree path is `<project-root>/.worktrees/<req-id>-<sr-id>`. A native tool may run only if it accepts that exact path. If already running in `/private/tmp/...` or any other external worktree, stop production edits and ask whether to switch to the project checkout or the exact project-local worktree. Leave the external worktree unchanged; switching workspaces never authorizes its migration, reuse, or deletion. Those actions require separate explicit confirmation naming the exact action and target.
+Worktrees are optional and the current checkout is the default. Creating or reusing one requires explicit user confirmation for the current sub-requirement; CP-UI, CP-DESIGN, framework defaults, and legacy mandatory-isolation flags are not consent. The only allowed worktree path is `<project-root>/.worktrees/<req-id>-<sr-id>`. A native tool may run only if it accepts that exact path. If already running in `/private/tmp/...` or any other external worktree, stop production edits and ask whether to switch to the project checkout or the exact project-local worktree. Leave the external worktree unchanged; switching workspaces never authorizes its migration, reuse, or deletion. Those actions require separate explicit confirmation naming the exact action and target.
 
 Review medium: deterministic official-stack previews for visual scenarios. Give the user every preview's **absolute path**; store v3 profiles, sourced states, scenarios, complete coverage, repo-relative paths, SHA-256 hashes, preview-bound static confirmation/waiver evidence, and each scenario's `evidence_scope` in `contracts/ui-truth-index.json`. Scope is `component-only`, `host-static`, or `host-runtime`. Before preview generation, check whether host composition is in visual scope, an existing runnable test entrypoint mounts the production host, state/resources are deterministic, and a bounded reviewable screenshot can be emitted. Any critical failure selects `component-only` with an uncovered-risk note; never assemble a synthetic page to manufacture host evidence. Host scopes require a production `host_binding`. Every unit also records a separate `motion_decision`: animated motion requires its own confirmation/waiver and later verification mode; static UI requires an explicit confirmed “static / no motion” decision. When the host can produce a deterministic GIF, show and hash it as motion evidence; otherwise confirm/waive first and verify at runtime after implementation. GIF is sufficient; do not add another motion format or encoder. A golden never substitutes for motion acceptance. Figma is 1:1 authority only for scenarios it actually evidences; runtime gaps require requirement, project, or explicit user-decision sources. Stage 4 must bind every scenario's scope-appropriate evidence to the current index in schema v2 `visual-acceptance.json`; host runtime screenshots live in the indexed native test evidence root outside `.ai-delivery/`.
 
@@ -16,12 +16,15 @@ Treat bundled template prose as an English source default, not as the output lan
 UI work enters through `ai-delivery-orchestrator`. TemPad MCP errors → STOP, do not guess.
 
 Delivery routing is capability-gated by each sub-requirement's `ui_truth_mode`
-(`none`, `existing`, `runtime-baseline`, or `figma`) and `design_mode`
-(`none`, `light`, or `full`). Only `runtime-baseline` and `figma` enable CP-UI,
-`contracts/ui-truth-index.json`, and visual acceptance. `full` solution design
-uses CP-DESIGN; `light` self-approves a short `design.md`; `none` skips the
-solution-design artifact. Keep `ui_bearing` consistent with `ui_truth_mode`.
-Runtime checkpoints are `CP-UI`, `CP-DESIGN`, `CP-001`, `CP-002`, and
-`CP-ARCHIVE`; the corresponding gated runtime mode is
-`confirm_solution_design` for a pending full solution design.
+(`none`, `existing`, `runtime-baseline`, or `figma`). Every active schema 2.0
+slice has one canonical `design.md`; `state_flow_required` controls only the
+depth of its state-flow contract. `user_decision_required=true` marks a design
+version that requires human authority and remains true after approval;
+CP-DESIGN is pending only while the current bytes lack a valid hash-bound human
+review. That review authorizes implementation inside the reviewed scope and
+advances the slice to `design_ready`. Only
+`runtime-baseline` and `figma` enable CP-UI,
+`contracts/ui-truth-index.json`, and visual acceptance. Keep `ui_bearing`
+consistent with `ui_truth_mode`. Runtime checkpoints are `CP-UI`, `CP-DESIGN`,
+`CP-002`, and `CP-ARCHIVE`; there is no separate development checkpoint.
 <!-- ai-delivery:ui-contract-gate:end -->

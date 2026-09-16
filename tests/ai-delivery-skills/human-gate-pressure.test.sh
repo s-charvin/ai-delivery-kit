@@ -1,479 +1,208 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Pressure scenarios: an agent under delivery pressure must not shortcut the
-# human-review gates (CP-DESIGN / CP-001 / visual acceptance) by forging or
-# leaving stale state in status.json. Each shortcut attempt is encoded as a
-# mechanical rejection by reconcile-delivery.py / validate-delivery-status.py,
-# not as agent behavior replay.
+ROOT=$(cd -- "$(dirname -- "$0")/../.." && pwd)
+export KIT_ROOT="$ROOT"
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-
-if ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null); then
-  :
-else
-  ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
-fi
-
-RECONCILE="$ROOT/.agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py"
-if [[ -f "$ROOT/managedassets.go" ]]; then
-  STATUS_VALIDATOR="$ROOT/scripts/validate-delivery-status.py"
-else
-  STATUS_VALIDATOR="$ROOT/.ai-delivery/scripts/validate-delivery-status.py"
-fi
-
-fail() {
-  echo "[human-gate-pressure] $1" >&2
-  exit 1
-}
-
-[[ -f "$RECONCILE" ]] || fail "Missing reconcile script: $RECONCILE"
-[[ -f "$STATUS_VALIDATOR" ]] || fail "Missing status validator: $STATUS_VALIDATOR"
-
-TMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/human-gate-pressure.XXXXXX")
-trap 'rm -rf "$TMP_DIR"' EXIT
-
-new_scenario() {
-  local name=$1
-  local dir="$TMP_DIR/$name"
-  mkdir -p "$dir"
-  echo "$dir"
-}
-
-reconcile_output() {
-  local dir=$1
-  python3 - "$dir" <<'PY'
+python3 - <<'PY'
 import hashlib
+import importlib.util
 import json
+import os
+import subprocess
 import sys
-from datetime import datetime, timezone
+import tempfile
 from pathlib import Path
 
-root = Path(sys.argv[1])
-status_path = root / "status.json"
-data = json.loads(status_path.read_text(encoding="utf-8"))
-data["_schema"] = "1.1"
-for subreq_id, entry in data.get("sub_requirements", {}).items():
-    entry.setdefault("state_flow_required", False)
-    if entry.get("design_approved") is True:
-        design = root / "sub-requirements" / subreq_id / "design.md"
-        if design.is_file():
-            entry["design_review"] = {
-                "review_mode": "human" if entry.get("design_mode") == "full" else "self",
-                "reviewed_design_sha256": hashlib.sha256(design.read_bytes()).hexdigest(),
-                "reviewed_at": "2026-09-09T00:00:00Z",
-                "reviewed_by": "fixture-user",
-            }
-    else:
-        entry["design_review"] = {
+root = Path(os.environ["KIT_ROOT"])
+script = root / ".agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py"
+spec = importlib.util.spec_from_file_location("human_gate_reconcile", script)
+mod = importlib.util.module_from_spec(spec)
+sys.modules[spec.name] = mod
+spec.loader.exec_module(mod)
+
+
+def contract(*, decision=False) -> str:
+    decision_row = "| D-001 | Choose retry behavior | automatic or manual | unresolved |" if decision else "not_applicable"
+    return f"""# Design Contract
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## Scope
+One bounded behavior.
+<!-- ai-delivery:behavior-contract:behavior -->
+## Behavior
+| ID | Given | When | Then |
+|---|---|---|---|
+| B-001 | input | submit | result |
+<!-- ai-delivery:behavior-contract:acceptance -->
+## Acceptance
+| ID | Outcome | Evidence |
+|---|---|---|
+| AC-001 | result is observable | focused test |
+<!-- ai-delivery:behavior-contract:traceability -->
+## Traceability
+| Behavior | Requirement | UI | Acceptance |
+|---|---|---|---|
+| B-001 | REQ-001 | not_applicable | AC-001 |
+<!-- ai-delivery:behavior-contract:end -->
+<!-- ai-delivery:user-decisions -->
+## User decisions
+{decision_row}
+"""
+
+
+def entry(status, *, ui="none", user_decision=False, state_flow=False):
+    return {
+        "status": status,
+        "ui_bearing": ui != "none",
+        "ui_truth_mode": ui,
+        "state_flow_required": state_flow,
+        "user_decision_required": user_decision,
+        "design_review": {
             "review_mode": "none",
             "reviewed_design_sha256": None,
             "reviewed_at": None,
             "reviewed_by": None,
-        }
-status_path.write_text(json.dumps(data), encoding="utf-8")
+        },
+        "blocker_scope": None,
+        "resume_target_status": None,
+        "notes": None,
+    }
+
+
+def write_design(req, subreq_id, text):
+    sub = req / "sub-requirements" / subreq_id
+    sub.mkdir(parents=True, exist_ok=True)
+    path = sub / "design.md"
+    path.write_text(text, encoding="utf-8")
+    return path
+
+
+def bind(value, path, mode):
+    value["design_review"] = {
+        "review_mode": mode,
+        "reviewed_design_sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        "reviewed_at": "2026-09-16T12:00:00Z",
+        "reviewed_by": "user" if mode == "human" else "agent",
+    }
+
+
+def run(req, values, checkpoint=None, schema="2.0", validator=False):
+    status = req / "status.json"
+    status.write_text(
+        json.dumps(
+            {
+                "_schema": schema,
+                "current_checkpoint": checkpoint,
+                "sub_requirements": values,
+            }
+        ),
+        encoding="utf-8",
+    )
+    validator_path = root / "scripts/validate-delivery-status.py" if validator else req / "missing-validator.py"
+    return mod.reconcile(status, req, validator_script=validator_path)
+
+
+# A forged design-ready status without a current design review cannot implement.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    result = run(req, {"SR-001": entry("design_ready")})
+    assert result["next_action"] == "none", result
+    assert result["runtime_mode"] == "blocker_recovery", result
+
+# A removed CP-001 credential cannot create or block authority. Current design does.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    path = write_design(req, "SR-001", contract())
+    ready = entry("design_ready")
+    bind(ready, path, "self")
+    result = run(req, {"SR-001": ready}, checkpoint="CP-001")
+    assert result["next_action"] == "implement", result
+    assert result["checkpoint"] is None, result
+
+# A real user decision requires human review; forged self-review does not pass.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    path = write_design(req, "SR-001", contract(decision=True))
+    pending = entry("design_ready", user_decision=True)
+    bind(pending, path, "self")
+    result = run(req, {"SR-001": pending})
+    assert result["runtime_mode"] == "confirm_solution_design", result
+    assert result["checkpoint"] == "CP-DESIGN", result
+    assert result["next_action"] == "solution-design", result
+
+# The pending decision remains visible but cannot block an independent ready slice.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    ready_path = write_design(req, "SR-002", contract())
+    ready = entry("design_ready")
+    bind(ready, ready_path, "self")
+    waiting = entry("split_ready", user_decision=True)
+    result = run(req, {"SR-001": waiting, "SR-002": ready})
+    assert result["runtime_mode"] == "resume", result
+    assert result["checkpoint"] == "CP-DESIGN", result
+    assert result["next_action"] == "implement", result
+    assert result["next_subreq"] == "SR-002", result
+
+# Complex state-flow depth is self-reviewable when no user decision exists.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    example = (root / ".agents/skills/ai-delivery-orchestrator/templates/design-state-flow-example.md").read_text(encoding="utf-8")
+    path = write_design(req, "SR-001", example)
+    ready = entry("design_ready", state_flow=True)
+    bind(ready, path, "self")
+    result = run(req, {"SR-001": ready})
+    assert result["next_action"] == "implement", result
+    assert result["checkpoint"] is None, result
+
+# Slice-local failure does not block a ready sibling.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    path = write_design(req, "SR-002", contract())
+    ready = entry("design_ready")
+    bind(ready, path, "self")
+    blocked = entry("blocked_verification_failure")
+    blocked["blocker_scope"] = "slice_local"
+    blocked["resume_target_status"] = "in_dev"
+    result = run(req, {"SR-001": blocked, "SR-002": ready})
+    assert result["runtime_mode"] == "resume", result
+    assert result["next_action"] == "implement", result
+    assert result["blocker_scopes"] == ["SR-001:slice_local"], result
+
+# UI truth remains capability-gated; existing UI does not enter CP-UI.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    result = run(req, {"SR-001": entry("split_ready", ui="figma")})
+    assert result["runtime_mode"] == "confirm_ui", result
+    assert result["checkpoint"] == "CP-UI", result
+    assert result["next_action"] == "none", result
+    result = run(req, {"SR-001": entry("split_ready", ui="existing")})
+    assert result["next_action"] == "solution-design", result
+    assert result["checkpoint"] is None, result
+
+# Active legacy schemas cannot use the removed route as a compatibility branch.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    legacy = {
+        "status": "tasks_ready",
+        "ui_bearing": False,
+        "ui_truth_mode": "none",
+        "design_mode": "full",
+        "design_approved": True,
+    }
+    result = run(req, {"SR-001": legacy}, schema="1.1")
+    assert result["runtime_mode"] == "blocker_recovery", result
+    assert any("migration to schema 2.0" in item for item in result["errors"]), result
+
+# UI acceptance cannot be forged by advancing only the status string.
+with tempfile.TemporaryDirectory() as td:
+    req = Path(td)
+    path = write_design(req, "SR-001", contract())
+    forged = entry("visual_acceptance_passed", ui="figma")
+    bind(forged, path, "self")
+    result = run(req, {"SR-001": forged}, validator=True)
+    assert result["runtime_mode"] == "blocker_recovery", result
+    assert any("visual-acceptance" in item for item in result["errors"]), result
+
+print("PASS: human gate pressure scenarios")
 PY
-  python3 "$RECONCILE" "$dir/status.json" --req-root "$dir" 2>/dev/null || true
-}
-
-require_line() {
-  local scenario=$1
-  local output=$2
-  local expected=$3
-  echo "$output" | grep -Fq "$expected" \
-    || fail "$scenario: expected line '$expected' in output:\n$output"
-}
-
-refute_line() {
-  local scenario=$1
-  local output=$2
-  local forbidden=$3
-  if echo "$output" | grep -Fq "$forbidden"; then
-    fail "$scenario: forbidden line '$forbidden' present in output:\n$output"
-  fi
-}
-
-# Scenario 1: stale CP-001 credential left behind after a regression must not
-# authorize implement. SR-001 regressed to spec_ready, SR-002 still tasks_ready.
-S1=$(new_scenario "stale-cp001")
-mkdir -p "$S1/sub-requirements/SR-001" "$S1/sub-requirements/SR-002"
-printf '# Solution Design\n' > "$S1/sub-requirements/SR-001/design.md"
-printf '# Solution Design\n' > "$S1/sub-requirements/SR-002/design.md"
-cat > "$S1/status.json" <<'EOF'
-{
-  "requirement_id": "stale-cp001",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": "CP-001",
-  "runtime_mode": "confirm_to_dev",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "spec_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": "regressed after contract change"
-    },
-    "SR-002": {
-      "status": "tasks_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    }
-  }
-}
-EOF
-OUT1=$(reconcile_output "$S1")
-refute_line "stale-cp001" "$OUT1" "RUNTIME_MODE=confirm_to_dev"
-refute_line "stale-cp001" "$OUT1" "NEXT_ACTION=implement"
-refute_line "stale-cp001" "$OUT1" "CHECKPOINT=CP-001"
-
-# Scenario 2: partial tasks_ready must not raise the CP-001 gate at all.
-S2=$(new_scenario "partial-tasks-ready")
-mkdir -p "$S2/sub-requirements/SR-001" "$S2/sub-requirements/SR-002"
-printf '# Solution Design\n' > "$S2/sub-requirements/SR-001/design.md"
-printf '# Solution Design\n' > "$S2/sub-requirements/SR-002/design.md"
-cat > "$S2/status.json" <<'EOF'
-{
-  "requirement_id": "partial-tasks-ready",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "tasks_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    },
-    "SR-002": {
-      "status": "spec_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    }
-  }
-}
-EOF
-OUT2=$(reconcile_output "$S2")
-refute_line "partial-tasks-ready" "$OUT2" "CHECKPOINT=CP-001"
-refute_line "partial-tasks-ready" "$OUT2" "RUNTIME_MODE=confirm_to_dev"
-refute_line "partial-tasks-ready" "$OUT2" "NEXT_ACTION=implement"
-
-# Scenario 3: forged spec_ready without design approval must fall back to design.
-S3=$(new_scenario "forged-spec-ready")
-cat > "$S3/status.json" <<'EOF'
-{
-  "requirement_id": "forged-spec-ready",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "spec_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": false,
-      "notes": null
-    }
-  }
-}
-EOF
-OUT3=$(reconcile_output "$S3")
-require_line "forged-spec-ready" "$OUT3" "NEXT_ACTION=solution-design"
-refute_line "forged-spec-ready" "$OUT3" "NEXT_ACTION=spec"
-
-# Scenario 4: a pending design approval must not block unrelated runnable work;
-# CP-DESIGN stays visible as a reminder.
-S4=$(new_scenario "design-pending-plus-runnable")
-mkdir -p "$S4/sub-requirements/SR-002"
-cat > "$S4/sub-requirements/SR-002/design.md" <<'EOF'
-# Solution Design
-
-Approved design for the runnable slice.
-EOF
-cat > "$S4/status.json" <<'EOF'
-{
-  "requirement_id": "design-pending-plus-runnable",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": false,
-      "notes": "light audit passed"
-    },
-    "SR-002": {
-      "status": "spec_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    }
-  }
-}
-EOF
-OUT4=$(reconcile_output "$S4")
-require_line "design-pending-plus-runnable" "$OUT4" "RUNTIME_MODE=resume"
-require_line "design-pending-plus-runnable" "$OUT4" "CHECKPOINT=CP-DESIGN"
-require_line "design-pending-plus-runnable" "$OUT4" "NEXT_ACTION=plan"
-require_line "design-pending-plus-runnable" "$OUT4" "NEXT_SUBREQ=SR-002"
-
-# Scenario 5: design pending with nothing else runnable pauses at CP-DESIGN.
-S5=$(new_scenario "design-pending-only")
-cat > "$S5/status.json" <<'EOF'
-{
-  "requirement_id": "design-pending-only",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": false,
-      "notes": "light audit passed"
-    }
-  }
-}
-EOF
-OUT5=$(reconcile_output "$S5")
-require_line "design-pending-only" "$OUT5" "RUNTIME_MODE=confirm_solution_design"
-require_line "design-pending-only" "$OUT5" "CHECKPOINT=CP-DESIGN"
-require_line "design-pending-only" "$OUT5" "NEXT_ACTION=solution-design"
-
-# Scenario 6: a slice-local blocker must not stop unrelated runnable work.
-S6=$(new_scenario "blocked-plus-runnable")
-mkdir -p "$S6/sub-requirements/SR-001" "$S6/sub-requirements/SR-002"
-printf '# Solution Design\n' > "$S6/sub-requirements/SR-001/design.md"
-printf '# Solution Design\n' > "$S6/sub-requirements/SR-002/design.md"
-cat > "$S6/status.json" <<'EOF'
-{
-  "requirement_id": "blocked-plus-runnable",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "blocked_verification_failure",
-      "blocker_scope": "slice_local",
-      "resume_target_status": "in_dev",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    },
-    "SR-002": {
-      "status": "spec_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    }
-  }
-}
-EOF
-OUT6=$(reconcile_output "$S6")
-require_line "blocked-plus-runnable" "$OUT6" "RUNTIME_MODE=resume"
-require_line "blocked-plus-runnable" "$OUT6" "RUNNABLE=SR-002:spec_ready->plan"
-require_line "blocked-plus-runnable" "$OUT6" "BLOCKER_SCOPES=SR-001:slice_local"
-require_line "blocked-plus-runnable" "$OUT6" "NEXT_ACTION=plan"
-
-# Scenario 7: forging visual_acceptance_passed without evidence files must be
-# rejected by the status validator gate.
-S7=$(new_scenario "forged-visual-acceptance")
-cat > "$S7/status.json" <<'EOF'
-{
-  "requirement_id": "forged-visual-acceptance",
-  "updated_at": "2026-08-06T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "visual_acceptance_passed",
-      "ui_bearing": true,
-      "ui_truth_mode": "figma",
-      "design_mode": "full",
-      "design_approved": true,
-      "notes": null
-    }
-  }
-}
-EOF
-if VALIDATOR_OUT=$(python3 "$STATUS_VALIDATOR" "$S7/status.json" --req-root "$S7" 2>&1); then
-  fail "forged-visual-acceptance: validator accepted a forged visual_acceptance_passed:\n$VALIDATOR_OUT"
-fi
-echo "$VALIDATOR_OUT" | grep -Fq "visual-acceptance" \
-  || fail "forged-visual-acceptance: expected visual-acceptance evidence gate, got:\n$VALIDATOR_OUT"
-
-# Scenario 8: split_ready UI work is production code and must pause for CP-UI
-# before ui-truth-mapping can be dispatched.
-S8=$(new_scenario "ui-implementation-without-approval")
-cat > "$S8/status.json" <<'EOF'
-{
-  "requirement_id": "ui-implementation-without-approval",
-  "updated_at": "2026-08-25T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": true,
-      "ui_truth_mode": "figma",
-      "design_mode": "full",
-      "design_approved": false,
-      "notes": "light audit passed"
-    }
-  }
-}
-EOF
-OUT8=$(reconcile_output "$S8")
-require_line "ui-implementation-without-approval" "$OUT8" "RUNTIME_MODE=confirm_ui"
-require_line "ui-implementation-without-approval" "$OUT8" "CHECKPOINT=CP-UI"
-require_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=none"
-refute_line "ui-implementation-without-approval" "$OUT8" "NEXT_ACTION=ui-truth-mapping"
-
-# Scenario 9: an existing frozen surface is UI-bearing but does not need the
-# UI truth capability gate. It proceeds to solution design directly.
-S9=$(new_scenario "existing-ui-no-cpui")
-cat > "$S9/status.json" <<'EOF'
-{
-  "requirement_id": "existing-ui-no-cpui",
-  "updated_at": "2026-08-26T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": true,
-      "ui_truth_mode": "existing",
-      "design_mode": "light",
-      "design_approved": false,
-      "notes": "behavior-only change on a frozen component"
-    }
-  }
-}
-EOF
-OUT9=$(reconcile_output "$S9")
-require_line "existing-ui-no-cpui" "$OUT9" "NEXT_ACTION=solution-design"
-refute_line "existing-ui-no-cpui" "$OUT9" "CHECKPOINT=CP-UI"
-
-# Scenario 10: design_mode=none is a deliberate no-design path, not a hidden
-# no_design_client profile. It proceeds to spec without a design gate.
-S10=$(new_scenario "design-mode-none")
-cat > "$S10/status.json" <<'EOF'
-{
-  "requirement_id": "design-mode-none",
-  "updated_at": "2026-08-26T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "none",
-      "design_approved": false,
-      "notes": "small server-only fix"
-    }
-  }
-}
-EOF
-OUT10=$(reconcile_output "$S10")
-require_line "design-mode-none" "$OUT10" "NEXT_ACTION=spec"
-refute_line "design-mode-none" "$OUT10" "NEXT_ACTION=solution-design"
-
-# Scenario 11: old bypass fields are rejected rather than selecting a hidden
-# compatibility branch.
-S11=$(new_scenario "legacy-bypass-fields")
-cat > "$S11/status.json" <<'EOF'
-{
-  "requirement_id": "legacy-bypass-fields",
-  "updated_at": "2026-08-26T00:00:00Z",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "split_ready",
-      "ui_bearing": true,
-      "ui_truth_mode": "existing",
-      "design_mode": "light",
-      "design_approved": true,
-      "ui_contract_exempt": true,
-      "notes": "deprecated bypass must fail"
-    }
-  }
-}
-EOF
-OUT11=$(reconcile_output "$S11")
-echo "$OUT11" | grep -Eq "ui_contract_exempt|legacy|unsupported" \
-  || fail "legacy bypass was not rejected: $OUT11"
-
-# Scenario 12: a late full-design regression cannot fall through to implement,
-# finish, or archive merely because the slice already advanced its status.
-S12=$(new_scenario "late-design-regression")
-cat > "$S12/status.json" <<'EOF'
-{
-  "requirement_id": "late-design-regression",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "in_dev",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "full",
-      "design_approved": false,
-      "notes": "approval was removed after a scope change"
-    }
-  }
-}
-EOF
-OUT12=$(reconcile_output "$S12")
-require_line "late-design-regression" "$OUT12" "RUNTIME_MODE=confirm_solution_design"
-require_line "late-design-regression" "$OUT12" "CHECKPOINT=CP-DESIGN"
-require_line "late-design-regression" "$OUT12" "NEXT_ACTION=solution-design"
-refute_line "late-design-regression" "$OUT12" "NEXT_ACTION=implement"
-
-# Scenario 13: light solution design is an executable prerequisite even when
-# the slice is already tasks_ready; CP-001 must not hide that action.
-S13=$(new_scenario "light-design-before-dev")
-cat > "$S13/status.json" <<'EOF'
-{
-  "requirement_id": "light-design-before-dev",
-  "current_checkpoint": null,
-  "runtime_mode": "resume",
-  "sub_requirements": {
-    "SR-001": {
-      "status": "tasks_ready",
-      "ui_bearing": false,
-      "ui_truth_mode": "none",
-      "design_mode": "light",
-      "design_approved": false,
-      "notes": "short design record has not been generated"
-    }
-  }
-}
-EOF
-OUT13=$(reconcile_output "$S13")
-require_line "light-design-before-dev" "$OUT13" "RUNTIME_MODE=resume"
-require_line "light-design-before-dev" "$OUT13" "NEXT_ACTION=solution-design"
-refute_line "light-design-before-dev" "$OUT13" "CHECKPOINT=CP-001"
-
-echo 'PASS: human-review gate pressure scenarios rejected as expected.'

@@ -1,140 +1,100 @@
-<!-- ai-delivery-meta: {"version":2,"artifact_type":"solution-design","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
+<!-- ai-delivery-meta: {"version":3,"artifact_type":"design-contract","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
 <!-- ai-delivery-template-language
 When instantiating this template, preserve the ai-delivery-meta comment and its machine keys, replacing only its timestamp and author placeholders. Write every human-readable heading, label, and prose passage in the user's current conversation language. Keep IDs, paths, commands, code symbols, and literal protocol tokens unchanged. Remove this language-instruction comment from the finished artifact.
 
-Language boundary: localize Markdown headings, table headers/cells, explanatory prose, risk/open-question text, and Mermaid node, edge, and participant labels. Keep only machine syntax, keys, enum values, IDs, paths, commands, code/API/library/protocol names, and necessary standard technical terms in English. Mermaid keywords such as `flowchart`, `stateDiagram-v2`, and `sequenceDiagram` stay unchanged; their labels do not. Translate template labels such as `State set`, `Owner`, `Guard`, and `Risk`. If a technical term is retained for precision, introduce the localized term first and put the English original in parentheses. Unexplained English prose or headings must be fixed before approval.
+Language boundary: localize Markdown headings, table headers/cells, explanatory prose, risk/open-question text, and Mermaid node, edge, or participant labels. Keep only machine syntax, keys, enum values, IDs, paths, commands, code/API/library/protocol names, and necessary standard technical terms in English. Mermaid syntax keywords stay unchanged; their labels do not. Unexplained English prose or headings must be fixed before review.
 -->
 
-# Solution Design: {{subreq_id}}
+# Design Contract: {{subreq_id}}
 
-> This file is the canonical solution-design record for `{subreq_id}`. It is a living artifact until archival. The approval record in `status.json` is valid only for the exact SHA-256 of this file.
+> This is the only persisted behavior and solution-design contract for `{subreq_id}`. It is not an execution plan or file-by-file task list. The review in `status.json` is valid only for the exact SHA-256 of this file.
 
-## 1. Context and Goals
-(Why this work is needed, including constraints, users, and explicit non-goals.)
+## 1. Context and Scope
 
-## 2. Key Decisions
-- Decision A: Choose X because ...
-- Decision B: ...
+### Goal
+(The user-visible or system outcome this slice must produce.)
 
-## 3. Solution Overview
-(Architecture, module boundaries, data flow, navigation, and the main interaction path.)
+### In Scope
+- ...
 
-## 4. UI Scenario References (UI truth modes only)
+### Out of Scope
+- ...
 
-The runtime coverage source of truth is `contracts/ui-truth-index.json`. This document references indexed scenarios; it does not duplicate their Runtime Coverage Plan.
+### Constraints and Existing Authority
+- Requirement source: ...
+- Existing architecture/API/project rule: ...
+- UI truth source, when enabled: `contracts/ui-truth-index.json`
 
-### Unit and Scenario Traceability
-| Unit ID | Scenario IDs | Responsibility | Verification owner |
-|---------|--------------|----------------|--------------------|
-| ... | ... | ... | ... |
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## 2. Behavioral Boundary
 
-<!-- ai-delivery:state-flow:start -->
-<!-- ai-delivery:state-flow:applicability: required when status.json state_flow_required=true; otherwise record not_applicable with a reason. -->
+(State the actors, inputs, outputs, exclusions, permissions, data ownership, and failure boundaries that implementation must preserve.)
 
-## 5. State Flow Design
+<!-- ai-delivery:behavior-contract:behavior -->
+## 3. Behavior Contract
 
-State-flow applicability: `required` / `not_applicable`.
+| Behavior ID | Given | When | Then | Boundary / failure behavior |
+|-------------|-------|------|------|-----------------------------|
+| B-001 | ... | ... | ... | ... |
 
-<!-- ai-delivery:state-flow:taxonomy -->
-### 5.1 State Taxonomy and Ownership
-| State set | Owner | Source of truth | Lifetime | Persistence / restoration | Render or mutate rule |
-|-----------|-------|-----------------|----------|--------------------------|------------------------|
-| Business/Domain State | ... | ... | ... | ... | ... |
-| Operation State | ... | ... | ... | ... | ... |
-| Local Input State | ... | ... | ... | ... | ... |
-| UiState (derived) | ... | ... | ... | ... | ... |
-| UiEffect (one-shot) | ... | ... | ... | ... | ... |
-| Command / Side Effect | ... | ... | ... | ... | ... |
+<!-- ai-delivery:behavior-contract:acceptance -->
+## 4. Acceptance Contract
 
-<!-- ai-delivery:state-flow:mvi-loop -->
-### 5.2 MVI / UDF Loop
-```mermaid
-flowchart LR
-  View[View] -->|Intent / Event| Reducer[Reducer / Decision]
-  Reducer -->|New state| Store[State holder]
-  Store -->|UiState| View
-  Reducer -->|Command| Effects[Side-effect executor]
-  Effects -->|Result event| Reducer
-  Reducer -->|One-shot UiEffect| EffectHost[Effect host]
-```
+| Acceptance ID | Verifiable outcome | Evidence or command |
+|---------------|--------------------|---------------------|
+| AC-001 | ... | ... |
 
-Reducer purity, command ownership, result-event correlation, and one-shot effect consumption rules: ...
+<!-- ai-delivery:behavior-contract:traceability -->
+## 5. Traceability
 
-<!-- ai-delivery:state-flow:lifecycle -->
-### 5.3 Business Lifecycle (State and Transition Model)
-```mermaid
-stateDiagram-v2
-  [*] --> Initial: T-001 initialize
-  Initial --> Terminal: T-002 complete
-  Terminal --> [*]
-```
+| Behavior ID | Requirement source | UI scenario | Acceptance ID |
+|-------------|--------------------|-------------|---------------|
+| B-001 | ... | `not_applicable` / ... | AC-001 |
+<!-- ai-delivery:behavior-contract:end -->
 
-Use composite or parallel states for independent regions. Keep the top-level graph small and link every displayed `T-###` to the matrix below.
+## 6. Solution Design
 
-<!-- ai-delivery:state-flow:projection -->
-### 5.4 UI Projection
-`UiState = project(BusinessState, OperationState, LocalInputState)`
+### Architecture and Data Flow
+(Only implementation-relevant boundaries, ownership, data flow, navigation, and integration contracts. Do not list mechanical edit steps.)
 
-| Projection ID | Input state conditions | Visible UI | Enabled interactions | UiEffect |
-|----------------|------------------------|------------|----------------------|----------|
-| P-001 | ... | ... | ... | none / ... |
-
-Loading, error, empty, disabled, and refreshing states that do not change business facts belong to the operation or local-input layer, not the business lifecycle.
-
-<!-- ai-delivery:state-flow:matrix -->
-### 5.5 authoritative Transition Matrix
-| Transition ID | From | Intent / Event | Guard | Decision | To | Command | Result event |
-|---------------|------|----------------|-------|----------|----|---------|--------------|
-| T-001 | ... | ... | ... | ... | ... | none / ... | none / ... |
-| T-002 | ... | ... | ... | ... | ... | none / ... | none / ... |
-
-| Transition ID | UI projection | Failure / cancel / stale behavior | Concurrency / idempotency | Persistence / recovery | Requirement / scenario / test |
-|---------------|---------------|-----------------------------------|---------------------------|-----------------------|-------------------------------|
-| T-001 | P-001 | ... | ... | ... | ... |
-| T-002 | P-001 | ... | ... | ... | ... |
-
-The matrix is the contract source of truth. Diagrams are views of it; resolve any disagreement by correcting the matrix and its diagrams together.
-
-<!-- ai-delivery:state-flow:sequences -->
-### 5.6 Critical Async Sequences
-```mermaid
-sequenceDiagram
-  participant V as View
-  participant R as Reducer
-  participant E as Effect executor
-  participant API as Repository/API
-  V->>R: T-001 Intent
-  R->>E: Command with correlation id
-  E->>API: Request
-  API-->>E: Result / failure
-  E-->>R: Result event
-  R-->>V: UiState / UiEffect
-```
-
-Cover each applicable retry, cancellation, stale-result, deduplication, parallel-merge, navigation-effect, and process-restoration policy. If none applies, write `not_applicable` and the reason.
-
-<!-- ai-delivery:state-flow:invariants -->
-### 5.7 Invariants and Illegal Transitions
-<!-- ai-delivery:state-flow:stale-result -->
-- Re-entry and idempotency: ...
-<!-- ai-delivery:state-flow:concurrency -->
-- Stale result / correlation ID policy: ...
-- Retry, cancellation, and recovery policy: ...
-- Forbidden state combinations and unreachable transitions: ...
-- Navigation return and process-death restoration: ...
-
-<!-- ai-delivery:state-flow:traceability -->
-### 5.8 State-flow Traceability
-| Transition / Projection ID | Requirement source | UI scenario | Test or verification command |
-|----------------------------|--------------------|-------------|------------------------------|
-| T-001 / P-001 | ... | ... | ... |
-
-<!-- ai-delivery:state-flow:end -->
-
-## 6. Risks and Mitigations
-| Risk | Impact | Mitigation |
-|------|--------|------------|
+### Key Decisions
+| Decision | Choice | Rationale and trade-off |
+|----------|--------|-------------------------|
 | ... | ... | ... |
 
-## 7. Open Questions
-None. Any unresolved question that changes a state, guard, transition, effect, or recovery policy must be resolved before approval.
+### UI Scenario References
+
+When UI truth is enabled, reference every indexed scenario without duplicating its runtime coverage plan.
+
+| Unit ID | Scenario IDs | Implementation responsibility | Verification owner |
+|---------|--------------|-------------------------------|--------------------|
+| `not_applicable` / ... | ... | ... | ... |
+
+## 7. State Flow
+
+State-flow depth: `not_applicable` / `simple` / `complex`.
+
+Use `not_applicable` for truly static behavior and record the reason. For a bounded flow, keep only the compact table below. Set `status.json.state_flow_required=true` only when the slice introduces or materially changes complex guards, concurrency, stale-result handling, recovery, persistence, or cross-surface state ownership; then replace this compact subsection with an adapted copy of `design-state-flow-example.md`.
+
+<!-- ai-delivery:state-summary -->
+| Transition ID | From | Event / intent | Guard | To | UI result / effect | Failure or recovery | Acceptance |
+|---------------|------|----------------|-------|----|--------------------|---------------------|------------|
+| T-001 | ... | ... | ... | ... | ... | ... | AC-001 |
+
+<!-- ai-delivery:user-decisions -->
+## 8. User Decisions
+
+Set `status.json.user_decision_required=true` when this design version contains a material product, behavior, resource, or experience choice whose authority belongs to the user. Keep it `true` after approval for this version; the current hash-bound human `design_review` records that the decision is resolved. Set it to `false` only when this version contains no user-authority decision. Technical complexity alone is not a user decision. Use stable IDs for decisions that require human review.
+
+| Decision ID | Question | Options and trade-offs | Resolution |
+|-------------|----------|------------------------|------------|
+| `not_applicable` / D-001 | ... | ... | ... |
+
+## 9. Risks and Verification Notes
+
+| Risk | Impact | Mitigation / verification |
+|------|--------|---------------------------|
+| ... | ... | ... |
+
+Unresolved questions that change scope, behavior, state, resources, experience, or acceptance must be represented as user decisions before implementation. Execution order, completed work, pending work, blockers, and verification results belong in `progress.md`, not here.

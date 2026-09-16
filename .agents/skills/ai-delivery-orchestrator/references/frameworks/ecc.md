@@ -14,7 +14,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 | Action | ECC usage |
 |--------|-----------|
 | `solution-design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, enabled UI truth host component / v3 profile-state-scenario-scope `ui-truth-index.json`, and API docs |
-| `implement` | ECC task-execution agents with its rules/hooks enforcing conventions; treat its review agents as the per-task review step |
+| `implement` | ECC execution agents with its rules/hooks enforcing conventions; treat review agents as the fresh-context review step |
 | `finish` | ECC review/verification commands before rebase-merge |
 
 ## Artifact containment
@@ -27,15 +27,15 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 ## Usage advice
 
 - Keep the orchestrator loop intact: ECC commands serve a single abstract action each; status transitions, gates, and blockers stay in the main session.
-- Prefer ECC's review agents for the per-task [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): implement → ECC review agent → findings back to the implementer → re-review, until clean or the `review_loop.max_rounds` budget is exhausted (then escalate to the user; never auto-merge).
+- Prefer ECC's review agents for the [Review loop](../stage-implementation.md#review-loop-closed-loop): bounded implementation → ECC review agent → findings back to the implementer → re-review, until clean or the configured budget is exhausted.
 - For UI truth slices, require ECC execution/review to cover every indexed scenario with mode-appropriate evidence and write the structured `visual-acceptance.json`; a state-only or screenshot-file-presence check is not acceptance.
 - If ECC hooks enforce formatting/lint rules, let them run; a hook failure is a verification failure (`blocked_verification_failure` after a review-loop fix round), not a reason to bypass the hook.
-- When ECC and another framework are both installed, ECC typically pairs well with a spec-producing tier (spec-kit/OpenSpec): ECC for solution-design/implement/finish, the spec tier for `spec`/`plan`/`tasks`.
+- When another framework is also installed, use only the method best suited to the current action. No framework adds a second persisted design, spec, plan, or task artifact.
 - Before `merged`, write `verification.md` in the user's current conversation language. Preserve the three `ai-delivery-verification:*` markers from `templates/verification-template.md`; the status validator rejects `merged` without them.
 
 ## Traceability recording
 
-ECC produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-producing tier. Record the ECC commands/agents actually used in `decisions.md` so a later session can resume with the same mapping.
+Record the ECC commands/agents actually used and the canonical `design.md` path/hash under `traceability.json` `source_index.design`; keep resumable method notes in `decisions.md`. Do not emit `spec_refs`.
 
 ## Boundaries
 

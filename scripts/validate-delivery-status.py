@@ -33,8 +33,9 @@ MOTION_ACCEPTANCE_EVIDENCE_KINDS = frozenset({"motion", "test", "manual"})
 EVIDENCE_ORIGINS = frozenset({"figma", "requirement", "project", "user-decision"})
 UI_TRUTH_MODES = frozenset({"none", "existing", "runtime-baseline", "figma"})
 UI_TRUTH_CAPABILITY_MODES = frozenset({"runtime-baseline", "figma"})
-DESIGN_MODES = frozenset({"none", "light", "full"})
-LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
+LEGACY_MODE_FIELDS = frozenset(
+    {"ui_contract_exempt", "no_design_client", "design_mode", "design_approved"}
+)
 SURFACE_KINDS = frozenset({"viewport", "container"})
 ORIENTATIONS = frozenset({"portrait", "landscape", "not-applicable"})
 REVIEW_MODES = frozenset({"visual", "behavior", "both"})
@@ -94,9 +95,7 @@ else:  # pragma: no cover
 POST_FREEZE_STATUSES = frozenset(
     {
         "acceptance_frozen",
-        "spec_ready",
-        "plan_ready",
-        "tasks_ready",
+        "design_ready",
         "in_dev",
         "visual_acceptance_passed",
         "merged",
@@ -171,7 +170,7 @@ def legacy_participation_errors(req_root: Path) -> list[str]:
         if has_legacy_profile(data):
             return [
                 "[MODE] no_design_client participation profile is removed; "
-                "use ui_truth_mode and design_mode"
+                "use ui_truth_mode and the canonical design contract"
             ]
     return []
 
@@ -229,16 +228,11 @@ def mode_errors(entry: dict, *, strict_design: bool = False) -> list[str]:
         errors.append(f"legacy field {field} is forbidden")
     bearing = entry.get("ui_bearing")
     truth = entry.get("ui_truth_mode")
-    design = entry.get("design_mode")
     if type(bearing) is not bool:
         errors.append("ui_bearing must be a boolean")
     if truth not in UI_TRUTH_MODES:
         errors.append(
             "ui_truth_mode must be one of: " + ", ".join(sorted(UI_TRUTH_MODES))
-        )
-    if design not in DESIGN_MODES:
-        errors.append(
-            "design_mode must be one of: " + ", ".join(sorted(DESIGN_MODES))
         )
     if isinstance(bearing, bool) and truth in UI_TRUTH_MODES:
         expected = truth != "none"
@@ -247,16 +241,13 @@ def mode_errors(entry: dict, *, strict_design: bool = False) -> list[str]:
                 f"ui_bearing={str(bearing).lower()} is inconsistent with "
                 f"ui_truth_mode={truth} (expected {str(expected).lower()})"
             )
-    if type(entry.get("design_approved")) is not bool:
-        errors.append("design_approved must be a boolean")
-    elif design == "none" and entry.get("design_approved") is True:
-        errors.append("design_mode=none cannot set design_approved=true")
     if strict_design or "state_flow_required" in entry:
         state_flow_required = entry.get("state_flow_required")
         if type(state_flow_required) is not bool:
             errors.append("state_flow_required must be a boolean")
-        elif state_flow_required and design != "full":
-            errors.append("state_flow_required=true requires design_mode=full")
+    if strict_design or "user_decision_required" in entry:
+        if type(entry.get("user_decision_required")) is not bool:
+            errors.append("user_decision_required must be a boolean")
     if strict_design and "design_review" not in entry:
         errors.append("design_review object is required")
     return errors
@@ -267,7 +258,7 @@ def requires_ui_truth(entry: dict) -> bool:
 
 
 def design_artifact_required(entry: dict, status: str) -> bool:
-    return entry.get("design_mode") in {"light", "full"} and status in POST_FREEZE_STATUSES
+    return status in DESIGN_ARTIFACT_STATUSES
 
 
 def verification_required_markers(req_root: Path) -> tuple[str, ...]:
@@ -1928,9 +1919,7 @@ def check_visual_acceptance(
 
 DESIGN_ARTIFACT_STATUSES = frozenset(
     {
-        "spec_ready",
-        "plan_ready",
-        "tasks_ready",
+        "design_ready",
         "in_dev",
         "visual_acceptance_passed",
         "merged",
@@ -1946,28 +1935,17 @@ def check_solution_design_artifact(
     entry: dict[str, Any],
     index: dict[str, Any] | None,
 ) -> list[str]:
-    """Validate conditional design.md and scenario references.
+    """Validate the required design.md and indexed scenario references.
 
     Runtime Coverage remains exclusively in the UI truth index. The solution
     design only needs to cite scenario IDs and assign implementation and
     verification responsibility.
     """
-    mode = entry.get("design_mode")
     design_path = subreq_dir / "design.md"
     errors: list[str] = []
-    if mode == "none":
-        if design_path.is_file():
-            errors.append(
-                f"[DESIGN] {subreq_id} design_mode=none must not produce design.md"
-            )
-        return errors
-    if mode in {"light", "full"} and entry.get("design_approved") is True and not design_path.is_file():
-        errors.append(
-            f"[DESIGN] {subreq_id} design_approved=true requires design.md"
-        )
     if status in DESIGN_ARTIFACT_STATUSES and not design_path.is_file():
         errors.append(
-            f"[DESIGN] {subreq_id} status={status} design_mode={mode} requires design.md"
+            f"[DESIGN] {subreq_id} status={status} requires design.md"
         )
         return errors
     if not design_path.is_file() or index is None:
@@ -2001,8 +1979,8 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     if not isinstance(sub_requirements, dict):
         return ["[STATUS] sub_requirements must be a mapping"]
     status_schema = status_data.get("_schema", "legacy")
-    if status_schema not in {"legacy", "1.0", "1.1"}:
-        return ["[STATUS] _schema must be 1.0 or 1.1"]
+    if status_schema not in {"legacy", "1.0", "1.1", "2.0"}:
+        return ["[STATUS] _schema must be 1.0, 1.1, or 2.0"]
 
     verification_markers = verification_required_markers(req_root)
     repo_root = find_repo_root(req_root)
@@ -2022,19 +2000,18 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
             errors.append(f"[STATUS] sub_requirements.{subreq_id}.status missing")
             continue
 
-        legacy_design = status_schema in {"legacy", "1.0"} and status in {"merged", "archived"}
-        if status_schema in {"legacy", "1.0"} and not legacy_design and (
-            "state_flow_required" not in entry or "design_review" not in entry
-        ):
+        legacy_design = status_schema != "2.0" and status in {"merged", "archived"}
+        if status_schema != "2.0" and not legacy_design:
             errors.append(
-                f"[DESIGN] {subreq_id} active schema 1.0 requires migration to schema 1.1 "
+                f"[DESIGN] {subreq_id} active legacy schema requires migration to schema 2.0 "
                 "before it can continue"
             )
 
-        errors.extend(
-            f"[STATUS] sub_requirements.{subreq_id}: {message}"
-            for message in mode_errors(entry, strict_design=status_schema == "1.1")
-        )
+        if not legacy_design:
+            errors.extend(
+                f"[STATUS] sub_requirements.{subreq_id}: {message}"
+                for message in mode_errors(entry, strict_design=status_schema == "2.0")
+            )
 
         subreq_dir = req_root / "sub-requirements" / subreq_id
         index_file = ui_truth_index_path(subreq_dir)
@@ -2042,11 +2019,12 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
         # Mode/artifact consistency is checked even for blocked slices. A
         # blocker may pause execution, but it must not preserve a removed
         # design bypass or a forged approval flag.
-        errors.extend(
-            check_solution_design_artifact(
-                subreq_id, subreq_dir, status, entry, index
+        if not legacy_design:
+            errors.extend(
+                check_solution_design_artifact(
+                    subreq_id, subreq_dir, status, entry, index
+                )
             )
-        )
         if validate_design_entry is not None:
             errors.extend(
                 f"[DESIGN] {subreq_id}: {message}"
@@ -2102,15 +2080,6 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
                 check_visual_acceptance(subreq_id, subreq_dir, repo_root, status)
             )
 
-        if (
-            entry.get("design_mode") in {"light", "full"}
-            and status in DESIGN_ARTIFACT_STATUSES
-            and entry.get("design_approved") is not True
-        ):
-            errors.append(
-                f"[STATUS] {subreq_id} status={status} requires design_approved=true "
-                f"for design_mode={entry.get('design_mode')}"
-            )
         if status in VERIFICATION_REQUIRED_STATUSES:
             errors.extend(
                 check_verification_evidence(

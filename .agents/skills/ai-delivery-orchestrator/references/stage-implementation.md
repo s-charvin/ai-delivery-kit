@@ -2,15 +2,17 @@
 
 ## When to run
 
-Each sub-requirement at `tasks_ready` after CP-001 user confirmation (reconcile emits `implement`). See [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md) for task-brief mapping and progress ledger rules.
-
-**Do not dispatch before CP-001 is confirmed.**
+Each dependency-ready sub-requirement at `design_ready` or `in_dev` when
+reconcile emits `implement`. See
+[stage-4-sdd-bridge.md](stage-4-sdd-bridge.md) for dynamic execution-brief and
+progress-ledger rules. The current hash-bound design review authorizes work
+inside its scope; there is no separate development checkpoint.
 
 ## Slice execution order
 
 Follow the sub-requirement dependency graph and each UI unit's type/dependencies persisted in `ui-truth-index.json`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are complete in the slice workspace.
 
-For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v3 profile/state/scenario coverage, evidence scopes, host bindings, and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining tasks; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never translate a parallel preview from one host stack into another.
+For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v3 profile/state/scenario coverage, evidence scopes, host bindings, and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining implementation; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never translate a parallel preview from one host stack into another.
 
 Before adding an integration abstraction, trace the host's existing ownership and call path for the same kind of operation: API/client, transport, serialization, repository/use-case, dependency injection, and test seam. Extend that path when it fits. Do not introduce a parallel adapter, client, repository, transport, or injection architecture solely for one new operation or for easier testing; a new layer requires an established project boundary or an explicit requirement decision.
 
@@ -76,15 +78,15 @@ When a stable Figma reference bitmap exists, record project-native image-diff ev
 The `implement` action always follows this chain, regardless of framework tier:
 
 1. **Resolve workspace** — follow [workspace-policy.md](workspace-policy.md). Reuse the recorded Stage 2 user-approved workspace for `ui_truth_mode=figma` or `runtime-baseline`; otherwise default to the current checkout. Creating or reusing a project-local worktree is allowed only after explicit confirmation for this sub-requirement.
-2. **Task loop** — one implementer per task, sequential by default; TDD inside each task (red → green → refactor).
-3. **Per-task review loop** — every task closes through the [Review loop](#review-loop-task-level-closed-loop) below; a task is only done when a review round comes back clean.
+2. **Execution loop** — derive the next bounded unit from `design.md`, dependencies, current code, and tests; run TDD inside each unit (red → green → refactor).
+3. **Review loop** — every unit closes through the [Review loop](#review-loop-closed-loop) below; it is complete only when a review round comes back clean.
 4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 scenario under its recorded profile and evidence scope with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record schema v2 structured `visual-acceptance.json` with one independent motion acceptance record for every indexed unit. Host scopes require hash-bound `runtime-capture` evidence; `component-only` must not claim host coverage. Static golden evidence never satisfies the motion record. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes. Data-bound visuals with no real value must be accepted as empty/omitted, not as fabricated fixture content.
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
 6. **Full analyze + full test** — project static analysis and test suite must pass clean.
 
 Before claiming a clean verification gate, classify every failure as an
 introduced regression, pre-existing baseline, environment/tooling failure, or
-test/spec contradiction. Re-run the narrowest failing evidence against the
+test/contract contradiction. Re-run the narrowest failing evidence against the
 unchanged baseline when possible, and record the command, observed result, and
 classification. A baseline or environment failure is not a pass; it requires an
 explicit user waiver or a scoped blocker. If a test contradicts the approved
@@ -100,7 +102,7 @@ to the requirement-level `retrospective.md` before trying another solution.
 Afterward tell the user the problem ID and the recorded conclusion. This is a
 memory aid, not a substitute for current evidence or an implementation-stage gate.
 
-When a task stalls or a scenario fails, first classify the failure and verify
+When an execution unit stalls or a scenario fails, first classify the failure and verify
 the smallest candidate cause before changing business code. Check candidates in
 roughly this order: state propagation / wiring; copy vs. reference semantics;
 model representation; time and async ordering; resource availability or an
@@ -186,14 +188,14 @@ compatibility shim. A temporary assumption or guess — endpoint names, token
 fields, expiry, error codes, migration facts — must be marked as such in the
 record and must never be written as a confirmed fact.
 
-## Review loop (task-level closed loop)
+## Review loop (closed loop)
 
-Every task and every visual-acceptance failure closes through this loop, regardless of framework tier:
+Every execution unit and every visual-acceptance failure closes through this loop, regardless of framework tier:
 
 ```
-implementer finishes the task
-  → reviewer (fresh context) reviews against the task brief + spec + contract
-  → clean → record the review outcome → next task
+implementer finishes the bounded unit
+  → reviewer (fresh context) reviews against the execution brief + design contract
+  → clean → record the review outcome → next unit
   → findings → findings list becomes the fix brief → implementer fixes → re-review
   → still not clean after review_loop.max_rounds rounds → stop and escalate to the user
 ```
@@ -209,8 +211,8 @@ Rules:
 ## Subagent policy
 
 ```
-Slice tasks independent AND non-overlapping files?
-  → NO (default): one implementer per task, sequential, dual review
+Slice units independent AND non-overlapping files?
+  → NO (default): one implementer per unit, sequential, dual review
   → YES (rare): parallel dispatch only for independent test/bug domains
 Never: two implementers parallel-editing the same slice file set
 ```
@@ -225,7 +227,11 @@ Gate / blocker / status / merge decisions stay in the main session always.
 
 ## Progress ledger (optional)
 
-Append completed tasks to `.ai-delivery/requirements/<req-id>/progress.md` to survive context compaction. Do not treat progress.md as source of truth — reconcile from artifacts and `status.json`.
+When cross-session recovery is useful, record completed and pending work,
+blockers, review outcomes, and verification commands/results in
+`.ai-delivery/requirements/<req-id>/progress.md`. Do not turn it into a second
+plan or treat it as source of truth; reconcile from governed artifacts and
+`status.json`.
 
 ## Blockers
 
@@ -245,7 +251,7 @@ When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` 
 
 Before the `finish` action creates a commit (rebase-merge), inspect
 `git diff --cached --name-status` and compare
-it with the task's declared file scope. Stage only task-owned paths; pre-existing
+it with the current execution unit's declared file scope. Stage only owned paths; pre-existing
 staged, unstaged, untracked, ignored, or generated files are not consent to
 include them. Never use a broad add/commit command to inherit another user's
 staging area. If the staged set is contaminated, remove only the unrelated

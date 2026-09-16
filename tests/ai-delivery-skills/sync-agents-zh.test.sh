@@ -137,8 +137,8 @@ for design_template in \
   "$SRC/ai-delivery-orchestrator/templates/design-template.md" \
   "$DST/ai-delivery-orchestrator/templates/design-template.md"
 do
-  grep -Fq '"artifact_type":"solution-design"' "$design_template" \
-    || fail "Design template must declare solution-design artifact metadata: $design_template"
+  grep -Fq '"artifact_type":"design-contract"' "$design_template" \
+    || fail "Design template must declare design-contract artifact metadata: $design_template"
   grep -Fq '"layout_key":"solution_design"' "$design_template" \
     || fail "Design template must declare the solution_design layout key: $design_template"
   grep -Fq '"canonical_path":"design.md"' "$design_template" \

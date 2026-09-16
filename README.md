@@ -79,14 +79,14 @@ Typical user input should stay natural-language and source-driven, for example:
 - “继续这个需求”
 - “这个 blocker 我处理好了，继续”
 
-The orchestrator is responsible for deciding whether to continue an existing requirement or create a new one. It gives one recommendation, pauses for human confirmation, then drives the governed workflow chain.
+The orchestrator decides whether to continue an existing requirement or create a new one. It proceeds automatically when the choice is unambiguous and asks only when competing choices materially change governed scope or ownership.
 
 ## Human Review Points
 
 Humans stay in the loop only where judgment matters:
 
-- confirm the orchestrator recommendation to continue an existing requirement or create a new one
-- confirm explicit checkpoints such as `tasks_ready_user_confirmation`
+- resolve a materially ambiguous requirement boundary
+- authorize enabled UI truth work at CP-UI and resolve named product/behavior/resource/experience decisions at CP-DESIGN
 - resolve blockers when governed truth is missing or conflicting
 
 Everything else should default to AI-driven progression through the orchestrated chain.
@@ -99,29 +99,30 @@ That path is for surgical recovery or expert use. It is not the normal entry for
 
 ## Framework Adaptation
 
-The orchestrator emits abstract stage actions (`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`) and adapts them to the frameworks already installed in your environment. Nothing is installed or required. The canonical solution-design artifact remains `design.md` for layout stability.
+The orchestrator emits abstract actions (`solution-design` / `implement` / `finish` / `archive`) and adapts them to frameworks already installed in your environment. Nothing is installed or required. `design.md` is the single persisted behavior and solution-design contract.
 
 Recommended frameworks (detected, never installed):
 
 | Framework | Primary actions | Detection marker |
 |-----------|-----------------|------------------|
-| spec-kit | `spec` / `plan` / `tasks` | `.specify/` or `specify` CLI |
-| OpenSpec | `spec` / `plan` / `tasks` | `openspec/` or `openspec` CLI |
+| spec-kit | optional requirement/design reasoning | `.specify/` or `specify` CLI |
+| OpenSpec | optional brownfield delta reasoning | `openspec/` or `openspec` CLI |
 | superpowers | `solution-design` / `implement` / `finish` | superpowers skills in user skill dirs |
 | ECC | `solution-design` / `implement` / `finish` | `/ecc:*` commands registered |
 
-No framework installed? The pipeline still runs end-to-end using built-in native artifacts (lightweight `spec.md` / `tasks.md` inside each sub-requirement plus inline discipline guidance).
+No framework installed? The native tier still runs the pipeline end to end with the same canonical `design.md`, TDD, review, and verification discipline.
 
 Per-framework usage guidance ships with the orchestrator skill: `references/framework-adaptation.md` and `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
 ## Capability-gated UI truth (no HTML contract hooks)
 
-Each sub-requirement declares two independent modes in `status.json`:
+Each sub-requirement declares independent capability and authority fields in `status.json`:
 
 - `ui_truth_mode`: `none` (no visible UI), `existing` (behavior or semantics on an existing visual surface), `runtime-baseline` (new visible UI without stable Figma truth), or `figma` (stable Figma evidence).
-- `design_mode`: `none` (no solution-design artifact), `light` (a short self-reviewed solution design), or `full` (complete solution design with CP-DESIGN approval).
+- `state_flow_required`: whether complex state ownership, guards, concurrency, stale-result, persistence, or recovery rules require the full state-flow contract.
+- `user_decision_required`: whether the current design version contains a material product, behavior, resource, or experience choice whose authority belongs to the user. It remains `true` after approval; the hash-bound `design_review` records whether that version has valid human authorization.
 
-Only `ui_truth_mode=figma` or `runtime-baseline` enables CP-UI, Stage 2, `acceptance_frozen`, the v3 UI truth index, and visual acceptance. `none` and `existing` proceed through ordinary solution-design/spec and behavior or semantic verification. `ui_bearing` is a consistency field, not a workflow gate. Runtime-baseline evidence must never be described as 1:1 Figma fidelity.
+Only `ui_truth_mode=figma` or `runtime-baseline` enables CP-UI, Stage 2, `acceptance_frozen`, the v3 UI truth index, and visual acceptance. `none` and `existing` proceed through the design contract and ordinary behavior or semantic verification. State-flow depth does not create CP-DESIGN; a design with `user_decision_required=true` enters CP-DESIGN only when its current bytes lack a valid hash-bound human review. `ui_bearing` is a consistency field, not a workflow gate.
 
 After CP-UI authorization, Stage 2 implements and freezes **real host-stack components** plus official previews for visual scenarios in the user-approved workspace (Flutter: widget + golden PNG; animated units additionally use a deterministic GIF when the host can produce one), with TDD and fresh-context review. GIF is the only governed motion-preview format; when it cannot be produced, record the reason and defer runtime verification rather than adding WebP/MP4 or fabricating a file. The current checkout is the default. Creating or reusing a worktree requires separate confirmation for the current sub-requirement and must use `<project-root>/.worktrees/<req-id>-<sr-id>`; external or platform-managed temp paths are forbidden. Before component code, each unit must resolve an applicability-gated Runtime Coverage Plan for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance, and record a separate `motion_decision` (animated motion confirmation/waiver or confirmed static/no-motion decision). Golden confirmation is static evidence only; Stage 4 must record a separate motion acceptance for every unit. Visible UI uses real controls and evidence-backed resources; absent data stays empty/omitted, unapproved placeholders or silent fallbacks are forbidden, and missing resources require an explicit user choice to render empty, defer, or block. `ai-delivery init` does **not** install UI git hooks.
 
@@ -163,9 +164,9 @@ If `goreleaser` or `pwsh` are available locally, it includes those checks too.
 
 Repos initialized after this refactor use a single canonical home under `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`:
 
-- `design.md` (canonical solution-design artifact when `design_mode` is `light` or `full`), `verification.md`, `visual-acceptance.json` (UI truth modes only), `spec/{spec,plan,tasks}.md`, `contracts/ui-truth-index.json` (UI truth modes only)
+- `design.md` (required canonical behavior and solution-design contract), `verification.md`, optional cross-session `progress.md`, `visual-acceptance.json` (UI truth modes only), and `contracts/ui-truth-index.json` (enabled UI truth only)
 - Path constants live in `.ai-delivery/meta/project-binding.json` → `layout`
-- External frameworks provide methods only; their process/governance artifacts write directly to canonical `.ai-delivery` paths, never to framework-owned derived views
+- External frameworks provide methods only; schema 2.0 does not create `spec.md`, `plan.md`, or `tasks.md`, and framework-owned derived views remain read-only
 
 **No automatic migration** for older repos — only new `ai-delivery init` seeds the layout.
 

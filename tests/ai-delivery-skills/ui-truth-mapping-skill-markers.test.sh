@@ -48,8 +48,11 @@ for file in "$SOURCE_VALIDATOR" "$MANAGED_VALIDATOR"; do
   require "$file" "no active-delivery compatibility path for earlier schemas" "current compatibility wording"
   forbid "$file" "no v1 compatibility path" "retired compatibility wording"
 done
-require "$PROJECT_BINDING" '"updated_by": "ui-runtime-coverage-v3"' "current UI coverage provenance"
-forbid "$PROJECT_BINDING" '"updated_by": "ui-runtime-coverage-v2"' "retired UI coverage provenance"
+require "$PROJECT_BINDING" '"version": 3' "current project binding schema"
+require "$PROJECT_BINDING" '"solution_design":' "unified design artifact binding"
+for key in spec plan tasks; do
+  forbid "$PROJECT_BINDING" "\"$key\":" "retired $key artifact binding"
+done
 
 # EN — scope / split / evidence
 require "$EN" "### 1b. Unit Split Plan (REQUIRED before any \`get_code\` or component code)" "EN §1b"

@@ -14,15 +14,15 @@ Never clone or symlink superpowers yourself.
 
 | Action | superpowers skill(s) |
 |--------|----------------------|
-| `solution-design` | brainstorming flow (solution-design exploration; CP-DESIGN only for `design_mode=full`) |
-| `implement` | optional `using-git-worktrees` mechanics after workspace confirmation, then `subagent-driven-development`, `test-driven-development`, `requesting-code-review`, `verification-before-completion` |
+| `solution-design` | brainstorming methods; CP-DESIGN only for `user_decision_required=true` |
+| `implement` | optional `using-git-worktrees` mechanics after workspace confirmation, then bounded execution with `test-driven-development`, `requesting-code-review`, and `verification-before-completion` |
 | `finish` | `finishing-a-development-branch` |
 
 ## Artifact containment
 
 - Before invoking a superpowers skill, pass the current requirement/sub-requirement canonical root and an explicit output map. Superpowers supplies the reasoning, TDD, review, worktree, and completion discipline; the orchestrator owns every persisted artifact.
 - Also pass the exact user-approved workspace from [../workspace-policy.md](../workspace-policy.md). Superpowers does not own workspace selection: mandatory isolation, native-tool-first placement, automatic reuse, and external/temp fallback are disabled. Invoke `using-git-worktrees` only after the user approves the exact `<project-root>/.worktrees/<req-id>-<sr-id>` path and only if the tool must honor that path; otherwise use controlled Git mechanics after approval.
-- Disable framework defaults such as `docs/superpowers/**` or `.superpowers/**`. Resolve every destination from the current binding: `brainstorming` writes its approved result to layout key `solution_design`; plan content writes to layout key `plan`; review findings, fix briefs, checklists, and agent/session metadata write to the applicable `progress`, `decisions`, or `verification` key.
+- Disable framework defaults such as `docs/superpowers/**` or `.superpowers/**`. Resolve every destination from the current binding: design output writes to layout key `solution_design`; cross-session progress, review findings, and verification evidence write only to the applicable canonical key. Do not persist an implementation plan or task list.
 - If a superpowers step requires a framework-owned file and cannot accept the canonical map, do not run that persistence step. Execute the method in-session and write the equivalent canonical artifact directly. Never create the framework file and move it afterward.
 - Host-tree writes remain limited to production source, project-native tests, goldens/official previews, and runtime assets. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before any gate advances.
 
@@ -30,13 +30,13 @@ Never clone or symlink superpowers yourself.
 
 - Feed the brainstorming flow: `requirement-slice.md`, each enabled UI truth unit's host component + `ui-truth-index.json`, API docs, and the dependency graph.
 - Produce architecture, component decomposition, a state/transition model, scenario ID references, and key trade-offs. When `state_flow_required=true`, include the taxonomy, MVI loop, lifecycle/projection diagrams, authoritative transition matrix, applicable async sequences, invariants, and traceability from `design-template.md`. Runtime Coverage remains in the UI truth index.
-- Store the canonical solution design in subreq `design.md` and keep only a pointer in `notes`; set `design_approved: true` after the required review (`design_mode=light` after AI self-review, `design_mode=full` only after explicit user approval). Record `design_review` with the exact file SHA-256, review mode, timestamp, and actor. Keep it `false` for `design_mode=none`. Do not write solution-design docs into framework-owned directories.
+- Store the canonical contract in subreq `design.md` and keep only a pointer in `notes`. With `user_decision_required=false`, self-review it; with `true`, obtain CP-DESIGN approval. Record `design_review` with the exact file SHA-256, review mode, timestamp, and actor. Do not write solution-design docs into framework-owned directories.
 
 ## `implement` usage advice (per slice)
 
 1. **Workspace** — use the current checkout by default. Reuse the Stage 2 user-approved workspace for UI slices. If this slice has no approved choice and a worktree is proposed, stop and ask with the exact project-local path; do not invoke `using-git-worktrees` before approval.
-2. `subagent-driven-development` (default) — one implementer subagent per task, sequential; TDD inside each subagent via `test-driven-development`. Use parallel dispatch only for independent, non-overlapping test/bug domains; never two implementers on the same slice file set.
-3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-task-level-closed-loop): the reviewer is always a fresh-context subagent; findings go back to the implementer as a fix brief and the review repeats until clean or the `review_loop.max_rounds` budget is exhausted, then escalate to the user.
+2. Derive one bounded execution brief from the current `design.md`, dependencies, code, tests, and optional `progress.md`. Use subagent-driven execution only when it accepts that transient brief without creating a plan/task artifact; otherwise execute with native discipline. Run TDD inside each unit. Use parallel dispatch only for independent, non-overlapping domains.
+3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-closed-loop): the reviewer is always fresh context; findings return as a fix brief and review repeats until clean or the configured budget is exhausted.
 4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 profile/state/scenario/scope entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write schema v2 `visual-acceptance.json`; failures re-enter the same review loop.
 5. `verification-before-completion` — integration checks before merge.
 6. Full analyze + full test must pass clean before `finish`.
@@ -51,7 +51,7 @@ Edit one file at a time during implementation.
 
 ## Traceability recording
 
-superpowers produces no spec artifacts of its own; `spec_refs.tier` keeps the spec-producing tier (spec-kit / openspec / native). Record the approved workspace, an optional worktree branch name, and review outcomes in the subreq `notes` or `progress.md`.
+Record the selected superpowers methods and canonical `design.md` path/hash under `traceability.json` `source_index.design`. Record the approved workspace and review outcomes in canonical `decisions.md`, optional `progress.md`, or `verification.md`. Do not emit `spec_refs`.
 
 ## Boundaries
 

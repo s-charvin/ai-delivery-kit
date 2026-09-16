@@ -73,26 +73,45 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     default_preview.write_bytes(b"default-png")
     loading_preview.write_bytes(b"loading-png")
     motion_preview.write_bytes(TWO_FRAME_GIF)
-    (subreq / "design.md").write_text(
-        "# Solution Design\n\n"
-        "| Unit ID | Scenario ID | Responsibility | Verification |\n"
-        "| profile-card | default-phone | Render the approved default state | golden |\n"
-        "| profile-card | loading-phone | Render loading feedback | behavior test |\n"
-        "| profile-card | reduced-motion | Honor reduced motion | semantics test |\n",
-        encoding="utf-8",
-    )
+    def design_contract_text(scenarios: str = "default-phone loading-phone reduced-motion") -> str:
+        return f"""# Design Contract
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## Scope
+Profile card behavior and indexed UI scenarios.
+<!-- ai-delivery:behavior-contract:behavior -->
+## Behavior
+| ID | Given | When | Then |
+|---|---|---|---|
+| B-001 | profile state | render | current scenario is shown |
+<!-- ai-delivery:behavior-contract:acceptance -->
+## Acceptance
+| ID | Outcome | Evidence |
+|---|---|---|
+| AC-001 | B-001 matches indexed evidence | golden and behavior tests |
+<!-- ai-delivery:behavior-contract:traceability -->
+## Traceability
+| Behavior | Requirement | UI scenario | Acceptance |
+|---|---|---|---|
+| B-001 | REQ-UI | {scenarios} | AC-001 |
+<!-- ai-delivery:behavior-contract:end -->
+<!-- ai-delivery:user-decisions -->
+## User decisions
+not_applicable
+"""
+
+    (subreq / "design.md").write_text(design_contract_text(), encoding="utf-8")
 
     status = {
-        "_schema": "1.1",
+        "_schema": "2.0",
         "requirement_id": "REQ-UI",
         "sub_requirements": {
             "SR-001": {
-                "status": "spec_ready",
+                "status": "design_ready",
                 "ui_bearing": True,
                 "ui_truth_mode": "figma",
-                "design_mode": "full",
                 "state_flow_required": False,
-                "design_approved": True,
+                "user_decision_required": False,
                 "design_review": {
                     "review_mode": "none",
                     "reviewed_design_sha256": None,
@@ -336,9 +355,15 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     def sync_design_review() -> None:
         entry = status["sub_requirements"]["SR-001"]
         design_path = subreq / "design.md"
-        if entry.get("design_approved") is True and design_path.is_file():
+        if entry.get("status") in {
+            "design_ready",
+            "in_dev",
+            "visual_acceptance_passed",
+            "merged",
+            "archived",
+        } and design_path.is_file():
             entry["design_review"] = {
-                "review_mode": "human" if entry.get("design_mode") == "full" else "self",
+                "review_mode": "human" if entry.get("user_decision_required") is True else "self",
                 "reviewed_design_sha256": sha256(design_path),
                 "reviewed_at": "2026-09-09T00:00:00Z",
                 "reviewed_by": "fixture-user",
@@ -385,8 +410,8 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
         require(needle in output, f"{label}: missing {needle!r} in:\n{output}")
 
     # Schema v3 runtime coverage and evidence scope remain required at every active post-freeze UI status.
-    expect_pass("valid runtime coverage spec_ready", valid_index)
-    expect_fail("missing index at spec_ready", None, "requires contracts/ui-truth-index.json")
+    expect_pass("valid runtime coverage design_ready", valid_index)
+    expect_fail("missing index at design_ready", None, "requires contracts/ui-truth-index.json")
 
     wrong_schema = copy.deepcopy(valid_index)
     wrong_schema["schema_version"] = 2
@@ -746,131 +771,54 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
 
     # The UI truth capability is selected explicitly by mode. Non-visual
     # slices do not need an index, while figma slices do.
-    def set_mode(*, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+    def set_mode(*, ui_bearing: bool, ui_truth_mode: str) -> None:
         status["sub_requirements"]["SR-001"].update(
             {
                 "ui_bearing": ui_bearing,
                 "ui_truth_mode": ui_truth_mode,
-                "design_mode": design_mode,
-                "design_approved": design_mode != "none",
+                "state_flow_required": False,
+                "user_decision_required": False,
             }
         )
         (req_root / "status.json").write_text(
             json.dumps(status, indent=2) + "\n", encoding="utf-8"
         )
 
-    def expect_mode_pass(label: str, *, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+    def expect_mode_pass(label: str, *, ui_bearing: bool, ui_truth_mode: str) -> None:
         set_mode(
             ui_bearing=ui_bearing,
             ui_truth_mode=ui_truth_mode,
-            design_mode=design_mode,
         )
         index_path.unlink(missing_ok=True)
-        if design_mode == "none":
-            (subreq / "design.md").unlink(missing_ok=True)
-        else:
-            (subreq / "design.md").write_text(
-                "# Solution Design\n\nExisting component behavior change.\n",
-                encoding="utf-8",
-            )
+        (subreq / "design.md").write_text(design_contract_text("not_applicable"), encoding="utf-8")
         result = run()
         require(result.returncode == 0, f"{label}: expected pass, got:\n{result.stderr}")
-
-    def expect_mode_fail(
-        label: str,
-        *,
-        ui_bearing: bool,
-        ui_truth_mode: str,
-        design_mode: str,
-        needle: str,
-        design_approved: bool = False,
-        design_text: str = "# Solution Design\n",
-    ) -> None:
-        set_mode(
-            ui_bearing=ui_bearing,
-            ui_truth_mode=ui_truth_mode,
-            design_mode=design_mode,
-        )
-        status["sub_requirements"]["SR-001"]["design_approved"] = design_approved
-        (req_root / "status.json").write_text(
-            json.dumps(status, indent=2) + "\n", encoding="utf-8"
-        )
-        index_path.unlink(missing_ok=True)
-        (subreq / "design.md").write_text(design_text, encoding="utf-8")
-        result = run()
-        output = result.stdout + result.stderr
-        require(result.returncode != 0, f"{label}: validator unexpectedly passed")
-        require(needle in output, f"{label}: missing {needle!r} in:\n{output}")
 
     # none and existing are capability-free and intentionally accept no index.
     expect_mode_pass(
         "ui_truth_mode=none without index",
         ui_bearing=False,
         ui_truth_mode="none",
-        design_mode="none",
     )
     expect_mode_pass(
         "ui_truth_mode=existing without index",
         ui_bearing=True,
         ui_truth_mode="existing",
-        design_mode="light",
     )
-    # A no-design slice cannot retain an approval bit or a stale design file.
-    set_mode(ui_bearing=False, ui_truth_mode="none", design_mode="none")
-    status["sub_requirements"]["SR-001"]["design_approved"] = True
-    (subreq / "design.md").unlink(missing_ok=True)
-    (req_root / "status.json").write_text(
-        json.dumps(status, indent=2) + "\n", encoding="utf-8"
-    )
-    result = run()
-    require(result.returncode != 0, "design_mode=none approval flag unexpectedly passed")
-    require(
-        "cannot set design_approved=true" in result.stdout + result.stderr,
-        "design_mode=none approval error was not reported",
-    )
-    status["sub_requirements"]["SR-001"]["design_approved"] = False
 
-    # Approval cannot be forged before the canonical design artifact exists.
-    set_mode(ui_bearing=True, ui_truth_mode="existing", design_mode="light")
-    status["sub_requirements"]["SR-001"]["design_approved"] = True
+    # Every active schema 2.0 design-ready slice requires the canonical design.
+    set_mode(ui_bearing=False, ui_truth_mode="none")
     (subreq / "design.md").unlink(missing_ok=True)
-    (req_root / "status.json").write_text(
-        json.dumps(status, indent=2) + "\n", encoding="utf-8"
-    )
     result = run()
-    require(result.returncode != 0, "approved design without design.md unexpectedly passed")
+    require(result.returncode != 0, "design_ready without design.md unexpectedly passed")
     require(
-        "design_approved=true requires design.md" in result.stdout + result.stderr,
-        "missing design artifact was not tied to approval",
-    )
-    status["sub_requirements"]["SR-001"]["design_approved"] = False
-
-    expect_mode_fail(
-        "design_mode=none forbids design artifact",
-        ui_bearing=False,
-        ui_truth_mode="none",
-        design_mode="none",
-        needle="must not produce design.md",
-    )
-    expect_mode_fail(
-        "design_mode=light requires approval after spec",
-        ui_bearing=False,
-        ui_truth_mode="none",
-        design_mode="light",
-        needle="requires design_approved=true",
+        "requires design.md" in result.stdout + result.stderr,
+        "missing canonical design was not reported",
     )
 
     # Restore the governed Figma fixture for the remaining checks.
-    set_mode(ui_bearing=True, ui_truth_mode="figma", design_mode="full")
-    status["sub_requirements"]["SR-001"]["design_approved"] = True
-    (req_root / "status.json").write_text(
-        json.dumps(status, indent=2) + "\n", encoding="utf-8"
-    )
-    (subreq / "design.md").write_text(
-        "# Solution Design\n\n"
-        "Scenario IDs: default-phone loading-phone reduced-motion\n",
-        encoding="utf-8",
-    )
+    set_mode(ui_bearing=True, ui_truth_mode="figma")
+    (subreq / "design.md").write_text(design_contract_text(), encoding="utf-8")
     expect_pass("ui_truth_mode=figma with index", valid_index)
 
     runtime_baseline = copy.deepcopy(valid_index)
@@ -893,7 +841,6 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     set_mode(
         ui_bearing=True,
         ui_truth_mode="runtime-baseline",
-        design_mode="light",
     )
     runtime_with_figma_source = copy.deepcopy(valid_index)
     runtime_with_figma_source["ui_truth_mode"] = "runtime-baseline"
@@ -905,23 +852,25 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     expect_pass("runtime-baseline with deterministic index", runtime_baseline)
 
     mismatch = copy.deepcopy(valid_index)
-    set_mode(ui_bearing=False, ui_truth_mode="figma", design_mode="full")
+    set_mode(ui_bearing=False, ui_truth_mode="figma")
     expect_fail("ui_bearing/mode mismatch", mismatch, "ui_bearing")
 
     mismatch_none = copy.deepcopy(valid_index)
-    set_mode(ui_bearing=True, ui_truth_mode="none", design_mode="none")
+    set_mode(ui_bearing=True, ui_truth_mode="none")
     expect_fail("ui-bearing true with no UI truth", mismatch_none, "ui_bearing")
 
     unknown_ui_mode = copy.deepcopy(valid_index)
-    set_mode(ui_bearing=True, ui_truth_mode="invented", design_mode="full")
+    set_mode(ui_bearing=True, ui_truth_mode="invented")
     expect_fail("unknown ui truth mode", unknown_ui_mode, "ui_truth_mode")
 
-    unknown_design_mode = copy.deepcopy(valid_index)
-    set_mode(ui_bearing=True, ui_truth_mode="figma", design_mode="partial")
-    expect_fail("unknown design mode", unknown_design_mode, "design_mode")
+    legacy_design_mode = copy.deepcopy(valid_index)
+    set_mode(ui_bearing=True, ui_truth_mode="figma")
+    status["sub_requirements"]["SR-001"]["design_mode"] = "full"
+    expect_fail("removed design mode", legacy_design_mode, "legacy field design_mode")
+    del status["sub_requirements"]["SR-001"]["design_mode"]
 
     legacy_bypass = copy.deepcopy(valid_index)
-    set_mode(ui_bearing=True, ui_truth_mode="existing", design_mode="light")
+    set_mode(ui_bearing=True, ui_truth_mode="existing")
     status["sub_requirements"]["SR-001"]["ui_contract_exempt"] = True
     (req_root / "status.json").write_text(
         json.dumps(status, indent=2) + "\n", encoding="utf-8"
@@ -948,10 +897,9 @@ with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     # Every indexed visual scenario must be referenced by solution design; a
     # missing reference is a stale design artifact, not a harmless omission.
     (repo / ".ai-delivery" / "meta" / "project-binding.json").unlink(missing_ok=True)
-    set_mode(ui_bearing=True, ui_truth_mode="figma", design_mode="full")
+    set_mode(ui_bearing=True, ui_truth_mode="figma")
     (subreq / "design.md").write_text(
-        "# Solution Design\n\n"
-        "Scenario IDs: default-phone-extra loading-phone-extra reduced-motion-extra\n",
+        design_contract_text("default-phone-extra loading-phone-extra reduced-motion-extra"),
         encoding="utf-8",
     )
     expect_fail(

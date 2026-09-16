@@ -10,11 +10,6 @@
   "confidence": "fixture",
   "conflicts": [],
   "last_verified_at": "2026-04-05T00:00:00.000Z",
-  "spec_refs": {
-    "tier": "native",
-    "spec_path": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/spec.md",
-    "tasks_path": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/tasks.md"
-  },
   "api_contract_mapping": {
     "status": "missing_nonblocking",
     "updated_at": "2026-04-05T00:00:00.000Z",
@@ -39,20 +34,7 @@
         "last_verified_at": "2026-04-06T00:00:00.000Z"
       }
     ],
-    "spec": [
-      {
-        "ref_type": "spec",
-        "ref": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/spec.md",
-        "status": "seeded",
-        "last_verified_at": "2026-04-05T00:00:00.000Z"
-      },
-      {
-        "ref_type": "tasks",
-        "ref": ".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/tasks.md",
-        "status": "seeded",
-        "last_verified_at": "2026-04-05T00:00:00.000Z"
-      }
-    ],
+    "design": [],
     "pr": [],
     "ci": [],
     "visual": [],

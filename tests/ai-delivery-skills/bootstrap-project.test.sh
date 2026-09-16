@@ -90,10 +90,15 @@ grep -Fq 'host-runtime' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'runtime coverage' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'visual-acceptance.json' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'ui_truth_mode' "$TARGET_REPO/AGENTS.md"
-grep -Fq 'design_mode' "$TARGET_REPO/AGENTS.md"
-grep -Fq 'solution-design' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'state_flow_required' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'user_decision_required' "$TARGET_REPO/AGENTS.md"
 grep -Fq 'capability' "$TARGET_REPO/AGENTS.md"
-grep -Fq 'confirm_solution_design' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'design.md' "$TARGET_REPO/AGENTS.md"
+grep -Fq 'design_ready' "$TARGET_REPO/AGENTS.md"
+if grep -Fq 'CP-001' "$TARGET_REPO/AGENTS.md"; then
+  echo "removed development checkpoint leaked into bootstrap output" >&2
+  exit 1
+fi
 grep -Fq 'Worktrees are optional' "$TARGET_REPO/AGENTS.md"
 grep -Fq '<project-root>/.worktrees/<req-id>-<sr-id>' "$TARGET_REPO/AGENTS.md"
 grep -Fq '/private/tmp' "$TARGET_REPO/AGENTS.md"

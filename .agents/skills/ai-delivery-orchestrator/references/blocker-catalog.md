@@ -25,7 +25,7 @@ When a blocker occurs, record the narrowest matching blocker, continue other run
 
 | Blocker | Trigger |
 |---------|---------|
-| `blocked_spec_mismatch` | Spec output conflicts with governed truth |
+| `blocked_design_mismatch` | The canonical design contract conflicts with governed truth |
 | `blocked_dependency_slice` | Upstream slice not merged |
 | `blocked_merge_conflict` | Rebase/integration failed |
 | `blocked_verification_failure` | Tests, review, or visual acceptance failed after auto-fix |

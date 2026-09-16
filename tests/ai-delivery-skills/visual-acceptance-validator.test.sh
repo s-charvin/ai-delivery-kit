@@ -75,25 +75,47 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     preview.write_bytes(b"default-png")
     motion_preview.write_bytes(TWO_FRAME_GIF)
     unrelated_preview.write_bytes(b"unrelated-png")
-    (subreq / "design.md").write_text(
-        "# Solution Design\n\n"
-        "Scenario IDs: default-phone\n",
-        encoding="utf-8",
-    )
+    def design_contract_text(scenarios: str = "default-phone") -> str:
+        return f"""# Design Contract
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## Scope
+Profile card behavior and indexed UI scenarios.
+<!-- ai-delivery:behavior-contract:behavior -->
+## Behavior
+| ID | Given | When | Then |
+|---|---|---|---|
+| B-001 | profile state | render | current scenario is shown |
+<!-- ai-delivery:behavior-contract:acceptance -->
+## Acceptance
+| ID | Outcome | Evidence |
+|---|---|---|
+| AC-001 | B-001 matches indexed evidence | visual and behavior tests |
+<!-- ai-delivery:behavior-contract:traceability -->
+## Traceability
+| Behavior | Requirement | UI scenario | Acceptance |
+|---|---|---|---|
+| B-001 | REQ-UI | {scenarios} | AC-001 |
+<!-- ai-delivery:behavior-contract:end -->
+<!-- ai-delivery:user-decisions -->
+## User decisions
+not_applicable
+"""
+
+    (subreq / "design.md").write_text(design_contract_text(), encoding="utf-8")
 
     status = {
-        "_schema": "1.1",
+        "_schema": "2.0",
         "requirement_id": "REQ-UI",
         "sub_requirements": {
             "SR-001": {
                 "status": "visual_acceptance_passed",
                 "ui_bearing": True,
                 "ui_truth_mode": "figma",
-                "design_mode": "full",
                 "state_flow_required": False,
-                "design_approved": True,
+                "user_decision_required": False,
                 "design_review": {
-                    "review_mode": "human",
+                    "review_mode": "self",
                     "reviewed_design_sha256": sha256(subreq / "design.md"),
                     "reviewed_at": "2026-09-09T00:00:00Z",
                     "reviewed_by": "fixture-user",
@@ -267,9 +289,15 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     def run() -> subprocess.CompletedProcess[str]:
         entry = status["sub_requirements"]["SR-001"]
         design_path = subreq / "design.md"
-        if entry.get("design_approved") is True and design_path.is_file():
+        if entry.get("status") in {
+            "design_ready",
+            "in_dev",
+            "visual_acceptance_passed",
+            "merged",
+            "archived",
+        } and design_path.is_file():
             entry["design_review"] = {
-                "review_mode": "human" if entry.get("design_mode") == "full" else "self",
+                "review_mode": "human" if entry.get("user_decision_required") is True else "self",
                 "reviewed_design_sha256": sha256(design_path),
                 "reviewed_at": "2026-09-09T00:00:00Z",
                 "reviewed_by": "fixture-user",
@@ -587,52 +615,45 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
 
     index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
 
-    def write_status(*, status_name: str, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+    def write_status(*, status_name: str, ui_bearing: bool, ui_truth_mode: str) -> None:
         status["sub_requirements"]["SR-001"].update(
             {
                 "status": status_name,
                 "ui_bearing": ui_bearing,
                 "ui_truth_mode": ui_truth_mode,
-                "design_mode": design_mode,
-                "design_approved": design_mode != "none",
+                "state_flow_required": False,
+                "user_decision_required": False,
             }
         )
         (req_root / "status.json").write_text(
             json.dumps(status, indent=2) + "\n", encoding="utf-8"
         )
 
-    def expect_without_acceptance(label: str, *, status_name: str, ui_bearing: bool, ui_truth_mode: str, design_mode: str) -> None:
+    def expect_without_acceptance(label: str, *, status_name: str, ui_bearing: bool, ui_truth_mode: str) -> None:
         write_status(
             status_name=status_name,
             ui_bearing=ui_bearing,
             ui_truth_mode=ui_truth_mode,
-            design_mode=design_mode,
         )
         acceptance_path.unlink(missing_ok=True)
         index_path.unlink(missing_ok=True)
-        if design_mode == "none":
-            (subreq / "design.md").unlink(missing_ok=True)
-        else:
-            (subreq / "design.md").write_text(
-                "# Solution Design\n\nExisting behavior change.\n",
-                encoding="utf-8",
-            )
+        (subreq / "design.md").write_text(
+            design_contract_text("not_applicable"), encoding="utf-8"
+        )
         result = run()
         require(result.returncode == 0, f"{label}: expected pass, got:\n{result.stderr}")
 
     expect_without_acceptance(
         "none skips visual acceptance",
-        status_name="spec_ready",
+        status_name="design_ready",
         ui_bearing=False,
         ui_truth_mode="none",
-        design_mode="none",
     )
     expect_without_acceptance(
         "existing skips visual acceptance",
-        status_name="spec_ready",
+        status_name="design_ready",
         ui_bearing=True,
         ui_truth_mode="existing",
-        design_mode="light",
     )
 
     # A runtime baseline has no Figma claim, but it still needs deterministic
@@ -641,7 +662,6 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         status_name="visual_acceptance_passed",
         ui_bearing=True,
         ui_truth_mode="runtime-baseline",
-        design_mode="light",
     )
     runtime_index = copy.deepcopy(index)
     runtime_index["ui_truth_mode"] = "runtime-baseline"
@@ -671,13 +691,9 @@ with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
         status_name="visual_acceptance_passed",
         ui_bearing=True,
         ui_truth_mode="figma",
-        design_mode="full",
     )
     index_path.write_text(json.dumps(index, indent=2) + "\n", encoding="utf-8")
-    (subreq / "design.md").write_text(
-        "# Solution Design\n\nScenario IDs: default-phone\n",
-        encoding="utf-8",
-    )
+    (subreq / "design.md").write_text(design_contract_text(), encoding="utf-8")
     expect_pass("restore Figma acceptance after mode matrix", valid_acceptance)
 
 print("PASS: structured visual acceptance rejects missing, stale, partial, and forged evidence.")

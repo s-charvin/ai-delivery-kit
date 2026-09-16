@@ -69,4 +69,6 @@ python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/s
 
 ## 下一步交接
 
-`acceptance_frozen` → 按 `design_mode` 进入 `solution-design`。见 [handoff-table.md](handoff-table.md)。
+`acceptance_frozen` → 为唯一 `design.md` 进入 `solution-design`。仅当
+`user_decision_required=true` 时使用 CP-DESIGN。见
+[handoff-table.md](handoff-table.md)。

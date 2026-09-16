@@ -15,22 +15,38 @@ from typing import Any
 
 LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
 UI_TRUTH_INDEX = Path("contracts") / "ui-truth-index.json"
-UI_TRUTH_SCHEMA_VERSION = 2
+UI_TRUTH_SCHEMA_VERSION = 3
+LEGACY_UI_TRUTH_SCHEMA_VERSION = 2
 VISUAL_ACCEPTANCE_ARTIFACT = "visual-acceptance.json"
-VISUAL_ACCEPTANCE_SCHEMA_VERSION = 1
+VISUAL_ACCEPTANCE_SCHEMA_VERSION = 2
+LEGACY_VISUAL_ACCEPTANCE_SCHEMA_VERSION = 1
 KEBAB_CASE_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 UNIT_TYPES = frozenset({"page", "component", "modal", "shared-component"})
 STACKS = frozenset({"flutter", "web"})
 CONFIRMATION_STATUSES = frozenset({"confirmed", "waived"})
+MOTION_DECISIONS = frozenset({"animated", "static"})
+MOTION_VERIFICATION_MODES = frozenset({"runtime", "behavior", "manual", "not_applicable"})
+MOTION_PREVIEW_SUFFIXES = frozenset({".gif"})
+MOTION_ACCEPTANCE_RESULTS = frozenset({"passed", "waived"})
+MOTION_ACCEPTANCE_EVIDENCE_KINDS = frozenset({"motion", "test", "manual"})
 EVIDENCE_ORIGINS = frozenset({"figma", "requirement", "project", "user-decision"})
 UI_TRUTH_MODES = frozenset({"none", "existing", "runtime-baseline", "figma"})
 UI_TRUTH_CAPABILITY_MODES = frozenset({"runtime-baseline", "figma"})
-DESIGN_MODES = frozenset({"none", "light", "full"})
-LEGACY_MODE_FIELDS = frozenset({"ui_contract_exempt", "no_design_client"})
+LEGACY_MODE_FIELDS = frozenset(
+    {"ui_contract_exempt", "no_design_client", "design_mode", "design_approved"}
+)
 SURFACE_KINDS = frozenset({"viewport", "container"})
 ORIENTATIONS = frozenset({"portrait", "landscape", "not-applicable"})
 REVIEW_MODES = frozenset({"visual", "behavior", "both"})
+EVIDENCE_SCOPES = frozenset({"component-only", "host-static", "host-runtime"})
+HOST_EVIDENCE_SCOPES = frozenset({"host-static", "host-runtime"})
+NON_PRODUCTION_HOST_ROOTS = frozenset(
+    {".ai-delivery", "test", "tests", "integration_test", "integration-tests", "__tests__"}
+)
+SPATIAL_CONSTRAINT_KINDS = frozenset(
+    {"visible", "contains", "relative-position", "edge-insets", "spacing", "size-mode"}
+)
 COVERAGE_STATUSES = frozenset({"covered", "not_applicable"})
 COVERAGE_DIMENSIONS = frozenset(
     {
@@ -47,11 +63,14 @@ COVERAGE_DIMENSIONS = frozenset(
     }
 )
 ACCEPTANCE_RESULTS = frozenset({"passed", "waived"})
-ACCEPTANCE_EVIDENCE_KINDS = frozenset({"preview", "test", "manual", "image-diff"})
-VISUAL_EVIDENCE_KINDS = frozenset({"preview", "image-diff"})
+ACCEPTANCE_EVIDENCE_KINDS = frozenset(
+    {"preview", "test", "manual", "image-diff", "runtime-capture"}
+)
+VISUAL_EVIDENCE_KINDS = frozenset({"preview", "image-diff", "runtime-capture"})
 BEHAVIOR_EVIDENCE_KINDS = frozenset({"test", "manual"})
 WEB_PREVIEW_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp", ".html"})
 IMAGE_SUFFIXES = frozenset({".png", ".jpg", ".jpeg", ".webp"})
+MOTION_TEST_PREVIEW_SUFFIXES = IMAGE_SUFFIXES | MOTION_PREVIEW_SUFFIXES
 
 
 def _locate_layout_dir() -> Path | None:
@@ -67,16 +86,16 @@ _layout_dir = _locate_layout_dir()
 if _layout_dir is not None:
     sys.path.insert(0, str(_layout_dir))
     from layout import is_new_layout, load_workflow_policy  # noqa: E402
+    from design_contract import validate_design_entry  # noqa: E402
 else:  # pragma: no cover
     is_new_layout = None  # type: ignore[assignment]
     load_workflow_policy = None  # type: ignore[assignment]
+    validate_design_entry = None  # type: ignore[assignment]
 
 POST_FREEZE_STATUSES = frozenset(
     {
         "acceptance_frozen",
-        "spec_ready",
-        "plan_ready",
-        "tasks_ready",
+        "design_ready",
         "in_dev",
         "visual_acceptance_passed",
         "merged",
@@ -151,7 +170,7 @@ def legacy_participation_errors(req_root: Path) -> list[str]:
         if has_legacy_profile(data):
             return [
                 "[MODE] no_design_client participation profile is removed; "
-                "use ui_truth_mode and design_mode"
+                "use ui_truth_mode and the canonical design contract"
             ]
     return []
 
@@ -190,7 +209,7 @@ def infer_ui_bearing(entry: dict, subreq_dir: Path | None = None) -> bool:
     return entry.get("ui_bearing") is True
 
 
-def mode_errors(entry: dict) -> list[str]:
+def mode_errors(entry: dict, *, strict_design: bool = False) -> list[str]:
     errors: list[str] = []
     def legacy_keys(value: Any) -> set[str]:
         if isinstance(value, dict):
@@ -209,16 +228,11 @@ def mode_errors(entry: dict) -> list[str]:
         errors.append(f"legacy field {field} is forbidden")
     bearing = entry.get("ui_bearing")
     truth = entry.get("ui_truth_mode")
-    design = entry.get("design_mode")
     if type(bearing) is not bool:
         errors.append("ui_bearing must be a boolean")
     if truth not in UI_TRUTH_MODES:
         errors.append(
             "ui_truth_mode must be one of: " + ", ".join(sorted(UI_TRUTH_MODES))
-        )
-    if design not in DESIGN_MODES:
-        errors.append(
-            "design_mode must be one of: " + ", ".join(sorted(DESIGN_MODES))
         )
     if isinstance(bearing, bool) and truth in UI_TRUTH_MODES:
         expected = truth != "none"
@@ -227,10 +241,15 @@ def mode_errors(entry: dict) -> list[str]:
                 f"ui_bearing={str(bearing).lower()} is inconsistent with "
                 f"ui_truth_mode={truth} (expected {str(expected).lower()})"
             )
-    if type(entry.get("design_approved")) is not bool:
-        errors.append("design_approved must be a boolean")
-    elif design == "none" and entry.get("design_approved") is True:
-        errors.append("design_mode=none cannot set design_approved=true")
+    if strict_design or "state_flow_required" in entry:
+        state_flow_required = entry.get("state_flow_required")
+        if type(state_flow_required) is not bool:
+            errors.append("state_flow_required must be a boolean")
+    if strict_design or "user_decision_required" in entry:
+        if type(entry.get("user_decision_required")) is not bool:
+            errors.append("user_decision_required must be a boolean")
+    if strict_design and "design_review" not in entry:
+        errors.append("design_review object is required")
     return errors
 
 
@@ -239,7 +258,7 @@ def requires_ui_truth(entry: dict) -> bool:
 
 
 def design_artifact_required(entry: dict, status: str) -> bool:
-    return entry.get("design_mode") in {"light", "full"} and status in POST_FREEZE_STATUSES
+    return status in DESIGN_ARTIFACT_STATUSES
 
 
 def verification_required_markers(req_root: Path) -> tuple[str, ...]:
@@ -340,6 +359,34 @@ def _resolve_repo_relative_file(
     return resolved, []
 
 
+def _check_repo_relative_root(
+    repo_root: Path,
+    rel: Any,
+    *,
+    field: str,
+    subreq_id: str,
+    unit_id: str,
+) -> list[str]:
+    prefix = f"[GATE] {subreq_id} unit {unit_id} {field}"
+    if not _is_non_empty_string(rel):
+        return [f"{prefix} must be a repo-relative path"]
+    rel_path = Path(rel)
+    windows_path = PureWindowsPath(rel)
+    if rel_path.is_absolute() or windows_path.is_absolute() or windows_path.drive:
+        return [f"{prefix} must be a repo-relative path"]
+    if ".." in rel_path.parts or ".." in windows_path.parts:
+        return [f"{prefix} must stay within repository root ('..' is forbidden): {rel}"]
+    if rel_path.parts and rel_path.parts[0] == ".ai-delivery":
+        return [f"{prefix} must stay outside .ai-delivery"]
+    try:
+        resolved_root = repo_root.resolve(strict=True)
+        resolved = (resolved_root / rel_path).resolve(strict=False)
+        resolved.relative_to(resolved_root)
+    except (OSError, RuntimeError, ValueError):
+        return [f"{prefix} resolves outside repository root: {rel}"]
+    return []
+
+
 def _check_content_hash(
     path: Path | None,
     expected: Any,
@@ -360,6 +407,87 @@ def _check_content_hash(
     if actual != expected:
         return [f"{prefix} mismatch: expected {expected}, got {actual}"]
     return []
+
+
+def _skip_gif_sub_blocks(payload: bytes, offset: int) -> tuple[int, str | None]:
+    """Skip GIF data sub-blocks and report truncated payloads."""
+    while True:
+        if offset >= len(payload):
+            return offset, "truncated GIF data sub-block"
+        size = payload[offset]
+        offset += 1
+        if size == 0:
+            return offset, None
+        end = offset + size
+        if end > len(payload):
+            return end, "truncated GIF data sub-block"
+        offset = end
+
+
+def _gif_frame_count(path: Path) -> tuple[int, str | None]:
+    """Read enough of a GIF structure to prove it is a multi-frame GIF."""
+    try:
+        payload = path.read_bytes()
+    except OSError as exc:
+        return 0, f"could not read GIF: {exc}"
+
+    if len(payload) < 13 or payload[:6] not in {b"GIF87a", b"GIF89a"}:
+        return 0, "invalid GIF header"
+
+    offset = 13
+    packed = payload[10]
+    if packed & 0x80:
+        color_table_size = 3 * (1 << ((packed & 0x07) + 1))
+        if offset + color_table_size > len(payload):
+            return 0, "truncated GIF global color table"
+        offset += color_table_size
+
+    frame_count = 0
+    while offset < len(payload):
+        introducer = payload[offset]
+        offset += 1
+        if introducer == 0x3B:  # trailer
+            return frame_count, None
+        if introducer == 0x2C:  # image descriptor
+            if offset + 9 > len(payload):
+                return frame_count, "truncated GIF image descriptor"
+            image_packed = payload[offset + 8]
+            offset += 9
+            if image_packed & 0x80:
+                color_table_size = 3 * (1 << ((image_packed & 0x07) + 1))
+                if offset + color_table_size > len(payload):
+                    return frame_count, "truncated GIF local color table"
+                offset += color_table_size
+            if offset >= len(payload):
+                return frame_count, "truncated GIF image data"
+            offset += 1  # LZW minimum code size
+            offset, error = _skip_gif_sub_blocks(payload, offset)
+            if error is not None:
+                return frame_count, error
+            frame_count += 1
+            continue
+        if introducer == 0x21:  # extension block
+            if offset >= len(payload):
+                return frame_count, "truncated GIF extension block"
+            label = payload[offset]
+            offset += 1
+            if label == 0x01:  # plain-text extension has a fixed header first
+                if offset >= len(payload):
+                    return frame_count, "truncated GIF plain-text extension"
+                header_size = payload[offset]
+                offset += 1
+                if header_size != 12:
+                    return frame_count, "invalid GIF plain-text extension header"
+                if offset + header_size > len(payload):
+                    return frame_count, "truncated GIF plain-text extension header"
+                offset += header_size
+            offset, error = _skip_gif_sub_blocks(payload, offset)
+            if error is not None:
+                return frame_count, error
+            continue
+        return frame_count, f"unknown GIF block introducer 0x{introducer:02x}"
+
+    return frame_count, "missing GIF trailer"
 
 
 def _is_finite_number(value: Any) -> bool:
@@ -438,6 +566,109 @@ def _check_confirmation(
     return errors
 
 
+def _check_motion_decision(
+    motion: Any, *, prefix: str, repo_root: Path, stack: Any
+) -> list[str]:
+    """Require an explicit per-unit motion decision before UI truth freezes."""
+    if not isinstance(motion, dict):
+        return [f"{prefix} motion_decision must be an object"]
+
+    errors: list[str] = []
+    decision = motion.get("decision")
+    if decision not in MOTION_DECISIONS:
+        errors.append(
+            f"{prefix} motion_decision.decision must be one of: "
+            f"{', '.join(sorted(MOTION_DECISIONS))}"
+        )
+
+    verification_mode = motion.get("verification_mode")
+    if verification_mode not in MOTION_VERIFICATION_MODES:
+        errors.append(
+            f"{prefix} motion_decision.verification_mode must be one of: "
+            f"{', '.join(sorted(MOTION_VERIFICATION_MODES))}"
+        )
+    elif decision == "animated" and verification_mode == "not_applicable":
+        errors.append(
+            f"{prefix} animated motion_decision requires a runtime verification mode"
+        )
+    elif decision == "static" and verification_mode != "not_applicable":
+        errors.append(
+            f"{prefix} static motion_decision must use verification_mode=not_applicable"
+        )
+
+    confirmation = motion.get("confirmation")
+    if decision == "static" and isinstance(confirmation, dict) and confirmation.get("status") != "confirmed":
+        errors.append(
+            f"{prefix} static motion_decision requires confirmation.status=confirmed"
+        )
+
+    motion_preview_path = motion.get("preview_path")
+    motion_preview_sha256 = motion.get("preview_sha256")
+    has_motion_preview = motion_preview_path is not None or motion_preview_sha256 is not None
+    if decision == "animated" and not has_motion_preview:
+        if not _is_non_empty_string(motion.get("preview_unavailable_reason")):
+            errors.append(
+                f"{prefix} animated motion_decision without a preview requires preview_unavailable_reason"
+            )
+    if decision == "animated" and has_motion_preview and _is_non_empty_string(
+        motion.get("preview_unavailable_reason")
+    ):
+        errors.append(
+            f"{prefix} animated motion_decision with a preview must not declare preview_unavailable_reason"
+        )
+    if decision == "static" and (
+        has_motion_preview or _is_non_empty_string(motion.get("preview_unavailable_reason"))
+    ):
+        errors.append(
+            f"{prefix} static motion_decision must not declare a motion preview or unavailability reason"
+        )
+
+    errors.extend(
+        _check_confirmation(
+            confirmation,
+            prefix=f"{prefix} motion_decision",
+            preview_sha256=motion_preview_sha256 if has_motion_preview else None,
+        )
+    )
+    if isinstance(confirmation, dict) and not _is_non_empty_string(
+        confirmation.get("note")
+    ):
+        errors.append(f"{prefix} motion_decision confirmation.note is required")
+
+    if has_motion_preview:
+        motion_preview_file, file_errors = _resolve_repo_relative_file(
+            repo_root,
+            motion_preview_path,
+            field="motion_decision.preview_path",
+            subreq_id=prefix,
+            unit_id="motion",
+            allowed_suffixes=MOTION_PREVIEW_SUFFIXES,
+        )
+        errors.extend(file_errors)
+        errors.extend(
+            _check_content_hash(
+                motion_preview_file,
+                motion_preview_sha256,
+                field="motion_decision.preview_sha256",
+                subreq_id=prefix,
+                unit_id="motion",
+            )
+        )
+        if motion_preview_file is not None and decision == "animated":
+            frame_count, gif_error = _gif_frame_count(motion_preview_file)
+            if gif_error is not None:
+                errors.append(
+                    f"{prefix} motion_decision.preview_path must be a valid GIF: "
+                    f"{gif_error}"
+                )
+            elif frame_count < 2:
+                errors.append(
+                    f"{prefix} motion_decision.preview_path must contain at least "
+                    "two GIF frames"
+                )
+    return errors
+
+
 def check_ui_truth_index(
     subreq_id: str,
     subreq_dir: Path,
@@ -467,11 +698,18 @@ def check_ui_truth_index(
             f"must match status.json ({expected_mode})"
         )
     effective_mode = index_mode if index_mode in UI_TRUTH_CAPABILITY_MODES else expected_mode
-    if type(data.get("schema_version")) is not int or data["schema_version"] != UI_TRUTH_SCHEMA_VERSION:
+    schema_version = data.get("schema_version")
+    allowed_schema_versions = (
+        {UI_TRUTH_SCHEMA_VERSION, LEGACY_UI_TRUTH_SCHEMA_VERSION}
+        if status == "archived"
+        else {UI_TRUTH_SCHEMA_VERSION}
+    )
+    if type(schema_version) is not int or schema_version not in allowed_schema_versions:
         errors.append(
             f"[GATE] {subreq_id} {UI_TRUTH_INDEX.as_posix()} schema_version "
             f"must equal {UI_TRUTH_SCHEMA_VERSION}"
         )
+    enforce_evidence_scope = schema_version == UI_TRUTH_SCHEMA_VERSION
 
     design_source = data.get("design_source")
     if not isinstance(design_source, dict):
@@ -543,6 +781,15 @@ def check_ui_truth_index(
                 f"[GATE] {subreq_id} unit {unit_id} stack must be one of: "
                 f"{', '.join(sorted(STACKS))}"
             )
+
+        errors.extend(
+            _check_motion_decision(
+                unit.get("motion_decision"),
+                prefix=f"[GATE] {subreq_id} unit {unit_id}",
+                repo_root=repo_root,
+                stack=stack,
+            )
+        )
 
         if effective_mode == "figma" and not _is_non_empty_string(unit.get("source_node")):
             errors.append(f"[GATE] {subreq_id} unit {unit_id} source_node is required for figma evidence")
@@ -830,6 +1077,123 @@ def check_ui_truth_index(
                     f"{prefix} review_mode must be one of: "
                     f"{', '.join(sorted(REVIEW_MODES))}"
                 )
+
+            if enforce_evidence_scope:
+                evidence_scope = scenario.get("evidence_scope")
+                if evidence_scope not in EVIDENCE_SCOPES:
+                    errors.append(
+                        f"{prefix} evidence_scope must be one of: "
+                        f"{', '.join(sorted(EVIDENCE_SCOPES))}"
+                    )
+                scope_decision = scenario.get("scope_decision")
+                if not isinstance(scope_decision, dict):
+                    errors.append(f"{prefix} scope_decision must be an object")
+                    scope_decision = {}
+                if not _is_non_empty_string(scope_decision.get("reason")):
+                    errors.append(f"{prefix} scope_decision.reason is required")
+                capture_supported = scope_decision.get("host_capture_supported")
+                if type(capture_supported) is not bool:
+                    errors.append(
+                        f"{prefix} scope_decision.host_capture_supported must be a boolean"
+                    )
+
+                host_binding = scenario.get("host_binding")
+                if evidence_scope == "component-only":
+                    if capture_supported is not False:
+                        errors.append(
+                            f"{prefix} component-only requires host_capture_supported=false"
+                        )
+                    if not _is_non_empty_string(scope_decision.get("uncovered_risk")):
+                        errors.append(
+                            f"{prefix} component-only requires a non-empty uncovered_risk"
+                        )
+                    if host_binding is not None:
+                        errors.append(
+                            f"{prefix} component-only must not declare host_binding"
+                        )
+                elif evidence_scope in HOST_EVIDENCE_SCOPES:
+                    if capture_supported is not True:
+                        errors.append(
+                            f"{prefix} {evidence_scope} requires host_capture_supported=true"
+                        )
+                    if not isinstance(host_binding, dict):
+                        errors.append(f"{prefix} host_binding must be an object")
+                    else:
+                        host_file, host_file_errors = _resolve_repo_relative_file(
+                            repo_root,
+                            host_binding.get("host_component_path"),
+                            field="host_component_path",
+                            subreq_id=subreq_id,
+                            unit_id=f"{unit_id} scenario {scenario_id} host_binding",
+                        )
+                        errors.extend(host_file_errors)
+                        host_component_path = host_binding.get("host_component_path")
+                        if _is_non_empty_string(host_component_path):
+                            host_parts = Path(host_component_path).parts
+                            if host_parts and host_parts[0] in NON_PRODUCTION_HOST_ROOTS:
+                                errors.append(
+                                    f"{prefix} host_binding.host_component_path must reference "
+                                    "production source, not test evidence"
+                                )
+                        errors.extend(
+                            _check_content_hash(
+                                host_file,
+                                host_binding.get("host_component_sha256"),
+                                field="host_component_sha256",
+                                subreq_id=subreq_id,
+                                unit_id=f"{unit_id} scenario {scenario_id} host_binding",
+                            )
+                        )
+                        for field in ("entrypoint_ref", "capture_boundary_ref"):
+                            if not _is_non_empty_string(host_binding.get(field)):
+                                errors.append(f"{prefix} host_binding.{field} is required")
+                        errors.extend(
+                            _check_repo_relative_root(
+                                repo_root,
+                                host_binding.get("evidence_root"),
+                                field="host_binding.evidence_root",
+                                subreq_id=subreq_id,
+                                unit_id=f"{unit_id} scenario {scenario_id}",
+                            )
+                        )
+                        landmarks = host_binding.get("required_landmarks")
+                        if (
+                            not isinstance(landmarks, list)
+                            or not landmarks
+                            or any(not _is_non_empty_string(item) for item in landmarks)
+                        ):
+                            errors.append(
+                                f"{prefix} host_binding.required_landmarks must be a non-empty string array"
+                            )
+                        constraints = host_binding.get("spatial_constraints")
+                        if not isinstance(constraints, list) or not constraints:
+                            errors.append(
+                                f"{prefix} host_binding.spatial_constraints must be a non-empty array"
+                            )
+                        else:
+                            seen_constraint_ids: set[str] = set()
+                            for constraint_index, constraint in enumerate(constraints):
+                                constraint_prefix = (
+                                    f"{prefix} host_binding.spatial_constraints[{constraint_index}]"
+                                )
+                                if not isinstance(constraint, dict):
+                                    errors.append(f"{constraint_prefix} must be an object")
+                                    continue
+                                constraint_id = constraint.get("constraint_id")
+                                if not _is_non_empty_string(constraint_id):
+                                    errors.append(f"{constraint_prefix}.constraint_id is required")
+                                elif constraint_id in seen_constraint_ids:
+                                    errors.append(f"{constraint_prefix}.constraint_id is duplicated")
+                                else:
+                                    seen_constraint_ids.add(constraint_id)
+                                if constraint.get("kind") not in SPATIAL_CONSTRAINT_KINDS:
+                                    errors.append(
+                                        f"{constraint_prefix}.kind must be one of: "
+                                        f"{', '.join(sorted(SPATIAL_CONSTRAINT_KINDS))}"
+                                    )
+                                for field in ("subject_ref", "source_ref"):
+                                    if not _is_non_empty_string(constraint.get(field)):
+                                        errors.append(f"{constraint_prefix}.{field} is required")
             errors.extend(
                 _check_evidence_source(
                     scenario,
@@ -870,6 +1234,16 @@ def check_ui_truth_index(
                     prefix=prefix,
                     preview_sha256=preview_sha256,
                 )
+            )
+
+        motion = unit.get("motion_decision")
+        if (
+            isinstance(motion, dict)
+            and motion.get("decision") == "animated"
+            and not any("motion" in dimensions for dimensions in scenario_dimensions.values())
+        ):
+            errors.append(
+                f"[GATE] {subreq_id} unit {unit_id} animated motion_decision requires a motion scenario"
             )
 
         for state_id in sorted(seen_state_ids - scenario_state_ids):
@@ -982,6 +1356,7 @@ def _check_acceptance_file_evidence(
     scenario_id: str,
     indexed_preview_path: Any | None,
     indexed_preview_sha256: Any | None,
+    host_binding: dict[str, Any] | None = None,
 ) -> list[str]:
     errors: list[str] = []
     kind = evidence.get("kind")
@@ -1062,6 +1437,182 @@ def _check_acceptance_file_evidence(
                 errors.append(f"{prefix} actual must not exceed threshold")
         if not _is_non_empty_string(evidence.get("command")):
             errors.append(f"{prefix} command is required")
+    elif kind == "runtime-capture":
+        capture_rel = evidence.get("path")
+        capture_file, file_errors = _resolve_repo_relative_file(
+            repo_root,
+            capture_rel,
+            field="path",
+            subreq_id=subreq_id,
+            unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+            allowed_suffixes=IMAGE_SUFFIXES,
+        )
+        errors.extend(file_errors)
+        errors.extend(
+            _check_content_hash(
+                capture_file,
+                evidence.get("sha256"),
+                field="sha256",
+                subreq_id=subreq_id,
+                unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+            )
+        )
+        if _is_non_empty_string(capture_rel):
+            capture_path = Path(capture_rel)
+            if capture_path.parts and capture_path.parts[0] == ".ai-delivery":
+                errors.append(f"{prefix} runtime capture must stay outside .ai-delivery")
+
+        for path_field, hash_field, suffixes in (
+            ("test_path", "test_sha256", None),
+            ("assertion_report_path", "assertion_report_sha256", frozenset({".json"})),
+        ):
+            evidence_file, evidence_errors = _resolve_repo_relative_file(
+                repo_root,
+                evidence.get(path_field),
+                field=path_field,
+                subreq_id=subreq_id,
+                unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+                allowed_suffixes=suffixes,
+            )
+            errors.extend(evidence_errors)
+            errors.extend(
+                _check_content_hash(
+                    evidence_file,
+                    evidence.get(hash_field),
+                    field=hash_field,
+                    subreq_id=subreq_id,
+                    unit_id=f"visual acceptance scenario {scenario_id} runtime-capture",
+                )
+            )
+
+        if not _is_non_empty_string(evidence.get("command")):
+            errors.append(f"{prefix} command is required")
+        if not _is_non_empty_string(evidence.get("reviewed_by")):
+            errors.append(f"{prefix} reviewed_by is required")
+        if not _is_iso8601_timestamp(evidence.get("reviewed_at")):
+            errors.append(f"{prefix} reviewed_at must be an ISO-8601 timestamp with timezone")
+        if evidence.get("reviewed_capture_sha256") != evidence.get("sha256"):
+            errors.append(f"{prefix} reviewed_capture_sha256 must match sha256")
+
+        if not isinstance(host_binding, dict):
+            errors.append(f"{prefix} runtime-capture requires indexed host_binding")
+        else:
+            for field in (
+                "host_component_path",
+                "entrypoint_ref",
+                "capture_boundary_ref",
+            ):
+                if evidence.get(field) != host_binding.get(field):
+                    errors.append(f"{prefix} {field} must match indexed host_binding")
+            evidence_root = host_binding.get("evidence_root")
+            if _is_non_empty_string(capture_rel) and _is_non_empty_string(evidence_root):
+                capture_parts = Path(capture_rel).parts
+                root_parts = Path(evidence_root).parts
+                if capture_parts[: len(root_parts)] != root_parts:
+                    errors.append(f"{prefix} runtime capture must be inside indexed evidence_root")
+
+            required_landmarks = set(host_binding.get("required_landmarks", []))
+            verified_landmarks = set(evidence.get("verified_landmarks", []))
+            for landmark in sorted(required_landmarks - verified_landmarks):
+                errors.append(f"{prefix} missing required landmark {landmark}")
+            required_constraints = {
+                row.get("constraint_id")
+                for row in host_binding.get("spatial_constraints", [])
+                if isinstance(row, dict) and _is_non_empty_string(row.get("constraint_id"))
+            }
+            verified_constraints = set(evidence.get("verified_constraints", []))
+            for constraint in sorted(required_constraints - verified_constraints):
+                errors.append(f"{prefix} missing required constraint {constraint}")
+    return errors
+
+
+def _check_motion_acceptance_evidence(
+    evidence: dict[str, Any],
+    *,
+    prefix: str,
+    repo_root: Path,
+    subreq_id: str,
+    unit_id: str,
+    indexed_preview_path: Any | None,
+    indexed_preview_sha256: Any | None,
+    indexed_preview_paths: set[str],
+) -> list[str]:
+    """Validate the separate Stage 4 motion evidence for one UI unit."""
+    kind = evidence.get("kind")
+    if kind not in MOTION_ACCEPTANCE_EVIDENCE_KINDS:
+        return [
+            f"{prefix} kind must be one of: "
+            f"{', '.join(sorted(MOTION_ACCEPTANCE_EVIDENCE_KINDS))}"
+        ]
+    errors: list[str] = []
+    if not _is_non_empty_string(evidence.get("summary")):
+        errors.append(f"{prefix} summary is required")
+
+    if kind == "motion":
+        if not _is_non_empty_string(indexed_preview_path) or not isinstance(
+            indexed_preview_sha256, str
+        ):
+            errors.append(
+                f"{prefix} motion evidence is only valid when motion_decision has a preview"
+            )
+        elif (
+            evidence.get("path") != indexed_preview_path
+            or evidence.get("sha256") != indexed_preview_sha256
+        ):
+            errors.append(
+                f"{prefix} motion evidence must match motion_decision preview_path and preview_sha256"
+            )
+        motion_file, file_errors = _resolve_repo_relative_file(
+            repo_root,
+            evidence.get("path"),
+            field="motion_acceptance.path",
+            subreq_id=subreq_id,
+            unit_id=unit_id,
+            allowed_suffixes=MOTION_PREVIEW_SUFFIXES,
+        )
+        errors.extend(file_errors)
+        errors.extend(
+            _check_content_hash(
+                motion_file,
+                evidence.get("sha256"),
+                field="motion_acceptance.sha256",
+                subreq_id=subreq_id,
+                unit_id=unit_id,
+            )
+        )
+        if not _is_non_empty_string(evidence.get("command")):
+            errors.append(f"{prefix} command is required")
+    elif kind == "test":
+        errors.extend(
+            _check_acceptance_file_evidence(
+                evidence,
+                prefix=prefix,
+                repo_root=repo_root,
+                subreq_id=subreq_id,
+                scenario_id=f"unit {unit_id} motion",
+                indexed_preview_path=None,
+                indexed_preview_sha256=None,
+                host_binding=None,
+            )
+        )
+        test_path = evidence.get("path")
+        if (
+            _is_non_empty_string(test_path)
+            and (
+                Path(test_path).suffix.lower() in MOTION_TEST_PREVIEW_SUFFIXES
+                or test_path in indexed_preview_paths
+            )
+        ):
+            errors.append(
+                f"{prefix} test evidence must reference a test/report artifact, not a preview file"
+            )
+    else:
+        if not _is_non_empty_string(evidence.get("reviewed_by")):
+            errors.append(f"{prefix} reviewed_by is required")
+        if not _is_iso8601_timestamp(evidence.get("reviewed_at")):
+            errors.append(
+                f"{prefix} reviewed_at must be an ISO-8601 timestamp with timezone"
+            )
     return errors
 
 
@@ -1083,10 +1634,13 @@ def check_visual_acceptance(
         return [f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} must be an object"]
 
     errors: list[str] = []
-    if (
-        type(data.get("schema_version")) is not int
-        or data["schema_version"] != VISUAL_ACCEPTANCE_SCHEMA_VERSION
-    ):
+    schema_version = data.get("schema_version")
+    allowed_schema_versions = (
+        {VISUAL_ACCEPTANCE_SCHEMA_VERSION, LEGACY_VISUAL_ACCEPTANCE_SCHEMA_VERSION}
+        if status == "archived"
+        else {VISUAL_ACCEPTANCE_SCHEMA_VERSION}
+    )
+    if type(schema_version) is not int or schema_version not in allowed_schema_versions:
         errors.append(
             f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} schema_version "
             f"must equal {VISUAL_ACCEPTANCE_SCHEMA_VERSION}"
@@ -1109,11 +1663,28 @@ def check_visual_acceptance(
     )
 
     expected_scenarios: dict[str, dict[str, Any]] = {}
+    expected_units: dict[str, dict[str, Any]] = {}
     index = load_ui_truth_index(subreq_dir)
     if index:
         for unit in index.get("units", []):
             if not isinstance(unit, dict):
                 continue
+            unit_id = unit.get("unit_id")
+            motion = unit.get("motion_decision")
+            if _is_non_empty_string(unit_id):
+                expected_units[unit_id] = {
+                    "motion_decision": motion if isinstance(motion, dict) else {},
+                    "motion_preview_path": (
+                        motion.get("preview_path")
+                        if isinstance(motion, dict)
+                        else None
+                    ),
+                    "motion_preview_sha256": (
+                        motion.get("preview_sha256")
+                        if isinstance(motion, dict)
+                        else None
+                    ),
+                }
             for scenario in unit.get("scenarios", []):
                 if not isinstance(scenario, dict):
                     continue
@@ -1122,9 +1693,24 @@ def check_visual_acceptance(
                 if _is_non_empty_string(scenario_id) and review_mode in REVIEW_MODES:
                     expected_scenarios[scenario_id] = {
                         "review_mode": review_mode,
+                        "evidence_scope": scenario.get("evidence_scope"),
+                        "host_binding": scenario.get("host_binding"),
                         "preview_path": scenario.get("preview_path"),
                         "preview_sha256": scenario.get("preview_sha256"),
                     }
+
+    indexed_preview_paths = {
+        path
+        for scenario in expected_scenarios.values()
+        for path in (scenario.get("preview_path"),)
+        if _is_non_empty_string(path)
+    }
+    indexed_preview_paths.update(
+        motion.get("preview_path")
+        for unit in expected_units.values()
+        for motion in (unit.get("motion_decision", {}),)
+        if isinstance(motion, dict) and _is_non_empty_string(motion.get("preview_path"))
+    )
 
     scenario_results = data.get("scenarios")
     if not isinstance(scenario_results, list):
@@ -1187,6 +1773,7 @@ def check_visual_acceptance(
                     indexed_preview_sha256=expected_scenarios[scenario_id].get(
                         "preview_sha256"
                     ),
+                    host_binding=expected_scenarios[scenario_id].get("host_binding"),
                 )
             )
 
@@ -1194,6 +1781,11 @@ def check_visual_acceptance(
             if not evidence_rows:
                 errors.append(f"{prefix} passed result requires evidence")
             review_mode = expected_scenarios[scenario_id]["review_mode"]
+            evidence_scope = expected_scenarios[scenario_id].get("evidence_scope")
+            if evidence_scope in HOST_EVIDENCE_SCOPES and "runtime-capture" not in evidence_kinds:
+                errors.append(f"{prefix} requires runtime-capture evidence")
+            if evidence_scope == "component-only" and "runtime-capture" in evidence_kinds:
+                errors.append(f"{prefix} component-only must not use runtime-capture evidence")
             if review_mode in {"visual", "both"} and not (
                 evidence_kinds & VISUAL_EVIDENCE_KINDS
             ):
@@ -1217,14 +1809,117 @@ def check_visual_acceptance(
             f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} "
             f"missing scenario result: {scenario_id}"
         )
+
+    motion_rows = data.get("motion_acceptance")
+    if not isinstance(motion_rows, list):
+        errors.append(
+            f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} motion_acceptance must be an array"
+        )
+        motion_rows = []
+    seen_motion_units: set[str] = set()
+    for motion_index, motion_row in enumerate(motion_rows):
+        row_prefix = f"[GATE] {subreq_id} motion acceptance[{motion_index}]"
+        if not isinstance(motion_row, dict):
+            errors.append(f"{row_prefix} must be an object")
+            continue
+        unit_id = motion_row.get("unit_id")
+        if not _is_non_empty_string(unit_id):
+            errors.append(f"{row_prefix} unit_id is required")
+            continue
+        if unit_id not in expected_units:
+            errors.append(f"{row_prefix} references unknown unit {unit_id}")
+            continue
+        if unit_id in seen_motion_units:
+            errors.append(f"{row_prefix} is duplicated")
+            continue
+        seen_motion_units.add(unit_id)
+
+        result = motion_row.get("result")
+        if result not in MOTION_ACCEPTANCE_RESULTS:
+            errors.append(
+                f"{row_prefix} result must be one of: "
+                f"{', '.join(sorted(MOTION_ACCEPTANCE_RESULTS))}"
+            )
+        evidence_rows = motion_row.get("evidence")
+        if not isinstance(evidence_rows, list):
+            errors.append(f"{row_prefix} evidence must be an array")
+            evidence_rows = []
+        evidence_kinds: set[str] = set()
+        expected_unit = expected_units[unit_id]
+        for evidence_index, evidence in enumerate(evidence_rows):
+            evidence_prefix = f"{row_prefix} evidence[{evidence_index}]"
+            if not isinstance(evidence, dict):
+                errors.append(f"{evidence_prefix} must be an object")
+                continue
+            kind = evidence.get("kind")
+            if kind in MOTION_ACCEPTANCE_EVIDENCE_KINDS:
+                evidence_kinds.add(kind)
+            errors.extend(
+                _check_motion_acceptance_evidence(
+                    evidence,
+                    prefix=evidence_prefix,
+                    repo_root=repo_root,
+                    subreq_id=subreq_id,
+                    unit_id=unit_id,
+                    indexed_preview_path=expected_unit["motion_preview_path"],
+                    indexed_preview_sha256=expected_unit["motion_preview_sha256"],
+                    indexed_preview_paths=indexed_preview_paths,
+                )
+            )
+
+        decision = expected_unit["motion_decision"].get("decision")
+        indexed_motion_preview = _is_non_empty_string(
+            expected_unit["motion_preview_path"]
+        )
+        if result == "passed":
+            if not evidence_rows:
+                errors.append(f"{row_prefix} passed result requires evidence")
+            if decision == "animated" and indexed_motion_preview:
+                if "motion" not in evidence_kinds:
+                    errors.append(
+                        f"{row_prefix} requires motion evidence matching the indexed motion preview"
+                    )
+            elif "motion" in evidence_kinds:
+                errors.append(
+                    f"{row_prefix} motion evidence requires an indexed motion preview"
+                )
+            if decision == "static" and "motion" in evidence_kinds:
+                errors.append(f"{row_prefix} static units cannot use motion evidence")
+            if decision == "animated" and not indexed_motion_preview and not (
+                evidence_kinds & {"test", "manual"}
+            ):
+                errors.append(
+                    f"{row_prefix} without a motion preview requires test or manual runtime evidence"
+                )
+            if decision == "static" and not (evidence_kinds & {"test", "manual"}):
+                errors.append(
+                    f"{row_prefix} static/no-motion acceptance requires test or manual evidence"
+                )
+        elif result == "waived":
+            if not _is_non_empty_string(motion_row.get("note")):
+                errors.append(f"{row_prefix} waiver note is required")
+            if not _is_non_empty_string(motion_row.get("waived_by")):
+                errors.append(f"{row_prefix} waived_by is required")
+            if not _is_iso8601_timestamp(motion_row.get("waived_at")):
+                errors.append(
+                    f"{row_prefix} waived_at must be an ISO-8601 timestamp with timezone"
+                )
+            if decision == "static":
+                errors.append(
+                    f"{row_prefix} static/no-motion acceptance cannot be waived"
+                )
+
+    for unit_id in sorted(set(expected_units) - seen_motion_units):
+        errors.append(
+            f"[GATE] {subreq_id} {VISUAL_ACCEPTANCE_ARTIFACT} "
+            f"missing motion acceptance: {unit_id}"
+        )
     return errors
 
 
 DESIGN_ARTIFACT_STATUSES = frozenset(
     {
-        "spec_ready",
-        "plan_ready",
-        "tasks_ready",
+        "design_ready",
         "in_dev",
         "visual_acceptance_passed",
         "merged",
@@ -1240,28 +1935,17 @@ def check_solution_design_artifact(
     entry: dict[str, Any],
     index: dict[str, Any] | None,
 ) -> list[str]:
-    """Validate conditional design.md and scenario references.
+    """Validate the required design.md and indexed scenario references.
 
     Runtime Coverage remains exclusively in the UI truth index. The solution
     design only needs to cite scenario IDs and assign implementation and
     verification responsibility.
     """
-    mode = entry.get("design_mode")
     design_path = subreq_dir / "design.md"
     errors: list[str] = []
-    if mode == "none":
-        if design_path.is_file():
-            errors.append(
-                f"[DESIGN] {subreq_id} design_mode=none must not produce design.md"
-            )
-        return errors
-    if mode in {"light", "full"} and entry.get("design_approved") is True and not design_path.is_file():
-        errors.append(
-            f"[DESIGN] {subreq_id} design_approved=true requires design.md"
-        )
     if status in DESIGN_ARTIFACT_STATUSES and not design_path.is_file():
         errors.append(
-            f"[DESIGN] {subreq_id} status={status} design_mode={mode} requires design.md"
+            f"[DESIGN] {subreq_id} status={status} requires design.md"
         )
         return errors
     if not design_path.is_file() or index is None:
@@ -1294,6 +1978,9 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
     sub_requirements = status_data.get("sub_requirements")
     if not isinstance(sub_requirements, dict):
         return ["[STATUS] sub_requirements must be a mapping"]
+    status_schema = status_data.get("_schema", "legacy")
+    if status_schema not in {"legacy", "1.0", "1.1", "2.0"}:
+        return ["[STATUS] _schema must be 1.0, 1.1, or 2.0"]
 
     verification_markers = verification_required_markers(req_root)
     repo_root = find_repo_root(req_root)
@@ -1313,10 +2000,18 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
             errors.append(f"[STATUS] sub_requirements.{subreq_id}.status missing")
             continue
 
-        errors.extend(
-            f"[STATUS] sub_requirements.{subreq_id}: {message}"
-            for message in mode_errors(entry)
-        )
+        legacy_design = status_schema != "2.0" and status in {"merged", "archived"}
+        if status_schema != "2.0" and not legacy_design:
+            errors.append(
+                f"[DESIGN] {subreq_id} active legacy schema requires migration to schema 2.0 "
+                "before it can continue"
+            )
+
+        if not legacy_design:
+            errors.extend(
+                f"[STATUS] sub_requirements.{subreq_id}: {message}"
+                for message in mode_errors(entry, strict_design=status_schema == "2.0")
+            )
 
         subreq_dir = req_root / "sub-requirements" / subreq_id
         index_file = ui_truth_index_path(subreq_dir)
@@ -1324,11 +2019,22 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
         # Mode/artifact consistency is checked even for blocked slices. A
         # blocker may pause execution, but it must not preserve a removed
         # design bypass or a forged approval flag.
-        errors.extend(
-            check_solution_design_artifact(
-                subreq_id, subreq_dir, status, entry, index
+        if not legacy_design:
+            errors.extend(
+                check_solution_design_artifact(
+                    subreq_id, subreq_dir, status, entry, index
+                )
             )
-        )
+        if validate_design_entry is not None:
+            errors.extend(
+                f"[DESIGN] {subreq_id}: {message}"
+                for message in validate_design_entry(
+                    entry,
+                    subreq_dir,
+                    status=status,
+                    legacy_allowed=legacy_design,
+                )
+            )
 
         truth_mode = entry.get("ui_truth_mode")
 
@@ -1374,15 +2080,6 @@ def validate_status_file(status_path: Path, req_root: Path) -> list[str]:
                 check_visual_acceptance(subreq_id, subreq_dir, repo_root, status)
             )
 
-        if (
-            entry.get("design_mode") in {"light", "full"}
-            and status in DESIGN_ARTIFACT_STATUSES
-            and entry.get("design_approved") is not True
-        ):
-            errors.append(
-                f"[STATUS] {subreq_id} status={status} requires design_approved=true "
-                f"for design_mode={entry.get('design_mode')}"
-            )
         if status in VERIFICATION_REQUIRED_STATUSES:
             errors.extend(
                 check_verification_evidence(

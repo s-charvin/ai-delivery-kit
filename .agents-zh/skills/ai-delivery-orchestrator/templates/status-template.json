@@ -1,56 +1,52 @@
 {
-  "_schema": "1.1",
-  "_description": "需求级别的单文件状态追踪。每个子需求独立追踪状态、能力模式、状态流复杂度、审批证据、阻塞详情和恢复目标。",
+  "_schema": "2.0",
+  "_description": "需求级单文件状态事实源。每个子需求独立记录 UI truth 能力、设计契约评审证据、阻塞详情与恢复目标。",
 
   "_status_meanings": {
-    "draft": "刚创建，边界不确定 — source_ref 覆盖、normalized statements 或依赖尚不完整",
-    "split_ready": "完整的 source_ref 覆盖、normalized statements、明确的范围和依赖 — 已准备好进入下一阶段",
-    "acceptance_frozen": "已启用的 UI truth 能力已在用户批准 workspace 中冻结 CP-UI 授权的真实组件、运行时覆盖矩阵、官方预览与每个 scenario 的证据范围；v3 contracts/ui-truth-index.json 的来源、profile、scenario、范围判定、必需宿主绑定、coverage、路径、SHA-256、预览绑定静态确认，以及每个 unit 独立的 motion_decision 均有效（仅 ui_truth_mode=figma 或 runtime-baseline）",
-    "spec_ready": "spec.md 已生成并对照契约审计通过",
-    "plan_ready": "plan.md 已生成并对照交付切片顺序审计通过",
-    "tasks_ready": "tasks.md 已生成，任务粒度合适、按依赖排序且文件级范围 — 等待用户确认进入剩余开发工作",
-    "in_dev": "剩余实现进行中 — UI truth 切片复用 Stage 2 用户已批准 workspace，TDD 循环活跃",
-    "visual_acceptance_passed": "实现已通过每个已索引的视觉/运行时 scenario，且结构化 visual-acceptance.json 绑定当前 UI truth index，并为每个 unit 写有独立 motion_acceptance（适用时包含 GIF 证据或运行时验证）（仅 ui_truth_mode=figma 或 runtime-baseline；其他模式跳过此状态）",
-    "merged": "代码已变基合并到开发分支（无合并提交）",
-    "archived": "原位归档 — 仅收敛状态，canonical 产物保留在原目录；需求变更须开新 <req-id>",
+    "draft": "边界或来源覆盖尚未明确",
+    "split_ready": "来源覆盖、范围与依赖已明确，可进入下一阶段",
+    "acceptance_frozen": "已启用的 UI truth 能力完成 CP-UI 授权、真实组件、运行时覆盖、官方预览和逐场景证据范围冻结",
+    "design_ready": "唯一 design.md 已包含行为/验收契约、实现相关决策和适用状态流深度，且当前字节具有有效评审",
+    "in_dev": "剩余实现进行中；UI truth 切片复用 Stage 2 workspace 并执行 TDD",
+    "visual_acceptance_passed": "所有索引视觉/运行时场景和每个 unit 的独立动效验收已通过并绑定当前 index",
+    "merged": "代码经 rebase 集成到开发分支且没有 merge commit",
+    "archived": "原位归档；canonical 产物保留，后续变化新建 <req-id>",
 
-    "blocked_missing_requirement": "源中缺少关键业务事实",
-    "blocked_requirement_conflict": "两个已批准的来源互相矛盾",
+    "blocked_missing_requirement": "来源缺少关键业务事实",
+    "blocked_requirement_conflict": "已批准来源互相冲突",
     "blocked_dependency": "上游子需求尚未就绪",
-    "blocked_missing_design": "缺少所需 UI truth 证据或方案设计输入",
-    "blocked_requirement_figma_conflict": "需求与视觉真值不可调和地矛盾",
-    "blocked_figma_conflict": "不同提供方的设计证据互相矛盾",
-    "blocked_missing_state_code": "最终屏幕状态缺少结构化框架证据",
-    "blocked_missing_visual_truth": "缺少默认状态、行组合、父外壳或关键资源",
-    "blocked_spec_mismatch": "官方 spec 输出与治理真值冲突",
+    "blocked_missing_design": "必需 UI truth 或方案设计输入缺失",
+    "blocked_requirement_figma_conflict": "需求与视觉真值不可调和",
+    "blocked_figma_conflict": "不同设计证据来源冲突",
+    "blocked_missing_state_code": "最终界面状态缺少结构化框架证据",
+    "blocked_missing_visual_truth": "默认状态、组合、宿主或关键资源缺失",
+    "blocked_design_mismatch": "canonical 设计契约与治理真值冲突",
     "blocked_dependency_slice": "上游切片尚未合并",
-    "blocked_merge_conflict": "变基/集成失败",
+    "blocked_merge_conflict": "rebase 或集成失败",
     "blocked_verification_failure": "测试、评审或视觉验收在自动修复后仍失败"
   },
 
   "_blocker_scope_meanings": {
-    "slice_local": "仅阻止一个切片、一个阶段或一个能力面的阻塞。默认不得阻止不相关的切片或阶段。",
-    "action_level_integration": "仅阻止一个操作的真实 API 连线或最终语义关闭。不阻止视觉映射、外壳工作、本地状态工作、导航骨架或安全的只读路径。",
-    "requirement_global": "仅当当前所有可推导的队列项都不可运行时才允许搁置整个需求。只要还有一个安全的可运行项存在，阻塞器就还不是需求全局的。"
+    "slice_local": "仅影响一个切片、阶段或能力表面，不得默认阻塞无关工作",
+    "action_level_integration": "仅影响某个动作的真实 API 接线或最终语义闭环",
+    "requirement_global": "只有所有当前可推导队列项都不可运行时才能暂停整个需求"
   },
 
   "_checkpoints": {
-    "CP-UI": "ui_visual_implementation_authorization — UI truth 能力切片等待用户授权写生产组件、golden 与预览；workspace 选择单独治理",
-    "CP-001": "tasks_ready_user_confirmation — 所有可执行切片均已达到 tasks_ready，等待用户确认进入开发",
-    "CP-002": "hard_blocker_pause — 当前需求没有安全的可运行队列项剩余。仅在无任何可运行项时才可进入此检查点。",
-    "CP-DESIGN": "solution_design_approval — 完整方案设计须通过评审并获得用户批准，方可进入 spec 阶段",
-    "CP-ARCHIVE": "archive_confirmation — 所有切片均已 merged，等待用户确认原位归档状态"
+    "CP-UI": "ui_visual_implementation_authorization - 等待授权写真实组件、golden 和预览；workspace 另行治理",
+    "CP-002": "hard_blocker_pause - 当前需求没有安全 runnable 项",
+    "CP-DESIGN": "user_design_decision - user_decision_required=true 表示当前设计版本需要用户授权且批准后仍保持 true；只有当前字节缺少有效 hash-bound human review 时 checkpoint 才待处理",
+    "CP-ARCHIVE": "archive_confirmation - 所有切片已 merged，等待原位归档确认"
   },
 
   "_runtime_modes": {
-    "bootstrap": "status.json 缺失、不完整或无法安全推导队列 — 从第一个受管控阶段开始构建",
-    "resume": "对账后至少还有一个未解决或可运行的队列项；无检查点主动阻止运行",
-    "confirm_ui": "current_checkpoint=CP-UI，ui_truth_mode=figma 或 runtime-baseline 的切片等待授权受控视觉实现；确认前 NEXT_ACTION=none",
-    "confirm_solution_design": "current_checkpoint=CP-DESIGN，design_mode=full 的切片需方案设计批准后方可进入 spec 阶段",
-    "confirm_to_dev": "current_checkpoint=CP-001，所有可执行切片均已 tasks_ready，用户确认进入开发",
-    "blocker_recovery": "current_checkpoint=CP-002，用户已提供缺失决策或外部阻塞已清除",
-    "closing": "current_checkpoint=CP-ARCHIVE，所有可执行切片均已 merged，等待用户确认原位归档状态",
-    "completed": "所有可执行 sub_requirements 均已 archived"
+    "bootstrap": "status.json 缺失或不完整",
+    "resume": "至少一个队列项可运行，且没有 checkpoint 阻止执行",
+    "confirm_ui": "current_checkpoint=CP-UI；受控视觉实现等待授权",
+    "confirm_solution_design": "current_checkpoint=CP-DESIGN；当前用户授权设计版本缺少有效 hash-bound human review，必须在实现前解决",
+    "blocker_recovery": "current_checkpoint=CP-002；等待缺失决策或外部阻塞解除",
+    "closing": "current_checkpoint=CP-ARCHIVE；全部切片已 merged",
+    "completed": "所有可执行 sub_requirements 均 archived"
   },
 
   "requirement_id": "<req-id>",
@@ -67,9 +63,8 @@
       "resume_target_status": null,
       "ui_bearing": false,
       "ui_truth_mode": "none",
-      "design_mode": "none",
       "state_flow_required": false,
-      "design_approved": false,
+      "user_decision_required": false,
       "design_review": {
         "review_mode": "none",
         "reviewed_design_sha256": null,

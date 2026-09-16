@@ -16,10 +16,8 @@ trap 'rm -rf "$TMP"' EXIT
 
 REQ="$TMP/.ai-delivery/requirements/report-language"
 SUB="$REQ/sub-requirements/SR-001"
-mkdir -p "$SUB/spec"
-printf '# spec\n' > "$SUB/spec/spec.md"
-printf '# plan\n' > "$SUB/spec/plan.md"
-printf '# tasks\n' > "$SUB/spec/tasks.md"
+mkdir -p "$SUB"
+printf '# design\n' > "$SUB/design.md"
 printf '# verification\n' > "$SUB/verification.md"
 mkdir -p "$TMP/.ai-delivery/meta"
 printf '{"layout": {}}\n' > "$TMP/.ai-delivery/meta/project-binding.json"
@@ -29,14 +27,21 @@ EOF
 
 cat > "$REQ/status.json" <<'JSON'
 {
+  "_schema": "2.0",
   "requirement_id": "report-language",
   "sub_requirements": {
     "SR-001": {
       "status": "merged",
       "ui_bearing": false,
       "ui_truth_mode": "none",
-      "design_mode": "none",
-      "design_approved": false
+      "state_flow_required": false,
+      "user_decision_required": false,
+      "design_review": {
+        "review_mode": "self",
+        "reviewed_design_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "reviewed_at": "2026-08-25T00:00:00Z",
+        "reviewed_by": "fixture-agent"
+      }
     }
   }
 }

@@ -20,11 +20,8 @@ trap 'rm -rf "$TMP"' EXIT
 
 REQ="$TMP/.ai-delivery/requirements/archive-immutability"
 SUB="$REQ/sub-requirements/SR-001"
-mkdir -p "$SUB/spec"
+mkdir -p "$SUB"
 
-printf '# spec\nfrozen content\n' > "$SUB/spec/spec.md"
-printf '# plan\n' > "$SUB/spec/plan.md"
-printf '# tasks\n' > "$SUB/spec/tasks.md"
 printf '# design\n' > "$SUB/design.md"
 printf '# verification\n\n<!-- ai-delivery-verification:review-rounds -->\n## Review Rounds\n\n- Round 1: approved.\n\n<!-- ai-delivery-verification:commands-results -->\n## Verification Commands and Results\n\n- echo ok -> ok\n\n<!-- ai-delivery-verification:sign-off -->\n## Sign-off\n\n- reviewer: signed\n' > "$SUB/verification.md"
 
@@ -36,6 +33,7 @@ EOF
 
 cat > "$REQ/status.json" <<'JSON'
 {
+  "_schema": "2.0",
   "requirement_id": "archive-immutability",
   "updated_at": "2026-07-10T00:00:00Z",
   "current_checkpoint": null,
@@ -45,8 +43,14 @@ cat > "$REQ/status.json" <<'JSON'
       "status": "merged",
       "ui_bearing": false,
       "ui_truth_mode": "none",
-      "design_mode": "light",
-      "design_approved": true
+      "state_flow_required": false,
+      "user_decision_required": false,
+      "design_review": {
+        "review_mode": "self",
+        "reviewed_design_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "reviewed_at": "2026-07-10T00:00:00Z",
+        "reviewed_by": "fixture-agent"
+      }
     }
   }
 }
@@ -62,9 +66,6 @@ python3 "$ARCHIVE" --req-root "$REQ" --subreq SR-001 --now "$NOW" --no-delivery-
 grep -Fq '"status": "archived"' "$REQ/status.json" \
   || fail "archive did not update status in place"
 [[ ! -d "$SUB/archive" ]] || fail "archive created a duplicate artifact directory"
-[[ -f "$SUB/spec/spec.md" ]] || fail "canonical spec was moved or removed"
-[[ -f "$SUB/spec/plan.md" ]] || fail "canonical plan was moved or removed"
-[[ -f "$SUB/spec/tasks.md" ]] || fail "canonical tasks were moved or removed"
 [[ -f "$SUB/design.md" ]] || fail "canonical design was moved or removed"
 [[ -f "$SUB/verification.md" ]] || fail "canonical verification was moved or removed"
 

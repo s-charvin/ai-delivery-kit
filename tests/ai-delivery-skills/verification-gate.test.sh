@@ -1,103 +1,111 @@
 #!/usr/bin/env bash
-# superpowers verification discipline: `merged` requires verification.md hard
-# evidence on new-layout sub-requirements, and legacy-layout repos stay clean.
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+ROOT=$(cd -- "$(dirname -- "$0")/../.." && pwd)
 VALIDATOR="$ROOT/scripts/validate-delivery-status.py"
-
-fail() {
-  printf '[verification-gate.test] %s\n' "$1" >&2
-  exit 1
-}
-
-[ -f "$VALIDATOR" ] || fail "Missing validator: $VALIDATOR"
-
-WORK="$(mktemp -d)"
+WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 
-write_status() {
-  local req_root="$1" subreq_id="$2" subreq_status="$3" design_mode="${4:-light}"
-  local design_approved=true
-  if [[ "$design_mode" == "none" ]]; then
-    design_approved=false
-  fi
-  cat >"$req_root/status.json" <<EOF
+fail() { echo "[verification-gate.test] $*" >&2; exit 1; }
+run_validator() { python3 "$VALIDATOR" "$1/status.json" --req-root "$1" 2>&1; }
+
+REQ="$WORK/current"
+SUB="$REQ/sub-requirements/SR-001"
+mkdir -p "$SUB"
+cat >"$SUB/design.md" <<'EOF'
+# Design Contract
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## Scope
+One server behavior.
+<!-- ai-delivery:behavior-contract:behavior -->
+## Behavior
+| ID | Given | When | Then |
+|---|---|---|---|
+| B-001 | request | handled | response |
+<!-- ai-delivery:behavior-contract:acceptance -->
+## Acceptance
+| ID | Outcome | Evidence |
+|---|---|---|
+| AC-001 | B-001 is observable | focused test |
+<!-- ai-delivery:behavior-contract:traceability -->
+## Traceability
+| Behavior | Requirement | UI | Acceptance |
+|---|---|---|---|
+| B-001 | REQ-VERIFY | not_applicable | AC-001 |
+<!-- ai-delivery:behavior-contract:end -->
+<!-- ai-delivery:user-decisions -->
+## User decisions
+not_applicable
+EOF
+
+python3 - "$REQ" <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+root = Path(sys.argv[1])
+design = root / "sub-requirements/SR-001/design.md"
+status = {
+    "_schema": "2.0",
+    "requirement_id": "REQ-VERIFY",
+    "sub_requirements": {
+        "SR-001": {
+            "status": "merged",
+            "ui_bearing": False,
+            "ui_truth_mode": "none",
+            "state_flow_required": False,
+            "user_decision_required": False,
+            "design_review": {
+                "review_mode": "self",
+                "reviewed_design_sha256": hashlib.sha256(design.read_bytes()).hexdigest(),
+                "reviewed_at": "2026-09-16T00:00:00Z",
+                "reviewed_by": "fixture-agent",
+            },
+        }
+    },
+}
+(root / "status.json").write_text(json.dumps(status), encoding="utf-8")
+PY
+
+if output=$(run_validator "$REQ"); then
+  fail "schema 2.0 merged without verification.md passed: $output"
+fi
+grep -q 'requires verification.md' <<<"$output" || fail "missing verification gate: $output"
+
+cat >"$SUB/verification.md" <<'EOF'
+# Evidencia de verificacion
+<!-- ai-delivery-verification:review-rounds -->
+- Ronda 1: clean
+<!-- ai-delivery-verification:commands-results -->
+- `make test` -> correcto
+EOF
+if output=$(run_validator "$REQ"); then
+  fail "verification missing sign-off marker passed: $output"
+fi
+grep -q 'missing required marker' <<<"$output" || fail "missing marker error: $output"
+
+cat >>"$SUB/verification.md" <<'EOF'
+<!-- ai-delivery-verification:sign-off -->
+- Revisor: orchestrator
+EOF
+output=$(run_validator "$REQ") || fail "complete verification failed: $output"
+
+# Historical terminal schema remains read-only compatible without invented evidence.
+LEGACY="$WORK/legacy"
+mkdir -p "$LEGACY/sub-requirements/SR-001"
+cat >"$LEGACY/status.json" <<'EOF'
 {
-  "requirement_id": "REQ-VERIFY",
+  "_schema": "1.1",
   "sub_requirements": {
-    "$subreq_id": {
-      "status": "$subreq_status",
+    "SR-001": {
+      "status": "merged",
       "ui_bearing": false,
       "ui_truth_mode": "none",
-      "design_mode": "$design_mode",
-      "design_approved": $design_approved
+      "design_mode": "none",
+      "design_approved": false
     }
   }
 }
 EOF
-}
+output=$(run_validator "$LEGACY") || fail "legacy terminal record should remain readable: $output"
 
-run_validator() {
-  python3 "$VALIDATOR" "$1/status.json" --req-root "$1" 2>&1
-}
-
-# --- Case 1: new layout at merged without verification.md -> rejected --------
-NEW_ROOT="$WORK/new"
-NEW_SR="$NEW_ROOT/sub-requirements/SR-001"
-mkdir -p "$NEW_SR/spec"
-echo '# spec' >"$NEW_SR/spec/spec.md"
-echo '# plan' >"$NEW_SR/spec/plan.md"
-echo '# tasks' >"$NEW_SR/spec/tasks.md"
-echo '# design' >"$NEW_SR/design.md"
-write_status "$NEW_ROOT" "SR-001" "merged"
-
-if output="$(run_validator "$NEW_ROOT")"; then
-  fail "merged without verification.md must fail, got: $output"
-fi
-grep -q 'requires verification.md' <<<"$output" \
-  || fail "Expected a verification.md gate error, got: $output"
-
-# --- Case 2: localized verification.md missing a required marker -------------
-cat >"$NEW_SR/verification.md" <<'EOF'
-# Evidencia de verificacion
-
-<!-- ai-delivery-verification:review-rounds -->
-## 1. Rondas de revision
-- Ronda 1: clean
-
-<!-- ai-delivery-verification:commands-results -->
-## 2. Comandos y resultados
-- `make test` -> correcto
-EOF
-
-if output="$(run_validator "$NEW_ROOT")"; then
-  fail "verification.md missing the sign-off marker must fail, got: $output"
-fi
-grep -q 'missing required marker' <<<"$output" \
-  || fail "Expected a missing-marker error, got: $output"
-
-# --- Case 3: complete localized verification.md -> accepted ------------------
-cat >>"$NEW_SR/verification.md" <<'EOF'
-
-<!-- ai-delivery-verification:sign-off -->
-## 4. Aprobacion final
-- Revisor: orchestrator
-EOF
-
-output="$(run_validator "$NEW_ROOT")" \
-  || fail "complete verification.md should validate clean, got: $output"
-
-# --- Case 4: legacy layout at merged stays clean ------------------------------
-OLD_ROOT="$WORK/old"
-OLD_SR="$OLD_ROOT/sub-requirements/SR-001"
-mkdir -p "$OLD_SR"
-echo '# spec' >"$OLD_SR/spec.md"
-echo '# tasks' >"$OLD_SR/tasks.md"
-write_status "$OLD_ROOT" "SR-001" "merged" "none"
-
-output="$(run_validator "$OLD_ROOT")" \
-  || fail "legacy-layout merged must stay clean, got: $output"
-
-echo 'PASS: verification.md gate enforced on new layout, legacy layout unaffected.'
+echo 'PASS: verification gate applies to schema 2.0 and preserves terminal legacy compatibility.'

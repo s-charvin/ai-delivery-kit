@@ -16,8 +16,9 @@
 ## 完成后
 
 - 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
-- 在能力审计中为每个子需求设置 `ui_truth_mode` 与 `design_mode`：`ui_truth_mode` 使用 `none`、`existing`、`runtime-baseline` 或 `figma`；`design_mode` 使用 `none`、`light` 或 `full`。
-- 当切片使用 MVI/UDF/Redux/Reducer/Store，跨组件或跨页面共享可变状态，呈现多阶段异步操作状态，需要重试/取消/并发/过期结果/幂等/恢复规则，或存在业务约束的导航与一次性 UI effect 时，设置 `state_flow_required=true`。这会自动要求 `design_mode=full` 和 CP-DESIGN。纯静态页面以及不承载业务规则的局部控件保持 `false`。
+- 在能力审计中为每个子需求设置 `ui_truth_mode`：使用 `none`、`existing`、`runtime-baseline` 或 `figma`。
+- 仅当切片引入或实质改变复杂 guard、并发、过期结果处理、重试/取消/幂等、持久化/恢复或跨组件/页面状态所有权时，设置 `state_flow_required=true`。架构名称和普通 loading/success/failure 阶段本身不触发。
+- 当前设计版本包含治理证据无法解决、且决策权属于用户的实质产品、行为、资源或体验选择时，设置 `user_decision_required=true`。用稳定 `D-###` 在 `design.md` 中记录每项决策。当前版本获批后该字段仍保持 `true`，有效的 hash-bound `design_review.review_mode=human` 表示决策已解决。只有当前版本不再包含用户授权决策时才设为 `false`。技术复杂度、框架选择和状态流深度不触发人工门禁。
 - 保留 `ui_bearing` 作为一致性字段：仅 `ui_truth_mode=none` 时为 `false`，其他 UI truth 模式为 `true`。
 - 初始化 `status.json`：复制 `templates/status-template.json` 的结构，填充 `requirement_id`、子需求条目与状态。保留所有 `_` 前缀元数据键和机器值；其中人类可读的描述值改为用户当前对话语言。
 - 依赖图写入 `.ai-delivery/requirements/<req-id>/dependency-graph.json`。
@@ -53,6 +54,8 @@
 
 不要创建子需求级 `status.json`。
 
-## 暂停
+## 决策边界
 
-继续前与用户确认拆分方案（或跳过决策）。
+来源证据能唯一支持拆分或跳过结果时自动推进。只有不同边界会实质改变范围、
+所有权、顺序或验收时才询问用户，并把选择记录为真实用户决策；不得为机械
+明确的拆分创建例行审批。

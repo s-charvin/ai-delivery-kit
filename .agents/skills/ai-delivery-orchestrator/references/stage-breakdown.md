@@ -16,10 +16,9 @@ Feed the requirement document and supporting-source paths. It produces sub-requi
 ## After completion
 
 - For each sub-requirement: if scope has complete source_ref coverage, normalized statements, and clear dependencies → set `split_ready`. If uncertain → leave `draft`.
-- Set `ui_truth_mode` and `design_mode` on each subreq entry during the capability audit:
-  - `ui_truth_mode`: `none` for no visible surface, `existing` for behavior/semantic changes on an existing visual surface, `runtime-baseline` for new visible UI without stable Figma truth, or `figma` when stable Figma evidence exists.
-- `design_mode`: `none` for changes with no solution-design decisions, `light` for a bounded design record, or `full` for architecture, data-flow, state-machine, cross-platform, security, or performance decisions requiring approval.
-- Set `state_flow_required=true` when the slice uses MVI/UDF/Redux/Reducer/Store, shares mutable state across components or screens, exposes multi-stage asynchronous operation state, needs retry/cancel/concurrency/stale-result/idempotency/recovery rules, or has business-constrained navigation or one-shot UI effects. This automatically requires `design_mode=full` and CP-DESIGN. Purely static surfaces and local controls without business rules keep it `false`.
+- Set `ui_truth_mode` on each subreq entry during the capability audit: `none` for no visible surface, `existing` for behavior/semantic changes on an existing visual surface, `runtime-baseline` for new visible UI without stable Figma truth, or `figma` when stable Figma evidence exists.
+- Set `state_flow_required=true` only when the slice introduces or materially changes complex guards, concurrency, stale-result handling, retry/cancel/idempotency, persistence/recovery, or cross-component/cross-screen state ownership. MVI/UDF/Redux/Reducer/Store terminology and ordinary loading/success/failure phases do not trigger it by themselves. Static surfaces and local controls without business rules keep it `false`.
+- Set `user_decision_required=true` when the current design version contains a material product, behavior, resource, or experience choice whose authority belongs to the user because governed evidence cannot resolve it. Technical complexity, framework selection, and state-flow depth do not trigger it. Name each decision in `design.md`. The field remains `true` after approval for that design version; a current hash-bound `design_review.review_mode=human` records that the decision is resolved. Set it to `false` only when the current design version contains no user-authority decision.
 - Keep `ui_bearing` as a consistency field: it is `false` only for `ui_truth_mode=none`, and `true` for the other UI truth modes.
 - Initialize `status.json`: copy the structure of `templates/status-template.json`, then fill `requirement_id`, sub-requirement entries, and statuses. Preserve all `_`-prefixed metadata keys and machine values; localize their human-readable descriptive values into the user's current conversation language.
 - Record dependency graph at `.ai-delivery/requirements/<req-id>/dependency-graph.json`.
@@ -55,6 +54,10 @@ When breakdown is skipped, create a minimal single sub-requirement package:
 
 Do not create a per-subreq `status.json`.
 
-## Pause
+## Decision boundary
 
-Confirm the split plan (or skip decision) with the user before proceeding.
+Proceed automatically when source coverage supports one unambiguous split or
+skip result. Ask the user only when competing boundaries would materially change
+scope, ownership, sequencing, or acceptance. Record that choice as a real user
+decision; do not create a routine approval checkpoint for a mechanically clear
+breakdown.

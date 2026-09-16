@@ -2,9 +2,10 @@
 
 ## 何时运行
 
-CP-001 用户确认后，每个处于 `tasks_ready` 的子需求（reconcile 输出 `implement`）。任务简报映射与进度账本规则见 [stage-4-sdd-bridge.md](stage-4-sdd-bridge.md)。
-
-**CP-001 确认前禁止 dispatch。**
+当依赖就绪的子需求处于 `design_ready` 或 `in_dev`，且 reconcile 输出
+`implement` 时执行。动态执行 brief 与进度记录规则见
+[stage-4-sdd-bridge.md](stage-4-sdd-bridge.md)。当前 hash 绑定的设计评审已
+授权其范围内的实现，不存在单独开发 checkpoint。
 
 ## 切片执行顺序
 
@@ -76,8 +77,8 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 无论哪个框架档位，`implement` 动作都遵循这条链路：
 
 1. **解析 workspace** — 遵循 [workspace-policy.md](workspace-policy.md)。`ui_truth_mode=figma` 或 `runtime-baseline` 复用已记录的 Stage 2 用户已批准 workspace；其他切片默认使用当前 checkout。只有为当前子需求取得明确确认后，才能创建或复用项目内 worktree。
-2. **任务 loop** — 默认每任务一个实现者、顺序执行；每任务内部走 TDD（红 → 绿 → 重构）。
-3. **每任务评审循环** — 每个任务都通过下方[评审循环](#评审循环任务级闭环)收口；只有某一轮评审干净，任务才算完成。
+2. **执行 loop** — 从 `design.md`、依赖、当前代码和测试形成下一个最小执行单元；单元内部走 TDD（红 → 绿 → 重构）。
+3. **评审循环** — 每个单元都通过下方[评审循环](#评审循环闭环)收口；只有某一轮评审 clean，单元才算完成。
 4. **视觉/运行时验收**（仅 `ui_truth_mode=figma` 或 `runtime-baseline`）— 在其 profile 与证据范围下执行每个 v3 scenario。视觉 scenario 对照已确认预览，behavior scenario 验证 state/interaction/motion/assets/theme/accessibility/platform/performance 预期，并记录 schema v2 结构化 `visual-acceptance.json`，且为每个索引 unit 写一条独立动效验收。宿主范围必须有 hash 绑定的 `runtime-capture` 证据；`component-only` 不得宣称宿主覆盖。静态 golden 不能满足动效记录。`ui_truth_mode=existing` 使用普通行为/语义证据，`none` 没有视觉验收产物。失败进入同一评审循环。fill/hug 盒子不以快照 `w×h` 相等为通过。绑定数据无真实值时必须验收为空/省略，而不是伪造 fixture 内容。
 5. **验证** — 合并前集成检查；在 `verification.md` 中使用用户当前对话语言记录人类可读证据（模板：`templates/verification-template.md`，删除其中的语言指令注释）。
 6. **全量 analyze + 全量测试** — 项目静态分析与测试套件须干净通过。
@@ -144,14 +145,14 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token 键、过期时间、
 错误码、迁移事实）必须在记录中显式标记，绝不能写成已确认事实。
 
-## 评审循环（任务级闭环）
+## 评审循环（闭环）
 
-无论哪个框架档位，每个任务与每次视觉验收失败都通过这个循环收口：
+无论哪个框架档位，每个执行单元与每次视觉验收失败都通过这个循环收口：
 
 ```
-实现者完成任务
-  → 评审者（新鲜上下文）对照任务简报 + spec + 契约评审
-  → 干净 → 记录评审结论 → 下一任务
+实现者完成最小执行单元
+  → 评审者（新鲜上下文）对照执行 brief + 设计契约评审
+  → 干净 → 记录评审结论 → 下一单元
   → 有 finding → finding 清单作为修复简报交回实现者 → 修复 → 复审
   → 经过 review_loop.max_rounds 轮仍不干净 → 停下并升级给用户
 ```
@@ -167,8 +168,8 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 ## 子代理策略
 
 ```
-切片内任务独立且文件不重叠？
-  → 否（默认）：每任务一个实现者，顺序执行，双阶段评审
+切片内执行单元独立且文件不重叠？
+  → 否（默认）：每单元一个实现者，顺序执行，双阶段评审
   → 是（少见）：并行派发仅用于独立的 test/bug 域
 禁止：两个实现者并行编辑同一切片的同一文件集
 ```
@@ -183,7 +184,9 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 
 ## 进度账本（可选）
 
-已完成任务追加到 `.ai-delivery/requirements/<req-id>/progress.md`，以应对上下文压缩。不要把 progress.md 当真相源 — 以产物与 `status.json` 对账。
+需要跨会话恢复时，在 `.ai-delivery/requirements/<req-id>/progress.md`
+记录已完成/待完成工作、阻塞、评审和验证命令/结果。不得把它变成第二份计划
+或事实源；仍以治理产物与 `status.json` 对账。
 
 ## 阻塞项
 

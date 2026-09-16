@@ -4,7 +4,7 @@
 
 ## 同意边界
 
-- 创建或复用 worktree 都必须取得当前子需求的用户明确确认。历史偏好、已记录的 worktree、框架默认值、dirty 文件、时间压力、CP-UI 和 CP-001 都不构成授权。CP-UI 与 CP-001 不授权 worktree。
+- 创建或复用 worktree 都必须取得当前子需求的用户明确确认。历史偏好、已记录的 worktree、框架默认值、dirty 文件、时间压力、CP-UI 和 CP-DESIGN 都不构成授权。
 - 询问前必须展示拟使用的准确路径、分支，以及任何必要的 `/.worktrees/` ignore 改动。唯一允许的 worktree 路径是 `<project-root>/.worktrees/<req-id>-<sr-id>`。
 - 用户拒绝时使用当前 checkout。保留无关的用户改动；只有发生具体文件冲突或其他真实 blocker 时才停止。
 - 将批准的选择与路径记录到当前子需求 canonical `decisions` 或 `progress` 产物。该批准仅对同一子需求的后续阶段有效，绝不授权其他切片。

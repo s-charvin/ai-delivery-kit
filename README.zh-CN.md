@@ -73,14 +73,14 @@ ai-delivery init --upgrade .
 - “继续这个需求”
 - “这个 blocker 我处理好了，继续”
 
-编排器负责决定是继续已有需求还是创建新需求：给出一条建议，暂停等待人工确认，再驱动受治理的工作流链路。
+编排器负责决定是继续已有需求还是创建新需求。选择明确时自动推进；只有不同选择会实质改变治理范围或所有权时才询问用户。
 
 ## 人工介入点
 
 人只在需要判断的地方介入：
 
-- 确认编排器关于「继续已有需求」或「创建新需求」的建议
-- 确认显式检查点，例如 `tasks_ready_user_confirmation`
+- 解决会实质改变范围的需求边界歧义
+- 在 CP-UI 授权启用的 UI truth 工作，并在 CP-DESIGN 解决明确命名的产品、行为、资源或体验决策
 - 在治理真值缺失或冲突时解决 blocker
 
 其余默认由 AI 沿编排链路推进。
@@ -93,29 +93,30 @@ ai-delivery init --upgrade .
 
 ## 框架适配
 
-编排器输出抽象阶段动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`），并适配你环境中已安装的框架。不要求安装任何东西。为保持布局稳定，规范方案设计仍落盘为 `design.md`。
+编排器输出抽象动作（`solution-design` / `implement` / `finish` / `archive`），并适配环境中已安装的框架。不要求安装任何东西。`design.md` 是唯一持久化的行为与方案设计契约。
 
 推荐框架（只检测、不安装）：
 
 | 框架 | 主要承担 | 识别标志 |
 |------|----------|----------|
-| spec-kit | `spec` / `plan` / `tasks` | 仓库根 `.specify/` 或 `specify` CLI |
-| OpenSpec | `spec` / `plan` / `tasks` | 仓库根 `openspec/` 或 `openspec` CLI |
+| spec-kit | 可选的需求与设计推理 | 仓库根 `.specify/` 或 `specify` CLI |
+| OpenSpec | 可选的棕地增量推理 | 仓库根 `openspec/` 或 `openspec` CLI |
 | superpowers | `solution-design` / `implement` / `finish` | 用户技能目录含 superpowers 技能 |
 | ECC | `solution-design` / `implement` / `finish` | IDE 中注册 `/ecc:*` 命令 |
 
-未安装任何框架？整条链路仍可端到端运行：使用内置原生档（子需求目录内的轻量 `spec.md` / `tasks.md` + 内置纪律指引）。
+未安装任何框架时，原生档仍可使用同一份 `design.md`、TDD、评审和验证纪律端到端运行。
 
 各框架的具体使用意见随编排器技能分发：`references/framework-adaptation.md` 与 `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
 
 ## 按能力启用的 UI 真值（无 HTML 契约 hook）
 
-每个子需求在 `status.json` 中声明两条独立模式轴：
+每个子需求在 `status.json` 中声明独立的能力与决策字段：
 
 - `ui_truth_mode`：`none`（没有可见 UI）、`existing`（既有视觉表面的行为或语义变化）、`runtime-baseline`（没有稳定 Figma 真值的新可见 UI）或 `figma`（有稳定 Figma 证据）。
-- `design_mode`：`none`（不需要方案设计产物）、`light`（短方案记录并自审）或 `full`（完整方案设计并经过 CP-DESIGN 审批）。
+- `state_flow_required`：是否因复杂状态所有权、守卫、并发、过期结果、持久化或恢复规则而需要完整状态流契约。
+- `user_decision_required`：当前设计版本是否包含决策权属于用户的实质产品、行为、资源或体验选择。当前版本批准后仍保持 `true`；hash-bound `design_review` 记录该版本是否已有有效人工授权。
 
-只有 `ui_truth_mode=figma` 或 `runtime-baseline` 才启用 CP-UI、Stage 2、`acceptance_frozen`、v3 UI truth index 与视觉验收。`none` 与 `existing` 直接进入按需的 solution-design/spec，以及普通行为或语义验证。`ui_bearing` 只是与模式一致性校验字段，不是工作流 gate。runtime-baseline 证据不得称为 Figma 1:1 还原。
+只有 `ui_truth_mode=figma` 或 `runtime-baseline` 才启用 CP-UI、Stage 2、`acceptance_frozen`、v3 UI truth index 与视觉验收。`none` 与 `existing` 进入统一设计契约和普通行为或语义验证。状态流深度不会触发 CP-DESIGN；只有 `user_decision_required=true` 且当前文件缺少有效 hash-bound human review 时才进入。`ui_bearing` 只是模式一致性字段。
 
 CP-UI 授权后，Stage 2 在用户已批准 workspace 中用 TDD 与新鲜上下文评审实现并冻结 **真实宿主栈组件**，并为每个视觉场景生成官方栈预览（Flutter：Widget + golden PNG；有动效的 unit 在宿主能够生成时还需确定性 GIF）。GIF 是唯一治理的动效预览格式；无法生成时记录原因并延后运行时验证，不得新增 WebP/MP4 或伪造文件。默认使用当前 checkout。创建或复用 worktree 必须为当前子需求另行确认，并使用 `<project-root>/.worktrees/<req-id>-<sr-id>`；禁止外部或平台托管临时路径。编写组件代码前，每个 unit 都必须按适用性解决覆盖 `state`、`layout`、`content`、`interaction`、`motion`、`assets`、`theme`、`accessibility`、`platform`、`performance` 的 Runtime Coverage Plan，并记录独立的 `motion_decision`（动效需确认/豁免，无动效也需明确确认）。golden 只证明静态帧，不能替代动效验收；Stage 4 还必须为每个 unit 记录独立动效验收。可见 UI 必须使用真实控件和有依据的资源；缺失真实数据时呈现空/省略状态，未经批准的占位层、静态替身和静默 fallback 均禁止。资源缺失时必须由用户明确选择“为空、延后或阻塞”。`ai-delivery init` **不会** 安装 UI git hook。
 
@@ -159,9 +160,9 @@ bash scripts/rehearse-release.sh
 
 本重构后 `ai-delivery init` 的仓库使用唯一 canonical 目录 `.ai-delivery/requirements/<req-id>/sub-requirements/<SR>/`：
 
-- `design.md`（`design_mode` 为 `light` 或 `full` 时的规范方案设计产物）、`verification.md`、`visual-acceptance.json`（仅 UI truth 模式）、`spec/{spec,plan,tasks}.md`、`contracts/ui-truth-index.json`（仅 UI truth 模式）
+- `design.md`（必需的行为与方案设计契约）、`verification.md`、可选的跨会话 `progress.md`、`visual-acceptance.json`（仅 UI truth 模式）和 `contracts/ui-truth-index.json`（仅启用 UI truth 时）
 - 路径常量在 `.ai-delivery/meta/project-binding.json` → `layout`
-- 外部框架只提供方法；其流程/治理产物直接写入 canonical `.ai-delivery` 路径，绝不写入框架自有派生视图
+- 外部框架只提供方法；schema 2.0 不生成 `spec.md`、`plan.md` 或 `tasks.md`，框架自有派生视图保持只读
 
 **不做旧布局自动迁移** — 仅新 `ai-delivery init` 播种新布局。
 

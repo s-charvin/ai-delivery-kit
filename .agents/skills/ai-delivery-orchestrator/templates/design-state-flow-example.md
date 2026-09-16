@@ -1,8 +1,53 @@
 # Generic MVI State-flow Example
 
-This example is a reusable Markdown reference, not a project contract. Copy only the sections that apply to the current slice.
+This example is a reusable, complete `design.md` shape for a complex state-flow
+slice. Adapt its facts and IDs to the current requirement; never copy its sample
+behavior as project truth.
 
 > Language boundary: this file is an English source reference. When the user's conversation is in another language, localize every human-readable heading, table header/cell, explanatory sentence, and Mermaid node, edge, or participant label. Keep machine syntax, IDs, code/API/library/protocol names, and required technical tokens unchanged.
+
+## Context and scope
+
+The example models one authenticated submission flow. It excludes account
+creation and background synchronization.
+
+<!-- ai-delivery:behavior-contract:start -->
+<!-- ai-delivery:behavior-contract:scope -->
+## Behavioral boundary
+
+An authenticated user edits, submits, cancels, or retries one draft. The flow
+preserves user input on failure and ignores stale results.
+
+<!-- ai-delivery:behavior-contract:behavior -->
+## Behavior contract
+
+| Behavior ID | Given | When | Then | Boundary / failure behavior |
+|-------------|-------|------|------|-----------------------------|
+| B-001 | A valid editable draft | The user submits it | Exactly one active request owns the visible submitting state | Duplicate input is deduplicated and stale results are ignored |
+| B-002 | An active submission | The request fails or is cancelled | The draft returns to editing with its input intact | A one-shot failure effect is emitted only for failure |
+
+<!-- ai-delivery:behavior-contract:acceptance -->
+## Acceptance contract
+
+| Acceptance ID | Verifiable outcome | Evidence or command |
+|---------------|--------------------|---------------------|
+| AC-001 | B-001 keeps only the active correlated result | Focused reducer and command test |
+| AC-002 | B-002 preserves input and consumes UiEffect once | Focused projection and restoration test |
+
+<!-- ai-delivery:behavior-contract:traceability -->
+## Behavior traceability
+
+| Behavior ID | Requirement source | UI scenario | Acceptance ID |
+|-------------|--------------------|-------------|---------------|
+| B-001 | REQ-SUBMIT | SC-SUBMIT | AC-001 |
+| B-002 | REQ-SUBMIT | SC-FAILURE | AC-002 |
+<!-- ai-delivery:behavior-contract:end -->
+
+## Solution design
+
+The state holder owns domain and operation state. A pure projection produces
+`UiState`; an effect host consumes one-shot `UiEffect` values. Side effects run
+outside the reducer and return correlated result events.
 
 <!-- ai-delivery:state-flow:start -->
 <!-- ai-delivery:state-flow:taxonomy -->
@@ -91,3 +136,16 @@ sequenceDiagram
 |----|-------------|----------|------|
 | T-002 / P-002 | REQ-SUBMIT | SC-SUBMIT | test/submit_test.dart |
 <!-- ai-delivery:state-flow:end -->
+
+<!-- ai-delivery:user-decisions -->
+## User decisions
+
+`not_applicable`: governed evidence fully determines the example behavior; no
+material product, resource, or experience choice remains for the user.
+
+## Risks and verification
+
+- Verify duplicate submit, cancellation, stale success, stale failure,
+  restoration, and single-consumption effect paths.
+- Verify that the reducer remains pure and that restored state never replays a
+  historical `UiEffect`.

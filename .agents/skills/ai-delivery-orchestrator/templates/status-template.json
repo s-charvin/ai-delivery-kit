@@ -1,14 +1,12 @@
 {
-  "_schema": "1.1",
-  "_description": "Requirement-level state tracking in a single file. Each sub-requirement independently tracks status, capability modes, design-flow complexity, approval evidence, blocker details, and resume target.",
+  "_schema": "2.0",
+  "_description": "Requirement-level state tracking in a single file. Each sub-requirement independently tracks UI truth capability, design-contract review evidence, blocker details, and resume target.",
 
   "_status_meanings": {
     "draft": "Newly created with uncertain boundaries - source_ref coverage, normalized statements, or dependencies are incomplete",
     "split_ready": "Complete source_ref coverage, normalized statements, explicit scope, and dependencies - ready to enter the next stage",
     "acceptance_frozen": "The enabled UI truth capability has a CP-UI-authorized real component, runtime coverage matrix, official previews, and per-scenario evidence scopes frozen in the user-approved workspace; v3 contracts/ui-truth-index.json provenance, profiles, scenarios, scope decisions, required host bindings, coverage, paths, SHA-256 hashes, preview-bound static confirmations, and a separate motion_decision for every unit are valid (ui_truth_mode=figma or runtime-baseline only)",
-    "spec_ready": "spec.md has been generated and audited against the contract",
-    "plan_ready": "plan.md has been generated and audited against delivery-slice ordering",
-    "tasks_ready": "tasks.md has been generated with suitable task granularity, dependency ordering, and file-level scope - awaiting user confirmation to enter the remaining development work",
+    "design_ready": "The canonical design.md contains the behavior and acceptance contract, implementation-relevant decisions, and the required state-flow depth; its current bytes have a valid self or human review",
     "in_dev": "Remaining implementation work is in progress - UI truth slices reuse the Stage 2 user-approved workspace and the TDD loop is active",
     "visual_acceptance_passed": "The implementation passed every indexed visual/runtime scenario and structured visual-acceptance.json binds the current UI truth index with independent motion_acceptance for every unit (including GIF evidence or runtime verification when applicable; ui_truth_mode=figma or runtime-baseline only; other modes skip this state)",
     "merged": "Code has been rebased and integrated into the development branch without a merge commit",
@@ -22,7 +20,7 @@
     "blocked_figma_conflict": "Design evidence from different providers conflicts",
     "blocked_missing_state_code": "The final screen state lacks structured framework evidence",
     "blocked_missing_visual_truth": "The default state, row combinations, parent shell, or key assets are missing",
-    "blocked_spec_mismatch": "Official spec output conflicts with governance truth",
+    "blocked_design_mismatch": "The canonical design contract conflicts with governed truth",
     "blocked_dependency_slice": "An upstream slice has not been merged",
     "blocked_merge_conflict": "Rebase or integration failed",
     "blocked_verification_failure": "Tests, review, or visual acceptance still fail after automated fixes"
@@ -36,9 +34,8 @@
 
   "_checkpoints": {
     "CP-UI": "ui_visual_implementation_authorization - a UI truth capability slice awaits user authorization to write the production component, golden tests, and preview; workspace choice is governed separately",
-    "CP-001": "tasks_ready_user_confirmation - all executable slices have reached tasks_ready and await user confirmation to enter development",
     "CP-002": "hard_blocker_pause - no safe runnable queue items remain for the current requirement; this checkpoint is allowed only when no runnable item exists",
-    "CP-DESIGN": "solution_design_approval - a full solution design must pass review and receive user approval before entering the spec stage",
+    "CP-DESIGN": "user_design_decision - user_decision_required=true classifies a design version that requires human authority and remains true after approval; the checkpoint is pending only while the current bytes lack a valid hash-bound human review",
     "CP-ARCHIVE": "archive_confirmation - all slices are merged and await user confirmation to archive their status in place"
   },
 
@@ -46,8 +43,7 @@
     "bootstrap": "status.json is missing or incomplete, or the queue cannot be derived safely - start from the first governed stage",
     "resume": "At least one unresolved or runnable queue item remains after reconciliation, and no checkpoint actively prevents execution",
     "confirm_ui": "current_checkpoint=CP-UI; a ui_truth_mode=figma or runtime-baseline slice awaits authorization for controlled visual implementation; NEXT_ACTION=none until confirmed",
-    "confirm_solution_design": "current_checkpoint=CP-DESIGN; a design_mode=full slice requires solution-design approval before entering the spec stage",
-    "confirm_to_dev": "current_checkpoint=CP-001; all executable slices are tasks_ready and await user confirmation to enter development",
+    "confirm_solution_design": "current_checkpoint=CP-DESIGN; the current user-authority design version lacks a valid hash-bound human review and must be resolved before implementation",
     "blocker_recovery": "current_checkpoint=CP-002; the user supplied the missing decision or the external blocker has cleared",
     "closing": "current_checkpoint=CP-ARCHIVE; all executable slices are merged and await user confirmation to archive status in place",
     "completed": "All executable sub_requirements are archived"
@@ -67,9 +63,8 @@
       "resume_target_status": null,
       "ui_bearing": false,
       "ui_truth_mode": "none",
-      "design_mode": "none",
       "state_flow_required": false,
-      "design_approved": false,
+      "user_decision_required": false,
       "design_review": {
         "review_mode": "none",
         "reviewed_design_sha256": null,

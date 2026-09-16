@@ -1,42 +1,45 @@
 # Handoff Table
 
-Each stage has exactly one legal next action. Do not improvise jumps. Actions are abstract; concrete tooling follows [framework-adaptation.md](framework-adaptation.md). Kit-owned skills (`requirement-breakdown`, `ui-truth-mapping`) keep their names.
+Each stage has one legal next action. Actions are abstract; concrete tooling
+follows [framework-adaptation.md](framework-adaptation.md). Kit-owned skills
+retain their names.
 
 | Current completion state | Unique next action | Forbidden |
 |--------------------------|--------------------|-----------|
-| Split decision pending | User confirms → `requirement-breakdown` or skip single-slice package | `ui-truth-mapping`, `spec`/`plan`/`tasks` |
-| `split_ready` + light audit with `ui_truth_mode=figma` or `runtime-baseline` | CP-UI pause → user authorizes controlled visual implementation | Production edits or `ui-truth-mapping` dispatch before approval |
-| CP-UI confirmed | Resolve the user-approved workspace, then run `ui-truth-mapping` (TDD + golden + review) | Treat Stage 2 as implementation-free mapping, or treat CP-UI as worktree consent |
-| `split_ready` + light audit with `ui_truth_mode=none` or `existing` | `solution-design` when `design_mode=light` or `full`; otherwise `spec` | Require a UI gate for an existing/no-truth slice |
-| `acceptance_frozen` (validator OK) | `solution-design` according to `design_mode` | `spec` before the solution-design gate is satisfied |
-| Solution design gate satisfied (`design_mode=none`, or a hash-bound `design_approved: true` for `light`/`full`) | `spec` → `plan` → `tasks` | Business code before `tasks_ready`, or proceeding with a stale design hash |
-| All executable subreqs at `tasks_ready` | CP-001 pause → user confirms | Silent entry to development |
-| CP-001 confirmed | Stage 4: `implement` | Parallel implementers on same slice files |
-| Slice implementation complete | `finish` → set `merged` | Subagent merge or gate promotion |
-| All subreqs `merged` | CP-ARCHIVE pause → `archive` (converge status in place) | Creating a second copy of canonical artifacts |
+| Breakdown boundary is materially ambiguous | Resolve the named user decision, then run `requirement-breakdown` or create the single-slice package | Routine approval for an unambiguous split |
+| `split_ready` + `ui_truth_mode=figma` or `runtime-baseline` | CP-UI → user authorizes controlled visual implementation | Production UI edits before CP-UI |
+| CP-UI confirmed | Resolve the approved workspace, then `ui-truth-mapping` | Treat CP-UI as worktree consent |
+| `split_ready` + `ui_truth_mode=none` or `existing` | `solution-design` | Require a UI gate |
+| `acceptance_frozen` | `solution-design` | Bypass frozen visual/motion evidence |
+| Current `design.md` has an unresolved material user decision | CP-DESIGN | Treat technical complexity as a human decision |
+| Current `design.md` has a valid hash-bound review | `design_ready` → `implement` when dependencies permit | A second development-authorization gate |
+| Slice implementation and verification complete | `finish` → `merged` | Merge with a stale design or unclean review |
+| All subreqs `merged` | CP-ARCHIVE → `archive` in place | Duplicate canonical artifacts |
 
-## Status → next action mapping (for reconcile)
+## Status to next action
 
-| Subreq status | ui_truth_mode | design_mode / approval | Next action |
-|---------------|----------------|----------------------|-------------|
-| `draft` | any | any | `requirement-breakdown` |
-| `split_ready` | `figma` or `runtime-baseline` | any | Await CP-UI; after confirmation → `ui-truth-mapping` |
-| `split_ready` | `none` or `existing` | `none` | `spec` |
-| `split_ready` (after any enabled UI truth gate) | any | `light`, `design_approved=false` | `solution-design` → automatic gate satisfaction |
-| `split_ready` / `acceptance_frozen` | any | `full`, `design_approved=false` | `solution-design` → CP-DESIGN |
-| `split_ready` / `acceptance_frozen` | any | `full`, `design_approved=true` | `spec` |
-| `spec_ready` | any | gate satisfied | `plan` |
-| `plan_ready` | any | gate satisfied | `tasks` |
-| `tasks_ready` | any | gate satisfied | (await CP-001; reconcile emits `implement` after confirm) |
-| `in_dev` | any | gate satisfied | `implement` |
-| `visual_acceptance_passed` | `figma` or `runtime-baseline` | gate satisfied | `finish` |
-| `merged` | any | any | `archive` (update status in place, set `archived`) |
-| `archived` | any | any | none |
-| `blocked_*` | any | any | `NEXT_ACTION=none`; resolve blocker; continue other runnable subreqs |
+| Subreq status | Capability condition | Next action |
+|---------------|----------------------|-------------|
+| `draft` | any | `requirement-breakdown` |
+| `split_ready` | `figma` or `runtime-baseline` | await CP-UI; after authorization → `ui-truth-mapping` |
+| `split_ready` | `none` or `existing` | `solution-design` |
+| `acceptance_frozen` | enabled UI truth | `solution-design` |
+| `design_ready` | dependencies ready | `implement` |
+| `in_dev` | any | `implement` |
+| `visual_acceptance_passed` | `figma` or `runtime-baseline` | `finish` |
+| `merged` | any | `archive` in place after the closing checkpoint |
+| `archived` | any | none |
+| `blocked_*` | any | resolve blocker; continue independent runnable slices |
 
-## Solution-design approval
+## Design review
 
-- Set `design_approved: true` after the required solution-design artifact is complete: `design_mode=light` after the AI self-review, or `design_mode=full` only after an explicit user approval. Record matching `design_review` metadata and the exact file SHA-256. Keep it `false` for `design_mode=none`.
-- For `design_mode=light`, record the short solution-design artifact and satisfy the gate without CP-DESIGN. For `design_mode=none`, do not create `design.md`.
-- Store only a short pointer in `notes`; the canonical artifact remains `design.md` when required.
-- Do not enter `spec`/`plan`/`tasks` while a `design_mode=full` gate is pending.
+- Every active schema 2.0 slice has one canonical `design.md`.
+- With `user_decision_required=false`, self-review and bind
+  `design_review.review_mode=self` to the exact file SHA-256.
+- With `user_decision_required=true`, resolve the named decision through
+  CP-DESIGN and bind `review_mode=human` to the approved file SHA-256.
+- A file change invalidates the review and returns the slice to
+  `solution-design`. It creates a new CP-DESIGN pause only when a material user
+  decision remains.
+- Store only a short pointer in `notes`; do not create `spec.md`, `plan.md`, or
+  `tasks.md`.

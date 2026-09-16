@@ -13,7 +13,7 @@ under the `layout` key. Every path below is *relative to* `ai_delivery_path`
 Artifact kinds come in two scopes:
   * project-level       (shared by all requirements): retrospective_index, ...
   * requirement-level   (no sub-requirement): status, requirement, ...
-  * sub-requirement-level: spec, plan, tasks, solution_design, verification, ...
+  * sub-requirement-level: solution_design, verification, visual_acceptance, ...
 
 Reconcile, validators, and archive scripts resolve paths through this module.
 """
@@ -52,9 +52,6 @@ DEFAULT_LAYOUT: dict = {
         "solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
         "verification": "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
         "visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
-        "spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
-        "plan": "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
-        "tasks": "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
         "ui_truth_index": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
     },
 }
@@ -316,7 +313,7 @@ DEFAULT_WORKFLOW_POLICY: dict = {
         },
         "conflict_behavior": "block",
     },
-    "workflow_gates": ["requirement_breakdown", "spec_pipeline", "implementation"],
+    "workflow_gates": ["requirement_breakdown", "design_contract", "implementation"],
     "capabilities": {
         "ui_truth": {
             "checkpoint": "CP-UI",
@@ -355,18 +352,28 @@ DEFAULT_WORKFLOW_POLICY: dict = {
         }
     },
     "solution_design": {
-        "modes": ["none", "light", "full"],
-        "full_checkpoint": "CP-DESIGN",
+        "required": True,
+        "human_checkpoint": "CP-DESIGN",
+        "human_checkpoint_condition": "user_decision_required_and_no_valid_human_review",
         "artifact_key": "solution_design",
     },
+    "status_sequence": [
+        "draft",
+        "split_ready",
+        "acceptance_frozen",
+        "design_ready",
+        "in_dev",
+        "visual_acceptance_passed",
+        "merged",
+        "archived",
+    ],
     "review_loop": {"max_rounds": 3},
-    "spec_persistence": {
+    "design_contract_persistence": {
         "active": "living",
         "complete": "in_place",
         "living": {
-            "source_of_truth": "spec/spec.md",
-            "derived": ["spec/plan.md", "spec/tasks.md"],
-            "on_drift": "downgrade_to_spec_ready",
+            "source_of_truth": "design.md",
+            "on_drift": "reopen_solution_design",
         },
         "in_place": {
             "source_of_truth": "canonical_artifacts",
@@ -389,12 +396,11 @@ def is_new_layout(subreq_dir: Path | str) -> bool:
     """True when a sub-requirement has adopted the unified canonical layout.
 
     Shared by every validator so "new layout" is decided in exactly one place.
-    Marker files: ``spec/spec.md``, ``design.md``, ``verification.md``.
+    Marker files: ``design.md`` and ``verification.md``.
     """
     d = Path(subreq_dir)
     return (
-        (d / "spec" / "spec.md").is_file()
-        or (d / "design.md").is_file()
+        (d / "design.md").is_file()
         or (d / "verification.md").is_file()
     )
 
@@ -547,8 +553,8 @@ def _selftest() -> int:
         root = Path(td)
         p = artifact_path(root, "status", "REQ-1")
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "status.json", p
-        p = artifact_path(root, "spec", "REQ-1", sr_id="SR-001")
-        assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "spec" / "spec.md", p
+        p = artifact_path(root, "solution_design", "REQ-1", sr_id="SR-001")
+        assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "design.md", p
         p = artifact_path(root, "visual_acceptance", "REQ-1", sr_id="SR-001")
         assert p == root / ".ai-delivery" / "requirements" / "REQ-1" / "sub-requirements" / "SR-001" / "visual-acceptance.json", p
         # Current archives are status transitions; no manifest path is emitted.
@@ -570,14 +576,14 @@ def _selftest() -> int:
                         "requirement_root": "requirements/{req_id}",
                         "sub_requirement_dir": "requirements/{req_id}/sub-requirements/{sr_id}",
                         "requirement_artifacts": {"status": "requirements/{req_id}/status.json"},
-                        "sub_requirement_artifacts": {"spec": "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md"},
+                        "sub_requirement_artifacts": {"solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/design.md"},
                     },
                 }
             ),
             encoding="utf-8",
         )
-        p = artifact_path(root, "spec", "REQ-9", sr_id="SR-002")
-        assert p == root / "governed" / "requirements" / "REQ-9" / "sub-requirements" / "SR-002" / "spec" / "spec.md", p
+        p = artifact_path(root, "solution_design", "REQ-9", sr_id="SR-002")
+        assert p == root / "governed" / "requirements" / "REQ-9" / "sub-requirements" / "SR-002" / "contracts" / "design.md", p
         assert artifact_path(root, "retrospective", "REQ-9") == root / "governed" / "requirements" / "REQ-9" / "retrospective.md"
         assert artifact_path(root, "retrospective_index") == root / "governed" / "retrospectives" / "index.md"
 
@@ -590,9 +596,9 @@ def _selftest() -> int:
     # 4) is_new_layout markers
     with tempfile.TemporaryDirectory() as td:
         sr = Path(td) / "SR-001"
-        (sr / "spec").mkdir(parents=True)
+        sr.mkdir(parents=True)
         assert not is_new_layout(sr)
-        (sr / "spec" / "spec.md").write_text("# spec\n", encoding="utf-8")
+        (sr / "design.md").write_text("# design\n", encoding="utf-8")
         assert is_new_layout(sr)
 
     # 5) spec_drift: in-sync clean, cosmetic edit clean, real edit detected
@@ -652,7 +658,7 @@ def _selftest() -> int:
     with tempfile.TemporaryDirectory() as td:
         policy = load_workflow_policy(Path(td))
         assert policy["review_loop"]["max_rounds"] == 3
-        assert policy["spec_persistence"]["active"] == "living"
+        assert policy["design_contract_persistence"]["active"] == "living"
 
     # 8) the canonical solution-design key retains the stable design.md filename
     with tempfile.TemporaryDirectory() as td:

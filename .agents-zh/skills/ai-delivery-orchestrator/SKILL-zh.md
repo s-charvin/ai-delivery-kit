@@ -1,6 +1,6 @@
 ---
 name: ai-delivery-orchestrator
-description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门禁治理的端到端交付时使用。存在 `.ai-delivery` 状态或用户提供新需求文档时，作为唯一入口。
+description: 当需求文档需要经 UI truth、唯一设计契约、实现验证与合并门禁治理的端到端交付时使用。存在 `.ai-delivery` 状态或用户提供新需求文档时，作为唯一入口。
 ---
 
 # AI 交付编排器
@@ -8,7 +8,7 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 需求 → 实现的唯一入口。Leaf 技能（`requirement-breakdown`、`ui-truth-mapping`）为纯工具，不感知管道。本技能拥有状态、门禁、阻塞与 handoff。
 
 ```
-需求 → [拆分？] → 能力审计 → 方案设计（按需）→ Spec → Plan → Tasks → 实现 → 合并 → 归档
+需求 → [拆分？] → 能力审计 → 设计契约 → 实现 + 验证 → 合并 → 归档
 ```
 
 编排器是**框架无关**的：它输出抽象阶段动作，并适配用户已安装的任何 AI 开发框架。绝不要求用户安装任何东西。
@@ -38,10 +38,10 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 ## 产物语言
 
 - 内置模板文本只是英文源默认值，不是最终输出语言。输出语言取决于用户当前对话，不取决于仓库、框架或源模板语言。
-- 人类可读内容包括 Markdown 标题、表头和单元格、列表标签、解释性正文、评审证据、方案设计/spec/plan/task 正文、风险和待决问题说明，以及 Mermaid 节点、连线和参与者标签。以上内容都必须使用用户当前对话语言；更新已有产物时同样适用。
+- 人类可读内容包括 Markdown 标题、表头和单元格、列表标签、解释性正文、评审证据、设计契约正文、风险和待决问题说明，以及 Mermaid 节点、连线和参与者标签。以上内容都必须使用用户当前对话语言；更新已有产物时同样适用。
 - 机器可读键、枚举值、ID、路径、命令、代码符号、Mermaid 语法关键字和协议字面量必须保持原样。`flowchart`、`stateDiagram-v2`、`sequenceDiagram` 等 Mermaid 语法关键字保留英文；附着其上的标签属于人类可读内容，必须本地化。
 - 只有真实 API、库、协议、代码符号，或为保持精度而必须使用英文的标准技术名词可以保留英文。其他术语首次出现时先写本地化术语，再在括号中保留英文原词，例如“归约器（`Reducer`）”。`State set`、`Owner`、`Guard`、`Risk` 等英文模板表头不是受保护的机器文本，不得直接照搬。
-- 在方案设计/spec/plan/task 门禁或 CP-DESIGN 批准前，执行一次语言复核：扫描标题、表头、图表标签、说明、正文和评审笔记；翻译未解释的英文；确认保留的英文确实属于受保护标识或已明确引入的技术术语。未解释的英文正文或标题属于本地化缺陷，必须在门禁前修复。
+- 在 `design_ready` 或 CP-DESIGN 前执行语言复核：扫描标题、表头、图表标签、说明、正文和评审笔记；翻译未解释的英文；确认保留的英文确实属于受保护标识或已明确引入的技术术语。未解释的英文正文或标题属于本地化缺陷。
 - Markdown 模板实例化后，删除 `ai-delivery-template-language` 指令注释；JSON 模板保持结构不变，只本地化人类可读的描述值。
 
 ## 框架适配（每会话执行一次）
@@ -49,7 +49,7 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 执行任何阶段动作之前：
 
 1. 按 [references/framework-adaptation.md](references/framework-adaptation.md) 自查环境（已安装框架：spec-kit / OpenSpec / superpowers / ECC；都没装 → 原生档）。
-2. 为当前动作选择档位（规格类动作 vs 执行纪律类动作）。
+2. 为当前动作选择档位（设计推理或执行纪律）。
 3. 在子需求 `decisions.md` 记录一次选择。
 
 动作 → 指南分发表与 loop 模型：[references/framework-adaptation.md](references/framework-adaptation.md)。各框架使用指南：`references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`。
@@ -60,8 +60,7 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 |------|----------|------|
 | 1 | `requirement-breakdown` + 轻量审计 | `split_ready` |
 | 2 | 按能力启用的 `ui-truth-mapping`（仅 `ui_truth_mode` 需要时） | 启用时为 `acceptance_frozen` |
-| 3a | `solution-design`（canonical 产物仍为 `design.md`） | `design_mode=full` 时为 `design_approved` |
-| 3b | `spec` → `plan` → `tasks` | `spec/plan/tasks_ready` |
+| 3 | `solution-design`（唯一行为与方案设计契约为 `design.md`） | `design_ready`；仅实质用户决策触发 CP-DESIGN |
 | 4 | `implement` | `visual_acceptance_passed` → `merged` |
 | 5 | `finish` | `merged` |
 | 6 | `archive` | `archived`（全部子需求） |
@@ -71,10 +70,10 @@ description: 当需求文档需要经 Figma UI 契约、spec 管道与合并门�
 ## 状态模型
 
 ```
-draft → split_ready → [acceptance_frozen] → [design_approved] → spec_ready → plan_ready → tasks_ready → in_dev → [visual_acceptance_passed] → merged → archived
+draft → split_ready → [acceptance_frozen] → design_ready → in_dev → [visual_acceptance_passed] → merged → archived
 ```
 
-方括号状态按能力启用：`ui_truth_mode=none` 与 `existing` 跳过 UI truth 冻结和视觉验收；`design_mode=none` 与 `light` 不需要完整审批检查点。
+方括号状态按能力启用：`ui_truth_mode=none` 与 `existing` 跳过 UI truth 冻结和视觉验收。每个活跃 schema 2.0 切片都有一份 `design.md`。`user_decision_required=true` 表示当前设计版本需要用户授权；只有该版本缺少有效 hash-bound human review 时，CP-DESIGN 才处于待处理状态。
 
 真相源：`.ai-delivery/requirements/<req-id>/status.json`。逐字复制 [templates/status-template.json](templates/status-template.json) 的结构，并本地化其中人类可读的描述值；禁止凭记忆生成结构。使用用户当前对话语言实例化 [templates/todo-template.md](templates/todo-template.md)（非真相源）。
 
@@ -83,9 +82,8 @@ draft → split_ready → [acceptance_frozen] → [design_approved] → spec_rea
 | `status` | 当前状态或 `blocked_*` |
 | `ui_bearing` | `true` / `false` — 切片是否拥有 UI 表面；校验器要求它与 `ui_truth_mode` 一致 |
 | `ui_truth_mode` | `none` / `existing` / `runtime-baseline` / `figma` — 切片所需的 UI truth 能力 |
-| `design_mode` | `none` / `light` / `full` — 方案设计深度与审批策略 |
-| `state_flow_required` | 能力审计结果；MVI/UDF、共享可变状态、复杂异步/并发/恢复或业务约束 effect 时为 `true`，并强制 `design_mode=full` |
-| `design_approved` | 方案设计门禁兼容字段；`light` 在 AI 自审后，`full` 在用户明确批准后；`none` 保持 `false` |
+| `state_flow_required` | 仅当切片实质改变复杂 guard、并发、过期结果、恢复、持久化或跨表面状态所有权时为 `true`；架构名称与普通 loading/error 不触发 |
+| `user_decision_required` | 当前设计版本包含决策权属于用户的实质产品、行为、资源或体验选择时为 `true`；批准后仍保持 `true`，当前字节是否已获有效人工授权由 `design_review` 记录 |
 | `design_review` | 结构化评审元数据（`review_mode`、`reviewed_design_sha256`、`reviewed_at`、`reviewed_by`），绑定当前 `design.md` 的精确字节 |
 | `blocker_scope` | `slice_local` / `action_level_integration` / `requirement_global` |
 | `resume_target_status` | 阻塞清除后的恢复目标 |
@@ -100,9 +98,9 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
   --req-root .ai-delivery/requirements/<req-id>
 ```
 
-reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `implement` / `finish`，另含 kit 自有技能）— 绝不输出第三方技能名。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
+reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `archive`，另含 kit 自有技能）— 绝不输出第三方技能名。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
 
-当前状态模板为 schema `1.1`。恢复时，缺少状态流与评审字段的未版本化或 schema `1.0` 活跃条目必须重新审计并迁移后才能路由；`merged`/`archived` 历史记录保持只读兼容。
+当前状态模板为 schema `2.0`。恢复时，所有活跃旧条目必须重新审计并迁移后才能路由；`merged`/`archived` 历史记录只读兼容，不补造设计或评审证据。
 
 ## Handoff 表
 
@@ -111,36 +109,35 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 | 完成态 | 下一站 |
 |--------|--------|
 | `split_ready` + 审计（`ui_truth_mode=figma` 或 `runtime-baseline`） | CP-UI → `ui-truth-mapping` |
-| `split_ready` + 审计（`ui_truth_mode=none` 或 `existing`） | `design_mode` 为 `light` 或 `full` 时进入 `solution-design`，否则进入 `spec` |
-| `acceptance_frozen` | 按 `design_mode` 进入 `solution-design` |
-| `design_approved=true` 或 `design_mode=none` | `spec` |
-| 全部 `tasks_ready` + CP-001 | Stage 4 `implement` |
+| `split_ready` + 审计（`ui_truth_mode=none` 或 `existing`） | `solution-design` |
+| `acceptance_frozen` | `solution-design` |
+| 当前 hash 绑定的 `design.md` 评审 | `design_ready` → 对该依赖就绪切片执行 Stage 4 `implement` |
 | 切片完成 | `finish` |
 
-## 暂停点（6 个）
+## 暂停点
 
-1. 拆分/跳过决策后 — 与用户确认
+1. 拆分/跳过边界存在实质歧义时 — 与用户解决命名的范围或所有权决策；明确结果自动推进
 2. 启用 UI truth 能力写生产代码前 — CP-UI，授权受控视觉实现（workspace 选择是独立的用户决策）
-3. `design_mode=full` 方案设计会话后 — CP-DESIGN，进入 `spec` 前须明确批准
-4. `tasks_ready` 后 — CP-001，进入剩余开发工作前确认
-5. 评审循环预算耗尽 — 任务级评审循环（实现 → 评审 → 修复 → 复审）在没有干净一轮的情况下停下；报告未解决的 finding 并等待用户
-6. 所有子需求 `merged` 后 — CP-ARCHIVE，标记 `archived` 前确认原位收敛状态
+3. `user_decision_required=true` 且当前设计缺少有效 hash-bound human review 时 — CP-DESIGN，解决命名决策并把人工评审绑定到当前 `design.md`；评审同时授权批准范围内实现
+4. 评审循环预算耗尽 — 报告未解决 finding 并等待用户
+5. 所有子需求 `merged` 后 — CP-ARCHIVE，标记 `archived` 前确认原位收敛状态
 
 ## 硬边界
 
 - 不要把工作流真相移出 `.ai-delivery`。
-- Workspace 选择遵循 [references/workspace-policy.md](references/workspace-policy.md)。默认使用当前 checkout；创建或复用 worktree 必须另外取得当前子需求的用户明确确认，批准的 worktree 必须位于 `<project-root>/.worktrees/<req-id>-<sr-id>`。CP-UI、CP-001、框架默认值和旧 `require_isolated_worktree` 都不构成同意。如果已经处于外部 worktree，停止生产编辑，并询问用户切换到项目 checkout 或准确的项目内 worktree。保持外部 worktree 原样；切换不授权迁移或删除。
+- Workspace 选择遵循 [references/workspace-policy.md](references/workspace-policy.md)。默认使用当前 checkout；创建或复用 worktree 必须另外取得当前子需求的用户明确确认，批准路径必须为 `<project-root>/.worktrees/<req-id>-<sr-id>`。CP-UI、CP-DESIGN、框架默认值和旧隔离字段都不构成同意。
 - 外部 skill 的默认设置绝不授权框架自有产物路径。外部 skill 只提供方法与执行纪律：调用前传入 canonical `.ai-delivery` 输出路径；持久化步骤无法遵守时，跳过该步骤并直接写等价 canonical 产物。禁止先在 `docs/superpowers/**`、`.superpowers/**`、`.specify/**`、`openspec/**` 或其他宿主树框架目录生成流程/治理产物再搬运。
 - `.ai-delivery/` 外只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。推进任何门禁前，对比入口/出口 Git 状态/内容指纹账本，并为外部 skill 声明的每个默认输出根建立包含 ignored 文件的独立文件系统指纹，至少覆盖上述四个禁写根。路径、状态、类型、符号链接目标或 SHA-256 漂移能捕获动作前已 dirty 或 ignored 路径上的再次写入。发现新增或修改且位于 `.ai-delivery/` 外的流程/治理产物时，设置 `blocked_verification_failure`。
 - 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
-- `ui_truth_mode=figma` 或 `runtime-baseline` 的子需求未 `acceptance_frozen` 不得进入 `spec`；`none` 与 `existing` 跳过该 gate。`acceptance_frozen` 同时要求静态视觉确认与每个适用 unit 的动效确认/豁免；「static / no motion」也必须是明确确认。绑定数据无真实值时保持空/省略；测试 fixture 不得进入生产 UI。
+- `ui_truth_mode=figma` 或 `runtime-baseline` 的子需求未 `acceptance_frozen` 不得进入 `solution-design`；`none` 与 `existing` 跳过该 gate。`acceptance_frozen` 同时要求静态视觉确认与每个适用 unit 的动效确认/豁免。
 - 只有模式启用且明确确认、记录 CP-UI 后，才能 dispatch `ui-truth-mapping`。Stage 2 在用户已批准 workspace 中写生产代码，执行 TDD/golden 测试并完成新鲜上下文评审闭环。
 - UI truth 切片未 `visual_acceptance_passed` 不得声称 `merged`；`none` 与 `existing` 使用普通行为/语义证据。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
 - 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
 - 编排器方案设计模式不要把文档写进框架自有目录；规范方案设计写入子需求 `design.md`，`notes` 只保留短指针。
-- `state_flow_required=true` 时，Stage 3a 始终为 `design_mode=full` 并受 CP-DESIGN 门禁约束。canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用的异步时序、不变量和追踪。只使用 Markdown 中的 Mermaid，不创建第二份状态索引或 HTML 产物。
-- 设计批准仅在 `design_review.reviewed_design_sha256` 匹配当前 `design.md` 精确 UTF-8 字节、评审模式与 `design_mode` 匹配且时间戳/评审者存在时有效。文件改变会使门禁失效并重新打开 `solution-design`（`full` 走 CP-DESIGN）。
+- `design.md` 是唯一持久化的行为与方案设计契约。不得创建 `spec.md`、`plan.md` 或 `tasks.md`，也不得把文件级执行步骤塞入 `design.md`。跨会话恢复信息按需写 `progress.md`。
+- `state_flow_required=true` 时，canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用异步时序、不变量和追踪。该深度不触发人工门禁。
+- 设计评审仅在 `reviewed_design_sha256` 匹配当前文件、`user_decision_required=true` 时模式为 `human`、否则为 `self`，且时间戳/评审者存在时有效。`user_decision_required` 描述当前版本所需的授权类型，批准后仍保持 `true`；是否待处理由 review 有效性决定。文件变化重新打开 `solution-design`；当该 human-authority 版本缺少有效 hash-bound review 时再次进入 CP-DESIGN。
 - 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**，以及有效 v3 `contracts/ui-truth-index.json` 之前，不得设置 `acceptance_frozen`。每个 scenario 必须冻结 `evidence_scope` 与 `scope_decision`；只有 `host-static` 和 `host-runtime` 可以携带有效 `host_binding`，`component-only` 明确把宿主组合排除在验收声明外。路径/hash/来源/profile/scenario/coverage、当前预览 hash 绑定确认、独立动效确认/豁免（静态 unit 必须确认无动效）与干净的 Stage 2 评审仍为必需。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
 - Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`component-only` 复用组件 preview 与行为测试，不宣称宿主视觉通过；`host-static` 通过项目原生确定性工具捕获索引中的生产宿主；`host-runtime` 在昂贵的原生生命周期检查前先做设备/资源/视觉 smoke。运行时截图必须位于 `.ai-delivery/` 外、索引声明的原生测试证据根目录，并绑定索引宿主 provenance。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止把平行预览翻译到另一宿主栈。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v3 `ui-truth-index.json`，以及按冻结证据范围覆盖全部已索引 scenario 的 schema v2 结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
@@ -153,7 +150,7 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 | 目标状态 | 硬要求 |
 |----------|--------|
 | `acceptance_frozen` | 仅 `ui_truth_mode=figma` 或 `runtime-baseline`：CP-UI 已记录；用户已批准 workspace 证据已记录；真实组件能编过；Stage 2 TDD/评审干净；十个运行时维度均为 `covered` 或有理由的 `not_applicable`；预览路径、v3 index 路径/hash/来源/profile/scenario/coverage、证据范围、能力判定、必需宿主绑定、预览绑定静态确认与动效确认/豁免均有效 |
-| `spec/plan/tasks_ready`（UI truth） | 曾有效 `acceptance_frozen`；v3 index 的路径、hash、coverage、证据范围、宿主绑定与确认绑定仍有效 |
+| `design_ready` | `design.md` 含范围、行为、验收、追踪、方案决策和适用状态流深度；评审 hash 与模式当前有效 |
 | `merged`（UI truth） | UI truth 模式已有 `acceptance_frozen` + `visual_acceptance_passed` + 有效 v3 index + schema v2 结构化验收；`existing` 使用普通行为/语义证据，`none` 跳过视觉验收 |
 | `archived` | 原位收敛状态；canonical 产物保留在原路径，后续变更须使用新的需求目录 |
 
@@ -167,13 +164,13 @@ reconcile 输出抽象动作（`solution-design` / `spec` / `plan` / `tasks` / `
 
 ## 轻量审计（非方案设计探索）
 
-`split_ready` 后，主会话对每个子需求 inline 执行 4 项检查（缺口、冲突、状态、权限），再确定 `ui_truth_mode` 与 `design_mode`。严重问题 → 阻塞；否则写入 `notes`。此处不要执行 `solution-design` 动作。
+`split_ready` 后，主会话对每个子需求 inline 执行 4 项检查（缺口、冲突、状态、权限），再确定 `ui_truth_mode`、`state_flow_required` 与 `user_decision_required`。严重问题 → 阻塞；否则写入 `notes`。
 
 ## Stage 4（摘要）
 
-`implement` 动作按所选档位执行（见 `references/frameworks/`）：有 superpowers 时子代理驱动，有 ECC 时代理驱动，原生档走内联纪律。无论哪个档位，默认纪律一致：顺序任务、内部 TDD、声称完成前先评审。禁止同一切片文件并行实现者。
+`implement` 动作按所选档位执行。下一最小执行 brief 从当前 `design.md`、代码证据和 `progress.md` 动态形成，不持久化第二份计划或任务清单。无论哪个档位，都执行依赖安全的 TDD 与完成前评审。
 
-链路：按 `references/workspace-policy.md` 解析用户已批准 workspace，启用 UI truth 的切片复用 Stage 2 选择 → 任务执行（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录 scenario 完整视觉/运行时验收 → 完成前验证 → 全量测试 → 合并。
+链路：解析已批准 workspace并复用 Stage 2 选择 → 最小实现单元（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录完整验收 → 完成前验证 → 全量测试 → 合并。
 
 UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；`existing` UI 只做普通行为/语义验证；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
 
@@ -185,7 +182,7 @@ UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载�
 
 ## API 策略
 
-API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integration_deferred`；不阻塞 UI 映射或外壳工作。
+API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、`integration_deferred` 或 blocker。
 
 ## 用户入口
 
@@ -193,22 +190,21 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 2. 如果存在则读取 `.ai-delivery/retrospectives/index.md`，筛选匹配的问题行并只加载链接的章节。
    当前需求有 `retrospective.md` 时，读取其问题地图以恢复未完成排查。
 3. 推荐 `continue req-xxx` 或 `create req-yyy`。
-4. 路由前暂停等待人工确认。
+4. continue/create 选择明确时自动路由；只有不同选择会实质改变治理需求或 workspace 时暂停。
 
 | 意图 | 模式 |
 |------|------|
 | 新需求 + 素材 | `bootstrap` 或 `resume` |
 | 继续编排 | `resume` |
 | UI truth 能力待授权 | `confirm_ui`（CP-UI） |
-| tasks_ready，进入开发 | `confirm_to_dev`（CP-001） |
-| 完整方案设计待批准 | `confirm_solution_design`（CP-DESIGN） |
+| 实质用户设计决策待解决 | `confirm_solution_design`（CP-DESIGN） |
 | 阻塞已解决 | `blocker_recovery`（CP-002） |
 
 ## 运行时模式
 
-`bootstrap` | `resume` | `confirm_ui` | `confirm_solution_design` | `confirm_to_dev` | `blocker_recovery` | `closing` | `completed`
+`bootstrap` | `resume` | `confirm_ui` | `confirm_solution_design` | `blocker_recovery` | `closing` | `completed`
 
-检查点：CP-UI（启用 UI truth 的生产代码前）、CP-DESIGN（完整方案设计批准）、CP-001（剩余开发前）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（原位归档前，所有子需求均已 merged）。
+检查点：CP-UI（启用 UI truth 的生产代码前）、CP-DESIGN（实质用户设计决策）、CP-002（硬阻塞，仅当无可运行项）、CP-ARCHIVE（原位归档前）。
 
 ## 完成
 
@@ -222,6 +218,6 @@ API 文档直接传给 spec 管道与实现。缺口写入 `notes` 的 `integrat
 2. **Dispatch 表是数据，不是 router** — `ACTION_BY_STATUS` / 对账输出的是抽象动作名；不得引入重新推导或转述该表的 persona。
 3. **Subagent 仅叶子、深度 ≤ 1** — 实现与评审可按 tier 规则委派 subagent；编排器不得嵌套编排 persona。
 4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
-5. **评审永不自动合并** — `merged` / `archived` 须有干净的 `verification.md` 证据与人工门禁；预算耗尽必须暂停等待用户。
+5. **评审永不自动合并** — `merged` / `archived` 须有干净的 `verification.md` 证据与适用 gate；预算耗尽必须暂停等待用户。
 
 本 kit 只负责单仓治理交付（`.ai-delivery/`、`status.json`、门禁）。多方协同不在本 skill 范围内 — 需要时另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination)。

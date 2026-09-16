@@ -1,95 +1,132 @@
-# Stage 3: Solution Design + Spec Pipeline
+# Stage 3: Design Contract
 
-Stage 3 runs the `solution-design` action when `design_mode` is `light` or `full`, followed by `spec` → `plan` → `tasks`. `design_mode=none` skips the solution-design artifact and gate. Concrete tooling depends on the framework tier chosen per [framework-adaptation.md](framework-adaptation.md).
+Stage 3 produces a single canonical `design.md` behavior and solution contract.
+Frameworks may contribute reasoning methods, but they do not add persisted
+`spec.md`, `plan.md`, or `tasks.md` artifacts. Concrete tooling follows
+[framework-adaptation.md](framework-adaptation.md).
 
-Before dispatching any framework action, apply the [artifact containment protocol](framework-adaptation.md#artifact-containment-protocol-required): pass canonical `.ai-delivery` output paths, treat framework directories as read-only inputs, and skip any persistence step that cannot honor the map.
+Before dispatching a framework action, apply the
+[artifact containment protocol](framework-adaptation.md#artifact-containment-protocol-required):
+pass the canonical `design.md` path, treat framework directories as read-only
+inputs, and skip any persistence step that cannot honor that path.
 
 ## When to run
 
-- `solution-design`: each sub-requirement at `acceptance_frozen` (when UI truth is enabled) or `split_ready` (otherwise) with `design_mode=light`, or with `design_mode=full` and `design_approved: false`.
-- `spec` / `plan` / `tasks`: each sub-requirement whose design mode gate is satisfied, one step at a time per reconcile output.
+Run `solution-design` for every active schema 2.0 sub-requirement after:
 
-## Solution-design action (HARD-GATE)
+- `split_ready` when `ui_truth_mode` is `none` or `existing`; or
+- `acceptance_frozen` when `ui_truth_mode` is `figma` or `runtime-baseline`.
 
-<HARD-GATE>
-For `design_mode=full`, after the solution-design session do NOT write plan/spec artifacts of your own before the user approves the design.
-Do NOT write solution-design docs into framework-owned directories.
-Write the canonical solution design to `design.md` in the user's current conversation language (template: `templates/design-template.md`; remove its language instruction comment); keep `notes` to a one-line pointer only. For `design_mode=light`, set `design_approved=true` after the short record and AI self-review, and bind `design_review.reviewed_design_sha256` to the exact file bytes. For `design_mode=full`, set it only after explicit user approval of the current file, with `design_review.review_mode=human` and the same hash. When `state_flow_required=true`, the design must include the complete state-flow contract: state ownership taxonomy, MVI loop, business lifecycle, UI projection, authoritative transition matrix, applicable async sequences, invariants, and traceability. Then proceed to the `spec` action.
-</HARD-GATE>
+A changed or stale `design.md` hash reopens this action. A valid
+dependency-ready `design_ready` slice proceeds directly to `implement`; it does
+not wait for unrelated slices.
 
-<HARD-GATE>
-Do not run `spec`, `plan`, or `tasks` actions while a `design_mode=full` solution-design gate is pending. `design_mode=light` requires a short design record and self-review; `design_mode=none` requires neither.
-</HARD-GATE>
+## Inputs
 
-Feed the solution-design session (native flow or the installed framework's design flow, per [framework-adaptation.md](framework-adaptation.md)):
+- `requirement-slice.md` and applicable global rules
+- dependency graph and source references
+- API or protocol evidence, when available
+- for enabled UI truth, the frozen Stage 2 component and current v3
+  `ui-truth-index.json` profile, state, scenario, scope, preview, motion, asset,
+  and host-binding evidence
+- existing project architecture and constraints
 
-- `requirement-slice.md`
-- each enabled UI truth unit's Stage 2 component in the recorded user-approved workspace + valid v3 `ui-truth-index.json` profile/state/scenario/coverage/evidence-scope and preview/hash/host-binding pointers (if `ui_truth_mode=figma` or `runtime-baseline`)
-- API docs (if available)
-- Dependency graph
+Load `templates/design-state-flow-example.md` only when
+`state_flow_required=true`. It is a generic reference, not project truth.
 
-For the reusable Markdown shape, load `templates/design-state-flow-example.md` only when `state_flow_required=true`; it is a generic reference and must be adapted to the current requirement rather than copied as project truth.
+## Single design contract
 
-The solution-design session should produce:
+Instantiate `templates/design-template.md` in the user's current conversation language and remove its language instruction comment. `design.md` contains only
+information that a reviewer must decide, implementation must obey, or
+acceptance can verify:
 
-- Architecture (component tree, data flow, state management)
-- Route/navigation design (multi-screen)
-- Component decomposition strategy
-- Data model sketch
-- State machine and data-to-UI transitions, including applicable loading/refreshing/empty/partial/error/offline/auth/permission/disabled behavior
-- References to the indexed UI scenario IDs that own runtime coverage; do not duplicate the Runtime Coverage Plan in `design.md`
-- Key technical decisions and trade-offs
+- context, in-scope behavior, and explicit non-goals;
+- stable `B-###` behavior contracts and `AC-###` acceptance contracts;
+- traceability from requirements and UI scenarios to behavior, acceptance, and
+  verification;
+- architecture, ownership, data flow, API boundaries, and material trade-offs;
+- applicable UI scenario references without duplicating the Runtime Coverage
+  Plan;
+- state behavior at the depth required below;
+- unresolved material user decisions, risks, and verification strategy.
 
-For a stateful client slice, treat the transition matrix as authoritative and use Mermaid `flowchart`, `stateDiagram-v2`, and applicable `sequenceDiagram` blocks as review views. Keep diagrams bounded with composite/parallel states instead of enumerating a state Cartesian product. Every transition must account for guards, success, failure, cancellation, stale results, concurrency/idempotency, persistence, and recovery where applicable; explicitly record `not_applicable` when a sequence does not apply. A design is not ready for approval while any state-flow decision remains unresolved.
+Do not add file-by-file edit order, mechanical commands, implementation
+checklists, or a restatement of every source paragraph. Those are execution
+details, not design-contract content.
 
-Perform a language review before CP-DESIGN (and before a `light` self-approval). In `design.md`, localize every human-readable heading, table header/cell, explanatory sentence, risk/open-question description, and Mermaid node, edge, or participant label to the user's current conversation language. Keep only machine syntax, IDs, keys, paths, commands, code/API/library/protocol names, and necessary standard technical terms in English. Translate template labels such as `State set`, `Owner`, `Guard`, and `Risk`; if a technical term is retained for precision, introduce its localized equivalent first and put the English term in parentheses. Unexplained English prose or headings block approval.
+## State-flow depth
 
-Write the solution-design summary to `design.md` in the user's current conversation language (one-line pointer in `notes`). For `design_mode=full`, set `design_approved: true` only on user approval and record the current file hash in `design_review`; for `design_mode=light`, set it after recording the short design and self-review result and record the same hash. Any later design.md change invalidates the approval and reopens this action.
+State behavior is always explicit, but its form follows actual complexity:
 
-If the solution design conflicts with the frozen component / confirmed preview or requirement → `blocked_spec_mismatch`.
+- `state_flow_required=false`: use the compact state table in the template.
+  Record relevant state/event/result/UI behavior; do not create decorative
+  diagrams.
+- `state_flow_required=true`: include state taxonomy and ownership, the MVI/UDF
+  loop, business lifecycle, UI projection, authoritative `T-###` transition
+  matrix, applicable async sequences, invariants, illegal transitions,
+  persistence/recovery, and traceability. Mermaid diagrams are review views;
+  the transition matrix is authoritative.
 
-**Pause:** only `design_mode=full` uses checkpoint CP-DESIGN. Wait for explicit user approval before proceeding.
+An architecture label such as MVI, Redux, or Store, and ordinary
+loading/success/failure phases, do not by themselves require the complex form.
+Use it when the slice materially changes guards, concurrency, stale-result
+handling, recovery, persistence, or cross-surface state ownership.
 
-## Spec pipeline (framework-agnostic)
+## Review and CP-DESIGN
 
-When the design mode gate is satisfied, execute the actions emitted by reconcile, using the selected tier's guide under [frameworks/](frameworks/):
+`state_flow_required` controls documentation depth. It never creates a human
+gate. `user_decision_required` alone controls CP-DESIGN:
 
-Before dispatch, resolve the canonical outputs through the binding layout keys `spec`, `plan`, and `tasks`; `spec/spec.md`, `spec/plan.md`, and `spec/tasks.md` are default-layout examples only. Write all human-readable content in the three resolved artifacts in the user's current conversation language. Preserve machine keys, IDs, paths, commands, code symbols, and literal protocol tokens.
+- `false`: resolve all technical questions from governed evidence, self-review
+  the current `design.md`, and record `design_review.review_mode=self`.
+- `true`: name each material scope, behavior, resource, or experience decision
+  as a stable `D-###`; summarize the alternatives and impact; show the absolute
+  `design.md` path; and pause at CP-DESIGN. After the user explicitly resolves
+  and approves the current version, record `design_review.review_mode=human`.
 
-1. `spec` → `spec.md` — audit against every frozen unit/scenario id. For UI truth slices the Stage 2 component + confirmed preview set is the visual input, not a separate visual spec document. Preserve the distinction between Figma-origin fidelity and approved runtime behavior.
-2. `plan` → `plan.md` — audit delivery slice ordering and identify which task implements or verifies each scenario id.
-3. `tasks` → `tasks.md` — audit granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage.
+`user_decision_required` classifies the authority required by the current
+design version; it is not the pending-review state. It remains `true` for that
+design version after approval. A current hash-bound human review makes the
+decision non-pending and permits `design_ready`. Set the field to `false` only
+when the current design version contains no decision whose authority belongs to
+the user.
 
-After each step:
+The human review authorizes implementation within the approved scope. Do not
+ask for a second development authorization. Technical complexity, a framework
+preference, or the existence of state diagrams is not a user decision.
 
-- `spec.md` → `spec_ready`
-- `plan.md` → `plan_ready`
-- `tasks.md` → `tasks_ready`
+For either review mode, bind `reviewed_design_sha256` to the exact UTF-8 bytes
+of `design.md` and record `reviewed_at` plus `reviewed_by`. Then set
+`status=design_ready`. Any content change invalidates the review and reopens
+`solution-design`; request CP-DESIGN again when
+`user_decision_required=true` and the changed file lacks a valid hash-bound
+human review.
 
-Regardless of tier, record artifacts in `traceability.json` `spec_refs` (see [framework-adaptation.md](framework-adaptation.md) → Traceability). Each `artifacts[]` entry for `spec`, `plan`, and `tasks` MUST record its resolved repo-relative `canonical_path` and current `content_sha256` so the artifact-layout validator can detect drift. Do not fork or restate framework pipeline skills to duplicate repo-local contracts.
+Before review, localize every human-readable heading, table label and cell,
+diagram label, sentence, risk, and decision to the user's current conversation
+language. Preserve only machine keys, enums, IDs, paths, commands, code/API
+symbols, Mermaid syntax, and English technical terms needed for precision.
 
-## Spec persistence (living → in-place archive)
+If the design conflicts with governed requirements or frozen UI truth, open the
+narrowest applicable blocker. Do not weaken the evidence or choose an
+unrecorded interpretation.
 
-While the sub-requirement is not yet `archived`, the spec is **living**:
+## Execution persistence
 
-- The artifact resolved from layout key `spec` is the single source of truth; artifacts resolved from `plan` and `tasks` are derived and may be regenerated as the spec evolves.
-- Before regenerating any derived artifact, move the key decisions being overturned into `decisions.md` first (prevents rationale loss).
+Do not create `spec.md`, `plan.md`, or `tasks.md`. Stage 4 derives bounded
+execution units dynamically from the current design contract, dependency graph,
+and codebase. When work must survive compaction or another session, use optional
+`progress.md` to record completed work, pending work, blockers, review results,
+and verification commands/results. It is not a second plan and never promotes a
+gate.
 
-Once the sub-requirement reaches `archived`, the canonical spec remains in place:
+## API and UI-mode policy
 
-- The archive action only updates `status.json`; it does not create a snapshot or duplicate canonical artifacts.
-- Any requirement change starts a new `<req-id>/` directory; the completed directory remains the historical source of truth.
+API evidence feeds `design.md` and implementation directly. Record unresolved
+integration facts as risks or blockers according to impact; do not add a
+separate mapping stage.
 
-## Pause
-
-After all executable subreqs reach `tasks_ready`, enter CP-001 and confirm with user before development.
-
-## API policy
-
-API docs pass directly to the spec pipeline and implementation. No separate API mapping stage. Gaps → `integration_deferred` in notes; they do not block read-only UI evidence, while production shell work still waits for CP-UI.
-
-## Modes without a UI truth capability
-
-- `ui_truth_mode=none` or `existing` skips UI Truth Mapping (`acceptance_frozen` not required).
-- `split_ready` → `solution-design` only when `design_mode` is `light` or `full` → spec pipeline.
-- `existing` uses ordinary project behavior/semantic verification; `none` and `existing` skip `visual_acceptance_passed` at merge.
+`ui_truth_mode=none` and `existing` skip UI Truth Mapping and
+`visual_acceptance_passed`. `figma` and `runtime-baseline` must retain valid
+`acceptance_frozen` evidence before Stage 3 and scope-appropriate visual and
+motion acceptance during Stage 4.

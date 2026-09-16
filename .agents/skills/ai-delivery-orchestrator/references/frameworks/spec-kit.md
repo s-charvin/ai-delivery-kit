@@ -1,69 +1,42 @@
 # Framework Guide: spec-kit
 
-Use this tier for `spec` / `plan` / `tasks` actions when spec-kit is installed.
+When spec-kit is installed, its requirement and design reasoning may supplement
+`solution-design`. It does not own an AI Delivery stage or persisted artifact.
 
-## Detection signs
+## Detection
 
-- `.specify/` directory exists at the repository root, or
-- `specify` CLI is available on PATH.
+Detect `.specify/` or a working `specify` CLI. Never install, initialize, or
+upgrade spec-kit. Detection/configuration files are read-only inputs.
 
-If `.specify/` exists but the CLI is missing or broken, degrade to the native tier for the affected sub-requirement and record the reason in `decisions.md`. Never reinstall or upgrade spec-kit yourself.
+## Allowed use
 
-## Covered actions
+- Feed governed inputs: `requirement-slice.md`, applicable global rules, current
+  project architecture, API evidence, dependency graph, and enabled UI truth.
+- Use spec-kit questions, ambiguity checks, constitution analysis, and design
+  reasoning to improve the one canonical `design.md`.
+- Audit `B-###`, `AC-###`, source/UI traceability, state behavior, trade-offs,
+  and verification strategy against governed evidence.
+- Respect an existing constitution when it does not conflict with AI Delivery
+  truth; record conflicts in `decisions.md`, with governed truth taking
+  precedence.
 
-| Action | spec-kit usage | Output artifact |
-|--------|----------------|-----------------|
-| `spec` | Apply `/speckit-specify` reasoning to `requirement-slice.md` (and reviewed host component + `ui-truth-index.json` for UI slices) | path resolved from layout key `spec` (default `spec/spec.md`) |
-| `plan` | Apply `/speckit-plan` reasoning | path resolved from layout key `plan` (default `spec/plan.md`) |
-| `tasks` | Apply `/speckit-tasks` reasoning | path resolved from layout key `tasks` (default `spec/tasks.md`) |
+## Disabled persistence
 
-## Artifact containment
+Do not run `/speckit-specify`, `/speckit-plan`, `/speckit-tasks`, or another step
+that creates or changes `.specify/**`, `spec.md`, `plan.md`, `tasks.md`,
+checklists, state, or agent metadata. If a useful reasoning flow cannot run
+without those writes, apply its method in-session or use the native tier.
 
-- Before using a `speckit-*` skill or command, resolve the layout keys `spec`, `plan`, and `tasks` from `.ai-delivery/meta/project-binding.json` via the orchestrator layout resolver, then pass those exact repo-relative canonical paths. The default suffixes are `spec/spec.md`, `spec/plan.md`, and `spec/tasks.md`; never substitute them for a customized binding.
-- `.specify/**` is detection/configuration input only. Do not create or update feature specs, plans, tasks, checklists, state, or agent metadata there.
-- If a `speckit-*` command insists on persisting under `.specify/**` and cannot accept the canonical map, do not invoke that persistence step. Apply the same workflow in the current session and write its result directly to `.ai-delivery`.
-- Do not generate under `.specify/**` and copy back afterward. Run the artifact-boundary audit from [../framework-adaptation.md](../framework-adaptation.md) before advancing status.
+Never create framework output and copy it into `.ai-delivery` afterward. Run the
+artifact-boundary audit from
+[../framework-adaptation.md](../framework-adaptation.md) before advancing status.
 
-## Usage advice
+## Review and traceability
 
-- Feed spec-kit the governed inputs, not free prose: `requirement-slice.md`, each enabled UI truth unit's frozen host component + `ui-truth-index.json`, API docs if available, and the dependency graph.
-- For UI truth slices, spec-kit's input is the reviewed host component + v3 `ui-truth-index.json`; reference each unit/scenario id, evidence scope, and evidence origin instead of authoring a second visual description that could drift from the contract.
-- Audit each output before advancing status:
-  - `spec.md` → audit state transitions, content policies, motion, assets, accessibility, and acceptance criteria against every frozen unit/scenario id (UI) → `spec_ready`
-  - `plan.md` → audit delivery slice ordering and scenario implementation/verification ownership → `plan_ready`
-  - `tasks.md` → audit granularity, dependency order, file scope, and complete scenario-to-test/acceptance coverage → `tasks_ready`
-- If a generated output conflicts with the frozen contract or the requirement, open `blocked_spec_mismatch`; do not silently edit the contract to match.
+Review and approval follow `user_decision_required`, never the presence of
+spec-kit. Record the selected reasoning method plus canonical `design.md`
+path/hash under `traceability.json` `source_index.design`. Do not emit
+`spec_refs` or spec/plan/task entries for schema 2.0.
 
-## Constitution handling
-
-spec-kit projects may define a constitution. Respect it where it does not conflict with `.ai-delivery` governed truth. On conflict, `.ai-delivery` truth wins; record the conflict in `decisions.md`.
-
-## Traceability recording
-
-Use only the canonical `artifacts[]` shape in the sub-requirement `traceability.json`. Add one complete object for each `kind` (`spec`, `plan`, `tasks`); do not emit legacy path fields:
-
-```json
-{
-  "spec_refs": {
-    "tier": "spec-kit",
-    "artifacts": [
-      {
-        "kind": "spec",
-        "canonical_path": "<repo-relative path resolved from layout key spec>",
-        "derived_paths": [],
-        "content_sha256": "<sha256 of canonical content>",
-        "sync_state": "synced"
-      }
-    ]
-  }
-}
-```
-
-Also add one `source_index.spec` entry per artifact with `ref_type` `spec` / `plan` / `tasks`.
-
-## Boundaries
-
-- Do not fork or restate official `speckit-*` skills inside the repo.
-- Do not let spec-kit create process/governance artifacts outside `.ai-delivery/`.
-- Do not start `speckit-*` steps while a `design_mode=full` approval is pending (`design_approved: false`) or its `design_review` hash is stale; `state_flow_required=true` additionally requires the complete state-flow contract. UI truth slices additionally require `acceptance_frozen`.
-- spec-kit covers spec-producing actions only; `implement` / `finish` dispatch to superpowers, ECC, or the native tier per [../framework-adaptation.md](../framework-adaptation.md).
+Implementation and finish use superpowers, ECC, or native discipline according
+to [../framework-adaptation.md](../framework-adaptation.md).

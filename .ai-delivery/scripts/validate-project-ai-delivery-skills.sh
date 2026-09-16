@@ -257,19 +257,23 @@ validate_orchestrator_skill() {
     templates/status-template.json \
     templates/todo-template.md \
     templates/visual-acceptance-template.json \
+    references/framework-adapters/flutter.md \
+    references/scenario-guidance.md \
     references/handoff-table.md \
     references/reconcile-rules.md \
-    scripts/reconcile-delivery.py
+    scripts/reconcile-delivery.py \
+    scripts/design_contract.py \
+    templates/design-state-flow-example.md
 
   require_contains "$skill_file" 'Runtime modes'
   require_contains "$skill_file" 'reconcile-delivery.py'
   require_contains "$skill_file" 'handoff-table'
-  require_contains "$skill_file" 'design_approved'
+  require_contains "$skill_file" 'user_decision_required'
   require_contains "$skill_file" 'Light audit'
-  require_contains "$skill_file" 'CP-001'
+  require_contains "$skill_file" 'design_ready'
   require_contains "$skill_file" 'visual_acceptance_passed'
   require_contains "$skill_file" 'create req-'
-  require_contains "$skill_file" 'human confirmation'
+  require_contains "$skill_file" 'material user decision'
   require_contains "$skill_file" 'blocker_scope'
   require_contains "$skill_file" 'runnable'
   require_contains "$skill_file" 'ui-truth-index.json'

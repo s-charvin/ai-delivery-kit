@@ -1,89 +1,88 @@
-# 阶段 3：方案设计 + Spec 管道
+# Stage 3：设计契约
 
-阶段 3 在 `design_mode` 为 `light` 或 `full` 时执行 `solution-design`，随后执行 `spec` → `plan` → `tasks`。`design_mode=none` 跳过方案设计产物与门禁。具体工具取决于按 [framework-adaptation.md](framework-adaptation.md) 选定的框架档位。
+Stage 3 只产出一份 canonical `design.md` 行为与方案设计契约。外部框架可
+提供推理方法，但不得新增持久化的 `spec.md`、`plan.md` 或 `tasks.md`。
+具体适配见 [framework-adaptation.md](framework-adaptation.md)。
 
-分发任何框架动作前，先应用[产物边界协议](framework-adaptation.md#产物边界协议必须)：传入 canonical `.ai-delivery` 输出路径，把框架目录当作只读输入，并跳过任何无法遵守该映射的持久化步骤。
+调用框架前必须执行产物边界协议：传入 canonical `design.md` 路径，把框架
+目录视为只读输入；无法遵守路径的持久化步骤必须跳过。
 
-## 何时运行
+## 何时执行
 
-- `solution-design`：启用 UI truth 时处于 `acceptance_frozen`、否则处于 `split_ready`，且 `design_mode=light`，或 `design_mode=full` 且 `design_approved: false` 的子需求。
-- `spec` / `plan` / `tasks`：设计模式门禁已满足的子需求，按 reconcile 输出一步一步执行。
+- `ui_truth_mode=none|existing`：`split_ready` 后执行。
+- `ui_truth_mode=figma|runtime-baseline`：`acceptance_frozen` 后执行。
+- `design.md` hash 变化或评审证据过期时重新执行。
 
-## solution-design 动作（HARD-GATE）
+具有当前有效评审且依赖就绪的 `design_ready` 切片直接进入 `implement`，
+不等待无依赖的其他切片。
 
-<HARD-GATE>
-对 `design_mode=full`：方案设计会话结束后，在用户批准设计之前，不要自行撰写 plan/spec 产物。
-不要把方案设计文档写进框架自有目录。
-用用户当前对话语言把规范方案设计写入 `design.md`（模板：`templates/design-template.md`，删除其中的语言指令注释）；`notes` 只保留单行指针。`design_mode=light` 在完成短方案记录并通过 AI 自审后设 `design_approved=true`，并将 `design_review.reviewed_design_sha256` 绑定到文件精确字节；`design_mode=full` 仅在用户明确批准当前文件后设置，并使用 `design_review.review_mode=human` 与同一哈希。`state_flow_required=true` 时，设计必须包含完整状态流契约：状态所有权分类、MVI 闭环、业务生命周期、UI 投影、权威转换矩阵、适用的异步时序、不变量和追踪。然后进入 `spec` 动作。
-</HARD-GATE>
+## 输入
 
-<HARD-GATE>
-当 `design_mode=full` 的方案设计门禁尚未满足时，不要执行 `spec`、`plan` 或 `tasks`。`light` 需要短方案记录并自审，`none` 两者都不需要。
-</HARD-GATE>
+- `requirement-slice.md`、全局规则、依赖图和来源引用
+- 可用的 API / 协议证据及现有项目架构
+- 启用 UI truth 时，Stage 2 冻结组件和当前 v3 `ui-truth-index.json`
 
-向方案设计会话（原生流程或已安装框架的设计流程，见 [framework-adaptation.md](framework-adaptation.md)）提供：
+仅在 `state_flow_required=true` 时按需读取
+`templates/design-state-flow-example.md`，不得把示例行为复制成项目事实。
 
-- `requirement-slice.md`
-- 启用 UI truth 的 unit 在记录的用户已批准 workspace 中由 Stage 2 产出的组件 + 有效 v3 `ui-truth-index.json` 的 profile/state/scenario/coverage/evidence-scope 与预览/hash/host-binding 指针（`ui_truth_mode=figma` 或 `runtime-baseline`）
-- API 文档（若有）
-- 依赖图
+## 唯一设计契约
 
-可复用的 Markdown 结构见 `templates/design-state-flow-example.md`；仅在 `state_flow_required=true` 时按需读取。它只是通用参考，必须根据当前需求改写，不能复制成项目事实。
+用用户当前对话语言实例化 `design-template.md` 并删除语言指令注释。
+`design.md` 只保留用户需要决定、实现必须遵守或验收可以核对的信息：
 
-方案设计会话应产出：
+- 上下文、范围和明确的非目标；
+- 稳定的 `B-###` 行为契约、`AC-###` 验收契约及追踪关系；
+- 架构、所有权、数据流、API 边界和实质权衡；
+- 适用的 UI scenario 引用，不重复 Runtime Coverage Plan；
+- 与实际复杂度相称的状态流；
+- 实质用户决策、风险和验证策略。
 
-- 架构（组件树、数据流、状态管理）
-- 路由/导航设计（多屏）
-- 组件分解策略
-- 数据模型草图
-- 状态机与数据到 UI 的转换，包括适用的 loading/refreshing/empty/partial/error/offline/auth/permission/disabled 行为
-- 引用负责运行时 coverage 的 UI scenario ID；不要在 `design.md` 重复 Runtime Coverage Plan
-- 关键技术决策与权衡
+不得写文件级修改顺序、机械命令、实现清单或逐段复述来源。
 
-对于有状态客户端切片，将转换矩阵视为权威事实源，并用 Mermaid `flowchart`、`stateDiagram-v2` 及适用的 `sequenceDiagram` 作为验收视图。使用复合/并行状态拆解复杂流程，禁止枚举状态笛卡尔积。每个转换在适用时都必须覆盖 guard、成功、失败、取消、过期结果、并发/幂等、持久化与恢复；不适用的时序必须明确写出 `not_applicable`。仍有未决状态流决策时不得批准设计。
+## 状态流深度
 
-执行 CP-DESIGN 前的语言复核（`light` 自审批准前同样执行）。在 `design.md` 中，所有人类可读的标题、表头/单元格、解释性句子、风险/待决问题说明，以及 Mermaid 节点、连线和参与者标签，都必须改为用户当前对话语言。只有机器语法、ID、键、路径、命令、代码/API/库/协议名称和必要的标准技术术语保留英文。`State set`、`Owner`、`Guard`、`Risk` 等模板表头必须翻译；技术术语因精度需要保留时，先写本地化术语，再在括号中保留英文原词。未解释的英文正文或标题会阻断批准。
+- `state_flow_required=false`：使用模板中的紧凑状态表；真正静态时写明原因，
+  不生成装饰性图表。
+- `state_flow_required=true`：包含状态分类与所有权、MVI/UDF 闭环、业务
+  生命周期、UI 投影、权威 `T-###` 转换矩阵、适用的异步时序、不变量、
+  非法转换、持久化/恢复和追踪。图表是评审视图，矩阵是事实源。
 
-用用户当前对话语言把方案设计摘要写入 `design.md`，`notes` 只保留单行指针。`design_mode=full` 仅在用户批准后设 `design_approved: true`，并在 `design_review` 记录当前文件哈希；`light` 记录短方案并自审后设置该字段并记录同一哈希。之后任何 `design.md` 修改都会使批准失效并重新打开此动作。
+仅出现 MVI、Redux、Store 等架构名称，或普通 loading/success/failure，
+不会自动触发复杂模式。只有实质改变 guard、并发、过期结果、恢复、持久化
+或跨表面状态所有权时才设置为 `true`。
 
-若方案设计与冻结组件 / 已确认预览或需求冲突 → `blocked_spec_mismatch`。
+## 评审与 CP-DESIGN
 
-**暂停：** 仅 `design_mode=full` 使用 CP-DESIGN。继续前等待用户明确批准。
+`state_flow_required` 只控制文档深度；`user_decision_required` 才控制人工门禁：
 
-## Spec 管道（框架无关）
+- `false`：根据治理证据解决技术问题，自审当前文件，记录
+  `design_review.review_mode=self`。
+- `true`：用稳定 `D-###` 命名每个实质范围、行为、资源或体验决策，展示
+  选项、影响和 `design.md` 绝对路径，并在 CP-DESIGN 暂停。用户明确解决并
+  批准当前版本后记录 `review_mode=human`。
 
-当设计模式门禁满足后，按 reconcile 输出的动作执行，使用 [frameworks/](frameworks/) 下所选档位的指南：
+`user_decision_required` 描述当前设计版本所需的授权类型，不表示评审仍待
+处理。当前版本获批后它仍保持 `true`；有效的 hash-bound human review
+使决策不再待处理并允许进入 `design_ready`。只有当前版本不再包含决策权
+属于用户的事项时才设为 `false`。
 
-分发前，分别通过 binding 的 layout key `spec`、layout key `plan` 与 layout key `tasks` 解析 canonical 输出；`spec/spec.md`、`spec/plan.md` 和 `spec/tasks.md` 只是默认布局示例。三个已解析产物的所有人类可读内容都使用用户当前对话语言。机器键、ID、路径、命令、代码符号和协议字面量保持原样。
+人工评审同时授权批准范围内的实现，不再请求第二次开发授权。两种模式都要
+把 `reviewed_design_sha256` 绑定到文件精确 UTF-8 字节，并记录
+`reviewed_at` 与 `reviewed_by`，然后设置 `design_ready`。文件变化会使评审
+失效；当 `user_decision_required=true` 且变更后的文件缺少有效 hash-bound
+human review 时再次进入 CP-DESIGN。
 
-1. `spec` → `spec.md` — 对照每个已冻结 unit/scenario id 审计。UI truth 切片的视觉输入是 Stage 2 组件 + 已确认预览集合，不是另一份视觉 spec 文档；保留 Figma 来源视觉保真与已批准运行时行为之间的区别。
-2. `plan` → `plan.md` — 审计交付切片顺序，并标出由哪个任务实现或验证每个 scenario id。
-3. `tasks` → `tasks.md` — 审计粒度、依赖顺序、文件范围，以及完整的 scenario 到测试/验收覆盖。
+评审前检查语言：标题、表头/单元格、图中标签、正文、风险和决策使用用户
+当前对话语言；机器 key、enum、ID、路径、命令、代码/API 符号和 Mermaid
+语法保持原样。
 
-每步完成后：
+## 执行持久化
 
-- `spec.md` → `spec_ready`
-- `plan.md` → `plan_ready`
-- `tasks.md` → `tasks_ready`
+不得创建 `spec.md`、`plan.md` 或 `tasks.md`。Stage 4 从当前设计契约、
+依赖图和代码动态形成最小执行单元。需要跨会话恢复时，才在可选
+`progress.md` 中记录已完成、待完成、阻塞、评审和验证命令/结果；它不是
+第二份计划，也不能提升 gate。
 
-无论哪个档位，产物都要记入 `traceability.json` `spec_refs`（见 [framework-adaptation.md](framework-adaptation.md) → 可追溯性）。`spec`、`plan` 与 `tasks` 的每个 `artifacts[]` 条目都必须记录解析后的仓库相对 `canonical_path` 和当前 `content_sha256`，供 artifact-layout validator 检测 drift。不要 fork 或复述框架管道技能来重述仓库本地契约。
-
-## 暂停
-
-所有可执行子需求达 `tasks_ready` 后，进入 CP-001，开发前与用户确认。
-
-## 归档后的产物
-
-子需求进入 `archived` 后，archive 动作只原位更新 `status.json`。canonical
-spec、plan、tasks、design 和 verification 继续保留在原路径，不生成快照或
-第二份副本；后续需求变更须新建 `<req-id>` 目录。
-
-## API 策略
-
-API 文档直接传给 spec 管道与实现。无独立 API 映射阶段。缺口在 `notes` 记为 `integration_deferred`；不阻塞只读 UI 证据，但生产外壳工作仍等待 CP-UI。
-
-## 不启用 UI truth 的模式
-
-- `ui_truth_mode=none` 或 `existing` 跳过 UI 真值映射（不要求 `acceptance_frozen`）。
-- `split_ready` → 仅在 `design_mode` 为 `light` 或 `full` 时进入 `solution-design` → spec 管道。
-- `existing` 使用普通项目行为/语义验证；`none` 与 `existing` 合并时跳过 `visual_acceptance_passed`。
+API 证据直接进入 `design.md` 与实现。`none` / `existing` 跳过 UI Truth
+Mapping 与 `visual_acceptance_passed`；另外两种模式必须保留有效冻结证据，
+并在 Stage 4 完成对应视觉与动效验收。

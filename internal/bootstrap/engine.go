@@ -69,7 +69,7 @@ func (e Engine) Run(cfg Config) error {
 	timestamp := now.Format(time.RFC3339)
 
 	if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, ".ai-delivery/meta/project-binding.json"), map[string]any{
-		"version":          2,
+		"version":          3,
 		"project_id":       cfg.ProjectID,
 		"project_root":     cfg.RepoRoot,
 		"ai_delivery_path": ".ai-delivery",
@@ -98,9 +98,6 @@ func (e Engine) Run(cfg Config) error {
 				"solution_design":   "requirements/{req_id}/sub-requirements/{sr_id}/design.md",
 				"verification":      "requirements/{req_id}/sub-requirements/{sr_id}/verification.md",
 				"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json",
-				"spec":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/spec.md",
-				"plan":              "requirements/{req_id}/sub-requirements/{sr_id}/spec/plan.md",
-				"tasks":             "requirements/{req_id}/sub-requirements/{sr_id}/spec/tasks.md",
 				"ui_truth_index":    "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json",
 			},
 		},
@@ -111,7 +108,7 @@ func (e Engine) Run(cfg Config) error {
 	}
 
 	if err := writeJSONIfMissing(filepath.Join(cfg.RepoRoot, ".ai-delivery/meta/workflow-policy.json"), map[string]any{
-		"version": 2,
+		"version": 3,
 		"truth_policy": map[string]any{
 			"functional_source": "Requirement",
 			"visual_source":     "Figma",
@@ -125,7 +122,7 @@ func (e Engine) Run(cfg Config) error {
 		},
 		"workflow_gates": []string{
 			"requirement_breakdown",
-			"spec_pipeline",
+			"design_contract",
 			"implementation",
 		},
 		"capabilities": map[string]any{
@@ -166,17 +163,16 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"solution_design": map[string]any{
-			"modes":           []string{"none", "light", "full"},
-			"full_checkpoint": "CP-DESIGN",
-			"artifact_key":    "solution_design",
+			"required":                   true,
+			"human_checkpoint":           "CP-DESIGN",
+			"human_checkpoint_condition": "user_decision_required_and_no_valid_human_review",
+			"artifact_key":               "solution_design",
 		},
 		"status_sequence": []string{
 			"draft",
 			"split_ready",
 			"acceptance_frozen",
-			"spec_ready",
-			"plan_ready",
-			"tasks_ready",
+			"design_ready",
 			"in_dev",
 			"visual_acceptance_passed",
 			"merged",
@@ -187,7 +183,7 @@ func (e Engine) Run(cfg Config) error {
 				"requirement",
 				"figma",
 				"api",
-				"spec",
+				"design",
 				"pr",
 				"ci",
 				"visual",
@@ -196,9 +192,8 @@ func (e Engine) Run(cfg Config) error {
 			},
 		},
 		"gate_requirements": map[string]any{
-			"solution_design_full":     []string{"CP-DESIGN"},
-			"development_confirmation": []string{"CP-001"},
-			"archive_confirmation":     []string{"CP-ARCHIVE"},
+			"user_design_decision": []string{"CP-DESIGN"},
+			"archive_confirmation": []string{"CP-ARCHIVE"},
 		},
 		"worktree_policy": map[string]any{
 			"mode":                                "current_checkout_unless_user_confirmed",
@@ -215,15 +210,13 @@ func (e Engine) Run(cfg Config) error {
 		"review_loop": map[string]any{
 			"max_rounds": 3,
 		},
-		"spec_persistence": map[string]any{
-			"_doc":     "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work keeps canonical artifacts in place and uses a new requirement directory for changes",
+		"design_contract_persistence": map[string]any{
+			"_doc":     "The living design.md is the sole behavior and solution-design contract; completed work keeps canonical artifacts in place and uses a new requirement directory for changes",
 			"active":   "living",
 			"complete": "in_place",
 			"living": map[string]any{
-				"source_of_truth":   "spec/spec.md",
-				"derived":           []string{"spec/plan.md", "spec/tasks.md"},
-				"on_drift":          "downgrade_to_spec_ready",
-				"before_regenerate": "Record prior key decisions in decisions.md before regeneration",
+				"source_of_truth": "design.md",
+				"on_drift":        "reopen_solution_design",
 			},
 			"in_place": map[string]any{
 				"source_of_truth": "canonical_artifacts",

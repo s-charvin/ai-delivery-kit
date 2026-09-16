@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "truth_policy": {
     "functional_source": "Requirement",
     "visual_source": "Figma",
@@ -13,7 +13,7 @@
   },
   "workflow_gates": [
     "requirement_breakdown",
-    "spec_pipeline",
+    "design_contract",
     "implementation"
   ],
   "capabilities": {
@@ -54,17 +54,16 @@
     }
   },
   "solution_design": {
-    "modes": ["none", "light", "full"],
-    "full_checkpoint": "CP-DESIGN",
+    "required": true,
+    "human_checkpoint": "CP-DESIGN",
+    "human_checkpoint_condition": "user_decision_required_and_no_valid_human_review",
     "artifact_key": "solution_design"
   },
   "status_sequence": [
     "draft",
     "split_ready",
     "acceptance_frozen",
-    "spec_ready",
-    "plan_ready",
-    "tasks_ready",
+    "design_ready",
     "in_dev",
     "visual_acceptance_passed",
     "merged",
@@ -75,7 +74,7 @@
       "requirement",
       "figma",
       "api",
-      "spec",
+      "design",
       "pr",
       "ci",
       "visual",
@@ -84,8 +83,7 @@
     ]
   },
   "gate_requirements": {
-    "solution_design_full": ["CP-DESIGN"],
-    "development_confirmation": ["CP-001"],
+    "user_design_decision": ["CP-DESIGN"],
     "archive_confirmation": ["CP-ARCHIVE"]
   },
   "worktree_policy": {
@@ -103,15 +101,13 @@
   "review_loop": {
     "max_rounds": 3
   },
-  "spec_persistence": {
-    "_doc": "Spec-kit persistence: active work uses living mode with spec.md as the sole source of truth and in-place plan/tasks regeneration; completed work keeps canonical artifacts in place and uses a new requirement directory for changes",
+  "design_contract_persistence": {
+    "_doc": "The living design.md is the sole behavior and solution-design contract; completed work keeps canonical artifacts in place and uses a new requirement directory for changes",
     "active": "living",
     "complete": "in_place",
     "living": {
-      "source_of_truth": "spec/spec.md",
-      "derived": ["spec/plan.md", "spec/tasks.md"],
-      "on_drift": "downgrade_to_spec_ready",
-      "before_regenerate": "Record prior key decisions in decisions.md before regeneration"
+      "source_of_truth": "design.md",
+      "on_drift": "reopen_solution_design"
     },
     "in_place": {
       "source_of_truth": "canonical_artifacts",

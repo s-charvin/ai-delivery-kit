@@ -39,17 +39,18 @@ require_file "$REQ_ROOT/requirement.md"
 require_file "$REQ_ROOT/breakdown-summary.md"
 require_file "$REQ_ROOT/global-rules.md"
 require_file "$REQ_ROOT/dependency-graph.json"
+require_file "$REQ_ROOT/status.json"
 require_file "$SUBREQ_ROOT/README.md"
 require_file "$SUBREQ_ROOT/requirement-slice.md"
 require_file "$SUBREQ_ROOT/dependency.json"
-require_file "$SUBREQ_ROOT/status.json"
 require_file "$SUBREQ_ROOT/traceability.json"
 require_file "$SUBREQ_ROOT/decisions.md"
 require_file "$SUBREQ_ROOT/api-contract-mapping.md"
 require_file "$SUBREQ_ROOT/figma-mapping.md"
 require_file "$SUBREQ_ROOT/interaction-design.md"
-require_file "$SUBREQ_ROOT/spec.md"
-require_file "$SUBREQ_ROOT/tasks.md"
+[[ ! -e "$SUBREQ_ROOT/spec.md" ]] || fail "schema 2.0 must not precreate spec.md"
+[[ ! -e "$SUBREQ_ROOT/plan.md" ]] || fail "schema 2.0 must not precreate plan.md"
+[[ ! -e "$SUBREQ_ROOT/tasks.md" ]] || fail "schema 2.0 must not precreate tasks.md"
 
 require_markdown_meta "$REQ_ROOT/requirement.md"
 require_markdown_meta "$REQ_ROOT/breakdown-summary.md"
@@ -60,24 +61,24 @@ require_markdown_meta "$SUBREQ_ROOT/decisions.md"
 require_markdown_meta "$SUBREQ_ROOT/api-contract-mapping.md"
 require_markdown_meta "$SUBREQ_ROOT/figma-mapping.md"
 require_markdown_meta "$SUBREQ_ROOT/interaction-design.md"
-require_markdown_meta "$SUBREQ_ROOT/spec.md"
-require_markdown_meta "$SUBREQ_ROOT/tasks.md"
 
 require_json_version "$REQ_ROOT/dependency-graph.json"
 require_json_version "$SUBREQ_ROOT/dependency.json"
-require_json_version "$SUBREQ_ROOT/status.json"
+require_contains "$REQ_ROOT/status.json" '"_schema": "2.0"'
 require_json_version "$SUBREQ_ROOT/traceability.json"
 
-require_contains "$SUBREQ_ROOT/status.json" '"blocked_from_status"'
-require_contains "$SUBREQ_ROOT/status.json" '"resume_target_status"'
-require_contains "$SUBREQ_ROOT/status.json" '"ui_truth_mode"'
-require_contains "$SUBREQ_ROOT/status.json" '"design_mode"'
-require_contains "$SUBREQ_ROOT/status.json" '"design_approved"'
-require_contains "$SUBREQ_ROOT/traceability.json" '"spec_refs"'
+require_contains "$REQ_ROOT/status.json" '"blocked_from_status"'
+require_contains "$REQ_ROOT/status.json" '"resume_target_status"'
+require_contains "$REQ_ROOT/status.json" '"ui_truth_mode"'
+require_contains "$REQ_ROOT/status.json" '"state_flow_required"'
+require_contains "$REQ_ROOT/status.json" '"user_decision_required"'
+require_contains "$REQ_ROOT/status.json" '"design_review"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"api_contract_mapping"'
 require_contains "$SUBREQ_ROOT/traceability.json" '"source_index"'
-require_contains "$SUBREQ_ROOT/traceability.json" '".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/spec.md"'
-require_contains "$SUBREQ_ROOT/traceability.json" '".ai-delivery/requirements/example-requirement/sub-requirements/SR-001/tasks.md"'
+require_contains "$SUBREQ_ROOT/traceability.json" '"design": []'
+if grep -Eq '"spec_refs"|"design_mode"|"design_approved"' "$REQ_ROOT/status.json" "$SUBREQ_ROOT/traceability.json"; then
+  fail "removed schema fields leaked into the Stage 1 fixture"
+fi
 
 node - "$SUBREQ_ROOT/traceability.json" <<'NODE'
 const fs = require('node:fs')
@@ -91,4 +92,4 @@ if (!allowed.has(status)) {
 }
 NODE
 
-print -- "PASS: zero-based full-chain fixture is present and bridgeable."
+print -- "PASS: zero-based schema 2.0 Stage 1 fixture is present and bridgeable."

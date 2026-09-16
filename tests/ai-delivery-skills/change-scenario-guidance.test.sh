@@ -391,7 +391,7 @@ for label, content in (("EN", en_text), ("ZH", zh_text)):
 structural_probes = (
     "DemoFeatureController",
     "demo.project.legacy_field",
-    "CP-001",
+    "CP-999",
     ".host/workflow/status.json",
 )
 for probe in structural_probes:

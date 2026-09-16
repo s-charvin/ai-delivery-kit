@@ -33,8 +33,7 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 ## 检查点
 
 - [ ] CP-UI | checkpoint=ui_visual_implementation_authorization | condition=split_ready 切片为 ui_truth_mode=figma 或 runtime-baseline 且轻量审计通过 | action=写生产组件/golden 前暂停
-- [ ] CP-DESIGN | checkpoint=solution_design_approval | condition=design_mode=full 方案设计会话需要批准 | action=暂停等待用户批准
-- [ ] CP-001 | checkpoint=tasks_ready_user_confirmation | condition=所有可执行子需求已达 tasks_ready | action=开发前暂停
+- [ ] CP-DESIGN | checkpoint=solution_design_approval | condition=user_decision_required=true 且当前 design.md 缺少有效 hash-bound human review | action=解决命名决策并把人工评审绑定到当前文件 hash；该设计版本继续保持 user_decision_required=true
 - [ ] CP-002 | checkpoint=hard_blocker_pause | condition=无安全可运行队列项剩余 | action=暂停并呈现阻塞
 
 ## 活跃阻塞

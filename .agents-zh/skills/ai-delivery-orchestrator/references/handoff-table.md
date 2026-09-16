@@ -1,41 +1,36 @@
-# Handoff 表
+# 交接表
 
-每个阶段恰好有一个合法的下一站动作。不要即兴跳步。动作是抽象的；具体工具见 [framework-adaptation.md](framework-adaptation.md)。kit 自有技能（`requirement-breakdown`、`ui-truth-mapping`）保持原名。
+每个阶段只有一个合法下一动作；具体工具见
+[framework-adaptation.md](framework-adaptation.md)。
 
-| 当前完成态 | 唯一下一站 | 禁止 |
-|------------|-----------|------|
-| 拆分决策待定 | 用户确认后 → `requirement-breakdown` 或跳过单切片包 | `ui-truth-mapping`、`spec`/`plan`/`tasks` |
-| `split_ready` + 轻量审计通过（`ui_truth_mode=figma` 或 `runtime-baseline`） | CP-UI 暂停 → 用户授权受控视觉实现 | 批准前改生产代码或 dispatch `ui-truth-mapping` |
-| CP-UI 已确认 | 解析用户已批准 workspace，再运行 `ui-truth-mapping`（TDD + golden + 评审） | 把 Stage 2 当成不含实现的 mapping，或把 CP-UI 当作 worktree 同意 |
-| `split_ready` + 轻量审计通过（`ui_truth_mode=none` 或 `existing`） | `design_mode` 为 `light` 或 `full` 时进入 `solution-design`，否则进入 `spec` | 不应为无 UI truth 切片强制 UI gate |
-| `acceptance_frozen`（校验器 OK） | 按 `design_mode` 进入 `solution-design` | 方案设计门禁满足前进入 `spec` |
-| 方案设计门禁满足（`design_mode=none`，或 `light`/`full` 且 `design_approved: true` 并绑定哈希） | `spec` → `plan` → `tasks` | `tasks_ready` 前写业务代码，或带过期设计哈希继续 |
-| 所有可执行子需求达 `tasks_ready` | CP-001 暂停 → 用户确认 | 静默进入开发 |
-| CP-001 已确认 | Stage 4：`implement` | 同切片文件并行实现者 |
-| 切片实现完成 | `finish` → 设置 `merged` | 子代理合并或推进门禁 |
-| 所有子需求 `merged` | CP-ARCHIVE 暂停 → `archive`（原位收敛状态） | 复制第二份 canonical 产物 |
+| 当前完成状态 | 唯一下一动作 | 禁止 |
+|--------------|--------------|------|
+| 拆分边界存在实质歧义 | 解决命名的用户决策后拆分或创建单切片包 | 为明确拆分创建例行审批 |
+| `split_ready` + `figma` / `runtime-baseline` | CP-UI → 受控视觉实现 | CP-UI 前写生产 UI |
+| CP-UI 已确认 | 解析批准 workspace → `ui-truth-mapping` | 把 CP-UI 当 worktree 同意 |
+| `split_ready` + `none` / `existing` | `solution-design` | 强制 UI gate |
+| `acceptance_frozen` | `solution-design` | 绕过冻结视觉/动效证据 |
+| 当前设计有实质用户决策 | CP-DESIGN | 把技术复杂度当用户决策 |
+| 当前 `design.md` 有有效 hash 评审 | `design_ready` → 依赖就绪时 `implement` | 第二次开发授权 |
+| 实现与验证完成 | `finish` → `merged` | 带过期设计或未清洁评审合并 |
+| 所有切片 `merged` | CP-ARCHIVE → 原位 `archive` | 复制 canonical 产物 |
 
-## 状态 → 下一站映射（供 reconcile 使用）
+## 状态到动作
 
-| 子需求状态 | ui_truth_mode | design_mode / 审批 | 下一站 |
-|------------|----------------|----------------|--------|
-| `draft` | 任意 | 任意 | `requirement-breakdown` |
-| `split_ready` | `figma` 或 `runtime-baseline` | 任意 | 等待 CP-UI；确认后 → `ui-truth-mapping` |
-| `split_ready` | `none` 或 `existing` | `none` | `spec` |
-| `split_ready`（启用的 UI truth gate 完成后） | 任意 | `light` 且 `design_approved=false` | `solution-design` → 自动满足门禁 |
-| `split_ready` / `acceptance_frozen` | 任意 | `full` 且 `design_approved=false` | `solution-design` → CP-DESIGN |
-| `split_ready` / `acceptance_frozen` | 任意 | `full` 且 `design_approved=true` | `spec` |
-| `spec_ready` | 任意 | 门禁满足 | `plan` |
-| `plan_ready` | 任意 | 门禁满足 | `tasks` |
-| `tasks_ready` | 任意 | 门禁满足 |（等待 CP-001；确认后对账输出 `implement`）|
-| `in_dev` | 任意 | 门禁满足 | `implement` |
-| `visual_acceptance_passed` | `figma` 或 `runtime-baseline` | 门禁满足 | `finish` |
-| `merged` | 任意 | 任意 | `archive`（原位更新状态，设置 `archived`） |
-| `blocked_*` | 任意 | 任意 | `NEXT_ACTION=none`；先解决阻塞；继续其他可运行子需求 |
+| 状态 | 能力条件 | 下一动作 |
+|------|----------|----------|
+| `draft` | 任意 | `requirement-breakdown` |
+| `split_ready` | `figma` / `runtime-baseline` | CP-UI 后 `ui-truth-mapping` |
+| `split_ready` | `none` / `existing` | `solution-design` |
+| `acceptance_frozen` | 启用 UI truth | `solution-design` |
+| `design_ready` | 依赖就绪 | `implement` |
+| `in_dev` | 任意 | `implement` |
+| `visual_acceptance_passed` | 启用 UI truth | `finish` |
+| `merged` | 任意 | closing checkpoint 后原位 `archive` |
+| `archived` | 任意 | 无 |
+| `blocked_*` | 任意 | 解决 blocker，同时继续独立 runnable 切片 |
 
-## 方案设计批准
-
-- 所需方案设计产物完成后，将子需求条目的 `design_approved` 设为 `true`：`design_mode=light` 在 AI 自审后设置，`design_mode=full` 仅在用户明确批准后设置；同时写入匹配的 `design_review` 元数据和文件精确 SHA-256；`design_mode=none` 保持 `false`。
-- `design_mode=light` 记录短方案并自审，不触发 CP-DESIGN；`none` 不创建 `design.md`。
-- `notes` 只保留短指针，规范产物需要时落在 `design.md`。
-- `design_mode=full` 门禁未满足时不得进入 `spec`/`plan`/`tasks`。
+所有活跃 schema 2.0 切片都有一个 canonical `design.md`。无用户决策时
+`review_mode=self`；有实质用户决策时通过 CP-DESIGN 记录
+`review_mode=human`。两者都绑定文件精确 SHA-256。文件变化重新进入
+`solution-design`，但只有实质用户决策仍存在时才再次暂停。
