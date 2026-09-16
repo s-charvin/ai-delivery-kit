@@ -6,6 +6,23 @@ set -euo pipefail
 # failure modes.
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-ui-markers.XXXXXX")
+TARGET_REPO="$TEMP_DIR/target-repo"
+
+cleanup() {
+  rm -rf "$TEMP_DIR"
+}
+
+trap cleanup EXIT
+
+mkdir -p "$TARGET_REPO"
+git -C "$TARGET_REPO" init -q
+(
+  cd "$ROOT"
+  env GOCACHE="${AI_DELIVERY_GOCACHE:-$ROOT/.gocache}" \
+    go run ./cmd/ai-delivery init "$TARGET_REPO" >/dev/null
+)
+
 EN="$ROOT/.agents/skills/ui-truth-mapping/SKILL.md"
 ZH="$ROOT/.agents-zh/skills/ui-truth-mapping/SKILL-zh.md"
 ORCH="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
@@ -14,9 +31,9 @@ README_ZH="$ROOT/README.zh-CN.md"
 EN_OPENAI="$ROOT/.agents/skills/ui-truth-mapping/agents/openai.yaml"
 ZH_OPENAI="$ROOT/.agents-zh/skills/ui-truth-mapping/agents/openai.yaml"
 SOURCE_VALIDATOR="$ROOT/scripts/validate-project-ai-delivery-skills.sh"
-MANAGED_VALIDATOR="$ROOT/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
+MANAGED_VALIDATOR="$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
 REHEARSAL="$ROOT/scripts/rehearse-release.sh"
-PROJECT_BINDING="$ROOT/.ai-delivery/meta/project-binding.json"
+PROJECT_BINDING="$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 

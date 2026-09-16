@@ -59,6 +59,12 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 	if !strings.Contains(string(binding), `"project_id": "demo-project"`) {
 		t.Fatalf("expected project id in binding json, got %s", string(binding))
 	}
+	if !strings.Contains(string(binding), `"version": 3`) {
+		t.Fatalf("expected current binding schema version, got %s", string(binding))
+	}
+	if !strings.Contains(string(binding), `"solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md"`) {
+		t.Fatalf("expected canonical solution design layout in binding json, got %s", string(binding))
+	}
 	if !strings.Contains(string(binding), `"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"`) {
 		t.Fatalf("expected visual acceptance layout in binding json, got %s", string(binding))
 	}
@@ -84,6 +90,7 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		`"external_worktree_behavior": "stop_and_ask"`,
 		`"native_tool_requires_exact_path": true`,
 		`"ui_stages_reuse_approved_workspace": true`,
+		`"human_checkpoint_condition": "user_decision_required_and_no_valid_human_review"`,
 	} {
 		if !strings.Contains(string(policy), marker) {
 			t.Fatalf("expected verification marker %q in workflow policy, got %s", marker, string(policy))

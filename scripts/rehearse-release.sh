@@ -70,6 +70,7 @@ main() {
 
   need_cmd zsh
   run_step "go test ./..." env GOCACHE="$GOCACHE_DIR" go test ./...
+  run_step "kit root boundary" bash tests/ai-delivery-skills/kit-root-boundary.test.sh
   run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
   run_step "English source policy" bash tests/ai-delivery-skills/english-source-policy.test.sh
   run_step "artifact language policy" bash tests/ai-delivery-skills/artifact-language-policy.test.sh

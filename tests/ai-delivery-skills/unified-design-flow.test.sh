@@ -3,6 +3,22 @@ set -euo pipefail
 
 ROOT=$(cd -- "$(dirname -- "$0")/../.." && pwd)
 export KIT_ROOT="$ROOT"
+TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-unified-flow.XXXXXX")
+TARGET_REPO="$TEMP_DIR/target-repo"
+
+cleanup() {
+  rm -rf "$TEMP_DIR"
+}
+
+trap cleanup EXIT
+
+mkdir -p "$TARGET_REPO"
+git -C "$TARGET_REPO" init -q
+(
+  cd "$ROOT"
+  env GOCACHE="${AI_DELIVERY_GOCACHE:-$ROOT/.gocache}" \
+    go run ./cmd/ai-delivery init "$TARGET_REPO" >/dev/null
+)
 
 python3 - <<'PY'
 import hashlib
@@ -197,7 +213,7 @@ PY
 SKILL="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
 STAGE="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-design-and-spec.md"
 BREAKDOWN="$ROOT/.agents/skills/ai-delivery-orchestrator/references/stage-breakdown.md"
-POLICY="$ROOT/.ai-delivery/meta/workflow-policy.json"
+POLICY="$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 
 grep -Fq 'design_ready → in_dev' "$SKILL"
 grep -Fq 'single canonical `design.md`' "$STAGE"

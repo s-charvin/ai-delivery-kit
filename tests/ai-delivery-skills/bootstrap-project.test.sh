@@ -61,11 +61,13 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/requirement-breakdown/templates/requirement-slice-template.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adaptation.md" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adapters/flutter.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/workspace-policy.md" ]]
 for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/frameworks/$guide" ]]
@@ -126,6 +128,8 @@ fi
 [[ ! -e "$TARGET_REPO/.agents/AGENTS.md" ]]
 [[ ! -e "$TARGET_REPO/.specify" ]]
 grep -Fq '"project_id": "target-repo"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
+grep -Fq '"version": 3' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
+grep -Fq '"solution_design": "requirements/{req_id}/sub-requirements/{sr_id}/design.md"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"status_sequence"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"capabilities"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"ui_truth"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
@@ -148,6 +152,7 @@ grep -Fq '"acceptance_frozen"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.j
 grep -Fq '"visual_acceptance": "requirements/{req_id}/sub-requirements/{sr_id}/visual-acceptance.json"' "$TARGET_REPO/.ai-delivery/meta/project-binding.json"
 grep -Fq '"review_loop"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 grep -Fq '"max_rounds"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
+grep -Fq '"human_checkpoint_condition": "user_decision_required_and_no_valid_human_review"' "$TARGET_REPO/.ai-delivery/meta/workflow-policy.json"
 
 zsh "$TARGET_REPO/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
 zsh "$TARGET_REPO/.ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"
