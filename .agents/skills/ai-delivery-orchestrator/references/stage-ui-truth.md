@@ -40,7 +40,11 @@ Within the user-approved workspace, use the Stage 4 implementation discipline fo
 
 Follow ui-truth-mapping's batch user review policy: complete the slice's reviewable
 evidence before asking for one static-and-motion acceptance batch. Per-scenario
-hash records do not require separate user prompts.
+hash records do not require separate user prompts. Follow the orchestrator's
+**User decision interaction** protocol: after presenting the inspectable evidence,
+prefer `request_user_input` when available and permitted in the current runtime
+context; otherwise use one structured chat question. A permission approval never
+counts as static, motion, waiver, resource, or workspace acceptance.
 
 **Freeze bar (all required):**
 

@@ -91,6 +91,11 @@ gate. `user_decision_required` alone controls CP-DESIGN:
   `design.md` path; and pause at CP-DESIGN. After the user explicitly resolves
   and approves the current version, record `design_review.review_mode=human`.
 
+Present related `D-###` items together under the orchestrator's **User decision
+interaction** protocol. Use `request_user_input` when it is available and
+permitted for the current turn, runtime, and mode; otherwise use one structured
+chat question. Never interpret a permission approval prompt as CP-DESIGN review.
+
 `user_decision_required` classifies the authority required by the current
 design version; it is not the pending-review state. It remains `true` for that
 design version after approval. A current hash-bound human review makes the

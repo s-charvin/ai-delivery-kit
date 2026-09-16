@@ -406,6 +406,15 @@ response accepting all listed static and motion evidence may populate each
 covered confirmation with its own current hash. Silence, omitted items and
 static-only approval never confirm motion or unshown evidence.
 
+For every user decision in this skill, follow the orchestrator's **User decision
+interaction** protocol. Present the review packet and inspectable evidence first.
+When `request_user_input` is available and permitted in the current turn,
+runtime, and mode, prefer its native user-choice UI for the bounded acceptance,
+waiver, resource-disposition, or workspace options and batch related decisions
+within the tool limits. Otherwise use one structured chat question with the same
+IDs, options, consequences, recommendation, and affected scope. Never trigger a
+permission approval prompt as a substitute for this review.
+
 Ask early for blocking source conflicts or missing-resource decisions; continue
 independent work. Split review batches only for a user-requested cadence or an
 agreed manageable scope. Do not ask after each component or preview by default.

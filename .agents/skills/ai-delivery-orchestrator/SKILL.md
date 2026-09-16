@@ -228,6 +228,39 @@ API docs pass directly to `design.md` and implementation. Gaps → `integration_
 
 Checkpoints: CP-UI (pre-enabled UI truth production code), CP-DESIGN (material user design decision), CP-002 (hard blocker, only when no runnable items remain), CP-ARCHIVE (pre-freeze, all subreqs merged).
 
+## User decision interaction
+
+Apply this protocol whenever the workflow requires an explicit user choice,
+review, waiver, or acceptance:
+
+1. Resolve factual and technical questions first. Group decisions that can be
+   answered together into one concise batch; do not interrupt after each
+   artifact, scenario, or implementation unit. Raise a blocking conflict as
+   soon as the affected work cannot continue safely.
+2. When `request_user_input` is available and permitted in the current turn,
+   runtime, and mode, prefer that native user-choice UI for bounded choices.
+   Give each question a short decision label, two or three mutually exclusive
+   options, the material consequence of each option, and an evidence-backed
+   recommendation when one exists. Batch related questions within the tool's
+   limits.
+3. When `request_user_input` is unavailable, not permitted, cannot express the
+   required options or evidence, or returns no answer, use one structured chat
+   question as the fallback. Include stable decision IDs, the conflict or
+   evidence being reviewed, viable options and consequences, any justified
+   recommendation, and the exact scope awaiting the answer.
+4. Silence, an omitted item, a closed prompt, or an unrelated approval is never
+   confirmation. Record only the user's explicit answer, and keep the affected
+   gate or scope pending while continuing independent safe work where possible.
+
+Permission approval prompts are security surfaces owned by the host runtime.
+Use them only when the actual in-scope tool action genuinely requires elevated
+filesystem, network, connector, or similar permission. Never fake, manufacture,
+or trigger an unrelated elevated action to obtain a permission prompt for a
+product, design, workspace, waiver, or acceptance decision. A permission
+approval does not satisfy CP-UI, CP-DESIGN, CP-002, CP-ARCHIVE, visual review,
+motion review, or any other delivery decision unless the user separately answers
+that decision through the native user-choice UI or structured chat.
+
 ## Completion
 
 All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before

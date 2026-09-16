@@ -6,6 +6,7 @@ This policy is the single authority for workspace selection in Stage 2, Stage 4,
 
 - Creating **or reusing** a worktree requires explicit user confirmation for the current sub-requirement. Prior preferences, a recorded worktree, framework defaults, dirty files, time pressure, CP-UI, and CP-DESIGN do not authorize a worktree.
 - Before asking, show the exact proposed path, branch, and any required `/.worktrees/` ignore change. The only allowed worktree path is `<project-root>/.worktrees/<req-id>-<sr-id>`.
+- Ask under the orchestrator's **User decision interaction** protocol: prefer `request_user_input` when it is available and permitted in the current runtime context; otherwise use one structured chat question. Do not manufacture a filesystem permission request to obtain an approval prompt, and do not treat a real filesystem approval as workspace consent.
 - If the user declines, use the current checkout. Preserve unrelated user changes and stop only for a concrete file conflict or another real blocker.
 - Record the approved choice and path in the current sub-requirement's canonical `decisions` or `progress` artifact. That approval remains valid for later stages of the same sub-requirement only; it never authorizes another slice.
 - Treat legacy `require_isolated_worktree` values as deprecated input and ignore legacy `require_isolated_worktree` as consent or a mandate.

@@ -130,6 +130,12 @@ Unchanged evidence can be accepted in one batch; re-review only affected evidenc
 after changes. Existing structured validators do not establish that a human
 actually approved; the orchestrator must verify the recorded user response.
 
+After presenting the complete evidence packet, collect that response under the
+orchestrator's **User decision interaction** protocol. Prefer
+`request_user_input` when it is available and permitted in the current turn,
+runtime, and mode; otherwise use one structured chat question. A permission
+approval prompt is not visual or motion acceptance.
+
 ## Execution discipline (abstract chain)
 
 The `implement` action always follows this chain, regardless of framework tier:

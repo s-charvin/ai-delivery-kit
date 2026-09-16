@@ -88,6 +88,7 @@ main() {
   run_step "zero-based flow fixture" zsh tests/ai-delivery-contracts/zero-based-flow.test.sh
   run_step "ui composition guardrails" bash tests/ai-delivery-skills/ui-composition-guardrails.test.sh
   run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh
+  run_step "user interaction policy" bash tests/ai-delivery-skills/user-interaction-policy.test.sh
   run_step "legacy bootstrap contract" env GOCACHE="$GOCACHE_DIR" zsh tests/ai-delivery-skills/bootstrap-project.test.sh
   run_step "bootstrap smoke" bash tests/ai-delivery-cli/bootstrap-script.test.sh
   run_step "install smoke" bash tests/ai-delivery-cli/install-script.test.sh

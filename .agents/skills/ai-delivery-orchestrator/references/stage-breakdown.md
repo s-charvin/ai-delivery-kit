@@ -63,6 +63,11 @@ the original requirement and explicitly record the approved deviation. Prior
 answers remain authoritative until the user changes them. Reopen applicable
 review when the approved contract or its bound evidence changes.
 
+Use the orchestrator's **User decision interaction** protocol for that batch:
+prefer `request_user_input` only when it is available and permitted in the
+current runtime context; otherwise ask once through structured chat. A security
+permission approval is not a requirement decision.
+
 ## Skip path
 
 When breakdown is skipped, create a minimal single sub-requirement package:
