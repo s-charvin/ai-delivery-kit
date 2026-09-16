@@ -242,7 +242,7 @@ validate_ui_truth_mapping_skill() {
   require_contains "$skill_file" 'ui-truth-index.json'
   require_contains "$skill_file" 'fill detection rule'
   require_contains "$skill_file" 'Runtime Coverage Plan'
-  require_contains "$skill_file" 'There is no HTML validator and no v1 compatibility path'
+  require_contains "$skill_file" 'no active-delivery compatibility path for earlier schemas'
   require_contains "$skill_file" 'Framework adapters'
   require_contains "$skill_file" 'temporary or ignored build directory'
   require_contains "$skill_file" 'official preview'

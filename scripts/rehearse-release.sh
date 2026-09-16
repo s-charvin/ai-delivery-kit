@@ -76,7 +76,7 @@ main() {
   run_step "ui-truth-mapping skill markers" bash tests/ai-delivery-skills/ui-truth-mapping-skill-markers.test.sh
   run_step "change-scenario guidance markers" bash tests/ai-delivery-skills/change-scenario-guidance.test.sh
   run_step "orchestrator Stage 4 skill markers" bash tests/ai-delivery-skills/orchestrator-stage4-skill-markers.test.sh
-  run_step "UI truth index v2 gate" bash tests/ai-delivery-skills/ui-truth-index-validator.test.sh
+  run_step "UI truth index v3 gate" bash tests/ai-delivery-skills/ui-truth-index-validator.test.sh
   run_step "structured visual acceptance gate" bash tests/ai-delivery-skills/visual-acceptance-validator.test.sh
   run_step "layout contract" bash tests/ai-delivery-skills/layout.test.sh
   run_step "artifact layout + drift" bash tests/ai-delivery-skills/artifact-layout.test.sh

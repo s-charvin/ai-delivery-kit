@@ -9,6 +9,14 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 EN="$ROOT/.agents/skills/ui-truth-mapping/SKILL.md"
 ZH="$ROOT/.agents-zh/skills/ui-truth-mapping/SKILL-zh.md"
 ORCH="$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md"
+README="$ROOT/README.md"
+README_ZH="$ROOT/README.zh-CN.md"
+EN_OPENAI="$ROOT/.agents/skills/ui-truth-mapping/agents/openai.yaml"
+ZH_OPENAI="$ROOT/.agents-zh/skills/ui-truth-mapping/agents/openai.yaml"
+SOURCE_VALIDATOR="$ROOT/scripts/validate-project-ai-delivery-skills.sh"
+MANAGED_VALIDATOR="$ROOT/.ai-delivery/scripts/validate-project-ai-delivery-skills.sh"
+REHEARSAL="$ROOT/scripts/rehearse-release.sh"
+PROJECT_BINDING="$ROOT/.ai-delivery/meta/project-binding.json"
 
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
@@ -19,6 +27,29 @@ require() {
   local file="$1" needle="$2" label="$3"
   grep -F -q -- "$needle" "$file" || fail "$label missing in $(basename "$file"): $needle"
 }
+
+forbid() {
+  local file="$1" needle="$2" label="$3"
+  if grep -F -q -- "$needle" "$file"; then
+    fail "$label still present in $(basename "$file"): $needle"
+  fi
+}
+
+# Current UI truth contract is schema v3. Public entry points and managed
+# validators must not continue advertising or enforcing the retired v2 text.
+for file in "$README" "$README_ZH" "$EN_OPENAI" "$ZH_OPENAI"; do
+  require "$file" "v3" "v3 contract version"
+  forbid "$file" "v2 UI truth index" "retired v2 UI truth wording"
+  forbid "$file" "v2 index" "retired v2 index wording"
+done
+require "$REHEARSAL" "UI truth index v3 gate" "release rehearsal v3 label"
+forbid "$REHEARSAL" "UI truth index v2 gate" "release rehearsal retired v2 label"
+for file in "$SOURCE_VALIDATOR" "$MANAGED_VALIDATOR"; do
+  require "$file" "no active-delivery compatibility path for earlier schemas" "current compatibility wording"
+  forbid "$file" "no v1 compatibility path" "retired compatibility wording"
+done
+require "$PROJECT_BINDING" '"updated_by": "ui-runtime-coverage-v3"' "current UI coverage provenance"
+forbid "$PROJECT_BINDING" '"updated_by": "ui-runtime-coverage-v2"' "retired UI coverage provenance"
 
 # EN — scope / split / evidence
 require "$EN" "### 1b. Unit Split Plan (REQUIRED before any \`get_code\` or component code)" "EN §1b"

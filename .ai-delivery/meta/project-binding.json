@@ -34,6 +34,6 @@
       "ui_truth_index": "requirements/{req_id}/sub-requirements/{sr_id}/contracts/ui-truth-index.json"
     }
   },
-  "updated_at": "2026-08-25T00:00:00Z",
-  "updated_by": "ui-runtime-coverage-v2"
+  "updated_at": "2026-09-16T09:40:09Z",
+  "updated_by": "ui-runtime-coverage-v3"
 }
