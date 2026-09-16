@@ -190,6 +190,17 @@ Full runbook: [references/stage-implementation.md](references/stage-implementati
 
 Narrowest blocker wins; continue safest runnable work first. On validator failure use `blocked_verification_failure`. Catalog: [references/blocker-catalog.md](references/blocker-catalog.md).
 
+## Requirement fidelity and acceptance
+
+Apply the [conflict question protocol](references/stage-breakdown.md)
+throughout delivery: uncertain business behavior or a technical conflict with
+requirements requires a user decision before affected implementation. Recheck
+original sources at design and completion.
+All UI modes follow [test design before implementation](references/stage-implementation.md).
+Stage 2 submits a complete slice-level static/motion batch for user review.
+For enabled UI truth, Stage 4 also requires [final human UI acceptance](references/stage-implementation.md)
+before visual_acceptance_passed; automated evidence alone is insufficient.
+
 ## API policy
 
 API docs pass directly to `design.md` and implementation. Gaps → `integration_deferred` in notes; they do not block UI mapping or safe shell work.

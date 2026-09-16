@@ -19,12 +19,31 @@ When instantiating this template, write every human-readable heading, label, res
 - Static analysis: `<command>` -> `<result>`
 - Tests: `<command>` -> `<result>`
 
+### Requirement and Test Coverage
+| Requirement source / B-### / AC-### | Actual test path and name | Result / evidence | Uncovered risk or approved deviation |
+|---|---|---|---|
+| ... | ... | ... | ... |
+
+- Original-source recheck: <omissions, contradictions, and user decision references>
+- Boundary, failure and event-order coverage: <tested cases and material exclusions>
+- Regression evidence: <reproduced failure and passing result after the fix, when applicable>
+
 ## 3. Visual Acceptance
 - Structured evidence: `visual-acceptance.json`
 - Bound UI truth index SHA-256: `<64-lowercase-hex-sha256>`
 - Scenario coverage: `<all indexed scenario ids passed or explicitly waived>`
 - Stable Figma bitmap comparison: `<reference/candidate/diff and threshold, or not available>`
 - Result: passed / failed
+
+### Final User Acceptance (enabled UI truth only)
+- Reviewed scenario/unit IDs and absolute preview paths:
+- Current UI truth index SHA-256 and static/motion evidence hashes:
+- User response, reviewer and time:
+- Static acceptance and separate motion/no-motion acceptance or scoped waiver:
+- Rejected, deferred or unreviewed items:
+
+One explicit batch response may cover all listed current evidence. Do not infer
+motion acceptance from static approval or treat omitted items as approved.
 
 <!-- ai-delivery-verification:sign-off -->
 ## 4. Sign-off

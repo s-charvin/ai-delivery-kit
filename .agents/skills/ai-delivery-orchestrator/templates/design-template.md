@@ -45,6 +45,11 @@ Language boundary: localize Markdown headings, table headers/cells, explanatory 
 |---------------|--------------------|---------------------|
 | AC-001 | ... | ... |
 
+For each material behavior, summarize the source-backed expectation, forbidden
+outcome, applicable boundary/failure/event-order cases and intended test layer.
+Resolve unknown expectations with the user before implementing affected behavior.
+Keep detailed cases in native tests; this is a coverage summary, not a task list.
+
 <!-- ai-delivery:behavior-contract:traceability -->
 ## 5. Traceability
 

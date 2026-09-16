@@ -180,6 +180,17 @@ UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载�
 
 最窄阻塞优先；优先继续最安全的可运行工作。校验失败用 `blocked_verification_failure`。目录：[references/blocker-catalog.md](references/blocker-catalog.md)。
 
+## 需求一致性与验收
+
+全过程执行 [需求冲突询问规则](references/stage-breakdown.md)：
+业务行为不明确或技术方案与需求冲突时，受影响实现前必须取得用户决定。
+设计和完成时均回查原始来源。所有 UI 模式执行
+[编码前测试设计](references/stage-implementation.md)。
+Stage 2 完成子需求静态/动效证据后整批验收。启用 UI truth 时，Stage 4
+进入 visual_acceptance_passed 前还须完成
+[最终人工 UI 验收](references/stage-implementation.md)，
+自动化证据不能单独放行。
+
 ## API 策略
 
 API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、`integration_deferred` 或 blocker。

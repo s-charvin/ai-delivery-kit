@@ -38,6 +38,10 @@ Before preview generation, make a host capability decision for every scenario an
 
 Within the user-approved workspace, use the Stage 4 implementation discipline for the visual surface: write focused tests first where applicable, run red → green → refactor, generate deterministic goldens, and send the completed unit to a fresh-context code review. Findings must be fixed and re-reviewed before freeze. Record test commands and review outcomes in `progress.md`.
 
+Follow ui-truth-mapping's batch user review policy: complete the slice's reviewable
+evidence before asking for one static-and-motion acceptance batch. Per-scenario
+hash records do not require separate user prompts.
+
 **Freeze bar (all required):**
 
 1. Component compiles / host preview opens.

@@ -395,6 +395,25 @@ regenerate only the affected evidence with fresh hashes.
 - For input/IME visuals, confirm the control is driven by real focus, value,
   validation, and IME state before changing icons or decorations.
 
+### Batch user review
+
+Per-scenario confirmation is evidence granularity, not prompting frequency.
+Default to completing the current slice's scoped units, previews, tests and
+fresh-context review before requesting one batch acceptance. List scenario/unit
+IDs, absolute preview paths, evidence scope and limitations; separate static
+results from GIF motion or explicit static/no-motion decisions. A single explicit
+response accepting all listed static and motion evidence may populate each
+covered confirmation with its own current hash. Silence, omitted items and
+static-only approval never confirm motion or unshown evidence.
+
+Ask early for blocking source conflicts or missing-resource decisions; continue
+independent work. Split review batches only for a user-requested cadence or an
+agreed manageable scope. Do not ask after each component or preview by default.
+For partial approval, record only explicitly accepted items. After fixes, show
+the changed/rejected evidence and keep still-valid confirmations for unchanged
+evidence. Unreviewed items continue to block slice freeze. Use the existing chat
+freeze packet and index; do not create a new review document or synthetic page.
+
 ### 7. Index and status
 
 Write/update `.ai-delivery/requirements/<req-id>/sub-requirements/<sr-id>/contracts/ui-truth-index.json` from the v3 template. It stores pointers, environment profiles, coverage, governance hashes, source provenance, evidence scopes, host bindings, and confirmation metadata, never paint.

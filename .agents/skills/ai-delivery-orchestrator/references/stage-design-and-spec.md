@@ -54,6 +54,13 @@ Do not add file-by-file edit order, mechanical commands, implementation
 checklists, or a restatement of every source paragraph. Those are execution
 details, not design-contract content.
 
+Before review, reconcile the behavior and acceptance contract with original
+requirement sources and recorded user decisions, not just existing code.
+Apply [the conflict question protocol](stage-breakdown.md)
+to unresolved interpretations. Derive the compact acceptance coverage summary
+using [test design](stage-implementation.md);
+do not approve unknown expected outcomes as technical defaults.
+
 ## State-flow depth
 
 State behavior is always explicit, but its form follows actual complexity:

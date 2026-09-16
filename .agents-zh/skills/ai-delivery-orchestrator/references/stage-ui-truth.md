@@ -35,6 +35,9 @@ v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 在用户已批准 workspace 内，对视觉表面沿用 Stage 4 实现纪律：适用时先写聚焦测试，执行红 → 绿 → 重构，生成确定性 golden，并把完成的 unit 交给新鲜上下文代码评审。finding 修复并复审干净后才能冻结。测试命令与评审结论记入 `progress.md`。
 
+遵循 ui-truth-mapping 的批量用户验收规则：完成子需求全部可审阅证据后，
+统一请求静态与动效验收。逐场景记录哈希不要求逐次询问用户。
+
 **冻结门槛（全部满足）：**
 
 1. 组件能编过 / 宿主预览能打开。

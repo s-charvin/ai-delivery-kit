@@ -73,6 +73,63 @@ If component code changes while all regenerated visual preview hashes remain ide
 
 When a stable Figma reference bitmap exists, record project-native image-diff evidence with reference/candidate/diff hashes, metric, threshold, actual result, and command. Without a stable reference bitmap, require exact design-value mapping, deterministic preview, and user confirmation; never claim an automated pixel comparison occurred.
 
+## Test design before implementation
+
+For every UI mode, derive cases from original requirement sources, B-###,
+AC-###, applicable T-###, and user decisions before coding the bounded unit.
+Specify preconditions, inputs/events, expected outcomes, forbidden outcomes,
+and the source of each expectation. Unknown business expectations invoke the
+requirement-conflict question protocol; implementation behavior is not an oracle.
+
+Select cases by risk and applicability, not an exhaustive Cartesian product:
+
+- Input equivalence classes and boundaries: empty/null, valid/invalid, minimum,
+  maximum and just outside each limit, long content and Unicode.
+- State transitions: guards passing/failing, illegal transitions, repeated entry,
+  navigation return, and permission changes.
+- Async ordering: duplicate requests, out-of-order and stale results, timeout,
+  cancellation followed by success, retry/idempotency and partial success.
+- Lifecycle and consistency: disposal callbacks, restart/restore, persistence
+  failures, ownership and preventing old data from overwriting newer changes.
+- Integration: the actual entrypoint, state owner, request serialization, result
+  handling and UI projection; test doubles must not hide the wiring under test.
+
+Use a decision table for interacting business rules and a transition/sequence
+table for order-sensitive behavior. Keep a compact coverage summary in design.md
+acceptance notes; detailed cases belong in native tests. Record material exclusions
+and risks, not repetitive not_applicable rows. Before implementation, review case
+coverage against the original sources independently of the proposed code; the
+fresh-context reviewer must also check omitted cases and incorrect expectations.
+
+Choose the lowest test layer that proves the behavior and integration checks
+where boundaries matter. Control time, scheduling and external failures with the
+host's existing facilities; avoid sleeps and live network dependence. Assert
+business results and forbidden side effects, not only mocks or internal calls.
+For automatable defects, reproduce with a failing regression test before fixing.
+Use property-based or mutation checks selectively for high-risk invariants when
+existing tooling makes them practical; they are not universal dependencies.
+
+Before completion, map each AC-### to actual test names/paths, commands and
+results in verification.md. Recheck the original requirement for omissions and
+unauthorized deviations. Missing, skipped or environment-blocked checks remain
+unproven; report residual risks and obtain explicit disposition before claiming
+acceptance. Test success alone does not prove requirement completeness.
+
+## Final human UI acceptance
+
+For figma/runtime-baseline slices, after automated checks and clean review,
+present one complete slice-level acceptance packet with current preview paths,
+scenario scope, static and motion results, limitations and outstanding decisions.
+Obtain explicit user acceptance of the implemented static UI and motion (or an
+explicit scoped waiver) before visual_acceptance_passed. Record the response,
+reviewed scenario/unit IDs, current index SHA-256, evidence hashes, reviewer and
+time in verification.md alongside visual-acceptance.json. Stage 2 approval does
+not substitute for final acceptance of the integrated result. If motion could
+not be previewed earlier, provide the agreed runtime/manual evidence now.
+Unchanged evidence can be accepted in one batch; re-review only affected evidence
+after changes. Existing structured validators do not establish that a human
+actually approved; the orchestrator must verify the recorded user response.
+
 ## Execution discipline (abstract chain)
 
 The `implement` action always follows this chain, regardless of framework tier:

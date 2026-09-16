@@ -40,6 +40,29 @@ Outcomes:
 - Critical conflict → `blocked_requirement_conflict`
 - No critical issues → append audit findings to `notes`, proceed
 
+## Requirement conflicts and questions
+
+At audit, design, implementation, and acceptance, compare technical interpretations
+with the original requirement and recorded user decisions. Existing code describes
+current behavior; it does not override requested behavior. A choice affecting
+observable behavior, business facts, permissions, data retention, or acceptance
+is a user decision when the sources leave it ambiguous or conflict.
+
+Ask before implementing the affected behavior. Quote the source location and
+requirement, explain the technical constraint and mismatch, present viable
+options with consequences, and identify the decision needed. Never silently
+weaken a requirement, invent a default, or change a test expectation to fit code.
+Investigate factual technical questions first; if the business answer remains
+uncertain, ask rather than guessing. Continue independent work where safe.
+
+Group non-blocking questions into one concise batch; raise blocking conflicts
+when discovered. Record the answer under D-### in design.md (or the existing
+decision record before design exists), including its source and affected scope.
+Update behavior, acceptance, state flow, and affected tests together; preserve
+the original requirement and explicitly record the approved deviation. Prior
+answers remain authoritative until the user changes them. Reopen applicable
+review when the approved contract or its bound evidence changes.
+
 ## Skip path
 
 When breakdown is skipped, create a minimal single sub-requirement package:
