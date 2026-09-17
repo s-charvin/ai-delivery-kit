@@ -1,5 +1,7 @@
 # Stage 3: Design Contract
 
+For Android View, apply [the Android View design contract](framework-adapters/android-view.md): preserve old-feature architecture; independent new features use Kotlin + MVI + Flow/StateFlow + ViewBinding. Record effect delivery, lifecycle ownership, async results, cancellation, concurrency and recovery in this same `design.md`.
+
 Stage 3 produces a single canonical `design.md` behavior and solution contract.
 Frameworks may contribute reasoning methods, but they do not add persisted
 `spec.md`, `plan.md`, or `tasks.md` artifacts. Concrete tooling follows

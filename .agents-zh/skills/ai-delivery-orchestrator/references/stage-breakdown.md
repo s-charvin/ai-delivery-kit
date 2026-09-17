@@ -1,5 +1,7 @@
 # 阶段 1：需求拆分
 
+Android View 切片分类前读取 [Android View 适配](framework-adapters/android-view.md)：检查模块/variant、SDK/JDK、语言、架构、资源和测试设施；按功能所有权分类，不以新建文件判断新功能。
+
 ## 何时运行
 
 - 自动决策为「拆分」，或任一子需求处于 `draft` 且范围未确定。

@@ -25,5 +25,6 @@ copy_identical "ai-delivery-orchestrator/scripts/reconcile-delivery.py"
 copy_identical "ai-delivery-orchestrator/scripts/design_contract.py"
 copy_identical "ai-delivery-orchestrator/scripts/layout.py"
 copy_identical "ui-truth-mapping/templates/ui-truth-index-template.json"
+copy_identical "ui-truth-mapping/references/framework-adapters/android-view/AnimatedViewCapture.kt"
 
 print -- "Synced non-localized assets to .agents-zh/skills"

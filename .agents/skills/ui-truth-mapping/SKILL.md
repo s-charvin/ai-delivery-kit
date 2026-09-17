@@ -25,6 +25,8 @@ This skill does one thing: after CP-UI authorization, use the **user-approved wo
 - A truth source locator: Figma file key + node id for `figma`, or a requirement/project/user-decision reference for `runtime-baseline`
 - For follow-ups: any hint of the target unit (path, widget name, or "no known unit yet")
 
+For traditional Android Views, read [the Android View capture adapter](references/framework-adapters/android-view/README.md). Its Robolectric/Roborazzi path is community tooling that renders the real host stack; references to official-stack previews do not label those libraries as official Android APIs. Android input changes require fresh captures/tests; preserved confirmations also require unchanged approved behavior and motion contracts.
+
 ## Framework adapters
 
 The core contract is framework-neutral. Framework-specific capture recipes live
@@ -438,6 +440,8 @@ There is no HTML validator and no active-delivery compatibility path for earlier
 Stage 4 **wires** the already-written component (API, route, state, mount) in the same user-approved workspace. It must not create a second workspace, redraw the component from a parallel format, or re-query TemPad by default.
 
 Stage 4 verifies every indexed scenario according to its frozen evidence scope, then writes schema v2 structured `visual-acceptance.json`. `component-only` reuses the frozen component preview and component behavior tests without adding a host-visual pass. `host-static` uses the indexed production host and official deterministic screenshot facility. `host-runtime` performs a cheap device/resource/visual smoke first, then runs expensive native lifecycle verification only after the smoke passes. Host evidence uses `runtime-capture` with hash-bound screenshot, test, assertion report, command, and matching host provenance; the screenshot must live in the project's declared native test evidence root, never under `.ai-delivery/`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
+
+For `stack: "android-view"`, the confirmation-retention rule above additionally requires unchanged approved behavior and motion contracts. Any changed `render_inputs` requires rerunning affected tests and regenerating affected previews before updating input hashes; retain a corresponding confirmation only when both its preview and approved behavior/motion contract remain unchanged.
 
 **Reference check:** run a reference/usage search before writing any "implemented at" claim. Definition-only is not enough.
 

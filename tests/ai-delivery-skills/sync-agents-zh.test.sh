@@ -39,6 +39,9 @@ require_no_han_content() {
 }
 
 # Non-localized assets must be byte-identical
+require_identical "ui-truth-mapping/references/framework-adapters/android-view/AnimatedViewCapture.kt"
+require_han_content "$DST/ui-truth-mapping/references/framework-adapters/android-view/README.md"
+require_han_content "$DST/ai-delivery-orchestrator/references/framework-adapters/android-view.md"
 for rel in \
   ai-delivery-orchestrator/agents/openai.yaml \
   ai-delivery-orchestrator/scripts/reconcile-delivery.py \

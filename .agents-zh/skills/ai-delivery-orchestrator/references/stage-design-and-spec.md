@@ -1,5 +1,7 @@
 # Stage 3：设计契约
 
+Android View 按 [Android View 设计契约](framework-adapters/android-view.md) 执行：旧功能延续架构，独立新功能使用 Kotlin + MVI + Flow/StateFlow + ViewBinding。在同一 `design.md` 记录 Effect 投递、生命周期所有权、异步结果、取消、并发和恢复。
+
 Stage 3 只产出一份 canonical `design.md` 行为与方案设计契约。外部框架可
 提供推理方法，但不得新增持久化的 `spec.md`、`plan.md` 或 `tasks.md`。
 具体适配见 [framework-adaptation.md](framework-adaptation.md)。

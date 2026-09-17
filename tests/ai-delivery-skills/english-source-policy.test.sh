@@ -12,7 +12,7 @@ do
   [[ -f "$ROOT/$rel" ]] || { printf '%s\n' "[english-source-policy.test] missing $rel" >&2; exit 1; }
 done
 
-if matches=$(git -C "$ROOT" grep -n -P '\p{Han}' -- . \
+if matches=$(git -C "$ROOT" grep -I -n -P '\p{Han}' -- . \
   ':(glob,exclude).agents-zh/**' \
   ':(glob,exclude)**/README*' \
   ':(glob,exclude)**/docs/**'); then

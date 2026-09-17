@@ -1,0 +1,16 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:orientation="vertical" android:background="?android:attr/colorBackground">
+    <View android:id="@+id/marker" android:layout_width="50dp" android:layout_height="50dp"
+        android:background="@drawable/marker" />
+    <Button android:id="@+id/animate" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/animate" />
+    <TextView android:id="@+id/status" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="18sp" />
+    <Button android:id="@+id/submit" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/submit" />
+    <Button android:id="@+id/cancel" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="@string/cancel" />
+    <androidx.recyclerview.widget.RecyclerView android:id="@+id/items"
+        android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" />
+</LinearLayout>

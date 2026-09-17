@@ -62,6 +62,12 @@ zsh "$SOURCE_BOOTSTRAP_SCRIPT" "$TARGET_REPO"
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/golden-preview-test.dart.example" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/flutter/motion-preview-test.dart.example" ]]
+[[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/android-view/README.md" ]]
+cmp "$ROOT/.agents/skills/ui-truth-mapping/references/framework-adapters/android-view/AnimatedViewCapture.kt" \
+    "$TARGET_REPO/.agents/skills/ui-truth-mapping/references/framework-adapters/android-view/AnimatedViewCapture.kt"
+[[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/references/framework-adapters/android-view.md" ]]
+[[ ! -e "$TARGET_REPO/tests/fixtures/android-view" ]]
+[[ ! -e "$TARGET_REPO/build.gradle.kts" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/SKILL.md" ]]
 [[ -f "$TARGET_REPO/.agents/skills/ai-delivery-orchestrator/templates/status-template.json" ]]

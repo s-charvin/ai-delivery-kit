@@ -535,6 +535,109 @@ not_applicable
     }
     expect_pass("valid host-static scope", valid_host_scope)
 
+    android_paths = {
+        "app/src/main/java/sample/ProfileFragment.kt": "class ProfileFragment\n",
+        "app/src/main/java/sample/ProfileActivity.kt": "class ProfileActivity\n",
+        "app/src/main/java/sample/LegacyCard.java": "class LegacyCard {}\n",
+        "app/src/main/res/layout/profile.xml": "<FrameLayout />\n",
+        "app/src/main/res/values/themes.xml": "<resources />\n",
+        "app/build.gradle.kts": "plugins {}\n",
+        "app/src/test/java/sample/ProfileTest.kt": "class ProfileTest\n",
+        "app/src/test/java/sample/LegacyTest.java": "class LegacyTest {}\n",
+    }
+    for rel, content in android_paths.items():
+        path = repo / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    android = copy.deepcopy(valid_index)
+    android_unit = android["units"][0]
+    android_component = "app/src/main/java/sample/ProfileFragment.kt"
+    android_test = "app/src/test/java/sample/ProfileTest.kt"
+    android_unit.update({
+        "stack": "android-view",
+        "component_path": android_component,
+        "component_sha256": sha256(repo / android_component),
+        "golden_test": android_test,
+        "golden_test_sha256": sha256(repo / android_test),
+        "render_inputs": [{"path": rel, "sha256": sha256(repo / rel)} for rel in android_paths],
+    })
+    expect_pass("Android Kotlin PNG and animated GIF", android)
+    for component_rel in ("app/src/main/java/sample/LegacyCard.java", "app/src/main/res/layout/profile.xml"):
+        alternate = copy.deepcopy(android)
+        alternate["units"][0].update({
+            "component_path": component_rel,
+            "component_sha256": sha256(repo / component_rel),
+            "golden_test": "app/src/test/java/sample/LegacyTest.java",
+            "golden_test_sha256": sha256(repo / "app/src/test/java/sample/LegacyTest.java"),
+        })
+        expect_pass("Android Java/XML compatibility", alternate)
+    for field in ("golden_test", "golden_test_sha256", "render_inputs"):
+        invalid = copy.deepcopy(android)
+        del invalid["units"][0][field]
+        expect_fail("Android missing " + field, invalid, field)
+    for inputs in ([], {}, [None]):
+        invalid = copy.deepcopy(android)
+        invalid["units"][0]["render_inputs"] = inputs
+        expect_fail("Android malformed inputs", invalid, "render_inputs")
+    invalid = copy.deepcopy(android)
+    invalid["units"][0]["render_inputs"] = android_unit["render_inputs"][1:]
+    expect_fail("Android omitted component", invalid, "render_inputs must include component_path")
+    invalid = copy.deepcopy(android)
+    invalid["units"][0]["render_inputs"].append({
+        "path": "app/./src/main/java/sample/ProfileFragment.kt",
+        "sha256": sha256(repo / android_component),
+    })
+    expect_fail("Android normalized duplicate", invalid, "duplicate render_inputs path")
+    for rel in ("../outside.dart", str(outside), "lib/escaped.dart", "C:\\outside.xml", "..\\outside.xml"):
+        invalid = copy.deepcopy(android)
+        invalid["units"][0]["render_inputs"].append({"path": rel, "sha256": sha256(outside)})
+        expect_fail("Android input escape " + rel, invalid, "render_inputs[8].path")
+    for rel in ("app/src/main/res/layout/profile.xml", "app/src/main/res/values/themes.xml", "app/build.gradle.kts"):
+        original = (repo / rel).read_bytes()
+        (repo / rel).write_bytes(original + b"changed\n")
+        expect_fail("Android stale input " + rel, android, ".sha256 mismatch")
+        (repo / rel).write_bytes(original)
+    for field, rel, hash_field in (
+        ("component_path", "lib/profile_card.dart", "component_sha256"),
+        ("golden_test", "app/src/main/res/layout/profile.xml", "golden_test_sha256"),
+    ):
+        invalid = copy.deepcopy(android)
+        invalid["units"][0].update({field: rel, hash_field: sha256(repo / rel)})
+        expect_fail("Android invalid suffix " + field, invalid, field + " must end with")
+    invalid = copy.deepcopy(android)
+    invalid["units"][0]["scenarios"][0]["preview_path"] = "test/motion/profile-card-default.gif"
+    expect_fail("Android static preview requires PNG", invalid, "preview_path must end with .png")
+    android_host = copy.deepcopy(android)
+    android_host["units"][0]["scenarios"][0] = copy.deepcopy(valid_host_scope["units"][0]["scenarios"][0])
+    android_binding = android_host["units"][0]["scenarios"][0]["host_binding"]
+    android_host_path = "app/src/main/java/sample/ProfileActivity.kt"
+    android_binding.update({
+        "host_component_path": android_host_path,
+        "host_component_sha256": sha256(repo / android_host_path),
+    })
+    expect_pass("Android production host-static", android_host)
+    invalid = copy.deepcopy(android_host)
+    invalid["units"][0]["render_inputs"] = [row for row in android_unit["render_inputs"] if row["path"] != android_host_path]
+    expect_fail("Android host omitted from inputs", invalid, "render_inputs must include host_component_path")
+    for source_set in ("test", "androidTest", "testFixtures"):
+        fake_host = f"app/src/{source_set}/java/sample/SyntheticHost.kt"
+        (repo / fake_host).parent.mkdir(parents=True, exist_ok=True)
+        (repo / fake_host).write_text("class SyntheticHost\n", encoding="utf-8")
+        invalid = copy.deepcopy(android_host)
+        invalid["units"][0]["scenarios"][0]["host_binding"].update({
+            "host_component_path": fake_host,
+            "host_component_sha256": sha256(repo / fake_host),
+        })
+        invalid["units"][0]["render_inputs"].append({"path": fake_host, "sha256": sha256(repo / fake_host)})
+        expect_fail("Android synthetic host " + source_set, invalid, "production source, not test evidence")
+    alias_host = repo / "app/src/main/java/sample/AliasHost.kt"
+    alias_host.symlink_to(repo / fake_host)
+    invalid["units"][0]["scenarios"][0]["host_binding"]["host_component_path"] = alias_host.relative_to(repo).as_posix()
+    expect_fail("Android synthetic host symlink alias", invalid, "production source, not test evidence")
+    invalid = copy.deepcopy(android_host)
+    invalid["units"][0]["scenarios"][0]["scope_decision"]["host_capture_supported"] = False
+    expect_fail("Android false host capability", invalid, "requires host_capture_supported=true")
+
     synthetic_host_scope = copy.deepcopy(valid_host_scope)
     synthetic_host_scope["units"][0]["scenarios"][0]["host_binding"].update(
         {

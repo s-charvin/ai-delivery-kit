@@ -25,6 +25,8 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 - 真值源定位符：`figma` 使用 Figma 文件 key + 节点 id；`runtime-baseline` 使用 requirement/project/user-decision 引用
 - 后续需求：目标单元的任何线索（路径、组件名，或「尚无已知单元」）
 
+传统 Android View 读取 [Android View 捕获适配](references/framework-adapters/android-view/README.md)。Robolectric/Roborazzi 是运行真实宿主栈的社区工具；「官方栈预览」措辞不代表这些库是 Android 官方 API。Android 输入变化必须重新捕获/测试，保留确认还要求已批准行为与动效契约不变。
+
 ## 框架适配器
 
 核心契约与框架无关。框架特定的捕获方案放在
@@ -407,6 +409,8 @@ unit、预览、测试和新鲜上下文评审后，统一请求一次验收。�
 Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从平行预览再画一遍宿主组件，也禁止再查 TemPad。
 
 Stage 4 按冻结的证据范围验证每个已索引 scenario，然后写 schema v2 结构化 `visual-acceptance.json`。`component-only` 复用冻结组件 preview 与组件行为测试，不追加宿主视觉通过声明；`host-static` 使用索引中的生产宿主与官方确定性截图设施；`host-runtime` 先执行低成本的设备/资源/视觉 smoke，只有 smoke 通过后才执行昂贵的原生生命周期验证。宿主证据使用 `runtime-capture`，必须绑定截图、测试、断言报告、命令与匹配的宿主 provenance；截图必须放在项目声明的原生测试证据根目录，绝不能放在 `.ai-delivery/`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
+
+对于 `stack: "android-view"`，上述保留确认规则还要求已批准行为和动效契约不变。任何 `render_inputs` 变化都必须先重跑受影响测试并重新生成受影响预览，再更新输入 hash；仅当对应预览及已批准行为/动效契约均未变化时，才能保留对应确认。
 
 **引用核实：** 写任何「实现于」声明之前跑引用/用法搜索。只查定义不够。
 

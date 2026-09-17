@@ -7,6 +7,32 @@ on:
   pull_request:
 
 jobs:
+  android-view:
+    name: Android View local rendering
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Install Android platform
+        run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
+      - name: Verify View rendering, MVI and GIF
+        run: bash scripts/test-android-view.sh
+      - name: Upload rendering evidence and test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-view-evidence
+          path: |
+            tests/fixtures/android-view/app/build/outputs/android-view/
+            tests/fixtures/android-view/app/build/reports/
+            tests/fixtures/android-view/app/build/test-results/
+
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}

@@ -1,5 +1,7 @@
 # Stage 4: Implementation
 
+For Android View, load [the Android View adapter](framework-adapters/android-view.md) for feature-boundary implementation rules, Flow/ViewBinding lifecycle checks, local PNG/GIF evidence, and the limits requiring emulator/device verification.
+
 ## When to run
 
 Each dependency-ready sub-requirement at `design_ready` or `in_dev` when
@@ -70,6 +72,8 @@ Do not add packages merely to run this matrix. Use existing golden/screenshot, w
 Never construct a synthetic page to satisfy host evidence. If the real host cannot be mounted or captured as frozen, stop and return the scenario for a corrected capability decision; do not silently downgrade or forge a passing screenshot. Host screenshots and assertion reports belong under the indexed project-native test evidence root outside `.ai-delivery/`.
 
 If component code changes while all regenerated visual preview hashes remain identical, update the component hash and keep existing preview-bound confirmations. If any preview hash changes, regenerate that preview and obtain fresh confirmation; a stale `reviewed_preview_sha256` must block progress.
+
+For `stack: "android-view"`, this retention rule additionally requires unchanged approved behavior and motion contracts. Any changed `render_inputs` requires rerunning affected tests and regenerating affected previews before updating input hashes; retain a corresponding confirmation only when both its preview and approved behavior/motion contract remain unchanged.
 
 When a stable Figma reference bitmap exists, record project-native image-diff evidence with reference/candidate/diff hashes, metric, threshold, actual result, and command. Without a stable reference bitmap, require exact design-value mapping, deterministic preview, and user confirmation; never claim an automated pixel comparison occurred.
 

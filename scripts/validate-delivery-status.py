@@ -23,7 +23,9 @@ LEGACY_VISUAL_ACCEPTANCE_SCHEMA_VERSION = 1
 KEBAB_CASE_RE = re.compile(r"^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 UNIT_TYPES = frozenset({"page", "component", "modal", "shared-component"})
-STACKS = frozenset({"flutter", "web"})
+STACKS = frozenset({"flutter", "web", "android-view"})
+ANDROID_COMPONENT_SUFFIXES = frozenset({".kt", ".java", ".xml"})
+ANDROID_TEST_SUFFIXES = frozenset({".kt", ".java"})
 CONFIRMATION_STATUSES = frozenset({"confirmed", "waived"})
 MOTION_DECISIONS = frozenset({"animated", "static"})
 MOTION_VERIFICATION_MODES = frozenset({"runtime", "behavior", "manual", "not_applicable"})
@@ -822,7 +824,10 @@ def check_ui_truth_index(
             if isinstance(raw_unit_id, str):
                 dependency_records.append((raw_unit_id, valid_dependencies))
 
-        component_suffixes = frozenset({".dart"}) if stack == "flutter" else None
+        component_suffixes = (
+            frozenset({".dart"}) if stack == "flutter"
+            else ANDROID_COMPONENT_SUFFIXES if stack == "android-view" else None
+        )
         component_file, file_errors = _resolve_repo_relative_file(
             repo_root,
             unit.get("component_path"),
@@ -842,10 +847,38 @@ def check_ui_truth_index(
             )
         )
 
-        if stack == "flutter" or "golden_test" in unit or "golden_test_sha256" in unit:
+        render_files: set[Path] = set()
+        if stack == "android-view":
+            render_inputs = unit.get("render_inputs")
+            if not isinstance(render_inputs, list) or not render_inputs:
+                errors.append(f"[GATE] {subreq_id} unit {unit_id} render_inputs must be a non-empty array")
+                render_inputs = []
+            for input_index, render_input in enumerate(render_inputs):
+                field = f"render_inputs[{input_index}]"
+                if not isinstance(render_input, dict):
+                    errors.append(f"[GATE] {subreq_id} unit {unit_id} {field} must be an object")
+                    continue
+                render_file, input_errors = _resolve_repo_relative_file(
+                    repo_root, render_input.get("path"), field=f"{field}.path",
+                    subreq_id=subreq_id, unit_id=str(unit_id),
+                )
+                errors.extend(input_errors)
+                errors.extend(_check_content_hash(
+                    render_file, render_input.get("sha256"), field=f"{field}.sha256",
+                    subreq_id=subreq_id, unit_id=str(unit_id),
+                ))
+                if render_file is not None:
+                    if render_file in render_files:
+                        errors.append(f"[GATE] {subreq_id} unit {unit_id} duplicate render_inputs path: {render_input.get('path')}")
+                    render_files.add(render_file)
+            if component_file is not None and component_file not in render_files:
+                errors.append(f"[GATE] {subreq_id} unit {unit_id} render_inputs must include component_path")
+
+        if stack in {"flutter", "android-view"} or "golden_test" in unit or "golden_test_sha256" in unit:
             test_suffixes = (
                 frozenset({".dart"})
                 if stack == "flutter"
+                else ANDROID_TEST_SUFFIXES if stack == "android-view"
                 else frozenset({".js", ".jsx", ".ts", ".tsx"})
             )
             golden_file, file_errors = _resolve_repo_relative_file(
@@ -999,7 +1032,7 @@ def check_ui_truth_index(
         scenario_state_ids: set[str] = set()
         scenario_profile_ids: set[str] = set()
         preview_suffixes = (
-            frozenset({".png"}) if stack == "flutter" else WEB_PREVIEW_SUFFIXES
+            frozenset({".png"}) if stack in {"flutter", "android-view"} else WEB_PREVIEW_SUFFIXES
         )
 
         for scenario_index, scenario in enumerate(scenarios):
@@ -1125,12 +1158,24 @@ def check_ui_truth_index(
                             field="host_component_path",
                             subreq_id=subreq_id,
                             unit_id=f"{unit_id} scenario {scenario_id} host_binding",
+                            allowed_suffixes=ANDROID_COMPONENT_SUFFIXES if stack == "android-view" else None,
                         )
                         errors.extend(host_file_errors)
+                        if stack == "android-view" and host_file is not None and host_file not in render_files:
+                            errors.append(f"{prefix} render_inputs must include host_component_path")
                         host_component_path = host_binding.get("host_component_path")
                         if _is_non_empty_string(host_component_path):
                             host_parts = Path(host_component_path).parts
-                            if host_parts and host_parts[0] in NON_PRODUCTION_HOST_ROOTS:
+                            resolved_host_parts = (
+                                host_file.relative_to(repo_root.resolve()).parts
+                                if host_file is not None else ()
+                            )
+                            if host_parts and (host_parts[0] in NON_PRODUCTION_HOST_ROOTS or (
+                                stack == "android-view" and any(
+                                    part in NON_PRODUCTION_HOST_ROOTS | {"androidTest", "testFixtures"}
+                                    for part in (*host_parts, *resolved_host_parts)
+                                )
+                            )):
                                 errors.append(
                                     f"{prefix} host_binding.host_component_path must reference "
                                     "production source, not test evidence"

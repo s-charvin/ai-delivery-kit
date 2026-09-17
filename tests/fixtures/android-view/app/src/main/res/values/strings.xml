@@ -1,0 +1,8 @@
+<resources>
+    <string name="animate">Animate</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="completed_count">Completed: %1$d</string>
+    <string name="completed">Completed</string>
+    <string name="legacy_label">Legacy view</string>
+</resources>

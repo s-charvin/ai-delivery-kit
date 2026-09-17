@@ -64,6 +64,8 @@ Before executing any stage action:
 
 Action → guide dispatch table and loop model: [references/framework-adaptation.md](references/framework-adaptation.md). Per-framework usage guides: `references/frameworks/{spec-kit,openspec,superpowers,ecc,native}.md`.
 
+For traditional Android View work, load [the Android View adapter](references/framework-adapters/android-view.md) during the Stage 1 capability audit and reuse it for design and implementation. It distinguishes existing-feature architecture from independent new Kotlin/MVI/Flow/ViewBinding features.
+
 ## Pipeline
 
 | Stage | Abstract action | Gate |

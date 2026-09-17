@@ -1,5 +1,7 @@
 # 框架适配器参考
 
+XML/ViewBinding Android 宿主读取 [Android View](android-view/README.md)。Robolectric Native Graphics + Roborazzi 是运行真实 Android View 的社区捕获链路；复用项目已验证工具并记录本地/设备证据边界。
+
 UI 真值映射 skill 定义框架无关的治理契约。本目录的适配器是宿主框架的
 实现参考，可选且可互换。适配器必须遵守核心规则：真实宿主渲染、确定性
 捕获、证据绑定、临时产物清理，以及独立的动效确认。

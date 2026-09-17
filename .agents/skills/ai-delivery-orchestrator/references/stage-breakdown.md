@@ -1,5 +1,7 @@
 # Stage 1: Requirement Breakdown
 
+For Android View slices, read [the Android View adapter](framework-adapters/android-view.md) before classification: inspect module/variant, SDK/JDK, language, architecture, resources and test facilities; classify feature ownership rather than whether a file is new.
+
 ## When to run
 
 - Auto-decision says "split", or any sub-requirement is at `draft` with unresolved scope.

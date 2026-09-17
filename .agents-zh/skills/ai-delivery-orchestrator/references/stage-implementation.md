@@ -1,5 +1,7 @@
 # 阶段 4：实现
 
+Android View 读取 [Android View 适配](framework-adapters/android-view.md)，按功能边界实现，验证 Flow/ViewBinding 生命周期、本地 PNG/GIF 证据，以及需模拟器/设备补充的范围。
+
 ## 何时运行
 
 当依赖就绪的子需求处于 `design_ready` 或 `in_dev`，且 reconcile 输出
@@ -69,6 +71,8 @@ fill 判定为 `fill` 时，按父宽减内边距实现，不要抄快照宽度�
 禁止为满足宿主证据而构造虚构页面。真实宿主无法按冻结方式挂载或截图时，停止并把 scenario 退回修正能力判定；不得静默降级或伪造通过截图。宿主截图与断言报告必须放在 `.ai-delivery/` 外、索引声明的项目原生测试证据根目录。
 
 若组件代码变化，但重新生成的所有视觉 preview hash 均不变，可更新组件 hash 并保留现有预览绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认；陈旧 `reviewed_preview_sha256` 必须阻止推进。
+
+对于 `stack: "android-view"`，上述保留规则还要求已批准行为和动效契约不变。任何 `render_inputs` 变化都必须先重跑受影响测试并重新生成受影响预览，再更新输入 hash；仅当对应预览及已批准行为/动效契约均未变化时，才能保留对应确认。
 
 存在稳定 Figma 参考位图时，以项目原生 image-diff 记录 reference/candidate/diff hash、metric、threshold、actual 与命令。没有稳定位图时，要求精确设计数值映射、确定性预览和用户确认；不得声称执行过自动像素比较。
 

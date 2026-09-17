@@ -1,5 +1,7 @@
 # Framework Adapter References
 
+For XML/ViewBinding Android hosts, read [Android View](android-view/README.md). Robolectric Native Graphics + Roborazzi is a community capture path for real Android Views; reuse established project tools and record local/device evidence limits.
+
 The UI Truth Mapping skill defines the framework-neutral governance contract.
 Adapters in this directory are implementation references for a host framework;
 they are optional and interchangeable. An adapter must follow the core rules

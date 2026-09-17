@@ -56,6 +56,8 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 
 ## 管道
 
+传统 Android View 任务在 Stage 1 能力审计时读取 [Android View 适配](references/framework-adapters/android-view.md)，设计和实现继续复用。按功能边界区分旧架构延续与独立新功能的 Kotlin/MVI/Flow/ViewBinding 标准。
+
 | 阶段 | 抽象动作 | 门禁 |
 |------|----------|------|
 | 1 | `requirement-breakdown` + 轻量审计 | `split_ready` |

@@ -696,5 +696,36 @@ not_applicable
     (subreq / "design.md").write_text(design_contract_text(), encoding="utf-8")
     expect_pass("restore Figma acceptance after mode matrix", valid_acceptance)
 
+    # Android inputs are checked again at final acceptance, even when the
+    # index and accepted preview bytes themselves have not changed.
+    android_component = repo / "app/src/main/java/sample/ProfileFragment.kt"
+    android_test = repo / "app/src/test/java/sample/ProfileTest.kt"
+    android_theme = repo / "app/src/main/res/values/themes.xml"
+    for path, content in (
+        (android_component, "class ProfileFragment\n"),
+        (android_test, "class ProfileTest\n"),
+        (android_theme, "<resources />\n"),
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(content, encoding="utf-8")
+    android_index = copy.deepcopy(index)
+    android_index["units"][0].update({
+        "stack": "android-view",
+        "component_path": android_component.relative_to(repo).as_posix(),
+        "component_sha256": sha256(android_component),
+        "golden_test": android_test.relative_to(repo).as_posix(),
+        "golden_test_sha256": sha256(android_test),
+        "render_inputs": [
+            {"path": path.relative_to(repo).as_posix(), "sha256": sha256(path)}
+            for path in (android_component, android_theme)
+        ],
+    })
+    index_path.write_text(json.dumps(android_index, indent=2) + "\n", encoding="utf-8")
+    android_acceptance = copy.deepcopy(valid_acceptance)
+    android_acceptance["ui_truth_index_sha256"] = sha256(index_path)
+    expect_pass("Android structured PNG/GIF acceptance", android_acceptance)
+    android_theme.write_text("<resources><!-- changed theme --></resources>\n", encoding="utf-8")
+    expect_fail("Android stale render input at acceptance", android_acceptance, "render_inputs[1].sha256 mismatch")
+
 print("PASS: structured visual acceptance rejects missing, stale, partial, and forged evidence.")
 PY
