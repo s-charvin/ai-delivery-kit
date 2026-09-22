@@ -10,9 +10,9 @@ It:
    requirement-level ``delivery-report.md`` from a caller-supplied template
    already localized to the user's current conversation language.
 3. Requires a requirement-level ``retrospective.md`` with a current
-   ``reviewed-at`` marker. If it has problem records, registers its marked
-   problem map in the project-level retrospective index without rewriting the
-   ledger.
+   ``reviewed-at`` marker. If it has problem records, registers its explicitly
+   qualified problem-map rows in the project-level retrospective index without
+   rewriting the ledger.
 
 Canonical artifacts remain in their original locations. Historical repositories
 may still contain ``archive/<ISO-ts>/MANIFEST.json`` snapshots; the validator
@@ -65,15 +65,31 @@ from layout import (  # noqa: E402
     find_ai_delivery_dir,
 )
 
-RETROSPECTIVE_INDEX_START = "<!-- ai-delivery-retrospective:problem-index:v1 -->"
-RETROSPECTIVE_INDEX_END = "<!-- /ai-delivery-retrospective:problem-index:v1 -->"
+RETROSPECTIVE_INDEX_START = "<!-- ai-delivery-retrospective:problem-index:v2 -->"
+RETROSPECTIVE_INDEX_END = "<!-- /ai-delivery-retrospective:problem-index:v2 -->"
+LEGACY_RETROSPECTIVE_INDEX_START = "<!-- ai-delivery-retrospective:problem-index:v1 -->"
+LEGACY_RETROSPECTIVE_INDEX_END = "<!-- /ai-delivery-retrospective:problem-index:v1 -->"
 PROJECT_INDEX_START = "<!-- ai-delivery-retrospective:index:v1 -->"
 PROJECT_INDEX_END = "<!-- /ai-delivery-retrospective:index:v1 -->"
 INDEX_TEMPLATE_MARKER = "ai-delivery-retrospective:index:v1"
 INDEX_TEMPLATE_PLACEHOLDER = "<retrospective_rows>"
+PROBLEM_MAP_REQUIRED_COLUMNS = frozenset(
+    {
+        "knowledge_type",
+        "reuse_scope",
+        "index_decision",
+        "confidence",
+        "importance",
+    }
+)
 RETROSPECTIVE_REVIEWED_AT_RE = re.compile(
     r"<!--\s*ai-delivery-retrospective:reviewed-at:(?P<value>[^\s]+)\s*-->"
 )
+INDEXABLE_KNOWLEDGE_TYPES = frozenset({"reusable"})
+INDEXABLE_REUSE_SCOPES = frozenset({"project", "domain"})
+INDEXABLE_INDEX_DECISIONS = frozenset({"include"})
+INDEXABLE_CONFIDENCE = frozenset({"confirmed"})
+INDEXABLE_IMPORTANCE = frozenset({"high", "critical"})
 
 
 def load_status(req_root: Path) -> dict:
@@ -168,6 +184,48 @@ def _table_cells(line: str) -> list[str]:
     return cells if len(cells) >= 6 else []
 
 
+def _entry_from_cells(cells: list[str]) -> dict[str, str]:
+    """Parse a v2 problem-map row after schema validation."""
+    entry = {
+        "id": cells[0],
+        "trigger": cells[1],
+        "scenario": cells[2],
+        "path": cells[3],
+        "knowledge_type": "",
+        "reuse_scope": "",
+        "index_decision": "",
+        "confidence": "",
+        "importance": "",
+        "status": "",
+        "details": "",
+    }
+    (
+        entry["knowledge_type"],
+        entry["reuse_scope"],
+        entry["index_decision"],
+        entry["confidence"],
+        entry["importance"],
+        entry["status"],
+        entry["details"],
+    ) = cells[4:11]
+    return entry
+
+
+def is_indexable_entry(entry: dict[str, str]) -> bool:
+    """Return whether AI-declared metadata qualifies a problem for routing."""
+    return (
+        entry.get("knowledge_type", "").lower() in INDEXABLE_KNOWLEDGE_TYPES
+        and entry.get("reuse_scope", "").lower() in INDEXABLE_REUSE_SCOPES
+        and entry.get("index_decision", "").lower() in INDEXABLE_INDEX_DECISIONS
+        and entry.get("confidence", "").lower() in INDEXABLE_CONFIDENCE
+        and entry.get("importance", "").lower() in INDEXABLE_IMPORTANCE
+    )
+
+
+def indexable_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [entry for entry in entries if is_indexable_entry(entry)]
+
+
 def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
     """Read only the stable problem-map table; never synthesize its content."""
     try:
@@ -179,6 +237,14 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
         start = lines.index(RETROSPECTIVE_INDEX_START)
         end = lines.index(RETROSPECTIVE_INDEX_END, start + 1)
     except ValueError:
+        if (
+            LEGACY_RETROSPECTIVE_INDEX_START in lines
+            and LEGACY_RETROSPECTIVE_INDEX_END in lines
+        ):
+            raise SystemExit(
+                "ERROR: retrospective uses legacy problem-map schema v1; "
+                "AI must upgrade retrospective.md to problem-index:v2 before archive"
+            )
         meaningful = [
             line.strip()
             for line in lines
@@ -191,20 +257,35 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
             "ERROR: retrospective is missing the stable problem-index markers"
         )
 
+    header_seen = False
     entries: list[dict[str, str]] = []
     for line in lines[start + 1 : end]:
         cells = _table_cells(line)
-        if len(cells) < 6 or not cells[0].startswith("RET-") or cells[0].lower() in {"problem", "id"}:
+        if not cells:
             continue
-        entries.append(
-            {
-                "id": cells[0],
-                "trigger": cells[1],
-                "scenario": cells[2],
-                "path": cells[3],
-                "status": cells[4],
-                "details": cells[5],
-            }
+        if cells[0].lower() in {"problem", "id"}:
+            if not PROBLEM_MAP_REQUIRED_COLUMNS.issubset(
+                {cell.lower() for cell in cells}
+            ):
+                raise SystemExit(
+                    "ERROR: retrospective uses legacy problem-map schema; "
+                    "AI must add knowledge_type, reuse_scope, index_decision, "
+                    "confidence, and importance before archive"
+                )
+            header_seen = True
+            continue
+        if not cells[0].startswith("RET-"):
+            continue
+        if len(cells) < 11:
+            raise SystemExit(
+                "ERROR: retrospective uses legacy problem-map schema; AI must "
+                "upgrade every problem row to the v2 qualification columns before archive"
+            )
+        entries.append(_entry_from_cells(cells))
+    if not header_seen:
+        raise SystemExit(
+            "ERROR: retrospective problem map is missing the v2 qualification header; "
+            "AI must upgrade retrospective.md before archive"
         )
     return entries
 
@@ -297,7 +378,7 @@ def preflight_retrospective_index(
         )
     validate_retrospective_reviewed_at(retrospective, archive_at)
     entries = read_retrospective_entries(retrospective)
-    if not entries or not require_index_template:
+    if not indexable_entries(entries) or not require_index_template:
         return None
 
     index = retrospective_index_path(req_root, req_id)
@@ -328,9 +409,12 @@ def register_retrospective_index(
     entries = read_retrospective_entries(retrospective)
     if not entries:
         return None
+    entries = indexable_entries(entries)
 
     index = retrospective_index_path(req_root, req_id)
     existing = index.read_text(encoding="utf-8") if index.is_file() else ""
+    if not entries and not existing:
+        return None
     rows = []
     for entry in entries:
         anchor = ""
@@ -481,6 +565,19 @@ def main() -> int:
         print(f"DELIVERY_REPORT {report.relative_to(req_root)}")
 
     if not args.no_status_write and all_archived(data):
+        retrospective = retrospective_ledger_path(req_root, req_id)
+        if retrospective.is_file():
+            all_entries = read_retrospective_entries(retrospective)
+            skipped = [
+                entry["id"]
+                for entry in all_entries
+                if not is_indexable_entry(entry)
+            ]
+            if skipped:
+                print(
+                    "RETROSPECTIVE_INDEX_SKIPPED "
+                    f"{len(skipped)} (not explicitly qualified: {', '.join(skipped)})"
+                )
         index = register_retrospective_index(req_root, req_id, now, index_template)
         if index is not None:
             print(f"RETROSPECTIVE_INDEX {index}")

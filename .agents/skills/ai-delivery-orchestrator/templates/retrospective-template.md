@@ -23,10 +23,18 @@ unchanged. Remove this comment from the instantiated document.
 
 ### 1.1 Problem Map
 
-<!-- ai-delivery-retrospective:problem-index:v1 -->
-| ID | Observable trigger | Applicable scenario | Shortest path | Status | Details |
-| --- | --- | --- | --- | --- | --- |
-<!-- /ai-delivery-retrospective:problem-index:v1 -->
+<!-- ai-delivery-retrospective:problem-index:v2 -->
+| ID | Observable trigger | Applicable scenario | Shortest path | knowledge_type | reuse_scope | index_decision | confidence | importance | Status | Details |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+<!-- /ai-delivery-retrospective:problem-index:v2 -->
+
+Use the five qualification fields to decide whether a problem belongs in the
+project routing index. Use `reusable` + `project`/`domain` + `include` +
+`confirmed` + `high`/`critical` only for problems that are broadly reusable,
+verified, and valuable. Use `temporary-decision`, `requirement`, `exclude`,
+`partial`/`unverified`, or `normal`/`low` for records that must remain in this
+ledger but must not be routed to future requirements. Missing or invalid
+qualification fields are treated as not indexable.
 
 ### 1.2 Reusable Constraints
 

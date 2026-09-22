@@ -30,6 +30,17 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 在证据仍然可用时记录可复用的失败、错误的 AI 方案、用户/评审纠偏或验证失败；开始下一个方案前先记录失败方案。
 不要记录普通机械修正。保持带标记的问题地图与详细问题记录的总分结构。
 
+问题地图的每一行都必须由 AI 声明 `knowledge_type`、`reuse_scope`、
+`index_decision`、`confidence` 和 `importance`。归档脚本仅当这些字段依次为
+`reusable`、`project` 或 `domain`、`include`、`confirmed`、`high` 或 `critical`
+时，才将问题路由到项目索引。临时决策、仅需求适用的变更、未确认根因和机械修正
+可以保留在台账中，但不会进入索引。
+
+归档前检查是否存在旧的 `problem-index:v1` 或六列表格。发现旧格式时，先读取完整台账，
+原位升级为 `problem-index:v2`，再调用归档脚本。必须保留所有问题 ID、详情章节、锚点、证据和结论；
+只依据已有证据分类。若无法确认复用范围、置信度或重要性，设置保守的不可索引元数据
+（`index_decision=exclude`、`confidence=unverified`）。不得静默丢弃旧问题，也不得根据标题推断 `include`。
+
 每次更新台账后，告诉用户 `RET-###` 编号、增加了什么以及文件路径。它不是实现阶段门禁，
 但归档前必须存在并更新 reviewed-at。
 恢复会话时读取当前问题地图；出现新现象时，将项目复盘索引作为路由表，只加载匹配的历史问题章节。
@@ -221,7 +232,7 @@ API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、
 
 ## 完成
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，并幂等更新 `.ai-delivery/retrospectives/index.md`。不会创建、重写、总结或审计台账。没有问题行的台账有效且不写索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，仅将明确符合资格的高价值问题幂等更新到 `.ai-delivery/retrospectives/index.md`。不会创建、重写、总结或审计台账。没有合格问题的台账有效且不写新的索引文件或索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行以及哪些问题因资格字段缺失或不符合而跳过。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
 
 ## 编排形态（不变量）
 

@@ -38,6 +38,21 @@ record trivial mechanical fixes. Keep the marked summary problem map and the
 detailed problem records in summary-to-detail order, and update the reviewed-at
 marker during the final review.
 
+For each problem-map row, AI must declare `knowledge_type`, `reuse_scope`,
+`index_decision`, `confidence`, and `importance`. The archive script routes a
+row only when those fields are `reusable`, `project` or `domain`, `include`,
+`confirmed`, and `high` or `critical`, respectively. Temporary decisions,
+requirement-only changes, unconfirmed causes, and mechanical corrections stay
+in the ledger but are not indexed.
+
+Before archive, detect legacy `problem-index:v1` or six-column problem maps.
+Read the full ledger and upgrade them to `problem-index:v2` in place before
+calling the archive script. Preserve all problem IDs, detail sections, anchors,
+evidence, and conclusions. Classify only from recorded evidence; when a row's
+reuse scope, confidence, or importance is not established, set conservative
+non-indexable metadata (`index_decision=exclude`, `confidence=unverified`).
+Do not silently drop legacy rows or infer `include` from their titles.
+
 After every ledger update, tell the user the `RET-###` ID, what was added, and
 the file path. On resume, read the current
 problem map; when a new symptom appears, use the project retrospective index
@@ -279,10 +294,12 @@ markers and placeholder, and pass it to the final command with
 `--retrospective-index-template <path>`. The archive command requires exactly
 one parseable `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker
 whose calendar date matches the archive date, then reads the marked problem map
-and idempotently updates `.ai-delivery/retrospectives/index.md`; it does not
+and idempotently updates `.ai-delivery/retrospectives/index.md` with only
+explicitly qualified high-value rows; it does not
 create, rewrite, summarize, or audit the ledger. A ledger with no problem rows
 is valid and creates no index rows. A missing or stale ledger blocks archive.
-Tell the user which problem rows were registered.
+Tell the user which problem rows were registered and which were skipped for
+missing or non-qualifying metadata.
 Do not claim `completed` until the localized `delivery-report.md` exists. When
 every subreq is `archived`, the requirement is `completed`; canonical artifacts
 remain in place and any later change requires a new `<req-id>` directory.

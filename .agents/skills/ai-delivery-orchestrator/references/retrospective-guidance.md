@@ -27,8 +27,9 @@ approach, including why it looked plausible and why it failed.
 ## Required problem record
 
 Keep the document in summary-to-detail order. The summary problem map is a
-stable, marked Markdown table. Use a stable `RET-###` ID per problem and link
-the row to its detail heading. Each detail must contain: scenario and impact,
+stable `problem-index:v2` marked Markdown table. Use a stable `RET-###` ID per problem and link
+the row to its detail heading. Each row must also declare `knowledge_type`,
+`reuse_scope`, `index_decision`, `confidence`, and `importance`. Each detail must contain: scenario and impact,
 shortest reproduction path, expected and actual result, root cause and
 evidence, every material AI attempt with outcome and success/failure reason,
 final solution and verification, minimal future path, do-not-retry guidance,
@@ -47,10 +48,27 @@ needs the reviewed-at marker.
 ## Progressive loading
 
 The project index at `.ai-delivery/retrospectives/index.md` contains only
-archived problem rows. It is a routing map, not a second source of truth. Each
+archived problem rows that are explicitly qualified for reuse. A row is
+indexable only when `knowledge_type=reusable`, `reuse_scope=project` or
+`domain`, `index_decision=include`, `confidence=confirmed`, and
+`importance=high` or `critical`. Missing or invalid qualification fields are
+not indexable. The index is a routing map, not a second source of truth. Each
 row keeps the trigger, applicable scenario, minimal path, status, archive date,
 and a link to the exact problem section. Do not place failure history or full
 root-cause narratives in the index.
+
+### Legacy ledger upgrade before archive
+
+When an older `retrospective.md` uses `problem-index:v1` or the former
+six-column problem map, the AI must upgrade it before invoking the archive
+script. Read the full problem records, preserve their IDs, detail headings,
+anchors, evidence, and conclusions, then add the v2 qualification columns and
+change only the map marker/schema needed for the upgrade. Classify from recorded
+evidence; do not infer reuse or importance from the title alone. If the record
+cannot establish reuse scope, confidence, or importance, use conservative
+non-indexable metadata (`index_decision=exclude`, `confidence=unverified`) and
+keep the full record in the ledger. The archive script rejects legacy maps so
+an incomplete migration cannot silently lose or over-index knowledge.
 
 At requirement creation or resume:
 
@@ -66,10 +84,12 @@ architecture constraints, product requirements, or unconfirmed external facts.
 
 Archive does not generate or rewrite retrospective content. The archive action
 requires the ledger and its current reviewed-at marker, then reads its marked
-problem map and idempotently replaces that requirement's rows in the project
-index. A ledger with no problem rows produces no index rows. A missing or stale
-ledger blocks archive; the command does not infer missing problems or perform a
-memory audit.
+problem map, keeps only explicitly qualified rows, and idempotently replaces
+that requirement's rows in the project index. Temporary decisions, requirement-
+only changes, unconfirmed causes, and mechanical corrections remain in the
+ledger but are not indexed. A ledger with no qualified problem rows produces no
+new index file or rows. A missing or stale ledger blocks archive; the command
+does not infer missing problems or perform a memory audit.
 
 The requirement-level ledger remains next to its requirement artifacts as the
 full historical source. The delivery report keeps its summary responsibility;

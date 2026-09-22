@@ -174,7 +174,7 @@ Repos initialized after this refactor use a single canonical home under `.ai-del
 
 - `merged` = code integrated on the dev branch
 - `archived` = status converged in place while canonical artifacts remain in their original locations; requirement completes when all executable subreqs are `archived`
-- Optional `retrospective.md` is a requirement-level living ledger. Archive keeps it as-is and registers its marked problem map in `.ai-delivery/retrospectives/index.md` for progressive, scenario-matched loading.
+- Optional `retrospective.md` is a requirement-level living ledger. Archive keeps it as-is and registers only problem-map rows explicitly marked as reusable, cross-requirement, confirmed, and high-value in `.ai-delivery/retrospectives/index.md` for progressive, scenario-matched loading; temporary decisions remain in the ledger but are not indexed. Before archive, AI upgrades legacy problem maps to `problem-index:v2` while preserving their detailed records.
 - Run `scripts/archive-subrequirement.py` at CP-ARCHIVE before setting `archived`; it must not create duplicate artifact copies
 - For the final sub-requirement, instantiate `delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and pass it with `--delivery-report-template <path>`
 

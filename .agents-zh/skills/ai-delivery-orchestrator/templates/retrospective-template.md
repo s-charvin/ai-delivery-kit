@@ -19,10 +19,16 @@ ID、状态值、路径、命令、时间戳、哈希、锚点和占位符保持
 
 ### 1.1 问题地图
 
-<!-- ai-delivery-retrospective:problem-index:v1 -->
-| ID | 可观察触发信号 | 适用场景 | 最短路径 | 状态 | 详情 |
-| --- | --- | --- | --- | --- | --- |
-<!-- /ai-delivery-retrospective:problem-index:v1 -->
+<!-- ai-delivery-retrospective:problem-index:v2 -->
+| ID | 可观察触发信号 | 适用场景 | 最短路径 | knowledge_type | reuse_scope | index_decision | confidence | importance | 状态 | 详情 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+<!-- /ai-delivery-retrospective:problem-index:v2 -->
+
+使用五个资格字段判断问题是否进入项目路由索引。只有同时满足
+`reusable` + `project`/`domain` + `include` + `confirmed` + `high`/`critical`
+的问题，才应进入索引。`temporary-decision`、`requirement`、`exclude`、
+`partial`/`unverified` 或 `normal`/`low` 的记录可以保留在本台账中，但不会
+路由给后续需求。字段缺失或值不合法时，按不可索引处理。
 
 ### 1.2 可复用约束
 

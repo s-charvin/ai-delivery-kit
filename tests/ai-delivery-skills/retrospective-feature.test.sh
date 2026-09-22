@@ -24,6 +24,16 @@ for rel in \
 do
   [[ -f "$ROOT/$rel" ]] || fail "missing $rel"
 done
+for field in knowledge_type reuse_scope index_decision confidence importance; do
+  grep -Fq "$field" "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/retrospective-template.md" \
+    || fail "retrospective template is missing explicit index field: $field"
+done
+grep -Fq 'problem-index:v2' "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/retrospective-template.md" \
+  || fail "retrospective template is missing v2 problem-map marker"
+grep -Fq 'only explicitly qualified' "$ROOT/.agents/skills/ai-delivery-orchestrator/references/retrospective-guidance.md" \
+  || fail "retrospective guidance is missing explicit index qualification rule"
+grep -Fq 'legacy problem-map schema' "$ROOT/scripts/archive-subrequirement.py" \
+  || fail "archive script is missing legacy schema rejection"
 grep -Fq 'only matching historical problem sections' "$ROOT/.agents/skills/ai-delivery-orchestrator/SKILL.md" \
   || fail "English skill is missing progressive loading rule"
 if ! python3 - "$ROOT/.agents-zh/skills/ai-delivery-orchestrator/SKILL-zh.md" <<'PY'
@@ -54,13 +64,23 @@ cat > "$REQ/retrospective.md" <<'EOF'
 
 <!-- ai-delivery-retrospective:reviewed-at:2026-09-02 -->
 
-<!-- ai-delivery-retrospective:problem-index:v1 -->
-| ID | Observable trigger | Applicable scenario | Shortest path | Status | Details |
-| --- | --- | --- | --- | --- | --- |
-| RET-001 | State resets after returning to the flow | Resumed state with asynchronous restoration | Reproduce with restoration delayed, then separate persisted and live state | resolved | [RET-001](#ret-001) |
-<!-- /ai-delivery-retrospective:problem-index:v1 -->
+<!-- ai-delivery-retrospective:problem-index:v2 -->
+| ID | Observable trigger | Applicable scenario | Shortest path | knowledge_type | reuse_scope | index_decision | confidence | importance | Status | Details |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| RET-001 | State resets after returning to the flow | Resumed state with asynchronous restoration | Reproduce with restoration delayed, then separate persisted and live state | reusable | domain | include | confirmed | high | resolved | [RET-001](#ret-001) |
+| RET-002 | A local option changed during delivery | One requirement with a one-off product constraint | Read the current requirement decision | temporary-decision | requirement | include | confirmed | critical | resolved | [RET-002](#ret-002) |
+| RET-003 | A suspected issue has no confirmed cause | Unverified investigation | Reproduce and collect evidence | reusable | project | include | partial | critical | open | [RET-003](#ret-003) |
+<!-- /ai-delivery-retrospective:problem-index:v2 -->
 
 ## RET-001: State restoration overwrites live input
+
+Details.
+
+## RET-002: Local delivery option
+
+Details.
+
+## RET-003: Unconfirmed issue
 
 Details.
 EOF
@@ -68,9 +88,51 @@ sed '/^<!-- ai-delivery-template-language$/,/^-->/d' \
   "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md" \
   > "$TMP/index-template.md"
 
+# Legacy problem maps must be upgraded by the AI before archive; the script
+# must not silently treat their rows as non-indexable.
+LEGACY_ROOT=$(mktemp -d)
+LEGACY_REQ="$LEGACY_ROOT/.ai-delivery/requirements/req-legacy"
+LEGACY_SUB="$LEGACY_REQ/sub-requirements/SR-001"
+mkdir -p "$LEGACY_SUB/spec"
+printf '# spec\n' > "$LEGACY_SUB/spec/spec.md"
+printf '# plan\n' > "$LEGACY_SUB/spec/plan.md"
+printf '# tasks\n' > "$LEGACY_SUB/spec/tasks.md"
+printf '# verification\n' > "$LEGACY_SUB/verification.md"
+cat > "$LEGACY_REQ/retrospective.md" <<'EOF'
+# Legacy Retrospective
+
+<!-- ai-delivery-retrospective:reviewed-at:2026-09-02 -->
+
+<!-- ai-delivery-retrospective:problem-index:v1 -->
+| ID | Observable trigger | Applicable scenario | Shortest path | Status | Details |
+| --- | --- | --- | --- | --- | --- |
+| RET-001 | Legacy trigger | Legacy scenario | Legacy path | resolved | [RET-001](#ret-001) |
+<!-- /ai-delivery-retrospective:problem-index:v1 -->
+
+## RET-001: Legacy problem
+
+Details.
+EOF
+cat > "$LEGACY_REQ/status.json" <<'EOF'
+{
+  "requirement_id": "req-legacy",
+  "sub_requirements": {"SR-001": {"status": "merged"}}
+}
+EOF
+if python3 "$ARCHIVE" --req-root "$LEGACY_REQ" --subreq SR-001 \
+  --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
+  --retrospective-index-template "$TMP/index-template.md" \
+  >"$LEGACY_ROOT/out" 2>"$LEGACY_ROOT/err"; then
+  fail "legacy retrospective schema unexpectedly archived"
+fi
+grep -Fq 'legacy problem-map schema' "$LEGACY_ROOT/err" \
+  || fail "legacy schema rejection did not explain the required AI upgrade"
+grep -Fq '"status": "merged"' "$LEGACY_REQ/status.json" \
+  || fail "legacy schema rejection changed status"
+
 # Invalid index-template input must fail before freezing or changing status.
 PRE_ROOT=$(mktemp -d)
-trap 'rm -rf "$TMP" "$PRE_ROOT"' EXIT
+trap 'rm -rf "$TMP" "$PRE_ROOT" "$LEGACY_ROOT"' EXIT
 PRE_REQ="$PRE_ROOT/.ai-delivery/requirements/req-preflight"
 PRE_SUB="$PRE_REQ/sub-requirements/SR-001"
 mkdir -p "$PRE_SUB/spec"
@@ -108,7 +170,10 @@ EOF
 
 python3 "$ARCHIVE" --req-root "$REQ" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   --retrospective-index-template "$TMP/index-template.md" \
+  >"$TMP/archive.out" \
   || fail "archive command failed"
+grep -Fq 'RETROSPECTIVE_INDEX_SKIPPED 2' "$TMP/archive.out" \
+  || fail "archive did not report skipped non-qualifying rows"
 
 INDEX="$TMP/.ai-delivery/retrospectives/index.md"
 [[ -f "$INDEX" ]] || fail "retrospective index was not created"
@@ -116,6 +181,48 @@ grep -Fq '| req-generic/RET-001 |' "$INDEX" || fail "problem entry missing from 
 grep -Fq 'State resets after returning to the flow' "$INDEX" || fail "trigger missing from index"
 grep -Fq 'Reproduce with restoration delayed' "$INDEX" || fail "shortest path missing from index"
 grep -Fq '../requirements/req-generic/retrospective.md#ret-001' "$INDEX" || fail "details link missing from index"
+[[ $(grep -c '^| req-generic/' "$INDEX") -eq 1 ]] || fail "index included non-qualifying problem rows"
+if grep -Fq 'req-generic/RET-002' "$INDEX" || grep -Fq 'req-generic/RET-003' "$INDEX"; then
+  fail "index included temporary or unconfirmed problem rows"
+fi
+
+# If a previously indexed problem loses qualification, re-registration removes
+# its stale project-index row instead of preserving an unsafe historical route.
+cp "$REQ/retrospective.md" "$TMP/qualified-retrospective.md"
+python3 - "$REQ/retrospective.md" <<'PY'
+import pathlib
+import sys
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8")
+text = text.replace(
+    "| reusable | domain | include | confirmed | high |",
+    "| reusable | domain | exclude | confirmed | high |",
+    1,
+)
+path.write_text(text, encoding="utf-8")
+PY
+python3 - "$ARCHIVE" "$REQ" <<'PY'
+import importlib.util
+import pathlib
+import sys
+
+archive_path = pathlib.Path(sys.argv[1])
+req_root = pathlib.Path(sys.argv[2])
+spec = importlib.util.spec_from_file_location("archive_subrequirement", archive_path)
+archive = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(archive)
+archive.register_retrospective_index(
+    req_root,
+    "req-generic",
+    archive.datetime.datetime.fromisoformat("2026-09-02T00:00:01+00:00"),
+    None,
+)
+PY
+if grep -Fq '| req-generic/' "$INDEX"; then
+  fail "stale non-qualified rows were not removed from index"
+fi
+cp "$TMP/qualified-retrospective.md" "$REQ/retrospective.md"
 
 # Existing rows belonging to another archived requirement must survive an update.
 python3 - "$INDEX" <<'PY'
@@ -160,7 +267,7 @@ PY
 # A multi-level custom ai_delivery_path must resolve project-level artifacts
 # from the binding's repository root, not from a parent inferred by depth.
 CUSTOM_ROOT=$(mktemp -d)
-trap 'rm -rf "$TMP" "$PRE_ROOT" "${NO_ROOT:-}" "$CUSTOM_ROOT"' EXIT
+trap 'rm -rf "$TMP" "$PRE_ROOT" "$LEGACY_ROOT" "${NO_ROOT:-}" "$CUSTOM_ROOT"' EXIT
 CUSTOM_AD="$CUSTOM_ROOT/config/governed"
 CUSTOM_REQ="$CUSTOM_AD/requirements/req-custom"
 CUSTOM_SUB="$CUSTOM_REQ/sub-requirements/SR-001"
@@ -197,7 +304,7 @@ grep -Fq '../requirements/req-custom/knowledge/retrospective.md#ret-001' \
 
 # A missing ledger blocks archive before status changes.
 NO_ROOT=$(mktemp -d)
-trap 'rm -rf "$TMP" "$PRE_ROOT" "$NO_ROOT"' EXIT
+trap 'rm -rf "$TMP" "$PRE_ROOT" "$LEGACY_ROOT" "$NO_ROOT"' EXIT
 NO_RET="$NO_ROOT/.ai-delivery/requirements/req-without-retrospective"
 NO_SUB="$NO_RET/sub-requirements/SR-001"
 mkdir -p "$NO_SUB/spec"
