@@ -151,8 +151,8 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 - `design.md` 是唯一持久化的行为与方案设计契约。不得创建 `spec.md`、`plan.md` 或 `tasks.md`，也不得把文件级执行步骤塞入 `design.md`。跨会话恢复信息按需写 `progress.md`。
 - `state_flow_required=true` 时，canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用异步时序、不变量和追踪。该深度不触发人工门禁。
 - 设计评审仅在 `reviewed_design_sha256` 匹配当前文件、`user_decision_required=true` 时模式为 `human`、否则为 `self`，且时间戳/评审者存在时有效。`user_decision_required` 描述当前版本所需的授权类型，批准后仍保持 `true`；是否待处理由 review 有效性决定。文件变化重新打开 `solution-design`；当该 human-authority 版本缺少有效 hash-bound review 时再次进入 CP-DESIGN。
-- 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**，以及有效 v3 `contracts/ui-truth-index.json` 之前，不得设置 `acceptance_frozen`。每个 scenario 必须冻结 `evidence_scope` 与 `scope_decision`；只有 `host-static` 和 `host-runtime` 可以携带有效 `host_binding`，`component-only` 明确把宿主组合排除在验收声明外。路径/hash/来源/profile/scenario/coverage、当前预览 hash 绑定确认、独立动效确认/豁免（静态 unit 必须确认无动效）与干净的 Stage 2 评审仍为必需。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 仅通过 `ui-truth-mapping` 写真实组件 — 绝不经由 `figma-design-to-code`，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
-- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`component-only` 复用组件 preview 与行为测试，不宣称宿主视觉通过；`host-static` 通过项目原生确定性工具捕获索引中的生产宿主；`host-runtime` 在昂贵的原生生命周期检查前先做设备/资源/视觉 smoke。运行时截图必须位于 `.ai-delivery/` 外、索引声明的原生测试证据根目录，并绑定索引宿主 provenance。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad / 不要跑 `figma-design-to-code`；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止把平行预览翻译到另一宿主栈。
+- 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**，以及有效 v3 `contracts/ui-truth-index.json` 之前，不得设置 `acceptance_frozen`。每个 scenario 必须冻结 `evidence_scope` 与 `scope_decision`；只有 `host-static` 和 `host-runtime` 可以携带有效 `host_binding`，`component-only` 明确把宿主组合排除在验收声明外。路径/hash/来源/profile/scenario/coverage、当前预览 hash 绑定确认、独立动效确认/豁免（静态 unit 必须确认无动效）与干净的 Stage 2 评审仍为必需。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 由 `ui-truth-mapping` 负责真实组件，所选提供方技能（包括官方 `figma:figma-design-to-code`）在其门槛下采集证据，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
+- Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`component-only` 复用组件 preview 与行为测试，不宣称宿主视觉通过；`host-static` 通过项目原生确定性工具捕获索引中的生产宿主；`host-runtime` 在昂贵的原生生命周期检查前先做设备/资源/视觉 smoke。运行时截图必须位于 `.ai-delivery/` 外、索引声明的原生测试证据根目录，并绑定索引宿主 provenance。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad 或官方 Figma；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止把平行预览翻译到另一宿主栈。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v3 `ui-truth-index.json`，以及按冻结证据范围覆盖全部已索引 scenario 的 schema v2 结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
 - 仅在 CP-ARCHIVE 确认后通过 `scripts/archive-subrequirement.py` 设置 `archived`。该动作只原位更新 `status.json`，不得创建 `archive/<ISO-ts>/`、复制 canonical 产物或写入 `MANIFEST.json`。已完成需求目录保留为历史事实源；后续变更须使用新的 `<req-id>` 目录。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
@@ -185,7 +185,7 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 
 链路：解析已批准 workspace并复用 Stage 2 选择 → 最小实现单元（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录完整验收 → 完成前验证 → 全量测试 → 合并。
 
-UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；`existing` UI 只做普通行为/语义验证；默认不要再查 TemPad / 不要跑 `figma-design-to-code`。
+UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；`existing` UI 只做普通行为/语义验证；默认不要再查 TemPad 或官方 Figma。
 
 完整 runbook：[references/stage-implementation.md](references/stage-implementation.md)。
 

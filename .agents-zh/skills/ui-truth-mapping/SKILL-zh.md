@@ -21,6 +21,13 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 ## 输入
 
+读取 Figma 证据前加载[提供方选择](references/figma-provider-routing.md)，覆盖发现
+阶段及后续每次取证。下文共享计划、几何和禁止整页 dump 规则中的 `get_code` 是
+作用域设计读取的简称：按该策略选用 TemPad `get_code` 或官方 Figma
+`get_design_context`，不要求官方分支同时拥有 TemPad。TemPad 提示表和
+`get_structure` 仅属于对应提供方；官方分支从真实 context/metadata 获取等价事实，
+不得编造字段。
+
 - 需求切片（范围、字段、验收信号）
 - 真值源定位符：`figma` 使用 Figma 文件 key + 节点 id；`runtime-baseline` 使用 requirement/project/user-decision 引用
 - 后续需求：目标单元的任何线索（路径、组件名，或「尚无已知单元」）
@@ -150,7 +157,7 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 ### 1. 确认上游、范围清单与定位
 
-从切片做一份短的 **范围清单**（必须冻结 / 仅上下文 / 忽略）。然后定位。在查询 TemPad **之前** 记录创建 / 修补 / 重建。
+从切片做一份短的 **范围清单**（必须冻结 / 仅上下文 / 忽略）。然后定位。在查询所选 Figma 提供方 **之前** 记录创建 / 修补 / 重建。
 
 ### 1b. 单元拆分计划（任何 `get_code` 或组件代码之前必做）
 
@@ -187,11 +194,16 @@ description: 仅当 ai-delivery 编排器已有受治理的 `.ai-delivery` 需�
 
 **分派：** 多个独立单元 → 每单元一个子代理，证据隔离。
 
-### 3. 采集最小 TemPad 证据
+### 3. 采集最小 Figma 证据
 
-对每个计划单元 / 状态，只对 **作用域内** `source_node` 调 `get_code`。层次、重叠或 fill vs hug vs fixed 仍含糊时再 `get_structure`。解析每个资产：分类（静态 vs 内容绑定 vs 动效）→ 相同则复用项目已有资产 → 持久化字节（TemPad URL 会过期）→ 永远不要手绘「看起来差不多」的字形。
+`figma` 先执行 [Figma 提供方选择](references/figma-provider-routing.md)：用户指定优先；否则使用可用者，两者都有默认 TemPad。两者均未安装则询问是否自动安装，拒绝后停止受影响流程。`runtime-baseline` 不要求 Figma 工具。官方 Figma 的必需技能可以作为证据适配器使用，但仍受本阶段治理。
 
-### 3b. 绘制合成 / 蒙版扫描（`get_code` 之后必做）
+对每个计划单元 / 状态，只通过所选提供方读取 **作用域内** `source_node`。TemPad 使用 `get_code`，层级/几何含糊时补充 `get_structure`；官方 Figma 先加载官方技能，再使用 `get_design_context`，metadata/screenshot 仅作补充。解析每个资产：分类（静态 vs 内容绑定 vs 动效）→ 相同则复用项目已有资产 → 持久化字节（提供方资产 URL 会过期）→ 永远不要手绘「看起来差不多」的字形。
+
+### 3b. 绘制合成 / 蒙版扫描（采集设计证据之后必做）
+
+官方 Figma 分支检查实际上下文、导出资产和截图，不假设存在 TemPad 专用提示字段。
+同样执行 paint/mask/overlay 判断，歧义未解决前不能实现。
 
 同一盒子里重叠的填充 **不会** 自动变成两层绘制。
 
@@ -406,7 +418,7 @@ unit、预览、测试和新鲜上下文评审后，统一请求一次验收。�
 
 ### 8. 实现之后（Stage 4 消费者）
 
-Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从平行预览再画一遍宿主组件，也禁止再查 TemPad。
+Stage 4 在同一个用户已批准 workspace **接线** 已经写好的组件（API、路由、状态、挂载）。不得创建第二个 workspace；默认 **禁止** 从平行预览再画一遍宿主组件，也禁止再查任一 Figma 提供方。
 
 Stage 4 按冻结的证据范围验证每个已索引 scenario，然后写 schema v2 结构化 `visual-acceptance.json`。`component-only` 复用冻结组件 preview 与组件行为测试，不追加宿主视觉通过声明；`host-static` 使用索引中的生产宿主与官方确定性截图设施；`host-runtime` 先执行低成本的设备/资源/视觉 smoke，只有 smoke 通过后才执行昂贵的原生生命周期验证。宿主证据使用 `runtime-capture`，必须绑定截图、测试、断言报告、命令与匹配的宿主 provenance；截图必须放在项目声明的原生测试证据根目录，绝不能放在 `.ai-delivery/`。若组件代码变化但每个渲染 preview hash 均不变，更新 component hash 后可保留绑定确认。任一 preview hash 变化都必须重新生成预览并取得新确认，index 才能再次通过。
 

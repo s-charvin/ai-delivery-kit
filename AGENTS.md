@@ -13,7 +13,7 @@ Visible UI must use real host-stack controls and evidence-backed resources. Do n
 
 Treat bundled template prose as an English source default, not as the output language. Write every human-readable AI Delivery artifact, review note, and necessary code comment in the user's current conversation language. Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, and literal protocol tokens exactly. Remove any `ai-delivery-template-language` instruction comment after localizing a copied template.
 
-UI work enters through `ai-delivery-orchestrator`. TemPad MCP errors → STOP, do not guess.
+UI work enters through `ai-delivery-orchestrator`. For Figma evidence, follow `.agents/skills/ui-truth-mapping/references/figma-provider-routing.md`: user choice wins; otherwise use the available provider, defaulting to TemPad when both are available. If neither is installed, ask for automatic installation consent; refusal stops the affected flow. Selected-provider MCP errors → STOP dependent work, diagnose, and do not guess or silently switch.
 
 Delivery routing is capability-gated by each sub-requirement's `ui_truth_mode`
 (`none`, `existing`, `runtime-baseline`, or `figma`). Every active schema 2.0

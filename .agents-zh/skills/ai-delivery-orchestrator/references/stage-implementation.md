@@ -13,21 +13,23 @@ Android View 读取 [Android View 适配](framework-adapters/android-view.md)，
 
 按子需求依赖图以及 `ui-truth-index.json` 持久化的 UI unit 类型/依赖执行：`shared-component` → `page` / `component` → `modal`（每个 modal 在其触发 page 之后）。仅当列出的依赖 unit 已在切片工作区完成，该 unit 才能启动。
 
-`ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 使用的同一个用户已批准 workspace**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v3 profile/state/scenario coverage、证据范围、宿主绑定与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。绝不要把 `figma-design-to-code` 当作 Stage 2 作者。禁止把一个宿主栈的平行预览翻译到另一宿主栈。
+`ui_truth_mode=figma` 或 `runtime-baseline` 的切片必须继续使用 **Stage 2 使用的同一个用户已批准 workspace**，并对照已冻结宿主栈组件以及 `ui-truth-index.json` 记录的 v3 profile/state/scenario coverage、证据范围、宿主绑定与已确认视觉预览实现。**该组件 + 预览集合是 Stage 4 唯一的视觉真值。** Stage 4 负责业务接线、scenario 验证与剩余任务；不得创建第二个 workspace 或重画组件。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。提供方技能负责证据采集，`ui-truth-mapping` 仍是 Stage 2 作者。禁止把一个宿主栈的平行预览翻译到另一宿主栈。
 
 新增集成抽象之前，先追溯宿主对同类操作的既有所有权与调用路径：API/client、transport、序列化、repository/use-case、依赖注入和测试缝。路径仍匹配时就扩展它。不要仅为一次新操作或更容易测试而平行引入 adapter、client、repository、transport 或注入架构；新层必须有既有项目边界或明确需求决策。
 
 ### 视觉真值 — 默认不要再查 Figma
 
-默认不要跑 `figma-design-to-code`，也不要调用 TemPad（`get_code` / `get_structure`）作为实现前仪式。Stage 2 已经把真实 Widget/组件冻进仓库。再拉一次会制造第二真值，并可能和已确认预览打架。
+默认不要重新查询 TemPad 或官方 Figma 作为实现前仪式。Stage 2 已经把真实 Widget/组件冻进仓库。再拉一次会制造第二真值，并可能和已确认预览打架。
 
-仅在下列情况才调用 TemPad / `figma-design-to-code`：
+仅在下列情况才重新采集 Figma 证据：
 
 1. 冻结组件缺少任务所需的几何，或
 2. 视觉验收失败，且无法从已确认预览消解偏差，或
 3. 用户明确要求重新拉取 Figma。
 
-若现场 TemPad 与冻结组件 / 已确认预览不一致，**以冻结组件为准**，除非用户解冻该 unit，或你正处于明确的修复 loop。
+获准重新采集时，遵循[提供方选择](../../ui-truth-mapping/references/figma-provider-routing.md)，包括官方技能前置要求及安装拒绝处理。
+
+若现场 Figma 证据与冻结组件 / 已确认预览不一致，**以冻结组件为准**，除非用户解冻该 unit，或你正处于明确的修复 loop。
 
 只有 Figma 来源的 scenario 才可声称 1:1 还原 Figma。requirement/project/user-decision 来源的 scenario 属于已批准运行时行为。不得用运行时惯例静默修改 Figma 已展示的像素；与无障碍/平台/性能冲突的可见修改须经过明确修复决策。
 

@@ -52,7 +52,7 @@ EN_TEMPLATE="$EN_ROOT/templates/design-template.md"
 EN_ADAPT="$EN_ROOT/references/framework-adaptation.md"
 
 # Existing UI truth, resource, layout, and motion constraints remain intact.
-require "$EN_IMPL" 'Do not run `figma-design-to-code` or call TemPad'
+require "$EN_IMPL" 'Do not re-query TemPad or official Figma as a pre-implement ritual'
 require "$EN_IMPL" 'the frozen component wins'
 require "$EN_IMPL" 'fill / hug / fixed'
 require "$EN_IMPL" 'one independent motion acceptance record for every indexed unit'

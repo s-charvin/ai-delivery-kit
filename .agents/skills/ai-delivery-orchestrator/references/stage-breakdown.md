@@ -8,6 +8,8 @@ For Android View slices, read [the Android View adapter](framework-adapters/andr
 
 ## Prepare inputs
 
+For supplied Figma sources, run [provider selection and setup](../../ui-truth-mapping/references/figma-provider-routing.md) before reading design evidence. Respect explicit choice; otherwise use the available provider and prefer TemPad when both work. Neither installed requires installation consent; refusal stops the affected flow, not a guessed baseline.
+
 - Read the requirement document and every explicitly supplied supporting artifact. Inspect content before assigning a semantic role; filenames, extensions, folders, and labels such as `draft` or `pending` do not prove that a source is only copy, localization, reference material, or safe to omit.
 - Output directory: `.ai-delivery/requirements/<req-id>/`.
 

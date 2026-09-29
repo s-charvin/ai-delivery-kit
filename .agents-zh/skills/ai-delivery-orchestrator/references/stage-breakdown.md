@@ -8,6 +8,8 @@ Android View 切片分类前读取 [Android View 适配](framework-adapters/andr
 
 ## 准备输入
 
+用户提供 Figma 来源时，读取设计证据前执行[提供方选择与配置](../../ui-truth-mapping/references/figma-provider-routing.md)。明确指定优先，否则使用可用者，两者可用默认 TemPad；两者均未安装需询问安装同意，拒绝后停止受影响流程，不能猜测基线。
+
 - 阅读需求文档以及每一份明确提供的补充资料。先检查内容再赋予语义角色；文件名、扩展名、文件夹以及 `draft` / `pending` / `待确认` 这类标签并不能证明来源只是文案、本地化、参考资料，或可以安全省略。
 - 输出目录：`.ai-delivery/requirements/<req-id>/`。
 

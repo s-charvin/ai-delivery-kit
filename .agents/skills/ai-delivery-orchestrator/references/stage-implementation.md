@@ -14,21 +14,23 @@ inside its scope; there is no separate development checkpoint.
 
 Follow the sub-requirement dependency graph and each UI unit's type/dependencies persisted in `ui-truth-index.json`: `shared-component` → `page` / `component` → `modal` (each modal after its trigger page). A unit starts only when its listed dependencies are complete in the slice workspace.
 
-For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v3 profile/state/scenario coverage, evidence scopes, host bindings, and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining implementation; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Never use `figma-design-to-code` as a Stage 2 author. Never translate a parallel preview from one host stack into another.
+For `ui_truth_mode=figma` or `runtime-baseline`, continue in the **same user-approved workspace used during Stage 2** and implement against the frozen host-stack component plus the v3 profile/state/scenario coverage, evidence scopes, host bindings, and confirmed visual previews recorded in `ui-truth-index.json`. **That component + preview set is the only visual source of truth for Stage 4.** Stage 4 owns business wiring, scenario verification, and remaining implementation; it does not create a second workspace or re-draw the component. `ui_truth_mode=existing` uses the existing component and ordinary behavior/semantic verification; `none` has no UI truth artifact. Provider skills supply evidence; `ui-truth-mapping` remains the Stage 2 author. Never translate a parallel preview from one host stack into another.
 
 Before adding an integration abstraction, trace the host's existing ownership and call path for the same kind of operation: API/client, transport, serialization, repository/use-case, dependency injection, and test seam. Extend that path when it fits. Do not introduce a parallel adapter, client, repository, transport, or injection architecture solely for one new operation or for easier testing; a new layer requires an established project boundary or an explicit requirement decision.
 
 ### Visual truth — do not re-query Figma by default
 
-Do not run `figma-design-to-code` or call TemPad (`get_code` / `get_structure`) as a pre-implement ritual. Stage 2 already froze the real widget/component. Re-fetching creates a second truth and can disagree with the landed preview.
+Do not re-query TemPad or official Figma as a pre-implement ritual. Stage 2 already froze the real widget/component. Re-fetching creates a second truth and can disagree with the landed preview.
 
-Call TemPad / `figma-design-to-code` **only** when:
+Reacquire Figma evidence **only** when:
 
 1. The frozen component is missing geometry the task needs, or
 2. Visual acceptance failed and the mismatch cannot be resolved from the confirmed preview, or
 3. The user explicitly asks to re-pull Figma.
 
-If live TemPad disagrees with the frozen component / confirmed preview, **the frozen component wins**, unless the user unfreezes the unit or you are in an explicit repair loop.
+For authorized reacquisition, follow [provider routing](../../ui-truth-mapping/references/figma-provider-routing.md), including official skill prerequisites and installation refusal handling.
+
+If live Figma evidence disagrees with the frozen component / confirmed preview, **the frozen component wins**, unless the user unfreezes the unit or you are in an explicit repair loop.
 
 Figma-origin scenarios are the only scenarios eligible for a 1:1 Figma claim. Requirement/project/user-decision scenarios are approved runtime behavior. Do not silently use runtime conventions to change evidenced Figma pixels; visible accessibility/platform/performance conflicts require an explicit repair decision.
 

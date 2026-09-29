@@ -15,7 +15,7 @@ Stage 2 会写生产代码，因此它是**受控视觉实现阶段**，不是�
 
 ## 仅运行受控的 `ui-truth-mapping`（Stage 2）
 
-Stage 2 **只跑 `ui-truth-mapping`**。此阶段不要跑 `figma-design-to-code`。Stage 2 混用会搞乱归属。**Stage 4 默认也不再跑** — 接线已经写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
+Stage 2 **由 `ui-truth-mapping` 负责**。Figma 证据按[提供方选择](../../ui-truth-mapping/references/figma-provider-routing.md)执行：用户指定优先，否则使用可用者，两者都有默认 TemPad；两者均未安装需询问安装同意，拒绝后停止受影响流程。加载所选提供方要求的技能，包括官方 `figma:figma-design-to-code`，作为证据适配器；不得替代 Stage 2 归属或跳过冻结门槛。**Stage 4 默认不重新采集证据**，接线已写好的组件（见 [stage-implementation.md](stage-implementation.md)）。
 
 传入需求切片与模式对应的真值来源。每个独立 unit 产出 **真实宿主栈组件**，并为每个视觉 scenario 生成官方栈预览。写组件代码前，必须完成 `ui-truth-mapping` 的 Runtime Coverage Plan，覆盖 state、layout、content、interaction、motion、assets、theme、accessibility、platform、performance。适用缺口必须引用 requirement/project/user-decision 证据；未解决的缺口阻止冻结。绑定数据无真实值时保持空/省略，fixture 只能用于测试夹具。每个 UI unit 都必须明确记录动效契约，或记录并确认「static / no motion」；静态预览确认与动效确认/豁免是两道独立门禁。
 

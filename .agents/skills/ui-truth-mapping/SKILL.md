@@ -21,6 +21,14 @@ This skill does one thing: after CP-UI authorization, use the **user-approved wo
 
 ## Input
 
+Before reading Figma evidence, load [provider routing](references/figma-provider-routing.md).
+It applies to discovery and every later evidence call. In the shared planning,
+geometry and anti-dump rules below, `get_code` denotes the scoped design read:
+TemPad `get_code` or official Figma `get_design_context`, selected by that policy.
+This shorthand never requires TemPad on the official route. TemPad hint tables
+and `get_structure` are provider-specific; use actual official context/metadata
+for equivalent facts, not invented fields.
+
 - A requirement-slice (scope, fields, acceptance signals)
 - A truth source locator: Figma file key + node id for `figma`, or a requirement/project/user-decision reference for `runtime-baseline`
 - For follow-ups: any hint of the target unit (path, widget name, or "no known unit yet")
@@ -153,7 +161,7 @@ Run an **implementation lookup** before create vs patch: does a matching widget/
 
 ### 1. Confirm upstream, scope inventory, and locate
 
-Build a short **scope inventory** from the slice (must-freeze / context-only / ignored). Then Locate. Record create / patch / rebuild **before** querying TemPad.
+Build a short **scope inventory** from the slice (must-freeze / context-only / ignored). Then Locate. Record create / patch / rebuild **before** querying the selected Figma provider.
 
 ### 1b. Unit Split Plan (REQUIRED before any `get_code` or component code)
 
@@ -190,11 +198,15 @@ Record a **Motion and transitions** table for the user (in their language): Scen
 
 **Dispatch:** more than one independent unit → per-unit subagent so evidence stays isolated.
 
-### 3. Gather minimal TemPad evidence
+### 3. Gather minimal Figma evidence
 
-For each planned unit / state, `get_code` the **scoped** `source_node` only. `get_structure` when hierarchy, overlap, or fill vs hug vs fixed is still ambiguous. Resolve every asset: classify (static vs content-bound vs motion) → reuse existing project asset if identical → persist bytes (TemPad URLs are ephemeral) → never hand-draw a "close enough" glyph.
+For `figma`, first follow [Figma provider routing](references/figma-provider-routing.md): explicit user choice wins; otherwise use the available provider, defaulting to TemPad when both are available. If neither is installed, ask for automatic installation consent; refusal stops the affected flow. `runtime-baseline` does not require Figma tooling. Official Figma's required skills are allowed as evidence adapters under this stage's governance.
 
-### 3b. Paint compositing / mask scan (REQUIRED after `get_code`)
+For each planned unit / state, read only the **scoped** `source_node` through the selected provider. TemPad uses `get_code`, with `get_structure` for hierarchy/geometry ambiguity; official Figma uses `get_design_context` after loading its official skill, with metadata/screenshots as supplements. Resolve every asset: classify (static vs content-bound vs motion) → reuse existing project asset if identical → persist bytes (provider asset URLs are ephemeral) → never hand-draw a "close enough" glyph.
+
+### 3b. Paint compositing / mask scan (REQUIRED after design evidence acquisition)
+
+For official Figma, inspect its actual context, exported assets and screenshot; do not assume TemPad-only hint fields exist. Apply the same paint/mask/overlay checks and resolve ambiguity before implementation.
 
 Overlapping fills in the same box are **not** automatically two drawing layers.
 
@@ -437,7 +449,7 @@ There is no HTML validator and no active-delivery compatibility path for earlier
 
 ### 8. After implementation (Stage 4 consumers)
 
-Stage 4 **wires** the already-written component (API, route, state, mount) in the same user-approved workspace. It must not create a second workspace, redraw the component from a parallel format, or re-query TemPad by default.
+Stage 4 **wires** the already-written component (API, route, state, mount) in the same user-approved workspace. It must not create a second workspace, redraw the component from a parallel format, or re-query either Figma provider by default.
 
 Stage 4 verifies every indexed scenario according to its frozen evidence scope, then writes schema v2 structured `visual-acceptance.json`. `component-only` reuses the frozen component preview and component behavior tests without adding a host-visual pass. `host-static` uses the indexed production host and official deterministic screenshot facility. `host-runtime` performs a cheap device/resource/visual smoke first, then runs expensive native lifecycle verification only after the smoke passes. Host evidence uses `runtime-capture` with hash-bound screenshot, test, assertion report, command, and matching host provenance; the screenshot must live in the project's declared native test evidence root, never under `.ai-delivery/`. If component code changes but every rendered preview hash stays identical, update the component hash and keep the bound confirmations. If any preview hash changes, regenerate the preview and obtain fresh confirmation before the index can validate.
 
