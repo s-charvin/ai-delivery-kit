@@ -28,6 +28,10 @@
 执行 TDD，并通过
 [闭环评审](../stage-implementation.md#review-loop-closed-loop) 直到 clean。
 
+实施 brief 必须遵循[保持既有所有权的约定](../stage-4-sdd-bridge.md#ownership-preserving-execution-brief)。
+宿主规范和既有生命周期权威约束分工；小单元与易测建议不能自行形成代码边界。
+并行分派既要编辑范围不重叠，也要状态所有权独立。
+
 随后完成每个 v3 scenario 的视觉/运行时验收、`verification-before-completion`
 和完整分析/测试。`finish` 使用完成分支的方法，但仍按项目规则 rebase 且不生成
 merge commit。

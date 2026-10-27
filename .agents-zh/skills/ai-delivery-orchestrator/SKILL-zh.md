@@ -181,7 +181,7 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 
 ## Stage 4（摘要）
 
-`implement` 动作按所选档位执行。下一最小执行 brief 从当前 `design.md`、代码证据和 `progress.md` 动态形成，不持久化第二份计划或任务清单。无论哪个档位，都执行依赖安全的 TDD 与完成前评审。
+`implement` 动作使用所选档位，并依据实际所有权与依赖选择顺序执行或分派。派发前执行[保持既有所有权的 brief 约定](references/stage-4-sdd-bridge.md)，传递宿主规范、既有权威、修改边界与结果导向的验证要求。brief 从当前 `design.md`、代码证据和 `progress.md` 形成，不持久化第二份计划或任务清单。需求拆分仅是跟踪边界；框架对小单元或独立测试的偏好不能授权新增生产 owner。无论哪个档位，都执行依赖安全的 TDD 与完成前集成评审。
 
 链路：解析已批准 workspace并复用 Stage 2 选择 → 最小实现单元（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录完整验收 → 完成前验证 → 全量测试 → 合并。
 

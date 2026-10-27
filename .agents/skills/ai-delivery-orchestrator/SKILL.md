@@ -185,7 +185,7 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 
 **Skip** when ALL: single screen, no shared state, one developer, no cross-cutting rules, doc under ~300 words.
 
-**Split** when ANY: 2+ screens, shared state, multi-developer coordination, cross-feature infrastructure.
+**Split** when ANY: 2+ screens, shared state, multi-developer coordination, cross-feature infrastructure. These are requirement tracking boundaries, not instructions to create separate code or state owners; preserve shared authority during implementation.
 
 State decision with reasoning, then proceed. Details: [references/stage-breakdown.md](references/stage-breakdown.md).
 
@@ -195,7 +195,7 @@ After `split_ready`, main session runs inline 4-check audit per subreq (gaps, co
 
 ## Stage 4 (summary)
 
-The `implement` action executes per the selected tier (see `references/frameworks/`): subagent-driven when superpowers is present, agent-driven with ECC, inline disciplined on the native tier. Derive the next bounded execution brief from the current `design.md`, codebase evidence, and `progress.md`; do not persist a second plan or task list. Default discipline regardless of tier: dependency-safe execution, TDD inside, code review before completion claims. Never parallel implementers on the same slice files.
+The `implement` action uses the selected tier (see `references/frameworks/`) while choosing sequential or delegated work from actual ownership and dependencies. Before dispatch, apply the [ownership-preserving execution brief](references/stage-4-sdd-bridge.md): carry host rules, existing authority, change boundaries, and outcome-based verification. Derive it from current `design.md`, code, and `progress.md`; do not persist a second plan or task list. Framework preferences for small units or independent tests do not authorize new production owners. Default discipline: dependency-safe execution, TDD inside, and integration review before completion claims. Never parallel implementers on the same slice files.
 
 Chain: resolve the user-approved workspace under `references/workspace-policy.md` and reuse the Stage 2 choice for enabled UI truth modes → bounded implementation (TDD) → code review → scenario-complete visual/runtime acceptance recorded in `visual-acceptance.json` when required → verification before completion → full test → merge.
 

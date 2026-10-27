@@ -277,10 +277,19 @@ Rules:
 - Budget exhausted: pause, report the outstanding findings to the user, and either open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest review round is not clean.**
 - The loop owner is the main orchestrator session; it decides clean/not-clean from the reviewer report, not from the implementer's claim.
 
+Before accepting the combined implementation, trace each added state and
+abstraction against the host rules and existing owner identified in the
+[execution brief](stage-4-sdd-bridge.md#ownership-preserving-execution-brief).
+Check whether separate tasks duplicated readiness, terminal, validity, or
+once-only guards. Where the existing owner already guarantees the same fact,
+reuse it and verify the integrated behavior; passing isolated tests and
+non-overlapping files do not establish independent ownership. A genuinely new
+fact or boundary may justify new state when that distinction is evidenced.
+
 ## Subagent policy
 
 ```
-Slice units independent AND non-overlapping files?
+Slice units have independent state/lifecycle ownership AND non-overlapping edits?
   → NO (default): one implementer per unit, sequential, dual review
   → YES (rare): parallel dispatch only for independent test/bug domains
 Never: two implementers parallel-editing the same slice file set
