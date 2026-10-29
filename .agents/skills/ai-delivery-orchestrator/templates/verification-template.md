@@ -12,12 +12,15 @@ When instantiating this template, write every human-readable heading, label, res
 ### Round 1 - <date>
 - Reviewer:
 - Result: clean / changes required
+- Reviewed batch / input identity:
 - Summary:
 
 <!-- ai-delivery-verification:commands-results -->
 ## 2. Verification Commands and Results
 - Static analysis: `<command>` -> `<result>`
 - Tests: `<command>` -> `<result>`
+
+Record raw results once in native reports. For reused evidence, include the original command/run, current input/toolchain/variant identity, output hashes, scope and reuse validation; never call it a fresh execution. Optional progress links this record.
 
 ### Requirement and Test Coverage
 | Requirement source / B-### / AC-### | Actual test path and name | Result / evidence | Uncovered risk or approved deviation |

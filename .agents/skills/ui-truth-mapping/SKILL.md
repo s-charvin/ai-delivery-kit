@@ -196,7 +196,7 @@ Record a **Motion and transitions** table for the user (in their language): Scen
 
 `pending-user` assets or missing data-bound resources → stop and ask before freeze. The user must explicitly choose a real resource, an approved empty rendering, or a blocked/deferred unit; “use a placeholder for now” is not an implicit option. If the skill believes a temporary placeholder is the only viable review aid, ask for explicit approval naming its exact scope and keep it outside production UI/data paths. Record the selected disposition and affected scenarios in the existing freeze record.
 
-**Dispatch:** more than one independent unit → per-unit subagent so evidence stays isolated.
+**Dispatch:** one implementer is the default across the current coherent batch. Unit count does not trigger subagents. Delegate only when state/lifecycle ownership and edits are independent (or investigation is read-only), outputs are separately verifiable, and saved time exceeds handoff/integration cost. One owner schedules shared builds, devices, and provider sessions. Keep evidence separate by unit/scenario regardless of agent count; retain independent batch review before freeze.
 
 ### 3. Gather minimal Figma evidence
 

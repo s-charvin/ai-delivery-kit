@@ -14,7 +14,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 | Action | ECC usage |
 |--------|-----------|
 | `solution-design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, enabled UI truth host component / v3 profile-state-scenario-scope `ui-truth-index.json`, and API docs |
-| `implement` | ECC execution agents with its rules/hooks enforcing conventions; treat review agents as the fresh-context review step |
+| `implement` | One inline implementer by default; use ECC methods/hooks, and a fresh-context reviewer for the coherent batch |
 | `finish` | ECC review/verification commands before rebase-merge |
 
 ## Artifact containment
@@ -27,7 +27,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 ## Usage advice
 
 - Keep the orchestrator loop intact: ECC commands serve a single abstract action each; status transitions, gates, and blockers stay in the main session.
-- Prefer ECC's review agents for the [Review loop](../stage-implementation.md#review-loop-closed-loop): bounded implementation → ECC review agent → findings back to the implementer → re-review, until clean or the configured budget is exhausted.
+- Prefer ECC's review agents for the [Review loop](../stage-implementation.md#review-loop-closed-loop): coherent batch implementation → ECC review agent → findings back to the implementer → re-review, until clean or the configured budget is exhausted.
 - For UI truth slices, require ECC execution/review to cover every indexed scenario with mode-appropriate evidence and write the structured `visual-acceptance.json`; a state-only or screenshot-file-presence check is not acceptance.
 - If ECC hooks enforce formatting/lint rules, let them run; a hook failure is a verification failure (`blocked_verification_failure` after a review-loop fix round), not a reason to bypass the hook.
 - When another framework is also installed, use only the method best suited to the current action. No framework adds a second persisted design, spec, plan, or task artifact.
@@ -42,3 +42,5 @@ Record the ECC commands/agents actually used and the canonical `design.md` path/
 - Never install or configure ECC yourself.
 - Do not let ECC agents decide gate/status/merge outcomes; they only execute the dispatched action.
 - Do not let ECC persist process/governance artifacts outside `.ai-delivery/`.
+
+Use the Stage 4 subagent and evidence-reuse policies: installed agents do not mandate delegation or duplicate full checks. Keep one implementer by default, independent integrated-batch review, and scoped re-review after fixes.

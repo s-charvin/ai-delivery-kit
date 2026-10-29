@@ -35,7 +35,7 @@ require_file "$SKILL_ROOT/ui-truth-mapping/SKILL.md"
 
 require_contains \
   "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \
-  "API docs pass directly to the spec pipeline and implementation"
+  'API docs pass directly to `design.md` and implementation'
 
 require_contains \
   "$SKILL_ROOT/ai-delivery-orchestrator/SKILL.md" \

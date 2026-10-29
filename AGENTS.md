@@ -1,7 +1,7 @@
 <!-- ai-delivery:ui-contract-gate:start -->
 # UI Truth Mapping
 
-After explicit CP-UI authorization, Stage 2 implements and freezes **real host-stack components** in the user-approved workspace, using the host's official rendering tests and fresh-context review. Before component code, resolve applicability-gated runtime coverage for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Stage 4 reuses that workspace. Do not generate `ui-contract.html` or translate a parallel preview into the host stack.
+After explicit CP-UI authorization, Stage 2 implements and freezes **real host-stack components** in the user-approved workspace, using the host's official rendering tests and independent fresh-context review of the coherent batch. Unit count does not require subagents or per-unit review gates. Before component code, resolve applicability-gated runtime coverage for state, layout, content, interaction, motion, assets, theme, accessibility, platform, and performance. Stage 4 reuses that workspace. Do not generate `ui-contract.html` or translate a parallel preview into the host stack.
 
 Worktrees are optional and the current checkout is the default. Creating or reusing one requires explicit user confirmation for the current sub-requirement; CP-UI, CP-DESIGN, framework defaults, and legacy mandatory-isolation flags are not consent. The only allowed worktree path is `<project-root>/.worktrees/<req-id>-<sr-id>`. A native tool may run only if it accepts that exact path. If already running in `/private/tmp/...` or any other external worktree, stop production edits and ask whether to switch to the project checkout or the exact project-local worktree. Leave the external worktree unchanged; switching workspaces never authorizes its migration, reuse, or deletion. Those actions require separate explicit confirmation naming the exact action and target.
 
@@ -13,7 +13,7 @@ Visible UI must use real host-stack controls and evidence-backed resources. Do n
 
 Treat bundled template prose as an English source default, not as the output language. Write every human-readable AI Delivery artifact, review note, and necessary code comment in the user's current conversation language. Preserve machine-readable keys, enum values, IDs, paths, commands, code symbols, and literal protocol tokens exactly. Remove any `ai-delivery-template-language` instruction comment after localizing a copied template.
 
-UI work enters through `ai-delivery-orchestrator`. For Figma evidence, follow `.agents/skills/ui-truth-mapping/references/figma-provider-routing.md`: user choice wins; otherwise use the available provider, defaulting to TemPad when both are available. If neither is installed, ask for automatic installation consent; refusal stops the affected flow. Selected-provider MCP errors → STOP dependent work, diagnose, and do not guess or silently switch.
+UI work enters through `ai-delivery-orchestrator`. For Figma evidence, resolve the actual installed `ui-truth-mapping` skill root, then read its `references/figma-provider-routing.md`: user choice wins; otherwise use the available provider, defaulting to TemPad when both are available. If neither is installed, ask for automatic installation consent; refusal stops the affected flow. Selected-provider MCP errors → STOP dependent work, diagnose, and do not guess or silently switch.
 
 Delivery routing is capability-gated by each sub-requirement's `ui_truth_mode`
 (`none`, `existing`, `runtime-baseline`, or `figma`). Every active schema 2.0

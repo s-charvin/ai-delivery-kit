@@ -18,11 +18,7 @@ do not add workflow stages or required documents.
 - If a step cannot honor the map, do not run its persistence phase. Apply the
   useful method in-session and write the canonical artifact directly. Never
   create an external process artifact and move it afterward.
-- Fingerprint Git-visible changes and every external default output root before
-  and after dispatch, including ignored files, types, symlink targets, and
-  SHA-256 values. Any new or changed process artifact outside `.ai-delivery/`
-  opens `blocked_verification_failure`; do not delete or rewrite pre-existing
-  user files while auditing.
+- Fingerprint Git-visible changes and every external default output root at coherent batch entry/exit and before a gate advances, including ignored files, types, symlink targets, and SHA-256 values. A single audit may cover controlled calls within the same batch only when it accounts for every writer and output root; keep output maps enforced throughout. Unknown writers, changed roots or uncertain coverage require a separate full audit. Never reuse by mtime or tracked paths alone. Any new or changed process artifact outside `.ai-delivery/` opens `blocked_verification_failure`; do not delete or rewrite user files.
 
 Existing framework trees are read-only inputs during orchestrated work.
 

@@ -23,9 +23,9 @@
 ## `implement`
 
 默认当前 checkout，并复用 Stage 2 workspace。每次从当前设计契约、依赖、代码、
-测试和可选 `progress.md` 形成一个临时执行 brief。仅当 subagent-driven 方法
-接受该 brief 且不创建计划/任务产物时使用，否则按 native 执行。每个单元内部
-执行 TDD，并通过
+测试和可选 `progress.md` 形成临时 brief，默认同一实现者 inline 连续完成。
+仅在满足 Stage 4 委派条件且方法不新增 plan/task 产物或逐任务审查门禁时，才使用
+subagent-driven；否则按 native 执行。单元内部执行 TDD，完整批次通过
 [闭环评审](../stage-implementation.md#review-loop-closed-loop) 直到 clean。
 
 实施 brief 必须遵循[保持既有所有权的约定](../stage-4-sdd-bridge.md#ownership-preserving-execution-brief)。
@@ -33,8 +33,9 @@
 并行分派既要编辑范围不重叠，也要状态所有权独立。
 
 随后完成每个 v3 scenario 的视觉/运行时验收、`verification-before-completion`
-和完整分析/测试。`finish` 使用完成分支的方法，但仍按项目规则 rebase 且不生成
-merge commit。
+和完整分析/测试覆盖。按 Stage 4 规则核对并复用仍有效证据，只补跑缺失或失效检查；
+这覆盖框架「本条消息必须重新运行」的默认要求，但不得把复用结果冒称新运行。
+`finish` 不重复仍有效的最终验证，仍按项目规则 rebase 且不生成 merge commit。
 
 在 `traceability.json` `source_index.design` 记录使用的方法和 canonical
 `design.md` 路径/hash；不生成 `spec_refs`。gate、blocker、status 和 merge

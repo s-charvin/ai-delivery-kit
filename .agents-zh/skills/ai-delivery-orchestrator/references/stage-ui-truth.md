@@ -31,9 +31,9 @@ v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 生成 preview 前，必须为每个 scenario 执行宿主能力判定，并冻结且仅冻结一种范围：`component-only`、`host-static` 或 `host-runtime`。检查宿主组合是否在视觉范围内、是否已有可运行宿主入口、该入口是否挂载生产宿主、所需状态/资源能否确定性准备，以及能否输出边界明确且可复核的截图。任一关键条件失败都选择 `component-only` 并记录未覆盖风险。禁止把组件手工拼成虚构页面来制造宿主证据。`host-static` 与 `host-runtime` 必须绑定生产 `host_binding`；`component-only` 没有宿主绑定，也不宣称宿主视觉通过。
 
-`ui-truth-mapping` 可按自身规则派发 per-unit 子代理。编排器不覆盖 leaf 子代理策略。
+默认同一实现者完成，单元数量不触发子代理；委派前满足 Stage 4 的所有权、产出边界和成本条件。证据始终按单元/场景隔离。
 
-在用户已批准 workspace 内，对视觉表面沿用 Stage 4 实现纪律：适用时先写聚焦测试，执行红 → 绿 → 重构，生成确定性 golden，并把完成的 unit 交给新鲜上下文代码评审。finding 修复并复审干净后才能冻结。测试命令与评审结论记入 `progress.md`。
+在用户已批准 workspace 内，对视觉表面沿用 Stage 4 实现纪律：适用时先写聚焦测试，执行红 → 绿 → 重构，生成确定性 golden，并把完成的完整批次交给新鲜上下文代码评审。finding 修复并复审干净后才能冻结。命令与结论只记入 `verification.md`；可选 `progress.md` 引用恢复所需信息。
 
 遵循 ui-truth-mapping 的批量用户验收规则：完成子需求全部可审阅证据后，
 统一请求静态与动效验收。逐场景记录哈希不要求逐次询问用户。
@@ -49,7 +49,7 @@ v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 7. 若本轮 unit 集合变化，已完成陈旧指针清扫（`ui-truth-mapping` §9）。
 8. `ui-truth-mapping` 要求的运行时 coverage、动效生命周期或明确无动效决定、资源/渲染、蒙版/合成、无障碍与 fill-hug-fixed 说明已记录（注释或冻结对话），不是第二份绘制文件。静态 golden 永远不能替代动效验收。
 9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；用户已批准 workspace 证据已记录，供 Stage 4 复用。Stage 4 的结构化验收必须为每个索引 unit 记录一条独立动效验收。
-10. Stage 2 产物边界路径审计已对比边界协议要求的入口/出口 Git 状态/内容指纹账本与独立文件系统指纹。目录指纹包含 ignored 文件，并覆盖外部 skill 声明的每个默认输出根，至少包括 `docs/superpowers/**`、`.superpowers/**`、`.specify/**` 与 `openspec/**`；因此能捕获被 `.gitignore` 隐藏的写入，以及进入动作前已 dirty 路径上的再次写入。`.ai-delivery/` 外只允许新增或修改生产源码、项目原生测试、golden/官方预览和运行时资源。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`；不得冻结或推进状态。在 canonical `progress.md` 记录审计结论与精确越界路径，不删除用户既有文件。
+10. Stage 2 产物边界路径审计已对比边界协议要求的入口/出口 Git 状态/内容指纹账本与独立文件系统指纹。目录指纹包含 ignored 文件，并覆盖外部 skill 声明的每个默认输出根，至少包括 `docs/superpowers/**`、`.superpowers/**`、`.specify/**` 与 `openspec/**`；因此能捕获被 `.gitignore` 隐藏的写入，以及进入动作前已 dirty 路径上的再次写入。`.ai-delivery/` 外只允许新增或修改生产源码、项目原生测试、golden/官方预览和运行时资源。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`；不得冻结或推进状态。在 canonical `verification.md` 一次记录审计结论与精确越界路径（可选 `progress.md` 仅引用），不删除用户既有文件。
 
 ## 完成后
 

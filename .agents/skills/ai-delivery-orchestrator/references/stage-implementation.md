@@ -148,10 +148,10 @@ The `implement` action always follows this chain, regardless of framework tier:
 
 1. **Resolve workspace** — follow [workspace-policy.md](workspace-policy.md). Reuse the recorded Stage 2 user-approved workspace for `ui_truth_mode=figma` or `runtime-baseline`; otherwise default to the current checkout. Creating or reusing a project-local worktree is allowed only after explicit confirmation for this sub-requirement.
 2. **Execution loop** — derive the next bounded unit from `design.md`, dependencies, current code, and tests; run TDD inside each unit (red → green → refactor).
-3. **Review loop** — every unit closes through the [Review loop](#review-loop-closed-loop) below; it is complete only when a review round comes back clean.
+3. **Review loop** — one implementer completes a coherent batch with focused feedback, then closes the [Review loop](#review-loop-closed-loop). Review shared ownership/persistence boundaries early when mistakes would spread; unit count alone adds no review gate.
 4. **Visual/runtime acceptance** (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 scenario under its recorded profile and evidence scope with project-native tools. Compare visual scenarios against confirmed previews, exercise behavior scenarios for state/interaction/motion/assets/theme/accessibility/platform/performance expectations, and record schema v2 structured `visual-acceptance.json` with one independent motion acceptance record for every indexed unit. Host scopes require hash-bound `runtime-capture` evidence; `component-only` must not claim host coverage. Static golden evidence never satisfies the motion record. `ui_truth_mode=existing` uses ordinary behavior/semantic evidence; `none` has no visual acceptance artifact. Failures enter the same review loop. Snapshot `w×h` equality is not a pass for fill/hug boxes. Data-bound visuals with no real value must be accepted as empty/omitted, not as fabricated fixture content.
 5. **Verification** — integration checks before merge; record human-readable evidence in the user's current conversation language in `verification.md` (template `templates/verification-template.md`; remove its language instruction comment).
-6. **Full analyze + full test** — project static analysis and test suite must pass clean.
+6. **Full analyze + full test** — preserve the required final project analysis and test scope. Run missing checks once on the stable inputs; reuse still-valid results under the rules below instead of rerunning at each stage or completion message.
 
 Before claiming a clean verification gate, classify every failure as an
 introduced regression, pre-existing baseline, environment/tooling failure, or
@@ -259,23 +259,25 @@ record and must never be written as a confirmed fact.
 
 ## Review loop (closed loop)
 
-Every execution unit and every visual-acceptance failure closes through this loop, regardless of framework tier:
+Each coherent implementation batch closes through independent review, regardless of framework tier. Small units keep fast test feedback without a separate reviewer gate per unit. A batch follows one observable behavior or state owner, preserves complete wiring, and remains small enough to review. Account isolation, persistence, concurrency, or public-boundary changes receive an early boundary review before dependent work, plus integrated review at completion.
 
 ```
-implementer finishes the bounded unit
-  → reviewer (fresh context) reviews against the execution brief + design contract
-  → clean → record the review outcome → next unit
-  → findings → findings list becomes the fix brief → implementer fixes → re-review
-  → still not clean after review_loop.max_rounds rounds → stop and escalate to the user
+one implementer completes the coherent batch with focused tests
+  → fresh-context reviewer checks requirements, tests, omissions and combined call path
+  → clean → record covered scope and current inputs → acceptance
+  → findings → fix brief → fix and scoped tests → scoped re-review
+  → budget exhausted without clean coverage → stop and escalate
 ```
 
 Rules:
 
-- The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself.
-- Each round's findings and fix summary are appended to `progress.md` for traceability and to the review-rounds area identified by its stable marker in `verification.md` (the verification artifact).
-- Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3.
-- Budget exhausted: pause, report the outstanding findings to the user, and either open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest review round is not clean.**
-- The loop owner is the main orchestrator session; it decides clean/not-clean from the reviewer report, not from the implementer's claim.
+- The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself. A single reviewer may cover requirements and code quality in one pass; add a separate specialist only for a distinct evidenced risk.
+- Append findings, fix summaries, reviewed scope/input identity and conclusions once in the stable review-rounds area of `verification.md`. Optional `progress.md` links that record for recovery; do not create it just to duplicate review evidence.
+- Re-review the changed code and affected interactions. Preserve valid prior review coverage; expand review when behavior, ownership, shared contracts or integration changes. A clean local re-review must not hide an unreviewed wider change. Agent agreement is not evidence.
+- Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3. External framework retry defaults do not override it.
+- Budget exhausted: pause, report outstanding findings and open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest applicable review is not clean.** The main orchestrator owns gate decisions.
+- Visual-acceptance failures re-enter the affected batch's loop. Across multiple batches, check new integrated interactions before completion; do not restart already-valid whole-batch reviews.
+
 
 Before accepting the combined implementation, trace each added state and
 abstraction against the host rules and existing owner identified in the
@@ -288,14 +290,26 @@ fact or boundary may justify new state when that distinction is evidenced.
 
 ## Subagent policy
 
-```
-Slice units have independent state/lifecycle ownership AND non-overlapping edits?
-  → NO (default): one implementer per unit, sequential, dual review
-  → YES (rare): parallel dispatch only for independent test/bug domains
-Never: two implementers parallel-editing the same slice file set
-```
+Default to one implementer continuing in the main session. Independent review is a separate role, not a reason to replace the implementer for every unit. Delegate only when all applicable conditions hold:
 
-Gate / blocker / status / merge decisions stay in the main session always.
+1. State/lifecycle/mutable ownership is independent, or the task is read-only investigation.
+2. Edits do not overlap, shared dependencies and integration contracts are understood.
+3. Inputs, outputs, acceptance and stopping conditions are bounded and separately verifiable.
+4. Expected time saved exceeds context-transfer, validation and integration cost.
+5. One owner schedules shared builds, devices and Figma/provider sessions.
+
+Different files, many screens, large task size or installed frameworks alone do not justify delegation. Never parallel-edit the same slice files or split production ownership merely to create tasks/tests. Record a material delegation reason in the existing decisions/progress record, not a new artifact. Gate / blocker / status / merge decisions stay in the main session.
+
+## Verification and evidence reuse
+
+Preserve required final test/analysis scope, real entrypoints, evidence levels, UI/motion approval and session protection. This policy changes execution frequency, not acceptance criteria. Match each required check against existing evidence, then execute missing or invalidated checks. A historical result is never described as a newly executed test.
+
+Reuse is valid only after checking current source/resource/Manifest/test bytes (including dirty, untracked and relevant submodule inputs), dependency resolution/build logic, toolchain, variant/flavor/properties/runner, test and assertion versions, command scope, and output hashes. Runtime evidence additionally requires a compatible device/profile, data, permissions and state preconditions. HEAD, dirty flags, mtime or an unchanged screenshot alone are insufficient. If input identity or dependency freshness is uncertain, run the required check.
+
+Use project-native batching: prepare/install fixed artifacts once, run selectors with independent logs and results, and bind evidence to APK/artifact hashes. Reconnecting a device does not itself invalidate an APK; recheck device and installed-artifact identity and runtime preconditions. Never add an unchecked skip-build path. Let the build tool determine tasks invalidated by input changes.
+
+Store raw facts once in native test reports; `verification.md` maps requirements to tests, commands, source/input identity, outputs, results and reuse reasons. Optional progress and user summaries link that evidence. Preserve failed attempts. Generate summaries from existing results when practical; do not add another governance index or require per-step manual telemetry. Compare build/test/agent and handoff costs with rework, coverage gaps and escaped regressions in existing delivery records; invalidate reuse and restore checks if quality regresses.
+
 
 ## Status updates
 

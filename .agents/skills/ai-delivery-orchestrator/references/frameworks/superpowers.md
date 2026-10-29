@@ -35,11 +35,11 @@ Never clone or symlink superpowers yourself.
 ## `implement` usage advice (per slice)
 
 1. **Workspace** — use the current checkout by default. Reuse the Stage 2 user-approved workspace for UI slices. If this slice has no approved choice and a worktree is proposed, stop and ask with the exact project-local path; do not invoke `using-git-worktrees` before approval.
-2. Derive one bounded execution brief from current evidence using the [ownership-preserving contract](../stage-4-sdd-bridge.md#ownership-preserving-execution-brief). Repository constraints and existing lifecycle authority govern the brief; small-unit and testability advice does not establish new code boundaries. Use subagent-driven execution only when it accepts that transient brief without creating a plan/task artifact; otherwise execute with native discipline. Run TDD inside each unit. Parallel dispatch requires independent state ownership as well as non-overlapping edits.
-3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-closed-loop): the reviewer is always fresh context; findings return as a fix brief and review repeats until clean or the configured budget is exhausted.
+2. Derive one bounded execution brief from current evidence using the [ownership-preserving contract](../stage-4-sdd-bridge.md#ownership-preserving-execution-brief). Repository constraints and existing lifecycle authority govern the brief; small-unit and testability advice does not establish new code boundaries. Default to inline execution by one implementer. Use subagent-driven execution only after the Stage 4 delegation conditions pass and the method accepts the transient brief without adding plan/task artifacts or per-task reviewer gates; otherwise use native discipline. Run TDD inside each unit. Parallel dispatch requires independent state ownership as well as non-overlapping edits.
+3. `requesting-code-review` drives the [Review loop](../stage-implementation.md#review-loop-closed-loop): the reviewer is always fresh context and reviews the coherent batch, not every mechanical unit. Findings return as a scoped fix brief; preserve valid coverage and re-review affected interactions until clean or the configured budget is exhausted.
 4. Visual/runtime acceptance (`ui_truth_mode=figma` or `runtime-baseline` only) — execute every v3 profile/state/scenario/scope entry, compare visual evidence against the confirmed preview, verify behavior with project-native tools, and write schema v2 `visual-acceptance.json`; failures re-enter the same review loop.
-5. `verification-before-completion` — integration checks before merge.
-6. Full analyze + full test must pass clean before `finish`.
+5. `verification-before-completion` — validate current evidence before merge under the Stage 4 evidence-reuse rules. This overrides framework same-message rerun defaults; never relabel reused results as newly executed.
+6. Full analyze + full test coverage must pass clean before `finish`; execute missing/invalidated checks and reuse valid matching results. Do not duplicate the Stage 4 run during finish.
 
 Edit one file at a time during implementation.
 

@@ -23,6 +23,10 @@ curl -fsSL https://raw.githubusercontent.com/s-charvin/ai-delivery-kit/main/scri
 
 若需多方协同（可选），另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) 并在业务仓运行 `coordination-cli init`；kit 本身不包含协同逻辑。
 
+## 默认执行节奏
+
+默认同一实现者连续完成完整批次，单元内保留定向测试反馈，完成后独立评审集成结果。单元数量不自动触发子代理；仅在所有权独立、产出有界且协调收益为正时委派。最终测试/分析范围与 UI/动效确认保持，核对输入和产物 hash 后复用有效证据。详见[实现与验证规则](.agents-zh/skills/ai-delivery-orchestrator/references/stage-implementation.md)。
+
 ## 升级
 
 重新运行安装脚本即可升级已安装的 CLI：

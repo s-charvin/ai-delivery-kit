@@ -29,6 +29,10 @@ git clone https://github.com/s-charvin/ai-delivery-kit.git
 
 For multi-party orchestration (optional), install [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination) separately and run `coordination-cli init` in your repo. This kit does not embed coordination logic.
 
+## Execution defaults
+
+One implementer completes a coherent batch with focused test feedback; an independent reviewer checks the integrated result. Unit count does not trigger subagents. Delegate only for independent ownership, bounded outputs and a net coordination benefit. Preserve final test/analysis scope and UI/motion approvals; validate matching inputs and artifact hashes before reusing evidence. Details: [implementation and verification](.agents/skills/ai-delivery-orchestrator/references/stage-implementation.md).
+
 ## Upgrade
 
 Upgrade the installed CLI by rerunning the installer:

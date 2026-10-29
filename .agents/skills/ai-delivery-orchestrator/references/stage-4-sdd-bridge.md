@@ -30,8 +30,12 @@ The brief is transient execution context, not a new governed artifact. Do not
 persist `spec.md`, `plan.md`, or `tasks.md`, and do not copy file-level steps
 into `design.md`.
 
-Each execution unit closes through TDD and fresh-context review before the next
-unit. When a reusable failure appears, update the requirement-level
+Run focused TDD inside each unit; one implementer may complete consecutive units
+within a coherent batch before independent review. A batch follows one observable
+behavior or existing state owner and includes a complete, compilable call path
+with its applicable tests. Do not collect unrelated work indefinitely. Review
+high-risk ownership or persistence boundaries before dependent implementation.
+When a reusable failure appears, update the requirement-level
 `retrospective.md` before another solution attempt and report the `RET-###` ID.
 
 <a id="ownership-preserving-execution-brief"></a>
@@ -97,8 +101,11 @@ dependencies, and governed evidence; never promote a gate from progress alone.
 Run the closed review loop in
 [stage-implementation.md](stage-implementation.md#review-loop-closed-loop):
 implement → fresh-context review → fix → re-review until clean or the configured
-budget is exhausted. Then run the full slice review, required visual/motion
-acceptance, and final verification.
+budget is exhausted. Review the integrated batch, including shared boundaries,
+not each mechanical unit followed by a duplicate full-slice pass. Multiple batches
+still require a final integration check of their combined call path; reuse valid
+review coverage and inspect only new interactions. Complete required visual/motion
+acceptance and final verification using the evidence-reuse rules in that guide.
 
 For enabled UI truth, instantiate `templates/visual-acceptance-template.json` as
 `visual-acceptance.json`. Preserve its machine keys/enums and localize summaries.

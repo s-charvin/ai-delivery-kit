@@ -140,13 +140,13 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 - 不要把工作流真相移出 `.ai-delivery`。
 - Workspace 选择遵循 [references/workspace-policy.md](references/workspace-policy.md)。默认使用当前 checkout；创建或复用 worktree 必须另外取得当前子需求的用户明确确认，批准路径必须为 `<project-root>/.worktrees/<req-id>-<sr-id>`。CP-UI、CP-DESIGN、框架默认值和旧隔离字段都不构成同意。
 - 外部 skill 的默认设置绝不授权框架自有产物路径。外部 skill 只提供方法与执行纪律：调用前传入 canonical `.ai-delivery` 输出路径；持久化步骤无法遵守时，跳过该步骤并直接写等价 canonical 产物。禁止先在 `docs/superpowers/**`、`.superpowers/**`、`.specify/**`、`openspec/**` 或其他宿主树框架目录生成流程/治理产物再搬运。
-- `.ai-delivery/` 外只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。推进任何门禁前，对比入口/出口 Git 状态/内容指纹账本，并为外部 skill 声明的每个默认输出根建立包含 ignored 文件的独立文件系统指纹，至少覆盖上述四个禁写根。路径、状态、类型、符号链接目标或 SHA-256 漂移能捕获动作前已 dirty 或 ignored 路径上的再次写入。发现新增或修改且位于 `.ai-delivery/` 外的流程/治理产物时，设置 `blocked_verification_failure`。
+- `.ai-delivery/` 外只允许写生产源码、项目原生测试、golden/官方预览和运行时资源。在完整批次入口/出口及推进门禁前，对比 Git 状态/内容指纹账本，并为外部 skill 声明的每个默认输出根建立包含 ignored 文件的独立文件系统指纹，至少覆盖上述四个禁写根。路径、状态、类型、符号链接目标或 SHA-256 漂移能捕获动作前已 dirty 或 ignored 路径上的再次写入。发现新增或修改且位于 `.ai-delivery/` 外的流程/治理产物时，设置 `blocked_verification_failure`。
 - 正常路径不要求用户安装或选择框架/技能；适配已安装的现状。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的子需求未 `acceptance_frozen` 不得进入 `solution-design`；`none` 与 `existing` 跳过该 gate。`acceptance_frozen` 同时要求静态视觉确认与每个适用 unit 的动效确认/豁免。
 - 只有模式启用且明确确认、记录 CP-UI 后，才能 dispatch `ui-truth-mapping`。Stage 2 在用户已批准 workspace 中写生产代码，执行 TDD/golden 测试并完成新鲜上下文评审闭环。
 - UI truth 切片未 `visual_acceptance_passed` 不得声称 `merged`；`none` 与 `existing` 使用普通行为/语义证据。
 - 仍有安全可运行项时，不得将 slice-local 阻塞升级为需求全局。
-- 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。Leaf 技能可按自身规则使用子代理（`ui-truth-mapping` per-unit、Stage 4 按所选执行档位）。
+- 门禁 / 阻塞 / 状态 / 合并决策永不交给子代理。默认同一实现者连续完成完整批次；leaf 技能和框架均按 Stage 4 所有权、产出边界与成本条件委派，单元数量不自动触发子代理。
 - 编排器方案设计模式不要把文档写进框架自有目录；规范方案设计写入子需求 `design.md`，`notes` 只保留短指针。
 - `design.md` 是唯一持久化的行为与方案设计契约。不得创建 `spec.md`、`plan.md` 或 `tasks.md`，也不得把文件级执行步骤塞入 `design.md`。跨会话恢复信息按需写 `progress.md`。
 - `state_flow_required=true` 时，canonical `design.md` 必须包含状态分类、MVI 闭环、生命周期图、UI 投影、权威转换矩阵、适用异步时序、不变量和追踪。该深度不触发人工门禁。
@@ -183,7 +183,7 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 
 `implement` 动作使用所选档位，并依据实际所有权与依赖选择顺序执行或分派。派发前执行[保持既有所有权的 brief 约定](references/stage-4-sdd-bridge.md)，传递宿主规范、既有权威、修改边界与结果导向的验证要求。brief 从当前 `design.md`、代码证据和 `progress.md` 形成，不持久化第二份计划或任务清单。需求拆分仅是跟踪边界；框架对小单元或独立测试的偏好不能授权新增生产 owner。无论哪个档位，都执行依赖安全的 TDD 与完成前集成评审。
 
-链路：解析已批准 workspace并复用 Stage 2 选择 → 最小实现单元（TDD）→ 代码评审 → 按需在 `visual-acceptance.json` 记录完整验收 → 完成前验证 → 全量测试 → 合并。
+链路：解析已批准 workspace 并复用 Stage 2 选择 → 同一实现者执行定向 TDD → 独立集成批次评审 → 必要视觉/运行时验收 → 核对当前证据并补齐最终范围内的缺失检查 → 合并。按实现指南的验证与证据复用规则执行，阶段变化不要求重跑仍有效检查。
 
 UI truth 切片：接线已经写好的组件（API / 路由 / 状态 / 挂载）；`existing` UI 只做普通行为/语义验证；默认不要再查 TemPad 或官方 Figma。
 

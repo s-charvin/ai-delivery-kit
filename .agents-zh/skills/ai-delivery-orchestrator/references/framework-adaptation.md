@@ -14,9 +14,7 @@
   与 `openspec/**` 默认路径全部禁用。
 - 若步骤无法遵守映射，不调用该持久化步骤；在会话内应用方法并直接写
   canonical 产物。禁止先在其他位置生成再搬运。
-- 分发前后比较 Git 状态/内容指纹账本和每个外部默认输出根的独立文件系统
-  指纹，包括 ignored 文件、类型、symlink target 与 SHA-256。发生越界写入
-  时设置 `blocked_verification_failure`，不得删除或改写用户既有文件。
+- 在完整批次入口/出口及推进门禁前，比较 Git 状态/内容与每个外部默认输出根的独立文件系统指纹，包括 ignored 文件、类型、symlink target 与 SHA-256。仅当能覆盖批次中所有写入方及输出根时，才合并受控调用的审计；期间持续限制输出映射。未知写入方、输出根变化或覆盖不明时单独完整审计，不仅凭 mtime 或 tracked 路径复用。越界写入设置 `blocked_verification_failure`，不得删除或改写用户既有文件。
 
 ## Workspace
 

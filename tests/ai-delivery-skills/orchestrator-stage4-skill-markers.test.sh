@@ -85,4 +85,12 @@ for guide in spec-kit.md openspec.md superpowers.md ecc.md native.md; do
   forbid "$EN_ROOT/references/frameworks/$guide" 'kind.?=.?(spec|plan|tasks)|layout key.?[[:space:]]*`?(spec|plan|tasks)'
 done
 
+# Guard against restoring automatic fan-out, per-unit reviewer gates and duplicate ledgers.
+forbid "$EN_ROOT/../ui-truth-mapping/SKILL.md" 'more than one independent unit.*per-unit subagent'
+forbid "$EN_IMPL" 'Every execution unit and every visual-acceptance failure|sequential, dual review|appended to `progress.md`.*and to'
+forbid "$EN_BRIDGE" 'Each execution unit closes through TDD and fresh-context review before the next'
+require "$EN_IMPL" '## Verification and evidence reuse'
+require "$EN_IMPL" 'Preserve required final test/analysis scope'
+require "$EN_IMPL" 'Expected time saved exceeds'
+
 echo 'PASS: unified Stage 3/4 and framework containment markers'
