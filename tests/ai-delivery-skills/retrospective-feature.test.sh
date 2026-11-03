@@ -19,6 +19,8 @@ for rel in \
   .agents-zh/skills/ai-delivery-orchestrator/references/retrospective-guidance.md \
   .agents/skills/ai-delivery-orchestrator/templates/retrospective-template.md \
   .agents-zh/skills/ai-delivery-orchestrator/templates/retrospective-template.md \
+  .agents/skills/ai-delivery-orchestrator/templates/user-prompt-record-template.md \
+  .agents-zh/skills/ai-delivery-orchestrator/templates/user-prompt-record-template.md \
   .agents/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md \
   .agents-zh/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md
 do
@@ -48,6 +50,8 @@ then
   fail "Chinese skill is missing progressive loading rule"
 fi
 
+python3 "$ROOT/tests/ai-delivery-skills/retrospective-structure.test.py"
+
 TMP=$(mktemp -d)
 trap 'rm -rf "$TMP"' EXIT
 
@@ -72,14 +76,17 @@ cat > "$REQ/retrospective.md" <<'EOF'
 | RET-003 | A suspected issue has no confirmed cause | Unverified investigation | Reproduce and collect evidence | reusable | project | include | partial | critical | open | [RET-003](#ret-003) |
 <!-- /ai-delivery-retrospective:problem-index:v2 -->
 
+<a id="ret-001"></a>
 ## RET-001: State restoration overwrites live input
 
 Details.
 
+<a id="ret-002"></a>
 ## RET-002: Local delivery option
 
 Details.
 
+<a id="ret-003"></a>
 ## RET-003: Unconfirmed issue
 
 Details.
@@ -109,6 +116,7 @@ cat > "$LEGACY_REQ/retrospective.md" <<'EOF'
 | RET-001 | Legacy trigger | Legacy scenario | Legacy path | resolved | [RET-001](#ret-001) |
 <!-- /ai-delivery-retrospective:problem-index:v1 -->
 
+<a id="ret-001"></a>
 ## RET-001: Legacy problem
 
 Details.

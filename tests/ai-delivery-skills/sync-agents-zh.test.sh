@@ -120,6 +120,7 @@ for template in \
   todo-template.md \
   visual-acceptance-template.json \
   retrospective-template.md \
+  user-prompt-record-template.md \
   retrospective-index-template.md \
   verification-template.md
 do

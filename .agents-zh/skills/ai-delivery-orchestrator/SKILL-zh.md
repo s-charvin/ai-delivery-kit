@@ -24,11 +24,9 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 
 ## 复盘台账
 
-使用需求级 `retrospective.md` 记录交付问题和最终复盘。
-创建或更新前阅读 [references/retrospective-guidance.md](references/retrospective-guidance.md)。
-归档前该文件必须存在，即使没有问题记录；最终复盘时更新 reviewed-at 标记。
-在证据仍然可用时记录可复用的失败、错误的 AI 方案、用户/评审纠偏或验证失败；开始下一个方案前先记录失败方案。
-不要记录普通机械修正。保持带标记的问题地图与详细问题记录的总分结构。
+使用唯一需求级 `retrospective.md` 收集全部已知交付问题。UI、逻辑、迁移、架构、集成、测试及工具一视同仁。用户明确指出的所有问题都须记录，即使很小、已修、未复现、根因未知、暂不解决或没有复用价值；测试全绿不能排除用户观察。下一次尝试前记录现象、来源和假设，不伪造确定缺陷或根因。创建或维护前阅读 [references/retrospective-guidance.md](references/retrospective-guidance.md)，详细收集规则、UI调查及完整性核对集中在那里。
+
+统一分类和正文，同机制补全原RET，独立机制融入分类及问题地图；禁止“2026-11-03补审”“本轮新增”、游离文末补充或第二份UI台账。批次收尾和归档前，利用现有来源逐项核对全部已知发现，尤其每个用户问题的具体案例和处置状态。索引资格不能过滤需求级收录。真正无问题也须有台账，完成核对后再更新唯一reviewed-at。
 
 问题地图的每一行都必须由 AI 声明 `knowledge_type`、`reuse_scope`、
 `index_decision`、`confidence` 和 `importance`。归档脚本仅当这些字段依次为
@@ -45,6 +43,12 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 但归档前必须存在并更新 reviewed-at。
 恢复会话时读取当前问题地图；出现新现象时，将项目复盘索引作为路由表，只加载匹配的历史问题章节。
 只有适用条件和当前证据都匹配才算命中，关键词相似不够。
+
+## 用户输入及辅助材料
+
+接收、恢复及执行中每次收到用户消息时，先定位需求／任务，完整保存原文，再解释执行。初始和相关补充、纠正、选择及续接同存该需求 `prompts/` 的一份连续任务组；恢复续写原组，独立任务才用下个文件编号。实际重复输入与可得附件仍须保存；历史缺口如实说明，不重构冒充原文。详见[保存及产物约定](references/framework-adaptation.md)和[唯一原文模板](templates/user-prompt-record-template.md)。这不授权回写归档需求，也不改变宿主存储与权限规则。
+
+新建辅助材料前阅读[轻量产物组织](references/framework-adaptation.md)：复用已有正文与入口、保留原始证据，新自由命名材料用序号／日期前缀，固定协议路径不变。不增加目录／命名门禁或自动整理历史。
 
 ## 产物语言
 
@@ -210,6 +214,8 @@ API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、
 
 ## 用户入口
 
+先定位所属需求／任务，完整保存可得用户输入到原提示词组；恢复不重复保存仅重新读取的消息，再运行以下流程。
+
 1. 检查 `.ai-delivery/requirements/*`、`status.json`，运行对账。
 2. 如果存在则读取 `.ai-delivery/retrospectives/index.md`，筛选匹配的问题行并只加载链接的章节。
    当前需求有 `retrospective.md` 时，读取其问题地图以恢复未完成排查。
@@ -232,7 +238,9 @@ API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、
 
 ## 完成
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，仅将明确符合资格的高价值问题幂等更新到 `.ai-delivery/retrospectives/index.md`。不会创建、重写、总结或审计台账。没有合格问题的台账有效且不写新的索引文件或索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行以及哪些问题因资格字段缺失或不符合而跳过。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
+归档前从原始用户输入和已知发现逐项反查RET案例及处置状态，遗漏直接整合正文，再更新reviewed-at，详见复盘指导。客观归档检查不证明语义完整性。
+
+所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，仅将明确符合资格的高价值问题幂等更新到 `.ai-delivery/retrospectives/index.md`。会检查客观地图／详情结构，但不会创建、重写、总结或语义审计台账。没有合格问题的台账有效且不写新的索引文件或索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行以及哪些问题因资格字段缺失或不符合而跳过。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
 
 ## 编排形态（不变量）
 

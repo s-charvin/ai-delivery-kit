@@ -59,6 +59,21 @@ counts as static, motion, waiver, resource, or workspace acceptance.
 9. Stage 2 tests pass and the latest fresh-context review is clean; the user-approved workspace evidence is recorded for Stage 4 reuse. Stage 4's structured acceptance must include one independent motion acceptance record per indexed unit.
 10. The Stage 2 artifact-boundary path audit compares the entry/exit Git status/content fingerprint ledger and the independent filesystem fingerprints required by the containment protocol. The root fingerprints include ignored files and cover every declared external default output root, at least `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, and `openspec/**`; this catches writes hidden by `.gitignore` and repeated writes to paths already dirty at entry. Outside `.ai-delivery/`, only production source, project-native tests, goldens/official previews, and runtime assets may be new or modified. Any new or modified process/governance artifact outside `.ai-delivery/` sets `blocked_verification_failure`; do not freeze or advance status. Record the audit result and exact offending paths once in canonical `verification.md` (optional `progress.md` links it), without deleting pre-existing user files.
 
+## Problem capture and batch close
+
+On user correction, source mismatch, wrong control/asset, composition/state/motion
+omission, review or verification finding, integrate the observation and current
+judgment into the requirement ledger **before the next attempt**, even with green
+tests. Use [retrospective-guidance.md](retrospective-guidance.md); it provides UI
+lenses, same-mechanism updates and completeness checks. Save each in-flight user
+input in its existing prompt group under
+[framework-adaptation.md](framework-adaptation.md).
+At batch close, cross-check every known finding against its specific RET case and
+disposition; link from the existing `verification.md` round. No second UI ledger,
+revision-batch appendix, new acceptance gate or default full re-test is added.
+Keep actual source exports, review rounds and failures in their proper original
+records, with a short current pointer rather than duplicate reports.
+
 ## After completion
 
 There is no HTML validator and no active-delivery compatibility branch for earlier schemas. Kit status validation checks the v3 schema, containment, file types, hashes, dependencies, profiles, sourced states, scenarios, evidence scopes, host bindings, complete coverage, and preview-bound confirmation evidence; archived records remain readable under their legacy schema:

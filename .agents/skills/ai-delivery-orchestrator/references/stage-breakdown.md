@@ -8,6 +8,13 @@ For Android View slices, read [the Android View adapter](framework-adapters/andr
 
 ## Prepare inputs
 
+First preserve the full available initial input and related supplements in the
+owning requirement's ordered prompt group. See
+[framework-adaptation.md](framework-adaptation.md) and
+[the template](../templates/user-prompt-record-template.md). Continue that same
+group across sessions; do not reconstruct unavailable history. Auxiliary source
+material follows that reference's lightweight organization rules.
+
 For supplied Figma sources, run [provider selection and setup](../../ui-truth-mapping/references/figma-provider-routing.md) before reading design evidence. Respect explicit choice; otherwise use the available provider and prefer TemPad when both work. Neither installed requires installation consent; refusal stops the affected flow, not a guessed baseline.
 
 - Read the requirement document and every explicitly supplied supporting artifact. Inspect content before assigning a semantic role; filenames, extensions, folders, and labels such as `draft` or `pending` do not prove that a source is only copy, localization, reference material, or safe to omit.

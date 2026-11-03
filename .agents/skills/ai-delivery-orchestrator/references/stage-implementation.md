@@ -166,10 +166,16 @@ How each step is executed depends on the tier (superpowers skills, ECC agents, o
 
 ### Failure triage before editing code
 
-When a triage result is reusable, append the problem and the attempted solution
-to the requirement-level `retrospective.md` before trying another solution.
-Afterward tell the user the problem ID and the recorded conclusion. This is a
-memory aid, not a substitute for current evidence or an implementation-stage gate.
+Record every encountered problem, not only reusable triage. Before the next
+attempt, integrate the symptom, source, current hypothesis and failed attempt
+into the requirement-level `retrospective.md` under
+[retrospective-guidance.md](retrospective-guidance.md). Every user-raised issue
+must be locatable even if tiny, fixed, unreplicated or requirement-only. Apply
+the relevant UI lenses for all UI modes, including `existing`, without changing
+mode gates. Preserve unknown causes and untested states; green tests alone do
+not resolve user feedback. Save in-flight inputs in their original prompt group
+under [framework-adaptation.md](framework-adaptation.md).
+Report RET updates with the normal progress message, not a new approval gate.
 
 When an execution unit stalls or a scenario fails, first classify the failure and verify
 the smallest candidate cause before changing business code. Check candidates in
@@ -273,6 +279,10 @@ Rules:
 
 - The reviewer always runs in fresh context (a subagent where the tier supports it), never the implementer reviewing itself. A single reviewer may cover requirements and code quality in one pass; add a separate specialist only for a distinct evidenced risk.
 - Append findings, fix summaries, reviewed scope/input identity and conclusions once in the stable review-rounds area of `verification.md`. Optional `progress.md` links that record for recovery; do not create it just to duplicate review evidence.
+- Link each finding to its specific RET case and disposition; a similar RET without
+  this observation is not coverage. At batch close, cross-check all known user,
+  AI and review findings; integrate missing cases into the unified ledger before
+  final review. Preserve the chronological review rounds here.
 - Re-review the changed code and affected interactions. Preserve valid prior review coverage; expand review when behavior, ownership, shared contracts or integration changes. A clean local re-review must not hide an unreviewed wider change. Agent agreement is not evidence.
 - Iteration budget `review_loop.max_rounds` defaults to 3. Resolution order: sub-requirement `decisions.md` override → `.ai-delivery/meta/workflow-policy.json` `review_loop.max_rounds` → default 3. External framework retry defaults do not override it.
 - Budget exhausted: pause, report outstanding findings and open `blocked_verification_failure` or follow the user's direction. **Never auto-merge work whose latest applicable review is not clean.** The main orchestrator owns gate decisions.
@@ -317,6 +327,14 @@ Store raw facts once in native test reports; `verification.md` maps requirements
 - Set `visual_acceptance_passed` only for `ui_truth_mode=figma` or `runtime-baseline`, after schema v2 `visual-acceptance.json` binds the current v3 index and every scenario is passed or explicitly waived with evidence appropriate to its frozen scope.
 - `merged` after successful rebase, and only when `verification.md` is signed (the validate-delivery-status gate rejects `merged` without it).
 
+## Evidence discovery and handoff
+
+Follow [framework-adaptation.md](framework-adaptation.md)
+for a concise current entry, purpose-based auxiliary homes, sorting and original
+preservation. At resume/handoff, verify key referenced evidence is readable;
+missing originals are a preservation limitation, not proof of a historical test
+failure. Do not fabricate a replacement or rerun devices without authorization.
+
 ## Progress ledger (optional)
 
 When cross-session recovery is useful, record completed and pending work,
@@ -336,6 +354,10 @@ plan or treat it as source of truth; reconcile from governed artifacts and
 ## Next handoff
 
 Slice complete → `finish` action → `merged`. See [handoff-table.md](handoff-table.md).
+
+Before archive, reverse-check known original feedback and findings against RET
+cases and dispositions, integrate omissions, then update the sole reviewed-at
+marker. Structural archive validation cannot certify semantic completeness.
 
 When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `scripts/archive-subrequirement.py` per subreq to update status to `archived` in place; it must not create a snapshot or copy canonical artifacts. Pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
 

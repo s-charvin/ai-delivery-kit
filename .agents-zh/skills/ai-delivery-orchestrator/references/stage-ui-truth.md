@@ -51,6 +51,12 @@ v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 9. Stage 2 测试通过且最新一轮新鲜上下文评审干净；用户已批准 workspace 证据已记录，供 Stage 4 复用。Stage 4 的结构化验收必须为每个索引 unit 记录一条独立动效验收。
 10. Stage 2 产物边界路径审计已对比边界协议要求的入口/出口 Git 状态/内容指纹账本与独立文件系统指纹。目录指纹包含 ignored 文件，并覆盖外部 skill 声明的每个默认输出根，至少包括 `docs/superpowers/**`、`.superpowers/**`、`.specify/**` 与 `openspec/**`；因此能捕获被 `.gitignore` 隐藏的写入，以及进入动作前已 dirty 路径上的再次写入。`.ai-delivery/` 外只允许新增或修改生产源码、项目原生测试、golden/官方预览和运行时资源。任何新增或修改且位于 `.ai-delivery/` 外的流程/治理产物都设置 `blocked_verification_failure`；不得冻结或推进状态。在 canonical `verification.md` 一次记录审计结论与精确越界路径（可选 `progress.md` 仅引用），不删除用户既有文件。
 
+## 问题收集与批次收尾
+
+用户纠正、来源冲突、控件／素材误用、合成／状态／动效遗漏、评审或验证发现，均须在**下一次尝试前**融入需求复盘的观察和当前判断，即使测试全绿。使用[复盘指导](retrospective-guidance.md)的UI视角、同机制更新和完整性核对。执行中用户输入先按[保存规则](framework-adaptation.md)续存原提示词组。
+
+批次收尾逐项核对每个已知发现的具体RET案例及状态，从现有 `verification.md` 轮次引用。不新建UI台账、修订批次附录、验收门禁或默认全量重测。来源导出、评审轮次及失败保留在各自原始记录，当前入口简短引用，不制造重复报告。
+
 ## 完成后
 
 没有 HTML 校验器，进行中的交付也不兼容旧 schema。Kit 状态校验检查 v3 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、证据范围、宿主绑定、完整 coverage 与预览绑定确认凭证；已归档记录保持旧 schema 可读：

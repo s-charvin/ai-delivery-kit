@@ -8,8 +8,9 @@ unchanged. Remove this comment from the instantiated document.
 # Retrospective - <req-id>
 
 > This is a required, living requirement-level ledger. The file must exist at
-> archive time even when there are no problem records. Record reusable delivery
-> failures and corrections while they happen. It is not a framework, product,
+> archive time even when there are no problem records. Record all known delivery
+> problems while they happen, including every user-raised issue regardless of
+> size, certainty, resolution or reuse value. It is not a framework, product,
 > or implementation specification.
 
 ## 1. Summary
@@ -36,17 +37,37 @@ verified, and valuable. Use `temporary-decision`, `requirement`, `exclude`,
 ledger but must not be routed to future requirements. Missing or invalid
 qualification fields are treated as not indexable.
 
-### 1.2 Reusable Constraints
+### 1.2 Classification Routes
+
+<Use relevant categories such as UI source/control/typography/composition/state/
+motion/wiring, logic, migration, architecture, integration, verification, tools
+or product-decision clarification. Categories are navigation, not priority or
+admission gates. Route each category to its RETs without copying their details.>
+
+### 1.3 Reusable Constraints
 
 - <constraint that prevents recurrence>
 
+Keep the whole document integrated by mechanism, never by revision batches.
+Update an existing RET for the same cause/path, retaining every specific report
+and material failed attempt. Add a RET only for an independent mechanism and
+update classification/map. No supplemental review, "this round additions", end
+notes or second UI ledger. Real failure/version dates inside records are valid.
+At batch close and before reviewed-at, reverse-check original user inputs and
+known findings against specific cases and dispositions; metadata never filters
+admission. Remove instructional placeholders from the instance.
+
 ## 2. Problem Records
 
+<a id="ret-001"></a>
 ### RET-001: <short problem name>
 
 #### Problem Scenario and Impact
 
-<What happened, who or what was affected, and why it matters.>
+<Specific user/AI/review findings and source links (including prompt input
+sections), observation, expected/actual behavior, affected scope and current
+handling state per case. Shared mechanism may contain multiple cases; none may
+be lost. A user product decision is not automatically an implementation defect.>
 
 #### Shortest Reproduction Path
 
@@ -58,9 +79,17 @@ Expected: <expected result>
 
 #### Root Cause and Evidence
 
-- Category: <requirement misread | architecture deviation | implementation defect | verification defect | evidence boundary | external dependency>
-- Cause: <specific causal explanation>
+- Category: <applicable classification route; no mandatory category enum>
+- Cause: <evidenced cause or explicitly unknown/hypothesis; do not invent certainty>
 - Evidence: <observations, logs, tests, or decisions supporting the conclusion>
+
+For UI, use relevant lenses from [retrospective guidance](../references/retrospective-guidance.md):
+source/page/parent/theme/state/Collection; real control/resource and typography;
+canvas versus slot, constraints/mask/full composition; final property writer,
+transitions/motion; production entry/shared consumers/rebind/return/first draw.
+Connect visible deviation to authority, mistaken judgment, correction and actual
+verification. Do not force every lens onto every issue. Remove this template
+link or replace with a valid installed-skill reference in the instance.
 
 #### AI Attempts
 
@@ -72,7 +101,11 @@ Expected: <expected result>
 #### Final Solution and Verification
 
 - Solution: <smallest confirmed correction>
-- Verification: <exact behavior, test, or evidence that confirms it>
+- Verification: <actual check/result and remaining untested scope; distinguish not run, partial and accepted; green tests do not close a user report>
+
+Use a compact record for local or unresolved issues; unknown/not run/no general
+lesson are valid. Keep their source and disposition even without a reusable
+constraint. For a reusable mechanism, fill the applicable path below.
 
 #### Minimal Path for Future Work
 

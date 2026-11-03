@@ -136,9 +136,7 @@ SHA-256、证据哈希、验收人和时间，并关联 visual-acceptance.json�
 
 ### 改代码前的失败分类
 
-当分诊结果具有复用价值时，在尝试另一个方案前追加到需求级
-`retrospective.md`，随后告诉用户问题编号和记录的结论。这是记忆辅助，不是
-当前证据的替代品，也不是实现阶段门禁；归档前仍必须存在并更新 reviewed-at。
+记录每个遇到的问题，不限可复用分诊。下一次尝试前按[复盘指导](retrospective-guidance.md)将现象、来源、当前假设及失败尝试融入需求级 `retrospective.md`。用户每个问题都须可定位，即使很小、已修、未复现或仅需求适用。所有UI模式（包括 `existing`）按适用UI视角调查，不改变模式门禁；根因未证及状态未验须保留，测试全绿不自动关闭用户反馈。执行中用户输入先按[保存规则](framework-adaptation.md)续存原组。正常进度中告知RET更新，不新增审批门禁。
 
 任务卡住或 scenario 失败时，先判断失败归属并验证最小候选原因，再改业务代码。
 候选原因大致按这个顺序检查：状态传播 / 接线；拷贝与引用语义；模型表达方式；
@@ -205,6 +203,7 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 ```
 
 - 评审者始终是实现者以外的新鲜上下文；支持时可使用子代理。一次评审可同时覆盖需求和代码质量，仅有明确不同风险时才增加专项审查。
+- 每个发现关联具体RET案例及状态，不能只说已有类似项。批次收尾逐项核对所有已知用户、AI、评审发现，遗漏整合到统一复盘，再完成审阅；原始评审轮次继续按时间保留。
 - 每轮 finding、修复摘要、审查范围/输入身份与结论只写一次，放在 `verification.md` 稳定评审区域。可选 `progress.md` 仅引用恢复所需信息，不为重复记录而创建它。
 - 复审修改及受影响交互，保留仍有效的既有覆盖；行为、所有权、共享契约或集成变化时扩大审查。局部 clean 不掩盖未审的更大改动；agent 一致同意不等于证据。
 - `review_loop.max_rounds` 默认 3，仍按子需求 `decisions.md` → `.ai-delivery/meta/workflow-policy.json` → 默认值解析。外部框架重试默认值不能覆盖它。
@@ -246,6 +245,10 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 - 仅当 `ui_truth_mode=figma` 或 `runtime-baseline`，且 schema v2 `visual-acceptance.json` 绑定当前 v3 index、每个 scenario 均按冻结范围带所需证据通过或明确 waived 后，才设 `visual_acceptance_passed`。
 - rebase 成功后设 `merged`。
 
+## 证据发现与交接
+
+按[产物指导](framework-adaptation.md)维护简短当前入口、按用途归属的辅助材料、排序及原件保全。恢复／交接时检查正在依赖的关键原件可读性；缺失是保存限制，不代表历史测试失败。不捏造替代品，也不未经授权重跑设备。
+
 ## 进度账本（可选）
 
 需要跨会话恢复时，在 `.ai-delivery/requirements/<req-id>/progress.md`
@@ -263,6 +266,8 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 ## 下一 handoff
 
 切片完成 → `finish` 动作 → `merged`。见 [handoff-table.md](handoff-table.md)。
+
+归档前从原始反馈／发现反查具体RET案例及处置状态，遗漏直接整合正文，再更新唯一reviewed-at；结构校验不能证明语义完整性。
 
 所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `scripts/archive-subrequirement.py` 原位推进状态至 `archived`，不得生成快照或复制 canonical 产物；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
 

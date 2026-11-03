@@ -29,6 +29,7 @@ import json
 import os
 import re
 import sys
+from html.parser import HTMLParser
 from pathlib import Path
 
 LAYOUT_REL = Path(".agents/skills/ai-delivery-orchestrator/scripts")
@@ -226,6 +227,164 @@ def indexable_entries(entries: list[dict[str, str]]) -> list[dict[str, str]]:
     return [entry for entry in entries if is_indexable_entry(entry)]
 
 
+def _retrospective_prose(lines: list[str]) -> list[tuple[int, str]]:
+    """Keep line locations, excluding fenced examples and HTML comment bodies."""
+    result = []
+    fence_char = ""
+    fence_size = 0
+    in_comment = False
+    for number, raw in enumerate(lines, 1):
+        fence = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", raw)
+        if fence_char:
+            if re.fullmatch(r" {0,3}" + re.escape(fence_char) + "{" + str(fence_size) + r",}\s*", raw):
+                fence_char = ""
+            continue
+        if fence and not in_comment:
+            fence_char, fence_size = fence.group(1)[0], len(fence.group(1))
+            continue
+        # Stable explicit anchors survive; comments are not prose headings.
+        visible = ""
+        rest = raw
+        while rest:
+            if in_comment:
+                _, found, rest = rest.partition("-->")
+                if not found:
+                    break
+                in_comment = False
+            else:
+                before, found, rest = rest.partition("<!--")
+                visible += before
+                if not found:
+                    break
+                in_comment = True
+        result.append((number, visible))
+    return result
+
+
+def retrospective_detail_anchor(details: str) -> str | None:
+    """Read the one local Markdown destination used by validation and routing."""
+    links = re.findall(
+        r"\]\(\s*<?(#[^<>\s)]+)>?(?:\s+[\"\x27][^\"\x27]*[\"\x27])?\s*\)",
+        details,
+    )
+    return links[0][1:] if len(links) == 1 else None
+
+
+class _RetrospectiveAnchors(HTMLParser):
+    def __init__(self) -> None:
+        super().__init__()
+        self.anchors: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag == "a":
+            self.anchors.extend(dict.fromkeys(
+                value for key, value in attrs if key in {"id", "name"} and value
+            ))
+
+
+def validate_retrospective_structure(
+    retrospective: Path, lines: list[str], entries: list[dict[str, str]]
+) -> None:
+    """Objective structure only; never infer source coverage or causal truth."""
+    def fail(number: int, message: str) -> None:
+        raise SystemExit(f"ERROR: {retrospective}:{number}: {message}")
+
+    for marker in (RETROSPECTIVE_INDEX_START, RETROSPECTIVE_INDEX_END):
+        locations = [i for i, line in enumerate(lines, 1) if line.strip() == marker]
+        if len(locations) != 1:
+            fail(locations[-1] if locations else 1,
+                 "exactly one pair of problem-index:v2 markers is required")
+    start = lines.index(RETROSPECTIVE_INDEX_START)
+    end = lines.index(RETROSPECTIVE_INDEX_END)
+    if start >= end:
+        fail(end + 1, "problem-index markers are out of order")
+    row_locations = {}
+    for number in range(start + 1, end):
+        cells = _table_cells(lines[number])
+        if not cells or not cells[0].startswith("RET-"):
+            continue
+        problem_id = cells[0]
+        if not re.fullmatch(r"RET-\d{3,}", problem_id):
+            fail(number + 1, f"{problem_id}: invalid problem ID")
+        if problem_id in row_locations:
+            fail(number + 1, f"{problem_id}: duplicate problem-map row")
+        row_locations[problem_id] = number + 1
+
+    prose = _retrospective_prose(lines)
+    details = {}
+    explicit = {}
+    section_headings = []
+    anchor_reader = _RetrospectiveAnchors()
+
+    def leading_anchor_start(index: int, heading_number: int) -> int:
+        start = heading_number
+        for prior_number, prior_line in reversed(prose[:index]):
+            if not prior_line.strip():
+                continue
+            # Reserve standalone anchors preceding a heading for that section.
+            if re.search(r"<a\b", prior_line, re.I) and not re.sub(r"</?a\b[^>]*>", "", prior_line, flags=re.I).strip():
+                start = prior_number
+            else:
+                break
+        return start
+    for index, (number, line) in enumerate(prose):
+        anchor_reader.anchors.clear()
+        anchor_reader.feed(line + "\n")
+        for anchor in anchor_reader.anchors:
+            if anchor in explicit:
+                fail(number, f"duplicate detail anchor #{anchor}")
+            explicit[anchor] = number
+        heading = re.match(r"^ {0,3}#{1,6}\s+(.+?)(?:\s+#+)?\s*$", line)
+        if not heading:
+            continue
+        title = heading.group(1)
+        level = len(line.lstrip().split()[0])
+        section_headings.append((number, level, leading_anchor_start(index, number)))
+        # Detect known revision-batch containers, not every mention or date.
+        batch_title = re.sub(r"^(?:\d+[.)]\s*|\d{4}-\d{1,2}-\d{1,2}\s*[:|\-]?\s*)+", "", title)
+        if re.match(
+            r"(?:this (?:round|session)(?:'s)? (?:additions|findings)|"
+            r"(?:supplemental|additional|appended) (?:retrospective|review)|"
+            r"retrospective addendum|"
+            r"\u672c\u8f6e\u65b0\u589e|\u8ffd\u52a0\u590d\u76d8|\u8865\u5145\u590d\u76d8|\u8865\u5ba1)",
+            batch_title, re.I,
+        ):
+            fail(number, f"revision-batch retrospective section is forbidden: {title}")
+        match = re.match(r"(RET-\d{3,})(?=$|[\s:\uff1a])", title)
+        if not match:
+            continue
+        problem_id = match.group(1)
+        if problem_id in details:
+            fail(number, f"{problem_id}: duplicate detail record")
+        if problem_id not in row_locations:
+            fail(number, f"{problem_id}: orphan detail without problem-map row")
+        # GitHub-style heading anchor for existing ledgers. Explicit anchors are
+        # preferred for new records, so title edits do not invalidate links.
+        slug = re.sub(r"[^\w\- ]", "", title.lower()).replace(" ", "-")
+        preceding = leading_anchor_start(index, number)
+        details[problem_id] = (number, slug, preceding, level)
+
+    for entry in entries:
+        problem_id = entry["id"]
+        row = row_locations[problem_id]
+        if problem_id not in details:
+            fail(row, f"{problem_id}: missing detail record")
+        number, slug, preceding, level = details[problem_id]
+        anchor = retrospective_detail_anchor(entry["details"])
+        if anchor is None:
+            fail(row, f"{problem_id}: Details must link to its own local detail anchor")
+        next_detail = min(
+            [prior for n, depth, prior in section_headings if n > number and depth <= level]
+            + [prior for n, _, prior, _ in details.values() if n > number],
+            default=len(lines) + 1,
+        )
+        # An explicit stable anchor immediately before or within its record is
+        # valid. Do not accept links to another RET or a generic summary heading.
+        at = explicit.get(anchor)
+        if anchor != slug and not (at is not None and (preceding <= at < next_detail)):
+            fail(row, f"{problem_id}: missing or mismatched detail anchor #{anchor}")
+
+
 def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
     """Read only the stable problem-map table; never synthesize its content."""
     try:
@@ -257,6 +416,8 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
             "ERROR: retrospective is missing the stable problem-index markers"
         )
 
+    if lines.count(RETROSPECTIVE_INDEX_START) != 1 or lines.count(RETROSPECTIVE_INDEX_END) != 1:
+        raise SystemExit(f"ERROR: {retrospective}:{start + 1}: exactly one pair of problem-index:v2 markers is required")
     header_seen = False
     entries: list[dict[str, str]] = []
     for line in lines[start + 1 : end]:
@@ -287,6 +448,7 @@ def read_retrospective_entries(retrospective: Path) -> list[dict[str, str]]:
             "ERROR: retrospective problem map is missing the v2 qualification header; "
             "AI must upgrade retrospective.md before archive"
         )
+    validate_retrospective_structure(retrospective, lines, entries)
     return entries
 
 
@@ -417,10 +579,8 @@ def register_retrospective_index(
         return None
     rows = []
     for entry in entries:
-        anchor = ""
-        details = entry["details"]
-        if "#" in details:
-            anchor = "#" + details.rsplit("#", 1)[1].rstrip(")")
+        # read_retrospective_entries already validated this local destination.
+        anchor = "#" + retrospective_detail_anchor(entry["details"])
         target = f"{Path(os.path.relpath(retrospective, index.parent)).as_posix()}{anchor}"
         rows.append(
             f"| {req_id}/{entry['id']} | {entry['trigger']} | {entry['scenario']} | "

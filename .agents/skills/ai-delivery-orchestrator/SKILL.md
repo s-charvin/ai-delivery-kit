@@ -28,15 +28,24 @@ compatibility. The reference does not replace the host workflow's own rules.
 
 ## Retrospective ledger
 
-Use the requirement-level `retrospective.md` ledger as a lightweight memory aid
-for delivery problems and final review. Read [references/retrospective-guidance.md](references/retrospective-guidance.md)
-before creating or updating it. The file is required before archive, even when
-there are no problem records. Record a reusable failure, a wrong AI attempt, a
-user/review correction, or a verification failure while the evidence is
-available; record the failed attempt before trying the next approach. Do not
-record trivial mechanical fixes. Keep the marked summary problem map and the
-detailed problem records in summary-to-detail order, and update the reviewed-at
-marker during the final review.
+Use one requirement-level `retrospective.md` for all known delivery problems.
+UI, logic, migration, architecture, integration, tests and tools use the same
+collection rule. Every user-raised problem is recorded, even tiny, fixed,
+unreplicated, unknown-cause, deferred or non-reusable issues. Green tests do not
+exclude user observations. Record symptoms, sources and hypotheses before the
+next attempt; never invent a confirmed defect or cause. Read
+[references/retrospective-guidance.md](references/retrospective-guidance.md)
+before maintenance. It owns the detailed collection, UI investigation and
+source-to-RET completeness method.
+
+Keep one coherent classified body and stable RETs: integrate new cases into the
+same mechanism, new mechanisms into the classification/map. No dated supplemental
+review, "this round additions", detached end notes or second UI ledger. At batch
+close and before archive cross-check all known source findings, especially every
+user problem, against specific cases and dispositions using existing records.
+Index qualification never filters requirement-level admission. The ledger is
+required at archive even if genuinely empty; update its sole reviewed-at only
+after that review.
 
 For each problem-map row, AI must declare `knowledge_type`, `reuse_scope`,
 `index_decision`, `confidence`, and `importance`. The archive script routes a
@@ -59,6 +68,25 @@ problem map; when a new symptom appears, use the project retrospective index
 as a routing map and load only matching historical problem sections. Similar
 keywords are not sufficient: applicability conditions and current evidence
 must match.
+
+## User inputs and auxiliary material
+
+At intake, resume and every in-flight user message, resolve the requirement and
+task, then preserve the full original input **before** interpreting it. Initial
+and related supplements/corrections/choices/continuations share one ordered task
+file in the requirement's `prompts/`; resume extends that file, independent tasks
+get the next numbered group. Preserve actual repeats and attachments; disclose
+unavailable history instead of reconstructing it. Follow
+[the preservation and artifact conventions](references/framework-adaptation.md)
+and [the prompt record template](templates/user-prompt-record-template.md).
+This does not authorize edits to an archived requirement or change host storage
+and permission rules.
+
+Before creating auxiliary material, consult
+[framework-adaptation.md](references/framework-adaptation.md):
+reuse the existing owner/entry, preserve original evidence, use sequence/date
+prefixes for new freely named material, and keep fixed protocol paths unchanged.
+No new directory/naming gate or historical cleanup is introduced.
 
 ## Artifact language
 
@@ -224,7 +252,10 @@ API docs pass directly to `design.md` and implementation. Gaps → `integration_
 
 ## User entry
 
-1. Inspect `.ai-delivery/requirements/*`, `status.json`, run reconcile.
+1. Resolve the owning requirement/task, preserve the available user input in its
+   prompt group under the rules above, then inspect `.ai-delivery/requirements/*`,
+   `status.json` and run reconcile. On resume, continue the original group without
+   duplicating messages that were merely re-read.
 2. Read `.ai-delivery/retrospectives/index.md` if it exists; select matching
    problem rows and load only their linked sections. If the current requirement
    has `retrospective.md`, read its problem map for unfinished investigation.
@@ -280,7 +311,10 @@ that decision through the native user-choice UI or structured chat.
 
 ## Completion
 
-All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Before
+All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Reverse-check
+all known findings and user input issues against RET cases, integrate omissions
+and current dispositions, then update reviewed-at as described in the retrospective
+guidance. Objective archive checks do not prove semantic completeness. Before
 the final archive command, instantiate `templates/delivery-report-template.md`
 as a temporary template in the user's current conversation language, remove its
 `ai-delivery-template-language` comment, and preserve its placeholders. Run
@@ -295,8 +329,8 @@ markers and placeholder, and pass it to the final command with
 one parseable `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker
 whose calendar date matches the archive date, then reads the marked problem map
 and idempotently updates `.ai-delivery/retrospectives/index.md` with only
-explicitly qualified high-value rows; it does not
-create, rewrite, summarize, or audit the ledger. A ledger with no problem rows
+explicitly qualified high-value rows; it checks objective map/detail structure but does not
+create, rewrite, summarize, or semantically audit the ledger. A ledger with no problem rows
 is valid and creates no index rows. A missing or stale ledger blocks archive.
 Tell the user which problem rows were registered and which were skipped for
 missing or non-qualifying metadata.

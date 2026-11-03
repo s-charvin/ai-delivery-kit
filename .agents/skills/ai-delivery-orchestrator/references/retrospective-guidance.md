@@ -1,49 +1,112 @@
 # Retrospective Guidance
 
-Retrospective is a requirement-level learning ledger for reducing repeat
-rework in client requirement delivery. The file is required before archive,
-even when no reusable problem has been found. It is framework-neutral and does
-not define product behavior, architecture, or a lifecycle gate.
+The requirement-level `retrospective.md` is the single living ledger of known
+delivery problems. Collect problems when encountered in UI, logic, migration,
+architecture, integration, tests, and tools under the same rule; no category
+has collection priority. Normal edits and successful execution are not problems.
+This ledger adds no stage, persona, product specification, or approval chain.
 
-The ledger must contain exactly one machine-readable marker in this form:
-`<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->`. Update it during
-the final review. Archive accepts the ledger only when the marker parses and
-its calendar date matches the archive date. This date-level check deliberately
-avoids requiring a human to predict the exact archive timestamp.
+## Admission is separate from reuse
 
-## Record only reusable problems
+Every problem explicitly raised by the user must be represented, including a
+one-line or mechanical correction, an already-fixed, deferred, unreplicated,
+unknown-cause, or requirement-only issue. Preserve the user's description,
+source, actual observation, and current disposition. Record AI, review,
+verification and runtime findings too. Green tests never exclude a user report.
 
-Create or update `retrospective.md` when a problem has reuse value, especially:
+Do not use `importance`, `confidence`, `reuse_scope`, `knowledge_type`, or
+`index_decision` as admission filters. They describe the recorded knowledge and
+its project-index eligibility. Do not invent a confirmed cause, high importance,
+or general usefulness to admit a local issue. A short requirement-only record
+is sufficient when there is no general lesson. Preserve reports judged to be a
+misunderstanding, changed product decision, or no longer reproducible, with the
+reason and evidence; do not silently remove them or label every decision a bug.
 
-- a substantive failed attempt or a second attempt at the same symptom;
-- a user or review correction that invalidates a previous direction;
-- a verification, acceptance, integration, or runtime failure;
-- a root cause that could recur in another requirement.
+## Capture, integrate, cross-check
 
-Do not record spelling fixes, isolated command mistakes, or mechanical edits
-with no reusable lesson. Record an incorrect AI approach before trying the next
-approach, including why it looked plausible and why it failed.
+1. On a user correction or a discovered implementation/review/verification
+   problem, record the symptom, source, current hypothesis and evidence **before
+   the next attempt**. An unknown cause stays unknown. Save the user's complete
+   input in its requirement prompt group first; see
+   [framework-adaptation.md](framework-adaptation.md).
+2. Match by trigger, cause, and smallest correction path. A shared mechanism
+   updates its existing RET, retaining each specific report and material attempt.
+   Similar words alone do not justify merging. Independent mechanisms get new
+   stable `RET-###` IDs and are integrated into classification and problem map.
+3. At batch close, cross-check every known user issue and other known finding
+   against a specific RET case and disposition. Reuse existing `verification.md`
+   findings and prompt input anchors; add RET references there, not a second
+   coverage ledger. An existing similar RET is insufficient unless this issue's
+   concrete observation and outcome are actually in it.
+4. Before archive, reverse-check from those original records, integrate omissions
+   directly, then update the sole reviewed-at marker. Reuse established links
+   and valid evidence; do not repeatedly scan all historical logs.
 
-## Required problem record
+Completeness means all **known** issues are locatable, especially every problem
+the user raised. It does not mean every latent defect has been discovered.
+A RET link does not close a source finding. Distinguish pending reproduction,
+confirmed deviation with unproven cause, fixed but not run, partial verification,
+and formal acceptance. `confidence=confirmed` applies only to the conclusion
+actually supported; it does not accept all UI states. Keep STOPs, waivers,
+withdrawn hypotheses and untested scope explicit.
 
-Keep the document in summary-to-detail order. The summary problem map is a
-stable `problem-index:v2` marked Markdown table. Use a stable `RET-###` ID per problem and link
-the row to its detail heading. Each row must also declare `knowledge_type`,
-`reuse_scope`, `index_decision`, `confidence`, and `importance`. Each detail must contain: scenario and impact,
-shortest reproduction path, expected and actual result, root cause and
-evidence, every material AI attempt with outcome and success/failure reason,
-final solution and verification, minimal future path, do-not-retry guidance,
-open boundaries, and a reusable constraint.
+## One coherent body, never revision batches
 
-The minimal future path must answer four questions: when does this apply, what
-is the smallest discriminating check, what is the smallest correction, and
-what is the narrowest verification? State a stop condition when evidence is
-ambiguous or the applicability boundary is not met.
+`retrospective.md` must always be one coherent requirement retrospective.
+Integrate every new finding into its classification and record. **Do not append
+revision-batch sections** such as dated supplemental reviews, "this round
+additions", or "additional retrospective", or leave detached notes at the end.
+Do not create a UI-only retrospective, stage copy, supplemental ledger, or
+second issue list. Modification notes belong in Git history.
 
-After every update, tell the user the recorded ID, what was added, and the
-ledger path. This is a visibility aid. The user may request an omission or
-correction before archive. A ledger with no problem rows is valid, but it still
-needs the reviewed-at marker.
+Maintain one complete account per mechanism. Classification and the problem
+map route to it rather than duplicating its history. Preserve stable IDs,
+anchors, failed attempts, evidence, and the basis for retractions. Move later
+outcomes back to their record. Real failure dates, changed-source versions and
+verification dates belong **inside** the relevant record; chronology in source
+review/decision/run records is valid. Never implement this rule as a ban on dates.
+
+## Record shape
+
+Use [the template](../templates/retrospective-template.md), summary to detail:
+classification routes → marked v2 problem map → stable RET records. Each map
+row declares the existing five qualification fields and links to its own detail
+heading or explicit stable anchor. Preserve existing valid anchors; for new
+records an explicit `ret-001` anchor avoids title-dependent links. No new
+required machine metadata or second table protocol is introduced.
+
+In the detail, keep the specific reports/sources and dispositions; scenario,
+expected/actual observation and smallest reproduction; cause and confidence
+with evidence; material AI attempts and why each seemed plausible but failed;
+correction, actual verification and uncovered scope. For unresolved/local issues
+keep this compact and mark unknown/not run/not generalizable honestly. Do not
+force a generic lesson or fictional failed test. Where reuse is established,
+give applicability, first discriminating check, smallest correction, narrowest
+verification, stop condition and disproven paths. "Be more careful" or "add more
+tests" is not a discriminating method.
+
+After updates, report the RET IDs, material change and ledger path concisely;
+batch the notice with the normal progress update rather than a new interruption.
+
+## UI investigation lenses (when applicable)
+
+These lenses apply to all UI delivery, including `figma`, `runtime-baseline`,
+and `existing`; they do not expand any mode's existing acceptance gates and do
+not require visual records for non-UI tasks. Use the relevant lenses, not a
+per-dimension quota or mandatory fields on every RET.
+
+| Lens | Discriminating questions |
+|---|---|
+| Source and applicability | Correct page, complete parent, theme, state, variable Collection and latest user decision? What does this source actually prove? |
+| Control, resource, typography | Why this real control/asset? Check weight, size, line box, fontPadding, gradient, spacing, radius, icon transform and canvas versus slot. |
+| Layout and full composition | Are hug/fill/fixed, anchors, clipping, underlay, masks and production host composition correct? A correct child is insufficient for its parent. |
+| Runtime state and motion | Which assignment wins last? Do theme/background/IME/panel/send/failure/quote/loading transitions restore old UI? A static loading image is not motion evidence. |
+| Production wiring and regression | Is the new UI enabled from the actual entry? Check shared consumers, rebinding, return and first draw at the proven scope. |
+
+Connect visible deviation → authoritative source → mistaken AI judgment or
+omission → correction → actual verification and remaining boundary. Preserve
+concrete wrong attempts, including ones that looked reasonable. Do not promote
+project-specific token values, fields or product choices into universal rules.
 
 ## Progressive loading
 
@@ -80,19 +143,24 @@ Re-scan when a new symptom appears. Similar wording alone is not a match. A
 historical conclusion is advisory and cannot override current evidence,
 architecture constraints, product requirements, or unconfirmed external facts.
 
-## Archive behavior
+## Archive behavior and limits
 
-Archive does not generate or rewrite retrospective content. The archive action
-requires the ledger and its current reviewed-at marker, then reads its marked
-problem map, keeps only explicitly qualified rows, and idempotently replaces
-that requirement's rows in the project index. Temporary decisions, requirement-
-only changes, unconfirmed causes, and mechanical corrections remain in the
-ledger but are not indexed. A ledger with no qualified problem rows produces no
-new index file or rows. A missing or stale ledger blocks archive; the command
-does not infer missing problems or perform a memory audit.
+The ledger is required even with no known problems. Keep exactly one
+`<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker, updated after
+final source-to-RET review; its calendar date must match archive. A genuinely
+empty ledger is valid. Never use an empty ledger to bypass known findings.
 
-The requirement-level ledger remains next to its requirement artifacts as the
-full historical source. The delivery report keeps its summary responsibility;
-there is no second sub-requirement artifact copy. Once the requirement is
-archived, treat its ledger and index entry as read-only; record later discoveries
-in a new requirement and link back to the old problem where useful.
+Archive does not generate, rewrite or semantically audit the ledger. It checks
+the review marker and objective map/detail structure, then keeps only explicitly qualified
+rows and idempotently replaces this requirement's project-index rows. Structural
+checks detect duplicate markers/IDs, missing or orphan details, broken anchors,
+and recognized revision-batch headings with file/line diagnostics. They cannot
+prove all user reports were collected or all duplicate mechanisms were merged;
+source cross-check and behavioral evaluation carry that responsibility. Novel
+patch prose may require review even when the script accepts the structure.
+
+Temporary decisions, requirement-only issues, unconfirmed causes and mechanical
+corrections remain in the ledger; nonqualifying rows create no index entries.
+Keep the full historical source next to the requirement, with no archive copy.
+Once archived, its ledger and index entry are read-only; later discoveries use
+a new requirement and may link the earlier problem.
