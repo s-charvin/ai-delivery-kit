@@ -27,19 +27,19 @@ func AtomicWriteFileChecked(target string, body []byte, mode os.FileMode, before
 	} else if !os.IsNotExist(err) {
 		return err
 	}
-	file, err := os.CreateTemp(filepath.Dir(target), ".ai-delivery-write-*")
+	file, err := createTemporaryFile(filepath.Dir(target))
 	if err != nil {
 		return err
 	}
 	tmp := file.Name()
-	defer file.Close()
-	staged, err := file.Stat()
-	if err != nil {
+	defer func() {
 		file.Close()
 		os.Remove(tmp)
+	}()
+	staged, err := file.Stat()
+	if err != nil {
 		return err
 	}
-	defer os.Remove(tmp)
 	if err = file.Chmod(mode); err == nil {
 		var n int
 		n, err = file.Write(body)

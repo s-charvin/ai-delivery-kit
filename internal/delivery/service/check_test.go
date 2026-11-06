@@ -11,6 +11,7 @@ import (
 	"sync"
 	"testing"
 
+	kitassets "github.com/s-charvin/ai-delivery-kit"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/model"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/protocol"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/service"
@@ -119,6 +120,35 @@ func TestQuotedContractExampleInRequirementDoesNotCreateReferences(t *testing.T)
 	write(t, root, ".ai-delivery/requirements/R/requirement.md", "原始需求\n````markdown\n<!-- ai-delivery-verification:contract:v2 -->\n```json\n{}\n```\n<!-- /ai-delivery-verification:contract:v2 -->\n````\n")
 	if d := check(t, root, "implement", "in_dev"); !d.Decision.Allowed {
 		t.Fatal(d.Decision.Diagnostics)
+	}
+}
+
+func TestManagedTemplateIsBoundAsInputWithoutActivatingExampleReferences(t *testing.T) {
+	root := actionProject(t, "in_dev")
+	template := ".agents/skills/ai-delivery-orchestrator/templates/verification-template.md"
+	body, err := kitassets.Embedded.ReadFile(template)
+	if err != nil {
+		t.Fatal(err)
+	}
+	write(t, root, template, string(body))
+	writeVerification(t, root, []any{map[string]any{"path": template, "sha256": fmt.Sprintf("%x", sha256.Sum256(body))}})
+	report := check(t, root, "merge", "merged")
+	if !report.Decision.Allowed {
+		t.Fatal(report.Decision.Diagnostics)
+	}
+	bound := false
+	for _, f := range report.Snapshot.Files() {
+		bound = bound || f.Path == template
+		if strings.Contains(f.Path, "<repo-relative-design-path>") || strings.Contains(f.Path, "<native-report-path>") {
+			t.Fatalf("模板示例被激活为当前合同引用: %s", f.Path)
+		}
+	}
+	if !bound {
+		t.Fatal("受管模板未进入输入身份")
+	}
+	write(t, root, template, string(body)+"\nchanged\n")
+	if (workspace.Reader{}).Verify(context.Background(), report.Snapshot) == nil {
+		t.Fatal("忽略示例解析不能忽略模板字节漂移")
 	}
 }
 

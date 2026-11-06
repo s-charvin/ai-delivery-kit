@@ -331,35 +331,43 @@ func TestGitChangesAndNoGitExecutable(t *testing.T) {
 	}
 }
 func TestRealGitRenameAndDeletedPaths(t *testing.T) {
-	root := fixture(t)
 	git, err := exec.LookPath("git")
 	if err != nil {
 		t.Skip("环境没有Git")
 	}
-	run := func(args ...string) {
-		t.Helper()
-		cmd := exec.Command(git, append([]string{"-C", root}, args...)...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("%s: %v", out, err)
-		}
+	oldPaths := []string{"old/旧 文件.go"}
+	if runtime.GOOS != "windows" {
+		oldPaths = append(oldPaths, "old/a\nfile.go")
 	}
-	put(t, root, "old/a\nfile.go", "old")
-	put(t, root, "deleted.go", "del")
-	run("init", "-q")
-	run("add", ".")
-	run("-c", "user.name=fixture", "-c", "user.email=f@invalid", "commit", "-qm", "fixture")
-	os.Mkdir(filepath.Join(root, "new"), 0755)
-	run("mv", "old/a\nfile.go", "new/a file.go")
-	put(t, root, "new/a file.go", "modified")
-	put(t, root, "new.go", "new")
-	os.Remove(filepath.Join(root, "deleted.go"))
-	paths, known, err := workspace.ObservedChanges(context.Background(), root)
-	if err != nil || !known {
-		t.Fatal(err)
-	}
-	want := []string{"deleted.go", "new.go", "new/a file.go", "old/a\nfile.go"}
-	if !reflect.DeepEqual(paths, want) {
-		t.Fatalf("%q != %q", paths, want)
+	for _, oldPath := range oldPaths {
+		t.Run(oldPath, func(t *testing.T) {
+			root := fixture(t)
+			run := func(args ...string) {
+				t.Helper()
+				cmd := exec.Command(git, append([]string{"-C", root}, args...)...)
+				if out, err := cmd.CombinedOutput(); err != nil {
+					t.Fatalf("%s: %v", out, err)
+				}
+			}
+			put(t, root, oldPath, "old")
+			put(t, root, "deleted.go", "del")
+			run("init", "-q")
+			run("add", ".")
+			run("-c", "user.name=fixture", "-c", "user.email=f@invalid", "commit", "-qm", "fixture")
+			os.Mkdir(filepath.Join(root, "new"), 0755)
+			run("mv", oldPath, "new/a file.go")
+			put(t, root, "new/a file.go", "modified")
+			put(t, root, "new.go", "new")
+			os.Remove(filepath.Join(root, "deleted.go"))
+			paths, known, err := workspace.ObservedChanges(context.Background(), root)
+			if err != nil || !known {
+				t.Fatal(err)
+			}
+			want := []string{"deleted.go", "new.go", "new/a file.go", oldPath}
+			if !reflect.DeepEqual(paths, want) {
+				t.Fatalf("%q != %q", paths, want)
+			}
+		})
 	}
 }
 
@@ -402,12 +410,16 @@ func TestAutomaticDiscoveryFromNestedCustomDelivery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	physicalRoot, err := filepath.EvalSymlinks(root)
+	expectedRoot, err := os.Stat(root)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if w.ProjectRoot != physicalRoot {
-		t.Fatalf("%s != %s", w.ProjectRoot, root)
+	actualRoot, err := os.Stat(w.ProjectRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !os.SameFile(actualRoot, expectedRoot) {
+		t.Fatalf("项目根不是同一目录: %q != %q", w.ProjectRoot, root)
 	}
 }
 

@@ -18,7 +18,7 @@ import (
 // NormalizePath 是声明范围、来源与消费器共用的项目相对 POSIX 路径入口。
 // 目录尾斜线是调用方的选择提示，不属于正文索引键。
 func NormalizePath(value string) (string, error) {
-	if value == "" || !utf8.ValidString(value) || strings.ContainsRune(value, 0) || strings.ContainsAny(value, "\\:") || filepath.IsAbs(value) || filepath.VolumeName(value) != "" {
+	if value == "" || !utf8.ValidString(value) || strings.ContainsRune(value, 0) || strings.ContainsAny(value, "\\:") || strings.HasPrefix(value, "/") || filepath.IsAbs(value) || filepath.VolumeName(value) != "" {
 		return "", fmt.Errorf("非法项目相对路径: %q", value)
 	}
 	for _, part := range strings.Split(value, "/") {

@@ -42,6 +42,10 @@ func TestAdvancePublishesOnlySelectedStatusAndRejectsReplay(t *testing.T) {
 		t.Fatal(code, checked)
 	}
 	statusPath := filepath.Join(root, ".ai-delivery/requirements/R/status.json")
+	beforeInfo, e := os.Stat(statusPath)
+	if e != nil {
+		t.Fatal(e)
+	}
 	code, result := invoke("advance", "--to", "split_ready", "--expected-snapshot", checked["snapshot_id"].(string))
 	if code != 0 || result["allowed"] != true {
 		t.Fatal(code, result)
@@ -53,9 +57,12 @@ func TestAdvancePublishesOnlySelectedStatusAndRejectsReplay(t *testing.T) {
 	if !bytes.Contains(body, []byte(`9007199254740993`)) || !bytes.Contains(body, []byte(`用户草稿`)) || !bytes.Contains(body, []byte(`"split_ready"`)) {
 		t.Fatal(string(body))
 	}
-	info, _ := os.Stat(statusPath)
-	if info.Mode().Perm() != 0600 {
-		t.Fatal(info.Mode())
+	info, e := os.Stat(statusPath)
+	if e != nil {
+		t.Fatal(e)
+	}
+	if info.Mode().Perm() != beforeInfo.Mode().Perm() {
+		t.Fatalf("status permissions changed: %v -> %v", beforeInfo.Mode(), info.Mode())
 	}
 	code, result = invoke("advance", "--to", "split_ready", "--expected-snapshot", checked["snapshot_id"].(string))
 	if code != 2 || result["allowed"] != false {

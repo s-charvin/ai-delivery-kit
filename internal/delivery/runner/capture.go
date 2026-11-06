@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/s-charvin/ai-delivery-kit/internal/projectfs"
 )
 
 type StreamCapture struct {
@@ -21,7 +23,7 @@ type capturedLog struct {
 
 // 原生流经独立管道采集；摘要来自实际收到的字节，不来自事后同名文件。
 func newCapturedLog(path string) (*capturedLog, error) {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_RDWR, 0600)
+	file, err := projectfs.CreateExclusiveFile(path)
 	if err != nil {
 		return nil, err
 	}

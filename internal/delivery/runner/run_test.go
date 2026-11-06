@@ -3,6 +3,7 @@ package runner_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -366,7 +367,7 @@ func TestCancellationCleansActualDescendant(t *testing.T) {
 	conn.SetReadDeadline(time.Now().Add(5 * time.Second))
 	one := make([]byte, 1)
 	_, err = conn.Read(one)
-	if err != io.EOF {
+	if !errors.Is(err, io.EOF) && !errors.Is(err, peerResetError) {
 		t.Fatalf("后代进程未关闭真实连接: %v", err)
 	}
 	select {
@@ -456,7 +457,7 @@ func TestExitedParentCannotPublishWhileDescendantHoldsOutput(t *testing.T) {
 	}
 	lc.SetReadDeadline(time.Now().Add(time.Second))
 	_, e = lc.Read(make([]byte, 1))
-	if e != io.EOF {
+	if !errors.Is(e, io.EOF) && !errors.Is(e, peerResetError) {
 		t.Fatalf("发布时后代仍活跃: %v", e)
 	}
 }

@@ -2,6 +2,7 @@ package initflow
 
 import (
 	"context"
+	"path/filepath"
 	"testing"
 
 	"github.com/s-charvin/ai-delivery-kit/internal/bootstrap"
@@ -48,19 +49,20 @@ func TestRunStopsBeforeBootstrapOnPreflightConflict(t *testing.T) {
 }
 
 func TestRunUpgradeModeAllowsManagedConflicts(t *testing.T) {
+	root := t.TempDir()
 	bootstrapper := &fakeBootstrapper{}
 	service := Service{
 		Bootstrapper: bootstrapper,
 		Discover: func(string) (repo.Info, error) {
 			return repo.Info{
-				Root:             "/tmp/project",
-				ManagedConflicts: []string{"/tmp/project/.agents/skills/requirement-breakdown"},
+				Root:             root,
+				ManagedConflicts: []string{filepath.Join(root, ".agents", "skills", "requirement-breakdown")},
 			}, nil
 		},
 	}
 
 	if _, err := service.Run(context.Background(), Input{
-		TargetPath: "/tmp/project",
+		TargetPath: root,
 		Upgrade:    true,
 	}); err != nil {
 		t.Fatalf("expected upgrade mode to bypass managed conflicts, got %v", err)

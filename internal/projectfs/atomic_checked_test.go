@@ -8,7 +8,7 @@ import (
 )
 
 func TestCheckedAtomicPublicationRejectsAbortAndTemporaryReplacement(t *testing.T) {
-	for _, kind := range []string{"abort", "symlink", "bytes", "rename"} {
+	for _, kind := range []string{"abort", "symlink", "bytes", "replace", "rename"} {
 		t.Run(kind, func(t *testing.T) {
 			root := t.TempDir()
 			target := filepath.Join(root, "status.json")
@@ -18,17 +18,30 @@ func TestCheckedAtomicPublicationRejectsAbortAndTemporaryReplacement(t *testing.
 			}
 			other := filepath.Join(t.TempDir(), "untouched")
 			os.WriteFile(other, []byte("用户资源"), 0600)
-			e := AtomicWriteFileChecked(target, []byte(`{"status":"new"}`), 0644, func(tmp string) error {
+			retained := filepath.Join(t.TempDir(), "staged-original")
+			stagedBody := []byte(`{"status":"new"}`)
+			e := AtomicWriteFileChecked(target, stagedBody, 0644, func(tmp string) error {
 				switch kind {
 				case "abort":
 					return errors.New("写前漂移或中断")
 				case "symlink":
-					if e := os.Remove(tmp); e != nil {
-						return e
+					if e := os.Rename(tmp, retained); e != nil {
+						t.Fatal("未能注入暂存路径替换", e)
 					}
-					return os.Symlink(other, tmp)
+					if e := os.Symlink(other, tmp); e != nil {
+						t.Fatal("未能注入暂存链接", e)
+					}
 				case "bytes":
-					return os.WriteFile(tmp, []byte("外部替换"), 0600)
+					if e := os.WriteFile(tmp, []byte("外部替换"), 0600); e != nil {
+						t.Fatal("未能注入暂存内容改写", e)
+					}
+				case "replace":
+					if e := os.Rename(tmp, retained); e != nil {
+						t.Fatal("未能移开原始暂存文件", e)
+					}
+					if e := os.WriteFile(tmp, stagedBody, 0600); e != nil {
+						t.Fatal("未能注入相同内容的新文件", e)
+					}
 				case "rename":
 					if e := os.Rename(target, target+".external"); e != nil {
 						return e

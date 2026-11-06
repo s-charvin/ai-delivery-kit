@@ -1,0 +1,16 @@
+# Managed resources and hash-bound fixtures must retain identical bytes on every OS.
+* text=auto eol=lf
+
+*.png -text
+*.gif -text
+*.jpg -text
+*.jpeg -text
+*.webp -text
+*.ico -text
+*.jar -text
+*.zip -text
+*.gz -text
+*.woff -text
+*.woff2 -text
+*.ttf -text
+*.otf -text

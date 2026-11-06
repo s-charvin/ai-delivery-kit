@@ -11,6 +11,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/s-charvin/ai-delivery-kit/internal/assets"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/contextview"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/model"
 	"github.com/s-charvin/ai-delivery-kit/internal/delivery/protocol"
@@ -69,6 +70,16 @@ func (r Reader) Collect(ctx context.Context, s model.Snapshot, checks []model.Ch
 	problems := map[string][]model.Diagnostic{}
 	add := func(id, p, msg string) { problems[id] = append(problems[id], diagnostic(s, id, p, msg)) }
 	addCause := func(id, p string, cause error) { problems[id] = append(problems[id], diagnosticCause(s, id, p, cause)) }
+	resourcePaths, err := assets.Paths()
+	if err != nil {
+		return model.ObservationSet{}, err
+	}
+	resourceDocuments := map[string]bool{}
+	for _, p := range resourcePaths {
+		if p != "AGENTS.md" {
+			resourceDocuments[p] = true
+		}
+	}
 	// 实际变更正文也属于动作身份；仅冻结路径类型无法发现同一文件继续编辑。
 	paths := append([]string{}, facts.ObservedChangedPaths...)
 	if len(facts.RunOutputPaths) != 0 {
@@ -175,6 +186,14 @@ func (r Reader) Collect(ctx context.Context, s model.Snapshot, checks []model.Ch
 				continue
 			}
 			if fixedHistorical[q.path] {
+				continue
+			}
+			// 受管技能和模板仍绑定原始字节，但其中的协议示例不是项目合同。
+			identity, _, err := workspace.Identity(s, q.path)
+			if err != nil {
+				return err
+			}
+			if resourceDocuments[q.path] || resourceDocuments[identity.ResolvedPath] {
 				continue
 			}
 			if data, err := protocol.Object(body); err == nil {

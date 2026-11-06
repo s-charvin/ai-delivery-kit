@@ -191,7 +191,8 @@ func TestReceiptRejectsNewProductionThatBreaksActualGoCommand(t *testing.T) {
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = root
 	out, err := cmd.CombinedOutput()
-	if err == nil || !bytes.Contains(out, []byte("src/broken.go")) {
+	diagnosticPath, _ := json.Marshal(filepath.FromSlash("src/broken.go"))
+	if err == nil || !bytes.Contains(out, diagnosticPath[1:len(diagnosticPath)-1]) {
 		t.Fatalf("相同原生命令应失败: %v\n%s", err, out)
 	}
 	assertStaleReceiptCannotAdvance(t, root, receipt, oldReceipt, oldVerification, "src/broken.go")
@@ -284,7 +285,8 @@ func TestReceiptRejectsProductionAliasToGeneratedOutput(t *testing.T) {
 			cmd := exec.Command(argv[0], argv[1:]...)
 			cmd.Dir = root
 			out, err := cmd.CombinedOutput()
-			if err == nil || !bytes.Contains(out, []byte("src/broken.go")) {
+			diagnosticPath, _ := json.Marshal(filepath.FromSlash("src/broken.go"))
+			if err == nil || !bytes.Contains(out, diagnosticPath[1:len(diagnosticPath)-1]) {
 				t.Fatalf("输出 alias 必须使相同 Go 命令失败: %v\n%s", err, out)
 			}
 			assertStaleReceiptCannotAdvance(t, root, receipt, oldReceipt, oldVerification, "src/broken.go")

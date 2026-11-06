@@ -107,6 +107,17 @@ func TestArchivePublishesStatusLastAndOriginalCommandRetries(t *testing.T) {
 				if !bytes.Equal(before, current) {
 					t.Fatal("必要输出失败却写了终态")
 				}
+				if err := filepath.WalkDir(root, func(p string, entry os.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if strings.HasPrefix(entry.Name(), ".ai-delivery-write-") {
+						return fmt.Errorf("归档失败遗留暂存文件: %s", p)
+					}
+					return nil
+				}); err != nil {
+					t.Fatal(err)
+				}
 				if report := check(t, root, "archive", ""); report.Snapshot.ID() != req.ExpectedSnapshot {
 					t.Fatalf("自身输出破坏原命令身份: %s / %s", report.Snapshot.ID(), req.ExpectedSnapshot)
 				}
