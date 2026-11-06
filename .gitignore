@@ -28,11 +28,4 @@ htmlcov/
 .ai-delivery-backups/
 
 # Local development documents and acceptance artifacts
-/docs/evaluations/
-/docs/guides/
-/docs/plans/
-/docs/prd/
-/docs/research/
-/docs/superpowers/
-/docs/artifact-layout.md
-/docs/CHANGELOG.md
+/.local-development/
