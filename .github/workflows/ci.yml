@@ -38,6 +38,7 @@ jobs:
   test:
     name: test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -59,14 +60,17 @@ jobs:
         if: runner.os != 'Windows'
         run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh
 
+      - name: Verify Windows process cleanup with retained references
+        if: runner.os == 'Windows'
+        run: go test ./internal/delivery/runner -run '^TestWindowsCleanupDoesNotForceExitedProcessWithRetainedReference$' -count=1
+
+      - name: Repeat Windows native receipt publication
+        if: runner.os == 'Windows'
+        run: go test ./internal/delivery/service -run '^TestReceiptStatusRoleAllowsLegalAdvanceButExplicitStatusRemainsInput/source$' -count=30
+
       - name: Run native Go and installed CLI tests on Windows
         if: runner.os == 'Windows'
-        run: |
-          go test ./internal/delivery/runner -run '^TestWindowsCleanupDoesNotForceExitedProcessWithRetainedReference$' -count=1
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go test ./internal/delivery/service -run '^TestReceiptStatusRoleAllowsLegalAdvanceButExplicitStatusRemainsInput/source$' -count=30
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          go test ./...
+        run: go test -json ./...
 
       - name: Validate PowerShell script syntax
         if: runner.os == 'Windows'

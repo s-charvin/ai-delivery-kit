@@ -17,6 +17,7 @@ var setJob = kernel32.NewProc("SetInformationJobObject")
 var assignJob = kernel32.NewProc("AssignProcessToJobObject")
 var terminateJob = kernel32.NewProc("TerminateJobObject")
 var queryJob = kernel32.NewProc("QueryInformationJobObject")
+var isProcessInJob = kernel32.NewProc("IsProcessInJob")
 var resumeProcess = syscall.NewLazyDLL("ntdll.dll").NewProc("NtResumeProcess")
 
 type jobBasicLimits struct {
@@ -32,14 +33,10 @@ type jobExtendedLimits struct {
 	IOCounters                                                                   [6]uint64
 	ProcessMemoryLimit, JobMemoryLimit, PeakProcessMemoryUsed, PeakJobMemoryUsed uintptr
 }
-type jobAccounting struct {
-	Times                                                            [4]int64
-	PageFaults, TotalProcesses, ActiveProcesses, TerminatedProcesses uint32
-}
 
 // 挂起创建后先纳入 Job，再恢复，避免子进程在 Job 绑定前逃离清理范围。
 func prepareProcess(cmd *exec.Cmd) error {
-	for _, p := range []*syscall.LazyProc{createJob, setJob, assignJob, resumeProcess, terminateJob, queryJob} {
+	for _, p := range []*syscall.LazyProc{createJob, setJob, assignJob, resumeProcess, terminateJob, queryJob, isProcessInJob} {
 		if err := p.Find(); err != nil {
 			return fmt.Errorf("Windows 进程隔离能力不可用: %w", err)
 		}
@@ -77,12 +74,19 @@ func startedProcess(cmd *exec.Cmd) (func() (bool, error), error) {
 	return func() (bool, error) {
 		once.Do(func() {
 			defer syscall.CloseHandle(syscall.Handle(job))
-			var initial jobAccounting
-			if ok, _, err := queryJob.Call(job, 1, uintptr(unsafe.Pointer(&initial)), unsafe.Sizeof(initial), 0); ok == 0 {
-				closeErr = fmt.Errorf("QueryInformationJobObject: %w", err)
+			members := map[uint32]syscall.Handle{}
+			defer func() {
+				for _, handle := range members {
+					syscall.CloseHandle(handle)
+				}
+			}()
+			deadline := time.Now().Add(5 * time.Second)
+			running, err := jobProcessesRunning(job, members, deadline)
+			if err != nil {
+				closeErr = err
 				return
 			}
-			if initial.ActiveProcesses == 0 {
+			if !running {
 				return
 			}
 			if ok, _, err := terminateJob.Call(job, 1); ok == 0 {
@@ -92,20 +96,20 @@ func startedProcess(cmd *exec.Cmd) (func() (bool, error), error) {
 			forced = true
 			ticker := time.NewTicker(10 * time.Millisecond)
 			defer ticker.Stop()
-			deadline := time.NewTimer(5 * time.Second)
-			defer deadline.Stop()
+			timeout := time.NewTimer(time.Until(deadline))
+			defer timeout.Stop()
 			for {
-				var accounting jobAccounting
-				if ok, _, err := queryJob.Call(job, 1, uintptr(unsafe.Pointer(&accounting)), unsafe.Sizeof(accounting), 0); ok == 0 {
-					closeErr = fmt.Errorf("QueryInformationJobObject: %w", err)
+				running, err := jobProcessesRunning(job, members, deadline)
+				if err != nil {
+					closeErr = err
 					return
 				}
-				if accounting.ActiveProcesses == 0 {
+				if !running {
 					return
 				}
 				select {
 				case <-ticker.C:
-				case <-deadline.C:
+				case <-timeout.C:
 					closeErr = fmt.Errorf("无法确认 Windows Job 中进程已全部退出")
 					return
 				}
