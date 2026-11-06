@@ -5,14 +5,9 @@ param(
   [string]$InstallDir = $env:AI_DELIVERY_INSTALL_DIR,
   [string]$DownloadBaseUrl = $env:AI_DELIVERY_DOWNLOAD_BASE_URL,
   [string]$InitTargetRepo = $env:AI_DELIVERY_INIT_TARGET_REPO,
-  [string]$UpgradeInitTargetRepo = $env:AI_DELIVERY_UPGRADE_INIT_TARGET_REPO,
-  [ValidateSet("claude","cursor","codex","all")]
-  [string]$Ide = $env:AI_DELIVERY_IDE
+  [string]$UpgradeInitTargetRepo = $env:AI_DELIVERY_UPGRADE_INIT_TARGET_REPO
 )
 
-if ([string]::IsNullOrWhiteSpace($Ide)) {
-  $Ide = "all"
-}
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -172,7 +167,7 @@ function Get-ArchiveName {
 
 function Get-FileHashValue {
   param([string]$Path)
-  return (Get-FileHash -Path $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+  return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 
 function Verify-Checksum {
@@ -182,66 +177,15 @@ function Verify-Checksum {
   )
 
   $archiveName = Split-Path -Leaf $ArchivePath
-  $line = Select-String -Path $ChecksumsPath -SimpleMatch "  $archiveName" | Select-Object -First 1
+  $line = Select-String -LiteralPath $ChecksumsPath -SimpleMatch "  $archiveName" | Select-Object -First 1
   if ($null -eq $line) {
-    Write-Log "No checksum entry found for $archiveName; skipping verification."
-    return
+    throw "No checksum entry found for $archiveName"
   }
 
   $expected = ($line.Line -split '\s+')[0].ToLowerInvariant()
   $actual = Get-FileHashValue -Path $ArchivePath
   if ($expected -ne $actual) {
     throw "Checksum verification failed for $archiveName"
-  }
-}
-
-function Install-UserSkills {
-  $skillsDir = Join-Path $HOME "ai-delivery-kit"
-  $skillsSrc = Join-Path $skillsDir ".agents\skills"
-
-  if (Test-Path (Join-Path $skillsDir ".git")) {
-    Write-Log "Updating skills repo at $skillsDir"
-    try {
-      git -C $skillsDir pull --ff-only | Out-Null
-    } catch {
-      Write-Warning "git pull --ff-only failed; continuing with existing checkout"
-    }
-  } else {
-    Write-Log "Cloning skills repo to $skillsDir"
-    git clone "https://github.com/s-charvin/ai-delivery-kit.git" $skillsDir
-  }
-
-  if (-not (Test-Path $skillsSrc)) {
-    Write-Log "Skills source not found — skipping IDE symlinks"
-    return
-  }
-
-  $ides = if ($Ide -eq "all") { @("claude", "cursor", "codex") } else { @($Ide) }
-
-  foreach ($ideName in $ides) {
-    $ideSkillsDir = Join-Path $HOME ".$ideName\skills"
-    New-Item -ItemType Directory -Force -Path $ideSkillsDir | Out-Null
-
-    foreach ($skillDir in Get-ChildItem -Path $skillsSrc -Directory) {
-      $skillMd = Join-Path $skillDir.FullName "SKILL.md"
-      if (-not (Test-Path $skillMd)) { continue }
-
-      $target = Join-Path $ideSkillsDir $skillDir.Name
-      if (Test-Path $target) {
-        Remove-Item -Recurse -Force $target
-      }
-
-      New-Item -ItemType Junction -Path $target -Target $skillDir.FullName -Force | Out-Null
-      Write-Log "[$ideName] Linked: $($skillDir.Name)"
-    }
-  }
-
-  Write-Log "Skills installed — each IDE symlinks to $skillsSrc"
-  Write-Log "Update skills later with: ai-delivery upgrade"
-
-  if ($Ide -eq "codex" -or $Ide -eq "all" -or [string]::IsNullOrWhiteSpace($Ide)) {
-    Write-Log "Codex note: project hooks need [features] hooks = true (ai-delivery init writes .codex/config.toml)."
-    Write-Log "Docs: https://developers.openai.com/codex/hooks"
   }
 }
 
@@ -255,12 +199,14 @@ function Invoke-PostInstallInit {
   if (-not [string]::IsNullOrWhiteSpace($InitTargetRepo)) {
     Write-Log "Running: $TargetPath init $InitTargetRepo"
     & $TargetPath init $InitTargetRepo
+    if ($LASTEXITCODE -ne 0) { throw "Project initialization failed" }
     return
   }
 
   if (-not [string]::IsNullOrWhiteSpace($UpgradeInitTargetRepo)) {
     Write-Log "Running: $TargetPath init --upgrade $UpgradeInitTargetRepo"
     & $TargetPath init --upgrade $UpgradeInitTargetRepo
+    if ($LASTEXITCODE -ne 0) { throw "Explicit project resource refresh failed" }
   }
 }
 
@@ -279,15 +225,11 @@ try {
   Write-Log "Downloading $archiveName from $sourceDescription"
   Download-ReleaseAsset -TempDir $tempDir -AssetName $archiveName -OutFile $archivePath
 
-  try {
-    Download-ReleaseAsset -TempDir $tempDir -AssetName "checksums.txt" -OutFile $checksumsPath
-    Verify-Checksum -ArchivePath $archivePath -ChecksumsPath $checksumsPath
-  } catch {
-    Write-Log "Could not verify checksums: $($_.Exception.Message)"
-  }
+  Download-ReleaseAsset -TempDir $tempDir -AssetName "checksums.txt" -OutFile $checksumsPath
+  Verify-Checksum -ArchivePath $archivePath -ChecksumsPath $checksumsPath
 
   Expand-Archive -LiteralPath $archivePath -DestinationPath $extractDir -Force
-  $binaryPath = Get-ChildItem -Path $extractDir -Recurse -Filter "ai-delivery.exe" | Select-Object -First 1
+  $binaryPath = Get-ChildItem -LiteralPath $extractDir -Recurse -Filter "ai-delivery.exe" | Select-Object -First 1
   if ($null -eq $binaryPath) {
     throw "Extracted archive did not contain ai-delivery.exe"
   }
@@ -296,15 +238,26 @@ try {
   if (Test-Path -LiteralPath $targetPath) {
     Write-Log "Replacing existing ai-delivery at $targetPath"
   }
-  Copy-Item -LiteralPath $binaryPath.FullName -Destination $targetPath -Force
+  $stagedPath = Join-Path $InstallDir (".ai-delivery-" + [Guid]::NewGuid().ToString("N") + ".exe")
+  try {
+    Copy-Item -LiteralPath $binaryPath.FullName -Destination $stagedPath
+    & $stagedPath version | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Downloaded program cannot run; existing installation is unchanged" }
+    if (Test-Path -LiteralPath $targetPath) {
+      [System.IO.File]::Replace($stagedPath, $targetPath, $null)
+    } else {
+      [System.IO.File]::Move($stagedPath, $targetPath)
+    }
+  } finally {
+    if (Test-Path -LiteralPath $stagedPath) { Remove-Item -LiteralPath $stagedPath -Force }
+  }
 
   Write-Log "Installed ai-delivery to $targetPath"
   Write-Log "Add $InstallDir to PATH if needed."
 
-  Install-UserSkills
 
   Write-Log "Run: ai-delivery init C:\path\to\repo"
-  Write-Log "Update skills later: ai-delivery upgrade"
+  Write-Log "Resources come from this program. Refresh projects explicitly with ai-delivery init --upgrade."
 
   Invoke-PostInstallInit -TargetPath $targetPath
 } finally {

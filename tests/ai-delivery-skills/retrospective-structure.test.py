@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from archive_fixture import govern_existing
 
 ROOT = Path(__file__).resolve().parents[2]
 spec = importlib.util.spec_from_file_location('retrospective_archive', ROOT / 'scripts/archive-subrequirement.py')
@@ -25,6 +26,9 @@ class StructureTests(unittest.TestCase):
         self.addCleanup(self.tmp.cleanup)
         self.req = Path(self.tmp.name) / '.ai-delivery/requirements/req-check'
         self.req.mkdir(parents=True)
+        meta=Path(self.tmp.name)/'.ai-delivery/meta';meta.mkdir()
+        (meta/'project-binding.json').write_text('{"version":3,"layout":{}}')
+        (meta/'workflow-policy.json').write_text('{"version":4,"verification_contract_version":2}')
         (self.req / 'sub-requirements/SR-001').mkdir(parents=True)
         self.ledger = self.req / 'retrospective.md'
         self.valid = MARKER + '\n' + HEADER + ROW + END + DETAIL
@@ -39,6 +43,7 @@ class StructureTests(unittest.TestCase):
             archive.preflight_retrospective_index(self.req, 'req-check', archive.datetime.datetime(2026, 9, 2), None, False)
         status = self.req / 'status.json'
         status.write_text('{"requirement_id":"req-check","sub_requirements":{"SR-001":{"status":"merged"}}}')
+        govern_existing(self.req)
         before = status.read_bytes()
         result = subprocess.run([sys.executable, str(ROOT / 'scripts/archive-subrequirement.py'), '--req-root', str(self.req), '--subreq', 'SR-001', '--no-delivery-report', '--now', '2026-09-02T12:00:00+00:00'], capture_output=True, text=True)
         self.assertNotEqual(result.returncode, 0)

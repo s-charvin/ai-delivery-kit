@@ -54,8 +54,7 @@ later from the current contract and codebase.
 1. Preserve final project analysis and test scope. Validate and reuse matching evidence under the Stage 4 reuse rules; run missing or invalidated checks, not the same successful suite again merely for finish.
 2. Complete scope-appropriate visual and motion acceptance for enabled UI truth.
 3. Write localized `verification.md` with the required stable markers.
-4. Rebase without merge commits, integrate, and set `merged` only while all
-   gates remain valid.
+4. Complete the user's authorized integration in the chosen workspace; do not require a branch or rebase for work already on the chosen checkout. Do not automatically commit, push, or publish. Set `merged` only while current CLI checks and applicable gates remain valid.
 
 ## Traceability and boundaries
 

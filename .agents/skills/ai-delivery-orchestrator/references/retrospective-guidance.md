@@ -6,6 +6,12 @@ architecture, integration, tests, and tools under the same rule; no category
 has collection priority. Normal edits and successful execution are not problems.
 This ledger adds no stage, persona, product specification, or approval chain.
 
+Maintain stable knowledge through the [quality loop](delivery-quality-loop.md)
+in one registered, writable project source. Current behavior and unconfirmed
+hypotheses do not automatically become mandatory rules. Source successful
+patterns in existing design/decisions without inventing RETs. Maintenance
+authority is not a waiver: never lower standards to close a current finding.
+
 ## Admission is separate from reuse
 
 Every problem explicitly raised by the user must be represented, including a
@@ -146,7 +152,7 @@ architecture constraints, product requirements, or unconfirmed external facts.
 ## Archive behavior and limits
 
 The ledger is required even with no known problems. Keep exactly one
-`<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker, updated after
+`<!-- ai-delivery-retrospective:reviewed-at:<reviewed-at> -->` marker, updated after
 final source-to-RET review; its calendar date must match archive. A genuinely
 empty ledger is valid. Never use an empty ledger to bypass known findings.
 
@@ -164,3 +170,5 @@ corrections remain in the ledger; nonqualifying rows create no index entries.
 Keep the full historical source next to the requirement, with no archive copy.
 Once archived, its ledger and index entry are read-only; later discoveries use
 a new requirement and may link the earlier problem.
+
+Use `YYYY-MM-DD` (for example `2026-11-05`) or RFC3339Nano with a timezone (for example `2026-11-05T12:00:00+08:00`). Datetimes without a timezone, single-digit hours, comma fractions, and offsets such as `+24:00` are invalid. The marker’s own calendar date must match the archive date.

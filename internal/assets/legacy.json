@@ -1,0 +1,74 @@
+[
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/delivery_context.py",
+    "sha256": "8cf61e62b9c3e91628cc02d6d5efe2c6bf685a8ad91ef536335e52d72ae31f82"
+  },
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/design_contract.py",
+    "sha256": "f9b9921e8e0b13edc3774e1487129979b0f52d78f67dbdbf3f6d11fa1885599b"
+  },
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/evidence_identity.py",
+    "sha256": "4d0c5ce8e8b3a18b018c5197ffd8d4fa150acaae2f158311f3a45f99e58fae72"
+  },
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/layout.py",
+    "sha256": "7b690668551e69e930dd653d41e4ea34e6d11b6fb6a3206a26aec6e7f05eaaf7"
+  },
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py",
+    "sha256": "ce5fef79dc6aaaf8c172a9c53ecbf163d87cc315e51b43a3cff25620beedde4f"
+  },
+  {
+    "source": ".agents-zh/skills/ai-delivery-orchestrator/scripts/verification_contract.py",
+    "sha256": "b5a453a2e73ef56be07de2b68083bf0bd7efebdb959f51a5dae2849457b7a8dd"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/delivery_context.py",
+    "sha256": "8cf61e62b9c3e91628cc02d6d5efe2c6bf685a8ad91ef536335e52d72ae31f82"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/design_contract.py",
+    "sha256": "f9b9921e8e0b13edc3774e1487129979b0f52d78f67dbdbf3f6d11fa1885599b"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/evidence_identity.py",
+    "sha256": "4d0c5ce8e8b3a18b018c5197ffd8d4fa150acaae2f158311f3a45f99e58fae72"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/layout.py",
+    "sha256": "7b690668551e69e930dd653d41e4ea34e6d11b6fb6a3206a26aec6e7f05eaaf7"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py",
+    "sha256": "ce5fef79dc6aaaf8c172a9c53ecbf163d87cc315e51b43a3cff25620beedde4f"
+  },
+  {
+    "source": ".agents/skills/ai-delivery-orchestrator/scripts/verification_contract.py",
+    "sha256": "b5a453a2e73ef56be07de2b68083bf0bd7efebdb959f51a5dae2849457b7a8dd"
+  },
+  {
+    "source": "scripts/archive-subrequirement.py",
+    "sha256": "4ddb07ba2d6b6aefab8eff4e3db6464802f24f82ab897342e6ebf2c87eec5aa0"
+  },
+  {
+    "source": "scripts/validate-artifact-layout.py",
+    "sha256": "091cf7838e90a742b51850eaee92bb05a2f49569c8ff8bc6fd8840bc848ebd17"
+  },
+  {
+    "source": "scripts/validate-delivery-status.py",
+    "sha256": "dfd5bbfe46ff14b8b634bcca7479cb911a9e7ac6023b238e449f84e7893b7caa"
+  },
+  {
+    "source": "scripts/validate-project-ai-delivery-skills.sh",
+    "sha256": "bd7ccb253b0124d7f904d48ff31595773f8c675b3cb59252cdc62e80b40bc203"
+  },
+  {
+    "source": "tests/ai-delivery-skills/api-nonblocking-policy.test.sh",
+    "sha256": "13901c4b754c7e389e34f8d89ed1e327a99bdae8b1f7d1fba8a909ef734fdc68"
+  },
+  {
+    "source": "tests/ai-delivery-skills/validate-sources.test.sh",
+    "sha256": "88a66cc76d13b2742233d975211c69cc35b59415fbc179b1b937d757bd1e0c54"
+  }
+]

@@ -132,6 +132,11 @@ class MotionReviewTest {
 在宿主拥有的资源内；出现其他待执行任务时应定位原因。此测试设施处理不代表
 已经验收真实系统返回手势。
 
-使用业务项目实际模块/variant 的测试命令。在 kit 源码中运行
-`bash scripts/test-android-view.sh` 可执行无需模拟器的样例测试和 lint；
-该脚本与工程不随 `init` 安装到业务项目。
+使用业务项目实际模块/variant 的测试命令。从 kit 源码根目录先进入参考工程，再执行无需模拟器的样例测试和 lint：
+
+```sh
+cd tests/fixtures/android-view
+./gradlew :app:testDebugUnitTest :app:lintDebug
+```
+
+该 wrapper 与工程不随 `init` 安装到业务项目。参考工程需要宿主 Android SDK 与 Gradle 工具链。

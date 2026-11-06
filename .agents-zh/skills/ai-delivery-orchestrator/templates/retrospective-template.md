@@ -17,6 +17,8 @@ ID、状态值、路径、命令、时间戳、哈希、锚点和占位符保持
 
 <!-- ai-delivery-retrospective:reviewed-at:<reviewed-at> -->
 
+填写 `YYYY-MM-DD`（例如 `2026-11-05`）或带时区 RFC3339Nano（例如 `2026-11-05T12:00:00+08:00`）。不接受无时区日期时间、单数字小时、逗号小数或 `+24:00` 等偏移。标记自身的日历日期必须与归档日期一致。
+
 ### 1.1 问题地图
 
 <!-- ai-delivery-retrospective:problem-index:v2 -->

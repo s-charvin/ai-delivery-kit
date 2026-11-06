@@ -1,0 +1,28 @@
+{
+  "source_sha256": {
+    "verification_contract.py": "b5a453a2e73ef56be07de2b68083bf0bd7efebdb959f51a5dae2849457b7a8dd",
+    "evidence_identity.py": "4d0c5ce8e8b3a18b018c5197ffd8d4fa150acaae2f158311f3a45f99e58fae72"
+  },
+  "cases": [
+    {
+      "kind": "input",
+      "input_json": "[{\"path\":\"中文.txt\",\"resolved_path\":\"中文.txt\",\"sha256\":\"7e1bea5265e68e6763fe521a5576b856cc40f704ff67510d4a3f3acc2926898b\"},{\"path\":\"链接.txt\",\"resolved_path\":\"中文.txt\",\"sha256\":\"7e1bea5265e68e6763fe521a5576b856cc40f704ff67510d4a3f3acc2926898b\"},{\"path\":\"缺失.txt\",\"resolved_path\":\"缺失.txt\",\"sha256\":null}]",
+      "sha256": "61d9546a86bef0e35811b1266ea58f4ccf8354b641e19126bfed14326ee3a6cd"
+    },
+    {
+      "kind": "review",
+      "input_json": "{\"checks\":[{\"details\":{\"big\":9007199254740993,\"escape\":\"\\\\\\n\",\"float\":1.0,\"int\":1,\"negative_zero\":-0.0,\"null\":null,\"unicode\":\"中文<>&  \"},\"id\":\"native-test\",\"result\":\"passed\"}],\"inputs\":[{\"path\":\"中文.txt\",\"resolved_path\":\"中文.txt\",\"sha256\":\"7e1bea5265e68e6763fe521a5576b856cc40f704ff67510d4a3f3acc2926898b\"},{\"path\":\"链接.txt\",\"resolved_path\":\"中文.txt\",\"sha256\":\"7e1bea5265e68e6763fe521a5576b856cc40f704ff67510d4a3f3acc2926898b\"},{\"path\":\"缺失.txt\",\"resolved_path\":\"缺失.txt\",\"sha256\":null}],\"reviews\":[{\"ignored\":true}],\"subreq_id\":\"SR-001\",\"version\":2}",
+      "sha256": "b783b92a872e82695a668ce414d0955fc2aeec0fe759a8c67df83d3f823155c3"
+    },
+    {
+      "kind": "review",
+      "input_json": "{\"version\":2}",
+      "sha256": "e7006f7ac24a0e833e6bf38a5aa93fcc2a961ac77f3602a5ed0bc9784a7aeef9"
+    },
+    {
+      "kind": "entry",
+      "input_json": "{\"archive_evidence\":{\"ignored\":true},\"details\":{\"big\":9007199254740993,\"escape\":\"\\\\\\n\",\"float\":1.0,\"int\":1,\"negative_zero\":-0.0,\"null\":null,\"unicode\":\"中文<>&  \"},\"id\":\"SR-001\",\"status\":\"merged\",\"ui_truth_mode\":\"none\"}",
+      "sha256": "737b05fc58a4de6430e53ab4e5774afb8a0571d09575b3609ba7fb582619edd5"
+    }
+  ]
+}

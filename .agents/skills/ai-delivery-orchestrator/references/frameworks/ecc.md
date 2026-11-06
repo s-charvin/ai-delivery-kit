@@ -15,7 +15,7 @@ ECC evolves quickly. Before first use in a run, list the locally available ECC c
 |--------|-----------|
 | `solution-design` | ECC planning/architecture agents or plan commands — seed with `requirement-slice.md`, enabled UI truth host component / v3 profile-state-scenario-scope `ui-truth-index.json`, and API docs |
 | `implement` | One inline implementer by default; use ECC methods/hooks, and a fresh-context reviewer for the coherent batch |
-| `finish` | ECC review/verification commands before rebase-merge |
+| `finish` | ECC review/verification methods before the user's authorized integration |
 
 ## Artifact containment
 

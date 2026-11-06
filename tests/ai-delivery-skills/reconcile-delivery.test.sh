@@ -94,10 +94,11 @@ def reconcile(req: Path, values: dict, *, checkpoint=None, schema="2.0") -> dict
         ),
         encoding="utf-8",
     )
-    return mod.reconcile(path, req, validator_script=req / "missing-validator.py")
+    (req / "dependency-graph.json").write_text(json.dumps({"nodes": {sid: {"depends_on": []} for sid in values}}))
+    return mod.reconcile(path, req, validator_script=root / "scripts/validate-delivery-status.py")
 
 
-# Legacy terminal histories remain readable and closable without invented design evidence.
+# Unsupported terminal history is rejected without fabricating current evidence.
 fixture_root = root / "tests/ai-delivery-skills/fixtures/reconcile-delivery"
 for name, mode, action in (
     ("all-merged", "closing", "archive"),
@@ -106,12 +107,13 @@ for name, mode, action in (
 ):
     status = fixture_root / name / "status.json"
     result = mod.reconcile(status, status.parent)
-    assert result["runtime_mode"] == mode, result
-    assert result["next_action"] == action, result
+    assert result["runtime_mode"] == "blocker_recovery", result
+    assert result["next_action"] == "none", result
+    assert any(d["category"]=="compatibility" for d in result["diagnostics"]),result
 
 with tempfile.TemporaryDirectory() as td:
     req = Path(td)
-    result = mod.reconcile(req / "missing.json", req)
+    result = mod.reconcile(req / "status.json", req)
     assert result["runtime_mode"] == "bootstrap", result
 
 with tempfile.TemporaryDirectory() as td:
@@ -147,13 +149,15 @@ with tempfile.TemporaryDirectory() as td:
     ready = make_ready(req, "SR-001")
     status_path = req / "status.json"
     reconcile(req, {"SR-001": ready}, checkpoint="CP-001")
-    result = mod.reconcile(status_path, req, validator_script=req / "missing-validator.py")
-    assert result["next_action"] == "implement", result
-    assert result["checkpoint"] is None, result
+    result = mod.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
+    assert result["next_action"] == "none", result
+    assert result["runtime_mode"] == "blocker_recovery", result
+    assert any(d["category"]=="compatibility" for d in result["diagnostics"]),result
+    reconcile(req,{"SR-001":ready})
 
     design = req / "sub-requirements/SR-001/design.md"
     design.write_text(design.read_text(encoding="utf-8") + "\nchanged\n", encoding="utf-8")
-    result = mod.reconcile(status_path, req, validator_script=req / "missing-validator.py")
+    result = mod.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
     assert result["next_action"] == "solution-design", result
     assert result["checkpoint"] is None, result
 
@@ -168,12 +172,13 @@ with tempfile.TemporaryDirectory() as td:
     }
     result = reconcile(req, {"SR-001": legacy}, schema="1.1")
     assert result["runtime_mode"] == "blocker_recovery", result
-    assert any("migration to schema 2.0" in item for item in result["errors"]), result
+    assert any("_schema" in item and "2.0" in item and "--reset-data" in item for item in result["errors"]), result
 
 # Dependency graph is authoritative; per-slice dependency.json is legacy fallback.
 with tempfile.TemporaryDirectory() as td:
     req = Path(td)
     (req / "sub-requirements/SR-B").mkdir(parents=True)
+    (req / "status.json").write_text(json.dumps({"_schema": "2.0", "sub_requirements": {"SR-A": entry("draft"), "SR-B": entry("draft")}}))
     (req / "dependency-graph.json").write_text(
         json.dumps({"nodes": {"SR-A": {"depends_on": []}, "SR-B": {"depends_on": ["SR-A"]}}}),
         encoding="utf-8",

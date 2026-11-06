@@ -192,6 +192,8 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 
 ## 评审循环（闭环）
 
+已审阅设计中登记的方法，可按[可选原生执行采集](delivery-quality-loop.md#可选原生执行采集)通过 `ai-delivery run` 取得真实 check/inputs。
+
 每个完整实现批次通过独立评审收口。小单元内部保留快速测试反馈，不逐单元另设审查门禁。批次围绕一个可观察行为或状态 owner，保持调用链完整且可整体复核，不无限积累无关改动。账号隔离、持久化、并发或公共边界变化在依赖实现前提前评审边界，完成后仍审查集成结果。
 
 ```text
@@ -269,7 +271,7 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 
 归档前从原始反馈／发现反查具体RET案例及处置状态，遗漏直接整合正文，再更新唯一reviewed-at；结构校验不能证明语义完整性。
 
-所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `scripts/archive-subrequirement.py` 原位推进状态至 `archived`，不得生成快照或复制 canonical 产物；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
+所有子需求均为 `merged` 后，reconcile 进入 `runtime_mode=closing`（CP-ARCHIVE）。执行最后一条归档命令前，先用用户当前对话语言实例化 `templates/delivery-report-template.md`，删除语言指令注释并保留全部占位符。逐个运行 `ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>` 原位推进状态至 `archived`，不得生成快照或复制 canonical 产物；最后一条命令通过 `--delivery-report-template <path>` 传入准备好的模板。全部子需求均为 `archived` 且已本地化的 `delivery-report.md` 存在后，需求才进入 `completed`。
 
 ## 收尾 / PR
 
@@ -287,3 +289,11 @@ fallback，也不要加兼容 shim。临时假设或猜测（endpoint、token �
 | Claude / Codex / 手动 | 开 PR、盯 CI、处理评审、重跑项目校验直至通过 |
 
 babysit 与 split-to-prs 为 handoff 推荐，非硬门禁。
+
+## 规范上下文与质量闭环
+
+开工、恢复、阶段/范围变化和独立评审前，读取并执行 [质量闭环](delivery-quality-loop.md)。
+使用同一只读上下文入口；新 policy v4 的 verification v2 绑定当前输入、原生结果与新鲜上下文评审。
+区分知识、已确认规范及任务决定；证据无效先修取证，真实失败定向纠错，沿用三轮预算。
+已登记 sources 且 writable 的规范允许在授权范围维护，导入默认只读，不为通过检查自行降标。
+不引入 Trellis/Helix 的第二任务状态、自动提交、逐单元人审或无限循环。

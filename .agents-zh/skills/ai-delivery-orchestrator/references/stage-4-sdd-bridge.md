@@ -97,3 +97,11 @@ design_ready → in_dev → [visual_acceptance_passed] → merged
 ```
 
 `none` / `existing` 跳过 `visual_acceptance_passed`。
+
+## 规范上下文与质量闭环
+
+开工、恢复、阶段/范围变化和独立评审前，读取并执行 [质量闭环](delivery-quality-loop.md)。
+使用同一只读上下文入口；新 policy v4 的 verification v2 绑定当前输入、原生结果与新鲜上下文评审。
+区分知识、已确认规范及任务决定；证据无效先修取证，真实失败定向纠错，沿用三轮预算。
+已登记 sources 且 writable 的规范允许在授权范围维护，导入默认只读，不为通过检查自行降标。
+不引入 Trellis/Helix 的第二任务状态、自动提交、逐单元人审或无限循环。

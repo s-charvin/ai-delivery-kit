@@ -265,6 +265,15 @@ record and must never be written as a confirmed fact.
 
 ## Review loop (closed loop)
 
+For methods registered in the reviewed design, see [optional native execution capture](delivery-quality-loop.md#optional-native-execution-capture) to obtain real check/inputs via `ai-delivery run`.
+
+Apply the [context and quality loop](delivery-quality-loop.md) for evidence
+validity, finding disposition, and verification v2. Repair capture for `invalid`
+evidence; fix implementation for valid `failed` checks. Bind native results and
+review to actual inputs, then recheck affected evidence after changes. Never
+lower expectations to pass. Retain the following budget, batch ownership, and
+independent review rules without adding a Helix state machine.
+
 Each coherent implementation batch closes through independent review, regardless of framework tier. Small units keep fast test feedback without a separate reviewer gate per unit. A batch follows one observable behavior or state owner, preserves complete wiring, and remains small enough to review. Account isolation, persistence, concurrency, or public-boundary changes receive an early boundary review before dependent work, plus integrated review at completion.
 
 ```
@@ -359,7 +368,7 @@ Before archive, reverse-check known original feedback and findings against RET
 cases and dispositions, integrate omissions, then update the sole reviewed-at
 marker. Structural archive validation cannot certify semantic completeness.
 
-When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `scripts/archive-subrequirement.py` per subreq to update status to `archived` in place; it must not create a snapshot or copy canonical artifacts. Pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
+When every sub-requirement is `merged`, reconcile enters `runtime_mode=closing` (CP-ARCHIVE). Before the final archive command, instantiate `templates/delivery-report-template.md` in the user's current conversation language, remove its language instruction comment, and retain all placeholders. Run `ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>` per subreq to update status to `archived` in place; it must not create a snapshot or copy canonical artifacts. Pass the prepared template to the final command with `--delivery-report-template <path>`. The requirement becomes `completed` only once all subreqs are `archived` and the localized `delivery-report.md` exists.
 
 ## Finishing / PR
 

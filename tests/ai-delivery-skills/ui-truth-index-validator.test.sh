@@ -51,6 +51,9 @@ ONE_FRAME_GIF = bytes.fromhex(
 
 with tempfile.TemporaryDirectory(prefix="ui-truth-index-validator.") as td:
     repo = Path(td) / "repo"
+    meta=repo/".ai-delivery/meta";meta.mkdir(parents=True)
+    (meta/"project-binding.json").write_text('{"version":3,"layout":{}}')
+    (meta/"workflow-policy.json").write_text('{"version":4,"verification_contract_version":2,"context":{"sources":[]}}')
     req_root = repo / ".ai-delivery" / "requirements" / "REQ-UI"
     subreq = req_root / "sub-requirements" / "SR-001"
     contracts = subreq / "contracts"
@@ -415,7 +418,7 @@ not_applicable
 
     wrong_schema = copy.deepcopy(valid_index)
     wrong_schema["schema_version"] = 2
-    expect_fail("wrong schema version", wrong_schema, "schema_version must equal 3")
+    expect_fail("wrong schema version", wrong_schema, "schema_version")
 
     missing_design_revision = copy.deepcopy(valid_index)
     del missing_design_revision["design_source"]["revision"]
@@ -985,7 +988,7 @@ not_applicable
     status["sub_requirements"]["SR-001"]["no_design_client"] = True
     (repo / ".ai-delivery" / "meta").mkdir(parents=True, exist_ok=True)
     (repo / ".ai-delivery" / "meta" / "project-binding.json").write_text(
-        json.dumps({"coordination": {"participation": "no_design_client"}}),
+        json.dumps({"version":3,"coordination": {"participation": "no_design_client"}}),
         encoding="utf-8",
     )
     (req_root / "status.json").write_text(
@@ -999,7 +1002,7 @@ not_applicable
 
     # Every indexed visual scenario must be referenced by solution design; a
     # missing reference is a stale design artifact, not a harmless omission.
-    (repo / ".ai-delivery" / "meta" / "project-binding.json").unlink(missing_ok=True)
+    (repo / ".ai-delivery" / "meta" / "project-binding.json").write_text('{"version":3,"layout":{}}')
     set_mode(ui_bearing=True, ui_truth_mode="figma")
     (subreq / "design.md").write_text(
         design_contract_text("default-phone-extra loading-phone-extra reduced-motion-extra"),

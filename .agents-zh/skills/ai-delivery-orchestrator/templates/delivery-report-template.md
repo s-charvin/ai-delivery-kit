@@ -22,7 +22,6 @@
 ## 验证摘要
 
 - 每个子需求的 `verification.md` 已签署，并包含评审轮次、验证命令与结果、签署对应的三个必备语言无关标记。
-- `validate-artifact-layout.py --verify-archive` 仅在旧仓库存在历史快照时额外校验；当前原位归档不要求快照。
 
 ## 变更与后续
 

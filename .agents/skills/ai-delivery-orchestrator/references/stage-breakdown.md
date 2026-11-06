@@ -22,11 +22,11 @@ For supplied Figma sources, run [provider selection and setup](../../ui-truth-ma
 
 ## Run `requirement-breakdown`
 
-Feed the requirement document and supporting-source paths. It produces sub-requirements with `requirement-slice.md`, `dependency.json`, and the artifact set.
+Feed the requirement document and supporting-source paths. It produces sub-requirements with `requirement-slice.md`, the requirement-level canonical `dependency-graph.json` resolved through binding, and the artifact set. Do not create per-slice `dependency.json`.
 
 ## After completion
 
-- For each sub-requirement: if scope has complete source_ref coverage, normalized statements, and clear dependencies → set `split_ready`. If uncertain → leave `draft`.
+- Initially create each sub-requirement as `draft`. Complete source_ref coverage, normalized statements, dependencies and the light audit below before requesting `split_ready`; unresolved scope stays `draft`.
 - Set `ui_truth_mode` on each subreq entry during the capability audit: `none` for no visible surface, `existing` for behavior/semantic changes on an existing visual surface, `runtime-baseline` for new visible UI without stable Figma truth, or `figma` when stable Figma evidence exists.
 - Set `state_flow_required=true` only when the slice introduces or materially changes complex guards, concurrency, stale-result handling, retry/cancel/idempotency, persistence/recovery, or cross-component/cross-screen state ownership. MVI/UDF/Redux/Reducer/Store terminology and ordinary loading/success/failure phases do not trigger it by themselves. Static surfaces and local controls without business rules keep it `false`.
 - Set `user_decision_required=true` when the current design version contains a material product, behavior, resource, or experience choice whose authority belongs to the user because governed evidence cannot resolve it. Technical complexity, framework selection, and state-flow depth do not trigger it. Name each decision in `design.md`. The field remains `true` after approval for that design version; a current hash-bound `design_review.review_mode=human` records that the decision is resolved. Set it to `false` only when the current design version contains no user-authority decision.
@@ -36,7 +36,7 @@ Feed the requirement document and supporting-source paths. It produces sub-requi
 
 ## Light audit checklist (inline — do not run the `solution-design` action)
 
-For each `split_ready` sub-requirement, main session outputs four checks:
+Before advancing each `draft` sub-requirement to `split_ready`, main session outputs four checks:
 
 1. **Gaps** — missing critical business facts?
 2. **Conflicts** — contradictions with `global-rules.md` or other slices?
@@ -50,6 +50,18 @@ Outcomes:
 - Critical gap → `blocked_missing_requirement`
 - Critical conflict → `blocked_requirement_conflict`
 - No critical issues → append audit findings to `notes`, proceed
+
+After the audit and required facts are complete, use the controlled transition:
+
+```sh
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent analyze --to split_ready --format json
+ai-delivery advance --project . --req <req-id> --subreq <subreq-id> --to split_ready --expected-snapshot <snapshot_id-from-that-check> --format json
+```
+
+Use the actual `snapshot_id` returned by a successful check for that slice and
+target. If check rejects the facts, address its diagnostics and check again.
+Never hand-edit an existing draft to `split_ready` to bypass this transition.
+`analysis` is a context role, not this intent; `check --help` lists valid intents.
 
 ## Requirement conflicts and questions
 

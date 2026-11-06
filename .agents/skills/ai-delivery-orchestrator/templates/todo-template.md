@@ -12,16 +12,15 @@ When instantiating this template, write every human-readable heading, label, and
 - source_of_truth: `.ai-delivery`
 - runtime_mode: `bootstrap`
 - current_checkpoint: `none`
-- last_reconciled_at: `<ISO8601>`
+- last_reconciled_at: `<RFC3339Nano-with-timezone>`
 - next_action: `requirement-breakdown`
 - next_subreq: `<subreq-id>`
 
 ## Reconcile Command
 
-```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery context --project . --req <req-id> --subreq <subreq-id> --role recovery --format json
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent <intent> --to <target-status> --format json
 ```
 
 Run reconcile before trusting this panel on every resume or continue.

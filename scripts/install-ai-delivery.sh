@@ -7,8 +7,6 @@ AI_DELIVERY_INSTALL_DIR="${AI_DELIVERY_INSTALL_DIR:-${HOME}/.local/bin}"
 AI_DELIVERY_DOWNLOAD_BASE_URL="${AI_DELIVERY_DOWNLOAD_BASE_URL:-}"
 AI_DELIVERY_INIT_TARGET_REPO="${AI_DELIVERY_INIT_TARGET_REPO:-}"
 AI_DELIVERY_UPGRADE_INIT_TARGET_REPO="${AI_DELIVERY_UPGRADE_INIT_TARGET_REPO:-}"
-AI_DELIVERY_IDE="${AI_DELIVERY_IDE:-all}"
-AI_DELIVERY_SKILLS_REPO="${AI_DELIVERY_SKILLS_REPO:-https://github.com/s-charvin/ai-delivery-kit.git}"
 AI_DELIVERY_TEMP_DIR=""
 
 usage() {
@@ -22,8 +20,6 @@ Environment overrides:
   AI_DELIVERY_DOWNLOAD_BASE_URL Override release asset base URL for testing or mirrors
   AI_DELIVERY_INIT_TARGET_REPO  Optional repo path to initialize after install
   AI_DELIVERY_UPGRADE_INIT_TARGET_REPO Optional repo path to refresh with 'init --upgrade' after install
-  AI_DELIVERY_IDE               Target IDE(s) for skills: claude, cursor, codex, all. Default: all
-  AI_DELIVERY_SKILLS_REPO       Git URL for skills repo. Default: https://github.com/s-charvin/ai-delivery-kit.git
   GITHUB_TOKEN                  Optional GitHub token used for authenticated downloads
 
 Flags:
@@ -33,7 +29,6 @@ Flags:
   --download-base-url <url>
   --init-target <path>
   --upgrade-init <path>
-  --ide <claude|cursor|codex|all>
   -h, --help
 EOF
 }
@@ -82,18 +77,6 @@ parse_args() {
       --upgrade-init)
         [[ $# -ge 2 ]] || fail "Missing value for --upgrade-init"
         AI_DELIVERY_UPGRADE_INIT_TARGET_REPO=$2
-        shift 2
-        ;;
-      --skip-skills)
-        AI_DELIVERY_SKIP_SKILLS=1
-        shift
-        ;;
-      --ide)
-        [[ $# -ge 2 ]] || fail "Missing value for --ide"
-        case "$2" in
-          claude|cursor|codex|all) AI_DELIVERY_IDE=$2 ;;
-          *) fail "Unknown IDE: $2 (use: claude, cursor, codex, all)" ;;
-        esac
         shift 2
         ;;
       -h|--help)
@@ -338,14 +321,12 @@ verify_checksum() {
   archive_name=$(basename "$archive_path")
   expected_line=$(grep -F "  $archive_name" "$checksums_path" || true)
   if [[ -z "$expected_line" ]]; then
-    log "No checksum entry found for $archive_name; skipping verification."
-    return 0
+    fail "No checksum entry found for $archive_name"
   fi
 
   tool=$(checksum_tool)
   if [[ -z "$tool" ]]; then
-    log "No sha256 tool found; skipping checksum verification."
-    return 0
+    fail "A sha256 checksum tool is required by this optional installer"
   fi
 
   log "Verifying checksum for $archive_name"
@@ -366,74 +347,6 @@ verify_checksum() {
     fail "Checksum verification failed for $archive_name"
   }
   rm -f "$verify_file"
-}
-
-# ---------------------------------------------------------------------------
-# User-level skill installation (clone repo + symlink to IDE dirs)
-# ---------------------------------------------------------------------------
-
-resolve_ides() {
-  case "$AI_DELIVERY_IDE" in
-    all) printf 'claude\ncursor\ncodex\n' ;;
-    claude|cursor|codex) printf '%s\n' "$AI_DELIVERY_IDE" ;;
-    *) fail "Unknown IDE: $AI_DELIVERY_IDE" ;;
-  esac
-}
-
-install_user_skills() {
-  if [[ "${AI_DELIVERY_SKIP_SKILLS:-0}" == "1" ]]; then
-    log "Skipping skill installation (AI_DELIVERY_SKIP_SKILLS=1)"
-    return 0
-  fi
-
-  ensure_cmds git
-
-  local skills_repo_dir="${HOME}/ai-delivery-kit"
-
-  if [[ -d "$skills_repo_dir/.git" ]]; then
-    log "Updating skills repo at $skills_repo_dir"
-    if ! git -C "$skills_repo_dir" pull --ff-only; then
-      warn "git pull --ff-only failed; continuing with existing checkout"
-    fi
-  else
-    log "Cloning skills repo to $skills_repo_dir"
-    git clone "$AI_DELIVERY_SKILLS_REPO" "$skills_repo_dir"
-  fi
-
-  local skills_src="${skills_repo_dir}/.agents/skills"
-  if [[ ! -d "$skills_src" ]]; then
-    warn "Skills source not found at $skills_src — skipping IDE symlinks"
-    return 0
-  fi
-
-  while IFS= read -r ide; do
-    local ide_skills_dir="${HOME}/.${ide}/skills"
-    mkdir -p "$ide_skills_dir"
-
-    for skill_dir in "$skills_src"/*/; do
-      local skill_name
-      skill_name="$(basename "$skill_dir")"
-      [[ -f "$skill_dir/SKILL.md" ]] || continue
-
-      local symlink_path="${ide_skills_dir}/${skill_name}"
-
-      # Remove existing symlink or directory.
-      rm -rf "$symlink_path"
-
-      ln -sfn "$skill_dir" "$symlink_path"
-      log "[$ide] Linked: $skill_name"
-    done
-  done < <(resolve_ides)
-
-  log "Skills installed — each IDE symlinks to $skills_src"
-  log "Update skills later with: ai-delivery upgrade"
-
-  case "$AI_DELIVERY_IDE" in
-    codex|all)
-      log "Codex note: project hooks need [features] hooks = true (ai-delivery init writes .codex/config.toml)."
-      log "Docs: https://developers.openai.com/codex/hooks"
-      ;;
-  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -485,7 +398,7 @@ main() {
   if download_release_asset "checksums.txt" "$checksums_path"; then
     verify_checksum "$archive_path" "$checksums_path"
   else
-    log "Could not download checksums.txt; continuing without checksum verification."
+    fail "Could not download checksums.txt; existing installation is unchanged"
   fi
 
   tar -xzf "$archive_path" -C "$extracted_dir"
@@ -495,17 +408,25 @@ main() {
   if [[ -e "$target_path" ]]; then
     log "Replacing existing ai-delivery at $target_path"
   fi
-  install -m 0755 "$binary_path" "$target_path"
+  local staged_path
+  staged_path=$(mktemp "$AI_DELIVERY_INSTALL_DIR/.ai-delivery.XXXXXX")
+  if ! install -m 0755 "$binary_path" "$staged_path"; then
+    rm -f "$staged_path"
+    fail "Could not stage program; existing installation is unchanged"
+  fi
+  if ! "$staged_path" version >/dev/null; then
+    rm -f "$staged_path"
+    fail "Downloaded program cannot run on this platform; existing installation is unchanged"
+  fi
+  mv -f "$staged_path" "$target_path"
 
   log "Installed ai-delivery to $target_path"
   log "Add $AI_DELIVERY_INSTALL_DIR to PATH if it is not already available:"
   log "  export PATH=\"$AI_DELIVERY_INSTALL_DIR:\$PATH\""
 
-  # Install user-level skills (clone repo + symlinks).
-  install_user_skills
 
   log "Run: ai-delivery init /path/to/repo"
-  log "Update skills later: ai-delivery upgrade"
+  log "Resources come from this program. Refresh each project explicitly: ai-delivery init --upgrade /path/to/repo"
   run_post_install_init "$target_path"
 }
 

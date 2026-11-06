@@ -46,9 +46,6 @@ require_han_content "$DST/ui-truth-mapping/references/framework-adapters/android
 require_han_content "$DST/ai-delivery-orchestrator/references/framework-adapters/android-view.md"
 for rel in \
   ai-delivery-orchestrator/agents/openai.yaml \
-  ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  ai-delivery-orchestrator/scripts/design_contract.py \
-  ai-delivery-orchestrator/scripts/layout.py \
   requirement-breakdown/agents/openai.yaml \
   ui-truth-mapping/agents/openai.yaml \
   ui-truth-mapping/templates/ui-truth-index-template.json
@@ -79,29 +76,25 @@ for tree in "$SRC" "$DST"; do
   if grep -R -Fq 'ui_contract_exempt' "$tree/ai-delivery-orchestrator" \
       --exclude-dir='__pycache__' \
       --exclude='reconcile-delivery.py' \
+      --exclude='layout.py' \
       --exclude='*.pyc'; then
     fail "Deprecated ui_contract_exempt bypass remains outside the explicit rejection guard"
   fi
   if grep -R -Fq 'no_design_client' "$tree/ai-delivery-orchestrator" \
       --exclude-dir='__pycache__' \
       --exclude='reconcile-delivery.py' \
+      --exclude='layout.py' \
       --exclude='*.pyc'; then
     fail "Deprecated no_design_client profile remains outside the explicit rejection guard"
   fi
 done
-grep -Fq 'legacy field ui_contract_exempt is forbidden' \
-  "$SRC/ai-delivery-orchestrator/scripts/reconcile-delivery.py" \
-  || fail "Reconcile must reject ui_contract_exempt explicitly"
-grep -Fq 'no_design_client participation profile is removed' \
-  "$SRC/ai-delivery-orchestrator/scripts/reconcile-delivery.py" \
-  || fail "Reconcile must reject no_design_client explicitly"
 
 # Localized templates
 require_file "$SRC/requirement-breakdown/templates/requirement-slice-template.md"
 require_file "$DST/requirement-breakdown/templates/requirement-slice-template-zh.md"
 
 # Orchestrator reference parity (same filenames, zh tree translated)
-for ref in framework-adaptation.md workspace-policy.md handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md scenario-guidance.md retrospective-guidance.md; do
+for ref in version-upgrade.md framework-adaptation.md workspace-policy.md handoff-table.md stage-breakdown.md stage-ui-truth.md stage-design-and-spec.md stage-4-sdd-bridge.md stage-implementation.md blocker-catalog.md reconcile-rules.md scenario-guidance.md retrospective-guidance.md; do
   require_file "$SRC/ai-delivery-orchestrator/references/$ref"
   require_file "$DST/ai-delivery-orchestrator/references/$ref"
   require_han_content "$DST/ai-delivery-orchestrator/references/$ref"

@@ -68,7 +68,7 @@ with tempfile.TemporaryDirectory() as td:
     current = entry()
     current["design_review"] = review(design)
     assert contract.validate_design_entry(
-        current, sub, status="design_ready", legacy_allowed=False
+        current, sub, status="design_ready"
     ) == []
 
     status_path = req / "status.json"
@@ -83,7 +83,7 @@ with tempfile.TemporaryDirectory() as td:
         encoding="utf-8",
     )
     errors = contract.validate_design_entry(
-        current, sub, status="design_ready", legacy_allowed=False
+        current, sub, status="design_ready"
     )
     assert any("hash does not match" in item for item in errors), errors
     reconciled = reconcile.reconcile(
@@ -97,7 +97,7 @@ with tempfile.TemporaryDirectory() as td:
 
     current["design_review"] = review(design)
     errors = contract.validate_design_entry(
-        current, sub, status="design_ready", legacy_allowed=False
+        current, sub, status="design_ready"
     )
     assert any(
         "state-flow contract requires a Mermaid stateDiagram-v2" in item
@@ -107,7 +107,7 @@ with tempfile.TemporaryDirectory() as td:
     # Review mode follows user authority, not state-flow complexity.
     wrong_mode = {**current, "design_review": review(design, mode="human")}
     errors = contract.validate_design_entry(
-        wrong_mode, sub, status="design_ready", legacy_allowed=False
+        wrong_mode, sub, status="design_ready"
     )
     assert any("requires design_review.review_mode=self" in item for item in errors), errors
 
@@ -144,8 +144,8 @@ with tempfile.TemporaryDirectory() as td:
         "design_approved": True,
     }
     assert contract.validate_design_entry(
-        archived, sub, status="archived", legacy_allowed=True
-    ) == []
+        archived, sub, status="archived"
+    ), "old archived design must not gain an exemption"
 
     active_legacy = {
         "status": "spec_ready",
@@ -171,7 +171,7 @@ with tempfile.TemporaryDirectory() as td:
         check=False,
     )
     assert output.returncode != 0
-    assert "requires migration to schema 2.0" in output.stderr, output.stderr
+    assert "_schema" in output.stderr and "--reset-data" in output.stderr, output.stderr
 
 print("PASS: design state-flow contract")
 PY

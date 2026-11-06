@@ -21,9 +21,6 @@ for skill in ai-delivery-orchestrator requirement-breakdown ui-truth-mapping; do
   copy_identical "$skill/agents/openai.yaml"
 done
 
-copy_identical "ai-delivery-orchestrator/scripts/reconcile-delivery.py"
-copy_identical "ai-delivery-orchestrator/scripts/design_contract.py"
-copy_identical "ai-delivery-orchestrator/scripts/layout.py"
 copy_identical "ui-truth-mapping/templates/ui-truth-index-template.json"
 copy_identical "ui-truth-mapping/references/framework-adapters/android-view/AnimatedViewCapture.kt"
 

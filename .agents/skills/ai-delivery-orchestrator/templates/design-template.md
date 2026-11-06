@@ -1,4 +1,4 @@
-<!-- ai-delivery-meta: {"version":3,"artifact_type":"design-contract","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
+<!-- ai-delivery-meta: {"version":3,"artifact_type":"design-contract","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<RFC3339Nano-with-timezone>","updated_by":"<agent>"} -->
 <!-- ai-delivery-template-language
 When instantiating this template, preserve the ai-delivery-meta comment and its machine keys, replacing only its timestamp and author placeholders. Write every human-readable heading, label, and prose passage in the user's current conversation language. Keep IDs, paths, commands, code symbols, and literal protocol tokens unchanged. Remove this language-instruction comment from the finished artifact.
 
@@ -49,6 +49,10 @@ For each material behavior, summarize the source-backed expectation, forbidden
 outcome, applicable boundary/failure/event-order cases and intended test layer.
 Resolve unknown expectations with the user before implementing affected behavior.
 Keep detailed cases in native tests; this is a coverage summary, not a task list.
+
+Optional: when choosing runner capture, register the actual methods in this
+acceptance section before design review, following [native execution capture](../references/delivery-quality-loop.md#optional-native-execution-capture).
+Otherwise omit that block and keep the applicable external/manual evidence plan.
 
 <!-- ai-delivery:behavior-contract:traceability -->
 ## 5. Traceability

@@ -69,3 +69,35 @@ motion acceptance from static approval or treat omitted items as approved.
 - Implementer:
 - Reviewer:
 - Date:
+
+## Machine-readable evidence (policy v4 / verification v2)
+
+Use the [quality loop](../references/delivery-quality-loop.md) to bind actual
+inputs, native reports, and review digests. Replace placeholders; this file is
+not raw execution output, and an unexecuted check cannot be labeled passed.
+
+<!-- ai-delivery-verification:contract:v2 -->
+```json
+{
+  "version": 2,
+  "subreq_id": "{{subreq_id}}",
+  "inputs": [{"path":"<repo-relative-design-path>","sha256":"<actual-sha256>"}],
+  "checks": [{
+    "id":"<native-check-id>", "acceptance_ids":["AC-001"], "required":true,
+    "result":"not_run", "mode":"executed", "command":"<actual-command>",
+    "exit_code":null,
+    "evidence":[{"path":"<native-report-path>","sha256":"<actual-sha256>"}]
+  }],
+  "reviews": [{
+    "reviewer":"<visible-reviewer>", "context":"fresh", "result":"changes_required",
+    "input_sha256":"<input_sha256-from-ai-delivery-evidence-review-digest>",
+    "verification_sha256":"<verification_sha256-from-ai-delivery-evidence-review-digest>", "findings":[]
+  }]
+}
+```
+<!-- /ai-delivery-verification:contract:v2 -->
+
+Inputs also include related production/test/resource/dependency/guideline files,
+not only design. Preserve failures, reuse/manual evidence, and unresolved items;
+the latest applicable review covers the full current scope. Migration does not
+approve old evidence. Fix or remove the guidance link when instantiating.

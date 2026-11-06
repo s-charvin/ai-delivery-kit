@@ -81,13 +81,24 @@ EOF
 if output=$(run_validator "$REQ"); then
   fail "verification missing sign-off marker passed: $output"
 fi
-grep -q 'missing required marker' <<<"$output" || fail "missing marker error: $output"
+grep -q 'verification contract version' <<<"$output" || fail "missing marker error: $output"
 
 cat >>"$SUB/verification.md" <<'EOF'
 <!-- ai-delivery-verification:sign-off -->
 - Revisor: orchestrator
 EOF
-output=$(run_validator "$REQ") || fail "complete verification failed: $output"
+if output=$(run_validator "$REQ"); then
+  fail "marker-only verification must not pass the current protocol: $output"
+fi
+python3 - "$ROOT" "$REQ" <<'PY_CURRENT'
+import sys
+from pathlib import Path
+sys.path.insert(0,str(Path(sys.argv[1])/'tests/ai-delivery-skills'))
+from fixture_helpers import seed_verification
+req=Path(sys.argv[2])
+seed_verification(req,req/'sub-requirements/SR-001')
+PY_CURRENT
+output=$(run_validator "$REQ") || fail "current verification failed: $output"
 
 # Historical terminal schema remains read-only compatible without invented evidence.
 LEGACY="$WORK/legacy"
@@ -106,6 +117,9 @@ cat >"$LEGACY/status.json" <<'EOF'
   }
 }
 EOF
-output=$(run_validator "$LEGACY") || fail "legacy terminal record should remain readable: $output"
+if output=$(run_validator "$LEGACY"); then
+  fail "unsupported terminal history passed: $output"
+fi
+grep -q -- '--reset-data' <<<"$output" || fail "missing upgrade choices: $output"
 
-echo 'PASS: verification gate applies to schema 2.0 and preserves terminal legacy compatibility.'
+echo 'PASS: current verification requires structured evidence and rejects unsupported history.'

@@ -35,7 +35,7 @@ subagent-driven；否则按 native 执行。单元内部执行 TDD，完整批�
 随后完成每个 v3 scenario 的视觉/运行时验收、`verification-before-completion`
 和完整分析/测试覆盖。按 Stage 4 规则核对并复用仍有效证据，只补跑缺失或失效检查；
 这覆盖框架「本条消息必须重新运行」的默认要求，但不得把复用结果冒称新运行。
-`finish` 不重复仍有效的最终验证，仍按项目规则 rebase 且不生成 merge commit。
+`finish` 不重复仍有效的最终验证，尊重用户实际集成选择。用户选择当前 checkout/main 不授权新 branch、worktree、commit、push 或 release；没有独立分支时不强制 rebase。保留无关变更，后续明确用户指令优先。仅在获授权的集成完成且当前 CLI 检查和适用门禁通过后设置 merged；框架完成消息不是授权。
 
 在 `traceability.json` `source_index.design` 记录使用的方法和 canonical
 `design.md` 路径/hash；不生成 `spec_refs`。gate、blocker、status 和 merge

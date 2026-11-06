@@ -1,0 +1,182 @@
+{
+  "schema_version": 3,
+  "ui_truth_mode": "figma",
+  "design_source": {
+    "evidence_origin": "figma",
+    "source_ref": "figma:file-key@rev-2026-08-25",
+    "file_key": "figma-file-key",
+    "root_node": "12:34",
+    "revision": "rev-2026-08-25",
+    "captured_at": "2026-08-25T00:00:00Z"
+  },
+  "units": [
+    {
+      "unit_id": "profile-card",
+      "type": "component",
+      "stack": "flutter",
+      "source_node": "12:40",
+      "dependencies": [],
+      "component_path": "lib/profile_card.dart",
+      "component_sha256": "08d0c6eca62613ba785f45fd826e5e8c85e4dec8461acf0460ea81bf4ba5bfb7",
+      "golden_test": "test/profile_card_golden_test.dart",
+      "golden_test_sha256": "12e3f0ab9f3e6b936c95dcfe87f4f506f6b2e3108281ea220ce1e0360cfe739a",
+      "motion_decision": {
+        "decision": "animated",
+        "verification_mode": "runtime",
+        "preview_path": "test/motion/profile-card-default.gif",
+        "preview_sha256": "9c0b7c3e24b1366a75e2326c0edde0fbd7e5ba4bb8c3f95e96c4266bdb12d397",
+        "confirmation": {
+          "status": "confirmed",
+          "confirmed_at": "2026-08-25T00:09:00Z",
+          "confirmed_by": "user",
+          "reviewed_preview_sha256": "9c0b7c3e24b1366a75e2326c0edde0fbd7e5ba4bb8c3f95e96c4266bdb12d397",
+          "note": "The motion contract is separately approved."
+        }
+      },
+      "profiles": [
+        {
+          "profile_id": "phone-portrait-light",
+          "surface": {
+            "kind": "viewport",
+            "width": 390,
+            "height": 844,
+            "device_pixel_ratio": 3
+          },
+          "orientation": "portrait",
+          "theme": "light",
+          "locale": "en-US",
+          "text_scale": 1.0,
+          "reduced_motion": false,
+          "input_mode": "touch"
+        }
+      ],
+      "states": [
+        {
+          "state_id": "default",
+          "evidence_origin": "figma",
+          "source_ref": "figma:12:41",
+          "source_node": "12:41"
+        }
+      ],
+      "scenarios": [
+        {
+          "scenario_id": "default-phone",
+          "evidence_scope": "component-only",
+          "scope_decision": {
+            "reason": "The component has a deterministic native preview.",
+            "host_capture_supported": false,
+            "uncovered_risk": "Host composition is outside this scenario's acceptance claim."
+          },
+          "state_id": "default",
+          "profile_id": "phone-portrait-light",
+          "dimensions": [
+            "state",
+            "layout",
+            "content",
+            "interaction",
+            "motion",
+            "assets",
+            "theme",
+            "accessibility",
+            "platform",
+            "performance"
+          ],
+          "review_mode": "both",
+          "evidence_origin": "figma",
+          "source_ref": "figma:12:41",
+          "preview_path": "test/goldens/profile-card-default.png",
+          "preview_sha256": "91c02849e39f4ad2d5a74b36e12c3d806d8fbe958903f60350c7e6248be33603",
+          "confirmation": {
+            "status": "confirmed",
+            "confirmed_at": "2026-08-25T00:10:00Z",
+            "confirmed_by": "user",
+            "reviewed_preview_sha256": "91c02849e39f4ad2d5a74b36e12c3d806d8fbe958903f60350c7e6248be33603",
+            "note": "The preview is approved."
+          }
+        }
+      ],
+      "coverage": [
+        {
+          "dimension": "state",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "state is covered by the default scenario."
+        },
+        {
+          "dimension": "layout",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "layout is covered by the default scenario."
+        },
+        {
+          "dimension": "content",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "content is covered by the default scenario."
+        },
+        {
+          "dimension": "interaction",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "interaction is covered by the default scenario."
+        },
+        {
+          "dimension": "motion",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "motion is covered by the default scenario."
+        },
+        {
+          "dimension": "assets",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "assets is covered by the default scenario."
+        },
+        {
+          "dimension": "theme",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "theme is covered by the default scenario."
+        },
+        {
+          "dimension": "accessibility",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "accessibility is covered by the default scenario."
+        },
+        {
+          "dimension": "platform",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "platform is covered by the default scenario."
+        },
+        {
+          "dimension": "performance",
+          "status": "covered",
+          "scenario_ids": [
+            "default-phone"
+          ],
+          "note": "performance is covered by the default scenario."
+        }
+      ]
+    }
+  ]
+}

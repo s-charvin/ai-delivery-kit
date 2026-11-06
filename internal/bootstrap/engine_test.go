@@ -28,10 +28,8 @@ func TestRunWritesGovernedAssetsAndSeedFiles(t *testing.T) {
 		filepath.Join(target, ".agents/skills/ui-truth-mapping/templates/ui-truth-index-template.json"),
 		filepath.Join(target, ".agents/skills/ai-delivery-orchestrator/templates/visual-acceptance-template.json"),
 		filepath.Join(target, ".agents/skills/ai-delivery-orchestrator/references/workspace-policy.md"),
-		filepath.Join(target, ".ai-delivery/scripts/validate-project-ai-delivery-skills.sh"),
-		filepath.Join(target, ".ai-delivery/scripts/validate-delivery-status.py"),
-		filepath.Join(target, ".ai-delivery/tests/ai-delivery-skills/validate-sources.test.sh"),
 		filepath.Join(target, ".ai-delivery/meta/project-binding.json"),
+		filepath.Join(target, ".ai-delivery/meta/kit-assets.json"),
 		filepath.Join(target, ".ai-delivery/meta/workflow-policy.json"),
 	}
 
@@ -190,6 +188,10 @@ func TestRunFailsOnSeededManagedFileConflictWithoutMutatingRepo(t *testing.T) {
 func TestRunUpgradeModeRefreshesManagedAssetsWithoutResettingRequirementData(t *testing.T) {
 	target := t.TempDir()
 	if err := os.Mkdir(filepath.Join(target, ".git"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := (Engine{}).Run(Config{RepoRoot: target, ProjectID: "demo-project"}); err != nil {
 		t.Fatal(err)
 	}
 

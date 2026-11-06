@@ -1,4 +1,4 @@
-<!-- ai-delivery-meta: {"version":3,"artifact_type":"design-contract","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<ISO8601>","updated_by":"<agent>"} -->
+<!-- ai-delivery-meta: {"version":3,"artifact_type":"design-contract","layout_key":"solution_design","canonical_path":"design.md","updated_at":"<RFC3339Nano-with-timezone>","updated_by":"<agent>"} -->
 <!-- ai-delivery-template-language
 实例化时保留 ai-delivery-meta 机器键，仅替换时间戳与作者。语言边界：所有人类可读标题、表格和正文使用用户当前对话语言；机器 key、enum、ID、路径、命令、代码符号和协议 token 保持不变。完成后删除本注释。
 -->
@@ -46,6 +46,10 @@
 每项关键行为概述有来源的预期、禁止结果、适用的边界/失败/事件顺序用例及
 预期测试层。预期不明确时先询问用户，再实现受影响行为。详细用例进入原生
 测试；这里是覆盖摘要，不是任务清单。
+
+可选：选择 runner 采集时，按[可选原生执行采集](../references/delivery-quality-loop.md#可选原生执行采集)
+在本验收节登记真实方法，并在设计评审前固定；否则省略该块，保留适用的
+external/manual 证据方案。
 
 <!-- ai-delivery:behavior-contract:traceability -->
 ## 5. 追踪

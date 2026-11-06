@@ -17,11 +17,11 @@ Android View 切片分类前读取 [Android View 适配](framework-adapters/andr
 
 ## 运行 `requirement-breakdown`
 
-传入需求文档路径和补充来源路径。产出子需求、`requirement-slice.md`、`dependency.json` 及完整产物集。
+传入需求文档路径和补充来源路径。产出子需求、`requirement-slice.md`、由 binding 定位的需求级 canonical `dependency-graph.json` 及完整产物集，不创建各切片的 `dependency.json`。
 
 ## 完成后
 
-- 每个子需求：若 source_ref 覆盖完整、有 normalized statements、依赖清晰 → 设 `split_ready`；不确定 → 保持 `draft`。
+- 首次创建每个子需求时使用 `draft`。补齐 source_ref 覆盖、normalized statements、依赖及下方轻量审计后，再请求推进到 `split_ready`；范围未确定时保持 `draft`。
 - 在能力审计中为每个子需求设置 `ui_truth_mode`：使用 `none`、`existing`、`runtime-baseline` 或 `figma`。
 - 仅当切片引入或实质改变复杂 guard、并发、过期结果处理、重试/取消/幂等、持久化/恢复或跨组件/页面状态所有权时，设置 `state_flow_required=true`。架构名称和普通 loading/success/failure 阶段本身不触发。
 - 当前设计版本包含治理证据无法解决、且决策权属于用户的实质产品、行为、资源或体验选择时，设置 `user_decision_required=true`。用稳定 `D-###` 在 `design.md` 中记录每项决策。当前版本获批后该字段仍保持 `true`，有效的 hash-bound `design_review.review_mode=human` 表示决策已解决。只有当前版本不再包含用户授权决策时才设为 `false`。技术复杂度、框架选择和状态流深度不触发人工门禁。
@@ -31,7 +31,7 @@ Android View 切片分类前读取 [Android View 适配](framework-adapters/andr
 
 ## 轻量审计清单（inline — 不要执行 `solution-design` 动作）
 
-对每个 `split_ready` 子需求，主会话输出四项检查：
+每个 `draft` 子需求推进到 `split_ready` 前，主会话输出四项检查：
 
 1. **缺口** — 是否缺少关键业务事实？
 2. **冲突** — 是否与 `global-rules.md` 或其他切片矛盾？
@@ -45,6 +45,17 @@ Android View 切片分类前读取 [Android View 适配](framework-adapters/andr
 - 严重缺口 → `blocked_missing_requirement`
 - 严重冲突 → `blocked_requirement_conflict`
 - 无严重问题 → 审计结论写入 `notes`，继续
+
+审计及必需事实完整后，通过受控入口推进：
+
+```sh
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent analyze --to split_ready --format json
+ai-delivery advance --project . --req <req-id> --subreq <subreq-id> --to split_ready --expected-snapshot <本次check返回的snapshot_id> --format json
+```
+
+使用同一切片、同一目标的成功 check 实际返回的 `snapshot_id`。check 拒绝时，
+按诊断补齐事实并重新检查；不能手改已有 draft 为 `split_ready` 绕过推进。
+`analysis` 是 context 角色，不是这里的意图；合法意图见 `check --help`。
 
 ## 需求冲突与询问
 

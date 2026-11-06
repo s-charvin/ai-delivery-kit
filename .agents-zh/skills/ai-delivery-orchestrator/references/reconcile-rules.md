@@ -2,10 +2,9 @@
 
 每次恢复或继续前先运行 reconcile，不得把 `todo.md` 当事实源。
 
-```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery context --project . --req <req-id> --subreq <subreq-id> --role recovery --format json
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent <intent> --to <target-status> --format json
 ```
 
 ## 对账契约
@@ -17,12 +16,12 @@ python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
 5. 缺失或过期证据重新打开最窄动作；`design_review` hash 失效重新进入
    `solution-design`。
 6. 保留 blocked 切片，同时继续所有无依赖的 runnable 切片。
-7. 输出 `RUNTIME_MODE`、`CHECKPOINT`、`RUNNABLE`、`BLOCKED`、
-   `BLOCKER_SCOPES`、`NEXT_ACTION` 与 `NEXT_SUBREQ`。
+7. 读取当前切片 JSON 的 `allowed`、`snapshot_id`、`checks` 和 `diagnostics`，从 canonical status 整理人读队列。程序不再输出旧脚本的 `RUNTIME_MODE`、`CHECKPOINT`、`RUNNABLE`、`BLOCKED`、`BLOCKER_SCOPES`、`NEXT_ACTION` 或 `NEXT_SUBREQ`。
 
 schema 2.0 动作只有 `solution-design`、`implement`、`finish`、`archive`
-以及 kit 自有技能。不得输出或重建 `spec`、`plan`、`tasks`。活跃旧 schema
-必须迁移并重做设计能力审计；旧 `merged` / `archived` 只读兼容。
+以及 kit 自有技能。不得输出或重建 `spec`、`plan`、`tasks`。不支持的 schema
+包括终态均停止依赖路由，报告实际与要求格式，并提供 [升级指引](version-upgrade.md)
+中的两种选择。不得补造评审，不自动迁移或重建。
 
 ## Runtime mode
 

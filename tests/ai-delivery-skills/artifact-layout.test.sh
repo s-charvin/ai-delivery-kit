@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# validate-artifact-layout.py selftest: layout-contract resolution, backward
-# compatibility, living-spec drift detection and legacy archive validation.
+# Current layout resolution and canonical artifact identity selftest.
 set -euo pipefail
 
 KIT_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"

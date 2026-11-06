@@ -113,12 +113,12 @@ grep -Fq 'Worktrees are optional' "$TARGET_REPO/AGENTS.md"
 grep -Fq '<project-root>/.worktrees/<req-id>-<sr-id>' "$TARGET_REPO/AGENTS.md"
 grep -Fq '/private/tmp' "$TARGET_REPO/AGENTS.md"
 if grep -R -Fq 'ui_contract_exempt' "$TARGET_REPO/.agents/skills" "$TARGET_REPO/.ai-delivery/meta" \
-  --exclude='reconcile-delivery.py'; then
+  --exclude='reconcile-delivery.py' --exclude='layout.py'; then
   echo "legacy ui_contract_exempt bypass leaked into bootstrap output" >&2
   exit 1
 fi
 if grep -R -Fq 'no_design_client' "$TARGET_REPO/.agents/skills" "$TARGET_REPO/.ai-delivery/meta" \
-  --exclude='reconcile-delivery.py'; then
+  --exclude='reconcile-delivery.py' --exclude='layout.py'; then
   echo "legacy no_design_client profile leaked into bootstrap output" >&2
   exit 1
 fi

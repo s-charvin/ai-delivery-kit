@@ -55,6 +55,7 @@ cat > "$REQ/status.json" <<'JSON'
   }
 }
 JSON
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$REQ"
 
 NOW="2026-07-10T00:00:00+00:00"
 TS="2026-07-10T000000Z"

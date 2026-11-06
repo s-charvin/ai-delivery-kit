@@ -22,6 +22,8 @@ unchanged. Remove this comment from the instantiated document.
 
 <!-- ai-delivery-retrospective:reviewed-at:<reviewed-at> -->
 
+Use `YYYY-MM-DD` (for example `2026-11-05`) or RFC3339Nano with a timezone (for example `2026-11-05T12:00:00+08:00`). Datetimes without a timezone, single-digit hours, comma fractions, and offsets such as `+24:00` are invalid. The marker’s own calendar date must match the archive date.
+
 ### 1.1 Problem Map
 
 <!-- ai-delivery-retrospective:problem-index:v2 -->

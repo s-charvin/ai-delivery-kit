@@ -46,6 +46,7 @@ cat > "$REQ/status.json" <<'JSON'
   }
 }
 JSON
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$REQ"
 
 if python3 "$ARCHIVE" \
   --req-root "$REQ" \

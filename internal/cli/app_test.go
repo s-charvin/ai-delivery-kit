@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,8 +29,8 @@ func TestRunWithoutCommandPrintsUsage(t *testing.T) {
 	var out bytes.Buffer
 	app := New(&out, &out)
 
-	if exitCode := app.Run(nil); exitCode != 1 {
-		t.Fatalf("expected exit code 1, got %d", exitCode)
+	if exitCode := app.Run(nil); exitCode != 2 {
+		t.Fatalf("expected exit code 2, got %d", exitCode)
 	}
 
 	if got := out.String(); !strings.Contains(got, "Usage: ai-delivery") {
@@ -91,17 +90,14 @@ func TestRunInitDefaultsToCWD(t *testing.T) {
 	}
 }
 
-func TestRunUpgradeFailsWhenRepoNotCloned(t *testing.T) {
+func TestRunUpgradeExplainsSeparateProgramAndProjectUpdates(t *testing.T) {
 	var out, errOut bytes.Buffer
-	app := New(&out, &errOut)
-	app.homeDir = func() (string, error) { return "/tmp/phony-missing-repo", nil }
-
-	exitCode := app.Run([]string{"upgrade"})
-	if exitCode != 1 {
-		t.Fatalf("expected exit code 1 when repo missing, got %d", exitCode)
+	t.Setenv("PATH", t.TempDir())
+	if code := New(&out, &errOut).Run([]string{"upgrade"}); code != 0 {
+		t.Fatalf("%d %s", code, &errOut)
 	}
-	if !strings.Contains(errOut.String(), "not found") {
-		t.Fatalf("expected 'not found' error, got %q", errOut.String())
+	if !strings.Contains(out.String(), "init --upgrade") {
+		t.Fatal(&out)
 	}
 }
 
@@ -134,7 +130,9 @@ func TestRunInitPrintsIDEGateRestoreHint(t *testing.T) {
 
 func TestRunIDEGatesListAndRestore(t *testing.T) {
 	root := t.TempDir()
-	runCmd(t, exec.Command("git", "init", root))
+	if err := os.Mkdir(filepath.Join(root, ".git"), 0755); err != nil {
+		t.Fatal(err)
+	}
 
 	settings := filepath.Join(root, ".claude", "settings.json")
 	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
@@ -176,37 +174,6 @@ func TestRunIDEGatesListAndRestore(t *testing.T) {
 	}
 	if !strings.Contains(restoreOut.String(), "Restored IDE gate config from "+stamp) {
 		t.Fatalf("expected restore confirmation, got %q", restoreOut.String())
-	}
-}
-
-func TestRunUpgradePullsExistingRepo(t *testing.T) {
-	tmpDir := t.TempDir()
-	repoPath := filepath.Join(tmpDir, "ai-delivery-kit")
-
-	// Set up a minimal git repo so git pull doesn't fail.
-	runCmd(t, exec.Command("git", "-C", tmpDir, "init", repoPath))
-	runCmd(t, exec.Command("git", "-C", repoPath, "-c", "user.name=test", "-c", "user.email=test@test.com", "commit", "--allow-empty", "-m", "init"))
-
-	// Point master/main to itself so pull has a remote.
-	runCmd(t, exec.Command("git", "-C", repoPath, "remote", "add", "origin", repoPath))
-	runCmd(t, exec.Command("git", "-C", repoPath, "branch", "-M", "main"))
-	runCmd(t, exec.Command("git", "-C", repoPath, "fetch", "origin"))
-	runCmd(t, exec.Command("git", "-C", repoPath, "branch", "--set-upstream-to=origin/main", "main"))
-
-	var out, errOut bytes.Buffer
-	app := New(&out, &errOut)
-	app.homeDir = func() (string, error) { return tmpDir, nil }
-
-	exitCode := app.Run([]string{"upgrade"})
-	if exitCode != 0 {
-		t.Fatalf("expected exit code 0, got %d: %s", exitCode, errOut.String())
-	}
-}
-
-func runCmd(t *testing.T, cmd *exec.Cmd) {
-	t.Helper()
-	if out, err := cmd.CombinedOutput(); err != nil {
-		t.Fatalf("git command failed: %v\n%s", err, out)
 	}
 }
 

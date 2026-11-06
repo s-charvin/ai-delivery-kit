@@ -2,18 +2,17 @@ package bootstrap
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/s-charvin/ai-delivery-kit/internal/projectfs"
 )
 
 const (
-	uiContractHookMarker = "validate-ui-contract.sh"
 	ideGateBackupKeep    = 3
 	ideGateBackupRelRoot = ".ai-delivery/backups/ide-gates"
 )
@@ -31,10 +30,12 @@ func (r AmendReport) Empty() bool {
 
 // amendSession binds one bootstrap or reapply run to a shared backup timestamp.
 type amendSession struct {
-	repoRoot string
-	stamp    string
-	report   *AmendReport
-	now      func() time.Time
+	backupRelRoot string
+	repoRoot      string
+	stamp         string
+	report        *AmendReport
+	now           func() time.Time
+	deferPrune    bool
 }
 
 func newAmendSession(repoRoot string, now func() time.Time, report *AmendReport) *amendSession {
@@ -45,18 +46,10 @@ func newAmendSession(repoRoot string, now func() time.Time, report *AmendReport)
 		report = &AmendReport{}
 	}
 	return &amendSession{
-		repoRoot: repoRoot,
-		now:      now,
-		report:   report,
-	}
-}
-
-func isAmendableJSONTarget(target string) bool {
-	switch filepath.ToSlash(target) {
-	case ".cursor/hooks.json", ".claude/settings.json", ".codex/hooks.json":
-		return true
-	default:
-		return false
+		repoRoot:      repoRoot,
+		backupRelRoot: ideGateBackupRelRoot,
+		now:           now,
+		report:        report,
 	}
 }
 
@@ -64,17 +57,12 @@ func isAmendableAgentsMDTarget(target string) bool {
 	return filepath.ToSlash(target) == "AGENTS.md"
 }
 
-func isAmendableCodexConfigTarget(target string) bool {
-	return filepath.ToSlash(target) == ".codex/config.toml"
-}
-
 func isAmendableManagedTarget(target string) bool {
-	return isAmendableJSONTarget(target) ||
-		isAmendableAgentsMDTarget(target) ||
-		isAmendableCodexConfigTarget(target)
+	return isAmendableAgentsMDTarget(target)
 }
 
-func amendableManagedTargets() []string {
+// 历史恢复允许列表不代表当前安装资源所有权。
+func restorableIDEPaths() []string {
 	return []string{
 		".cursor/hooks.json",
 		".claude/settings.json",
@@ -84,158 +72,6 @@ func amendableManagedTargets() []string {
 	}
 }
 
-// mergeAmendableJSON merges kit gate settings into existing project JSON without
-// deleting unrelated top-level fields or external hook entries.
-func mergeAmendableJSON(existing, desired []byte) ([]byte, error) {
-	desiredObj := map[string]any{}
-	if err := json.Unmarshal(desired, &desiredObj); err != nil {
-		return nil, fmt.Errorf("parse desired gate json: %w", err)
-	}
-
-	existingObj := map[string]any{}
-	if len(bytes.TrimSpace(existing)) == 0 {
-		existingObj = map[string]any{}
-	} else if err := json.Unmarshal(existing, &existingObj); err != nil {
-		return nil, fmt.Errorf("parse existing gate json: %w", err)
-	}
-
-	desiredHooks, _ := desiredObj["hooks"].(map[string]any)
-	existingHooks, _ := existingObj["hooks"].(map[string]any)
-	if existingHooks == nil {
-		existingHooks = map[string]any{}
-	}
-	if desiredHooks == nil {
-		desiredHooks = map[string]any{}
-	}
-
-	for event, existingValue := range existingHooks {
-		groups, ok := existingValue.([]any)
-		if !ok {
-			continue
-		}
-		existingHooks[event] = stripUIContractHookGroups(groups)
-	}
-
-	for event, desiredValue := range desiredHooks {
-		desiredGroups, ok := desiredValue.([]any)
-		if !ok {
-			existingHooks[event] = desiredValue
-			continue
-		}
-		existingGroups, _ := existingHooks[event].([]any)
-		existingHooks[event] = upsertHookGroups(existingGroups, desiredGroups)
-	}
-	existingObj["hooks"] = existingHooks
-
-	// Copy the desired version when an existing Cursor hooks.json has none.
-	if _, ok := existingObj["version"]; !ok {
-		if version, ok := desiredObj["version"]; ok {
-			existingObj["version"] = version
-		}
-	}
-
-	out, err := json.MarshalIndent(existingObj, "", "  ")
-	if err != nil {
-		return nil, err
-	}
-	return append(out, '\n'), nil
-}
-
-func upsertHookGroups(existing, desired []any) []any {
-	result := append([]any{}, existing...)
-	for _, desiredGroup := range desired {
-		desiredMap, ok := desiredGroup.(map[string]any)
-		if !ok {
-			result = append(result, desiredGroup)
-			continue
-		}
-		replaced := false
-		for i, existingGroup := range result {
-			existingMap, ok := existingGroup.(map[string]any)
-			if !ok {
-				continue
-			}
-			if hookGroupOwnsUIContractGate(existingMap) {
-				result[i] = desiredMap
-				replaced = true
-				break
-			}
-		}
-		if !replaced {
-			result = append(result, desiredMap)
-		}
-	}
-	return result
-}
-
-func stripUIContractHookGroups(groups []any) []any {
-	out := make([]any, 0, len(groups))
-	for _, group := range groups {
-		m, ok := group.(map[string]any)
-		if ok && hookGroupOwnsUIContractGate(m) {
-			continue
-		}
-		out = append(out, group)
-	}
-	return out
-}
-
-func hookGroupOwnsUIContractGate(group map[string]any) bool {
-	if commandContainsMarker(group["command"]) {
-		return true
-	}
-	hooks, ok := group["hooks"].([]any)
-	if !ok {
-		return false
-	}
-	for _, hook := range hooks {
-		hookMap, ok := hook.(map[string]any)
-		if !ok {
-			continue
-		}
-		if commandContainsMarker(hookMap["command"]) {
-			return true
-		}
-	}
-	return false
-}
-
-func commandContainsMarker(value any) bool {
-	command, ok := value.(string)
-	if !ok {
-		return false
-	}
-	return strings.Contains(command, uiContractHookMarker)
-}
-
-// writeAmendableJSON merges an amendable IDE JSON file. Existing files are
-// backed up before the atomic write; newly created files need no backup.
-func (s *amendSession) writeAmendableJSON(relTarget, absTarget string, desired []byte) error {
-	existing, err := os.ReadFile(absTarget)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("read %s: %w", absTarget, err)
-		}
-		existing = nil
-	}
-
-	merged, err := mergeAmendableJSON(existing, desired)
-	if err != nil {
-		return fmt.Errorf("merge %s: %w", absTarget, err)
-	}
-
-	if existing != nil {
-		if err := s.backupExisting(relTarget, absTarget, existing); err != nil {
-			return err
-		}
-	}
-
-	if err := atomicWriteFile(absTarget, merged, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", absTarget, err)
-	}
-	return nil
-}
-
 const (
 	agentsGateStart = "<!-- ai-delivery:ui-contract-gate:start -->"
 	agentsGateEnd   = "<!-- ai-delivery:ui-contract-gate:end -->"
@@ -243,6 +79,9 @@ const (
 
 // writeAmendableAgentsMD upserts the kit gate section into the Codex AGENTS.md entrypoint.
 func (s *amendSession) writeAmendableAgentsMD(relTarget, absTarget string, desired []byte) error {
+	if err := projectfs.NoLinkedParents(s.repoRoot, absTarget); err != nil {
+		return err
+	}
 	existing, err := os.ReadFile(absTarget)
 	if err != nil {
 		if !os.IsNotExist(err) {
@@ -260,7 +99,7 @@ func (s *amendSession) writeAmendableAgentsMD(relTarget, absTarget string, desir
 			return err
 		}
 	}
-	if err := atomicWriteFile(absTarget, merged, 0o644); err != nil {
+	if err := s.writeFrom(absTarget, merged, 0o644, existing); err != nil {
 		return fmt.Errorf("write %s: %w", absTarget, err)
 	}
 	return nil
@@ -301,63 +140,50 @@ func upsertAgentsMDSection(existing, desired []byte) []byte {
 	return out.Bytes()
 }
 
-// writeAmendableCodexConfig ensures project hooks are enabled in .codex/config.toml.
-func (s *amendSession) writeAmendableCodexConfig(relTarget, absTarget string, desired []byte) error {
-	existing, err := os.ReadFile(absTarget)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return fmt.Errorf("read %s: %w", absTarget, err)
-		}
-		existing = nil
+func (s *amendSession) backupExisting(relTarget, absTarget string, existing []byte) error {
+	if err := projectfs.NoLinkedParents(s.repoRoot, absTarget); err != nil {
+		return err
 	}
-
-	merged := ensureCodexHooksEnabled(existing, desired)
-	if existing != nil && bytes.Equal(existing, merged) {
-		return nil
-	}
-	if existing != nil {
-		if err := s.backupExisting(relTarget, absTarget, existing); err != nil {
+	if s.stamp == "" {
+		base := s.now().UTC().Format("2006-01-02T15-04-05Z")
+		parent := filepath.Join(s.repoRoot, filepath.FromSlash(s.backupRelRoot))
+		if err := projectfs.NoLinkedParents(s.repoRoot, parent); err != nil {
 			return err
 		}
+		if err := os.MkdirAll(parent, 0700); err != nil {
+			return err
+		}
+		for sequence := 0; ; sequence++ {
+			s.stamp = base
+			if sequence > 0 {
+				s.stamp = fmt.Sprintf("%s-%06d", base, sequence)
+			}
+			candidate := filepath.Join(parent, s.stamp)
+			if err := os.Mkdir(candidate, 0700); err != nil {
+				if os.IsExist(err) {
+					continue
+				}
+				return err
+			}
+			break
+		}
 	}
-	if err := atomicWriteFile(absTarget, merged, 0o644); err != nil {
-		return fmt.Errorf("write %s: %w", absTarget, err)
-	}
-	return nil
-}
-
-var (
-	codexHooksTrueRE  = regexp.MustCompile(`(?m)^\s*hooks\s*=\s*true\s*$`)
-	codexHooksFalseRE = regexp.MustCompile(`(?m)^(\s*hooks\s*=\s*)false(\s*)$`)
-)
-
-func ensureCodexHooksEnabled(existing, desired []byte) []byte {
-	if len(bytes.TrimSpace(existing)) == 0 {
-		out := bytes.TrimRight(desired, "\n")
-		return append(out, '\n')
-	}
-	if codexHooksTrueRE.Match(existing) {
-		return existing
-	}
-	if codexHooksFalseRE.Match(existing) {
-		return codexHooksFalseRE.ReplaceAll(existing, []byte(`${1}true${2}`))
-	}
-	var out bytes.Buffer
-	out.Write(bytes.TrimRight(existing, "\n"))
-	out.WriteString("\n\n# ai-delivery-kit: enable Codex project hooks\n[features]\nhooks = true\n")
-	return out.Bytes()
-}
-
-func (s *amendSession) backupExisting(relTarget, absTarget string, existing []byte) error {
-	if s.stamp == "" {
-		s.stamp = s.now().UTC().Format("2006-01-02T15-04-05Z")
-	}
-	backupRoot := filepath.Join(s.repoRoot, filepath.FromSlash(ideGateBackupRelRoot), s.stamp)
+	backupRoot := filepath.Join(s.repoRoot, filepath.FromSlash(s.backupRelRoot), s.stamp)
 	dest := filepath.Join(backupRoot, filepath.FromSlash(relTarget))
-	if err := os.MkdirAll(filepath.Dir(dest), 0o755); err != nil {
+	if err := projectfs.NoLinkedParents(s.repoRoot, dest); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
 		return fmt.Errorf("create backup dir for %s: %w", relTarget, err)
 	}
-	if err := os.WriteFile(dest, existing, 0o644); err != nil {
+	info, err := os.Lstat(absTarget)
+	if err != nil {
+		return err
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("备份目标必须是普通文件: %s", absTarget)
+	}
+	if err := s.write(dest, existing, info.Mode().Perm()); err != nil {
 		return fmt.Errorf("backup %s: %w", absTarget, err)
 	}
 
@@ -365,7 +191,10 @@ func (s *amendSession) backupExisting(relTarget, absTarget string, existing []by
 	s.report.BackupDir = backupRoot
 	s.report.Files = appendUnique(s.report.Files, filepath.ToSlash(relTarget))
 
-	if err := pruneIDEGateBackups(s.repoRoot, ideGateBackupKeep); err != nil {
+	if s.deferPrune {
+		return nil
+	}
+	if err := pruneBackupsAtRoot(filepath.Join(s.repoRoot, s.backupRelRoot), ideGateBackupKeep); err != nil {
 		return err
 	}
 	return nil
@@ -381,22 +210,68 @@ func appendUnique(items []string, value string) []string {
 }
 
 func atomicWriteFile(target string, body []byte, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+	return projectfs.AtomicWriteFile(target, body, mode)
+}
+
+func (s *amendSession) write(target string, body []byte, mode os.FileMode) error {
+	if err := projectfs.NoLinkedParents(s.repoRoot, target); err != nil {
 		return err
 	}
-	tmp := target + ".tmp"
-	if err := os.WriteFile(tmp, body, mode); err != nil {
+	original, err := os.ReadFile(target)
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
-	if err := os.Rename(tmp, target); err != nil {
-		_ = os.Remove(tmp)
+	return s.writeFrom(target, body, mode, original)
+}
+
+func (s *amendSession) writeFrom(target string, body []byte, mode os.FileMode, original []byte, extra ...func() error) error {
+	var identity os.FileInfo
+	check := func(string) error {
+		for _, verify := range extra {
+			if err := verify(); err != nil {
+				return err
+			}
+		}
+		if err := projectfs.NoLinkedParents(s.repoRoot, target); err != nil {
+			return err
+		}
+		info, err := os.Lstat(target)
+		if os.IsNotExist(err) {
+			if original != nil {
+				return fmt.Errorf("写入前文件已删除: %s", target)
+			}
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		if original == nil || !info.Mode().IsRegular() {
+			return fmt.Errorf("写入前文件身份已改变: %s", target)
+		}
+		current, err := os.ReadFile(target)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(current, original) {
+			return fmt.Errorf("写入前用户内容已改变: %s", target)
+		}
+		if identity != nil && (!os.SameFile(identity, info) || identity.Mode() != info.Mode()) {
+			return fmt.Errorf("写入前文件身份已改变: %s", target)
+		}
+		identity = info
+		return nil
+	}
+	if err := check(""); err != nil {
 		return err
 	}
-	return nil
+	return projectfs.AtomicWriteFileChecked(target, body, mode, check)
 }
 
 func pruneIDEGateBackups(repoRoot string, keep int) error {
-	root := filepath.Join(repoRoot, filepath.FromSlash(ideGateBackupRelRoot))
+	return pruneBackupsAtRoot(filepath.Join(repoRoot, filepath.FromSlash(ideGateBackupRelRoot)), keep)
+}
+
+func pruneBackupsAtRoot(root string, keep int) error {
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -424,8 +299,12 @@ func pruneIDEGateBackups(repoRoot string, keep int) error {
 }
 
 // ListIDEGateBackups returns backup timestamps in newest-first order.
-func ListIDEGateBackups(repoRoot string) ([]string, error) {
-	root := filepath.Join(repoRoot, filepath.FromSlash(ideGateBackupRelRoot))
+func ListIDEGateBackups(repoRoot string, hint ...string) ([]string, error) {
+	deliveryPath, err := currentDeliveryPath(repoRoot, hint...)
+	if err != nil {
+		return nil, err
+	}
+	root := filepath.Join(repoRoot, deliveryPath, "backups/ide-gates")
 	entries, err := os.ReadDir(root)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -445,7 +324,7 @@ func ListIDEGateBackups(repoRoot string) ([]string, error) {
 
 // RestoreIDEGateBackup restores amendable IDE settings and AGENTS.md from a timestamp.
 // Current files are backed up first to preserve another rollback point.
-func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendReport, error) {
+func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time, hint ...string) (AmendReport, error) {
 	report := AmendReport{}
 	if repoRoot == "" {
 		return report, fmt.Errorf("repo root is required")
@@ -459,7 +338,23 @@ func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendRe
 		root = abs
 	}
 
-	backupRoot := filepath.Join(root, filepath.FromSlash(ideGateBackupRelRoot), stamp)
+	unlock, err := projectLock(root, false)
+	if err != nil {
+		return report, err
+	}
+	defer unlock()
+	deliveryPath, err := currentDeliveryPath(root, hint...)
+	if err != nil {
+		return report, err
+	}
+	backupRelative := filepath.Join(deliveryPath, "backups/ide-gates")
+	if stamp == "" || stamp == "." || filepath.Base(stamp) != stamp || strings.ContainsAny(stamp, `/\\`) {
+		return report, fmt.Errorf("非法备份名称")
+	}
+	backupRoot := filepath.Join(root, backupRelative, stamp)
+	if err := projectfs.NoLinkedParents(root, backupRoot); err != nil {
+		return report, err
+	}
 	st, err := os.Stat(backupRoot)
 	if err != nil {
 		return report, fmt.Errorf("backup %s not found: %w", stamp, err)
@@ -469,9 +364,18 @@ func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendRe
 	}
 
 	session := newAmendSession(root, now, &report)
+	session.backupRelRoot = backupRelative
+	session.deferPrune = true
 	restored := 0
-	for _, rel := range amendableManagedTargets() {
+	for _, rel := range restorableIDEPaths() {
 		src := filepath.Join(backupRoot, filepath.FromSlash(rel))
+		if err := projectfs.NoLinkedParents(root, src); err != nil {
+			return report, err
+		}
+		dest := filepath.Join(root, filepath.FromSlash(rel))
+		if err := projectfs.NoLinkedParents(root, dest); err != nil {
+			return report, err
+		}
 		body, err := os.ReadFile(src)
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -479,15 +383,42 @@ func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendRe
 			}
 			return report, fmt.Errorf("read backup %s: %w", rel, err)
 		}
-		dest := filepath.Join(root, filepath.FromSlash(rel))
-		if current, err := os.ReadFile(dest); err == nil {
+		info, err := os.Lstat(src)
+		if err != nil {
+			return report, err
+		}
+		if !info.Mode().IsRegular() {
+			return report, fmt.Errorf("备份源必须为普通文件: %s", src)
+		}
+		current, err := os.ReadFile(dest)
+		if err == nil {
 			if err := session.backupExisting(rel, dest, current); err != nil {
 				return report, err
 			}
 		} else if !os.IsNotExist(err) {
 			return report, fmt.Errorf("read current %s: %w", rel, err)
 		}
-		if err := atomicWriteFile(dest, body, 0o644); err != nil {
+		verifySource := func() error {
+			if err := projectfs.NoLinkedParents(root, src); err != nil {
+				return err
+			}
+			latest, err := os.Lstat(src)
+			if err != nil {
+				return err
+			}
+			if !os.SameFile(info, latest) || info.Mode() != latest.Mode() {
+				return fmt.Errorf("恢复源身份已改变: %s", src)
+			}
+			raw, err := os.ReadFile(src)
+			if err != nil {
+				return err
+			}
+			if !bytes.Equal(raw, body) {
+				return fmt.Errorf("恢复源内容已改变: %s", src)
+			}
+			return nil
+		}
+		if err := session.writeFrom(dest, body, info.Mode().Perm(), current, verifySource); err != nil {
 			return report, fmt.Errorf("restore %s: %w", rel, err)
 		}
 		restored++
@@ -495,5 +426,6 @@ func RestoreIDEGateBackup(repoRoot, stamp string, now func() time.Time) (AmendRe
 	if restored == 0 {
 		return report, fmt.Errorf("backup %s contains no amendable IDE gate files", stamp)
 	}
+	// 恢复操作保留所选源和所有既有恢复点；新增当前内容备份不能隐式清理历史。
 	return report, nil
 }

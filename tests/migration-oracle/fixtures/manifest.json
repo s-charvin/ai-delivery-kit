@@ -1,0 +1,171 @@
+{
+  "baseline_revision": "7e8b996698e3d949e2887f5fd92d58e10c7951f5",
+  "fixtures": [
+    {
+      "name": "component-only",
+      "root": "tests/migration-oracle/fixtures/component-only",
+      "requirement": "REQ-UI",
+      "subrequirement": "SR-001",
+      "expected_exit": 0,
+      "expected_purpose": "当前协议结构/范围与证据身份回归；不是实际视觉效果验收",
+      "source": "tests/ai-delivery-skills/evidence-lifecycle.test.py::ui_fixture",
+      "files": [
+        {
+          "path": ".ai-delivery/meta/project-binding.json",
+          "sha256": "1f8f618f8d136e3da6573f4a2ec73c32fdeca404bf0e0cf6832e721b65542fe4"
+        },
+        {
+          "path": ".ai-delivery/meta/workflow-policy.json",
+          "sha256": "262feff309a71abea8cffbd3655126652dde7eccb5316912cef7f52fda433738"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/retrospective.md",
+          "sha256": "03324d09e28037703e71f4a489cac3a138434d2f6e4ef0f3bfccb06c950a9726"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/status.json",
+          "sha256": "3e9c9dff3a8ac5c16b3e1ffa158151805539ec1739b0e3b5c396d5a12c833e6b"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/contracts/ui-truth-index.json",
+          "sha256": "e493e1d14cbc32957ffb40ad80f29122b81c2973e7a31b754b8ed8b0f0e0d085"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/design.md",
+          "sha256": "88d4a9e3c735d50a4d8f0e64b46effcaada48bdba31faf61512c9eb116493232"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/verification.md",
+          "sha256": "291a3cb5f3aaabf62bc5181006e09bbbe98c7e799eca24e224da1110f7c105cc"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/visual-acceptance.json",
+          "sha256": "1527bc2ade23ff3db05a2eb522c26106abcf2782b9309049754e0573e4c9fb79"
+        },
+        {
+          "path": "integration_test/profile_page_test.dart",
+          "sha256": "12e3f0ab9f3e6b936c95dcfe87f4f506f6b2e3108281ea220ce1e0360cfe739a"
+        },
+        {
+          "path": "integration_test/screenshots/profile/profile-page.assertions.json",
+          "sha256": "1d608fa3c010086b4c309de977585424ed909d32e88632442ffab972465e78cf"
+        },
+        {
+          "path": "integration_test/screenshots/profile/profile-page.png",
+          "sha256": "1be402cbb832dca9a8c22df98c254dcdc6756798d6a5d0edc033b3d5dadba110"
+        },
+        {
+          "path": "lib/profile_card.dart",
+          "sha256": "08d0c6eca62613ba785f45fd826e5e8c85e4dec8461acf0460ea81bf4ba5bfb7"
+        },
+        {
+          "path": "lib/profile_page.dart",
+          "sha256": "0b775da5123a3fe74100ded1d53dd3cfdc213e8e99650e3d0916807c3808de92"
+        },
+        {
+          "path": "native.log",
+          "sha256": "1fb1e7f14870b28823dc4363b1fd641d5c9b315f1f385d2079308dddf6ea70c5"
+        },
+        {
+          "path": "test/goldens/profile-card-default.png",
+          "sha256": "91c02849e39f4ad2d5a74b36e12c3d806d8fbe958903f60350c7e6248be33603"
+        },
+        {
+          "path": "test/goldens/unrelated.png",
+          "sha256": "b055f2fca0615e16e4cd02ba18056bfd468c87621d135eda8f14dd7fc7667187"
+        },
+        {
+          "path": "test/motion/profile-card-default.gif",
+          "sha256": "9c0b7c3e24b1366a75e2326c0edde0fbd7e5ba4bb8c3f95e96c4266bdb12d397"
+        },
+        {
+          "path": "test/profile_card_golden_test.dart",
+          "sha256": "12e3f0ab9f3e6b936c95dcfe87f4f506f6b2e3108281ea220ce1e0360cfe739a"
+        }
+      ]
+    },
+    {
+      "name": "host-runtime",
+      "root": "tests/migration-oracle/fixtures/host-runtime",
+      "requirement": "REQ-UI",
+      "subrequirement": "SR-001",
+      "expected_exit": 0,
+      "expected_purpose": "当前协议结构/范围与证据身份回归；不是实际视觉效果验收",
+      "source": "tests/ai-delivery-skills/evidence-lifecycle.test.py::ui_fixture",
+      "files": [
+        {
+          "path": ".ai-delivery/meta/project-binding.json",
+          "sha256": "1f8f618f8d136e3da6573f4a2ec73c32fdeca404bf0e0cf6832e721b65542fe4"
+        },
+        {
+          "path": ".ai-delivery/meta/workflow-policy.json",
+          "sha256": "262feff309a71abea8cffbd3655126652dde7eccb5316912cef7f52fda433738"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/retrospective.md",
+          "sha256": "03324d09e28037703e71f4a489cac3a138434d2f6e4ef0f3bfccb06c950a9726"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/status.json",
+          "sha256": "3e9c9dff3a8ac5c16b3e1ffa158151805539ec1739b0e3b5c396d5a12c833e6b"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/contracts/ui-truth-index.json",
+          "sha256": "36c353fe859defe755d92d708fc41c4455edda300f862e29a714a93b2c22de1f"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/design.md",
+          "sha256": "88d4a9e3c735d50a4d8f0e64b46effcaada48bdba31faf61512c9eb116493232"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/verification.md",
+          "sha256": "291a3cb5f3aaabf62bc5181006e09bbbe98c7e799eca24e224da1110f7c105cc"
+        },
+        {
+          "path": ".ai-delivery/requirements/REQ-UI/sub-requirements/SR-001/visual-acceptance.json",
+          "sha256": "f2e5782a17f23922776ce5f8393504066ee797006554b0b442d50e567d8c158d"
+        },
+        {
+          "path": "integration_test/profile_page_test.dart",
+          "sha256": "12e3f0ab9f3e6b936c95dcfe87f4f506f6b2e3108281ea220ce1e0360cfe739a"
+        },
+        {
+          "path": "integration_test/screenshots/profile/profile-page.assertions.json",
+          "sha256": "1d608fa3c010086b4c309de977585424ed909d32e88632442ffab972465e78cf"
+        },
+        {
+          "path": "integration_test/screenshots/profile/profile-page.png",
+          "sha256": "1be402cbb832dca9a8c22df98c254dcdc6756798d6a5d0edc033b3d5dadba110"
+        },
+        {
+          "path": "lib/profile_card.dart",
+          "sha256": "08d0c6eca62613ba785f45fd826e5e8c85e4dec8461acf0460ea81bf4ba5bfb7"
+        },
+        {
+          "path": "lib/profile_page.dart",
+          "sha256": "0b775da5123a3fe74100ded1d53dd3cfdc213e8e99650e3d0916807c3808de92"
+        },
+        {
+          "path": "native.log",
+          "sha256": "1fb1e7f14870b28823dc4363b1fd641d5c9b315f1f385d2079308dddf6ea70c5"
+        },
+        {
+          "path": "test/goldens/profile-card-default.png",
+          "sha256": "91c02849e39f4ad2d5a74b36e12c3d806d8fbe958903f60350c7e6248be33603"
+        },
+        {
+          "path": "test/goldens/unrelated.png",
+          "sha256": "b055f2fca0615e16e4cd02ba18056bfd468c87621d135eda8f14dd7fc7667187"
+        },
+        {
+          "path": "test/motion/profile-card-default.gif",
+          "sha256": "9c0b7c3e24b1366a75e2326c0edde0fbd7e5ba4bb8c3f95e96c4266bdb12d397"
+        },
+        {
+          "path": "test/profile_card_golden_test.dart",
+          "sha256": "12e3f0ab9f3e6b936c95dcfe87f4f506f6b2e3108281ea220ce1e0360cfe739a"
+        }
+      ]
+    }
+  ]
+}

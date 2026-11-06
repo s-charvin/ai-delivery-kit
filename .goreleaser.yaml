@@ -30,6 +30,8 @@ archives:
     ids:
       - ai-delivery
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - none*
     formats:
       - tar.gz
     format_overrides:

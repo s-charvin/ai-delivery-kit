@@ -1,0 +1,5275 @@
+{
+  "source": "CPython 3.12.13 fnmatch.fnmatchcase；开发期固定基线，Go测试不调用Python",
+  "cases": [
+    {
+      "pattern": "*",
+      "name": "",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "中文",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/deep/.hidden.go",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/中.go",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/a.go",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/a/",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": ".hidden/file",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "x.go",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "x.GO",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "a\nb",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "a\\b",
+      "match": true
+    },
+    {
+      "pattern": "*",
+      "name": "src/new\nfile.go",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "?",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "?",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/deep/.hidden.go",
+      "match": true
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/中.go",
+      "match": true
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/a.go",
+      "match": true
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/",
+      "match": true
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/a/",
+      "match": true
+    },
+    {
+      "pattern": "src/*",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "src/*",
+      "name": "src/new\nfile.go",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/deep/.hidden.go",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/中.go",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/a.go",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/a/",
+      "match": true
+    },
+    {
+      "pattern": "src/**",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "src/**",
+      "name": "src/new\nfile.go",
+      "match": true
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/中.go",
+      "match": true
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/a.go",
+      "match": true
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "src/?.go",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "x.GO",
+      "match": true
+    },
+    {
+      "pattern": "*.GO",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "*.GO",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!a-c]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "[]]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[]]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[z-a]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!z-a]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a-c]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "a\nb",
+      "match": true
+    },
+    {
+      "pattern": "*\n*",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "*\n*",
+      "name": "src/new\nfile.go",
+      "match": true
+    },
+    {
+      "pattern": "a\\b",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "a\\b",
+      "name": "a\\b",
+      "match": true
+    },
+    {
+      "pattern": "a\\b",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a--b]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!]]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[^a]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[^a]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[^a]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[[]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[[]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[\\]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[\\]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a-b-c]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[z-a0-9]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[--0]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[--0]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[--0]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[-a]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[-a]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[-a]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a-]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[a-]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a-]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a&&b]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a~~b]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[a||b]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[中-文]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "b",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!中-文]",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/deep/.hidden.go",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/中.go",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/a.go",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/a/",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": ".hidden/file",
+      "match": true
+    },
+    {
+      "pattern": "**/*",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "**/*",
+      "name": "src/new\nfile.go",
+      "match": true
+    },
+    {
+      "pattern": "src/*/",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "a",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "c",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "z",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "-",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "!",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "^",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "[",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "]",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "\\",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "0",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "9",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "&",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "~",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "|",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "中",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "文",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "A",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/a/",
+      "match": true
+    },
+    {
+      "pattern": "src/*/",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "src/*/",
+      "name": "src/new\nfile.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "a",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "b",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "c",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "z",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "-",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "!",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "^",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "[",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "]",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "\\",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "0",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "9",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "&",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "~",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "|",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "中",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "文",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "中文",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "A",
+      "match": true
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/deep/.hidden.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/中.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/a.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/a/",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": ".hidden/file",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "x.go",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "x.GO",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "a\nb",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "a\\b",
+      "match": false
+    },
+    {
+      "pattern": "[!a--b]",
+      "name": "src/new\nfile.go",
+      "match": false
+    }
+  ]
+}

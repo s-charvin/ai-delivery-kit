@@ -1,4 +1,4 @@
-#!/bin/zsh
+#!/usr/bin/env bash
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
@@ -7,7 +7,7 @@ ROOT=$(cd -- "$SCRIPT_DIR/.." && pwd)
 usage() {
   /bin/cat <<'EOF'
 Usage:
-  zsh scripts/bootstrap-ai-delivery-project.sh /path/to/repo
+  bash scripts/bootstrap-ai-delivery-project.sh /path/to/repo
 
 Compatibility wrapper:
   Delegates to `go run ./cmd/ai-delivery init <target>`

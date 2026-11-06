@@ -58,3 +58,33 @@
 - 实现者：
 - 评审者：
 - 日期：
+
+## 机器可读证据（policy v4 / verification v2）
+
+按 [质量闭环](../references/delivery-quality-loop.md) 生成真实输入、原生报告与评审摘要。
+以下占位内容必须替换；不得以本文件作为运行输出，未运行不能改写成 passed。
+
+<!-- ai-delivery-verification:contract:v2 -->
+```json
+{
+  "version": 2,
+  "subreq_id": "{{subreq_id}}",
+  "inputs": [{"path":"<repo-relative-design-path>","sha256":"<actual-sha256>"}],
+  "checks": [{
+    "id":"<native-check-id>", "acceptance_ids":["AC-001"], "required":true,
+    "result":"not_run", "mode":"executed", "command":"<actual-command>",
+    "exit_code":null,
+    "evidence":[{"path":"<native-report-path>","sha256":"<actual-sha256>"}]
+  }],
+  "reviews": [{
+    "reviewer":"<visible-reviewer>", "context":"fresh", "result":"changes_required",
+    "input_sha256":"<input_sha256-from-ai-delivery-evidence-review-digest>",
+    "verification_sha256":"<verification_sha256-from-ai-delivery-evidence-review-digest>", "findings":[]
+  }]
+}
+```
+<!-- /ai-delivery-verification:contract:v2 -->
+
+inputs 还需包含相关生产/测试/资源/依赖/规范的实际文件，不能仅绑定 design。
+保留失败、复用/手工验证依据和未决项；最后适用评审覆盖当前完整范围。
+迁移不会自动接受旧证据。实例化后修正指导链接或删除。

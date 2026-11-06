@@ -5,7 +5,9 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 
 # AI 交付编排器
 
-需求 → 实现的唯一入口。Leaf 技能（`requirement-breakdown`、`ui-truth-mapping`）为纯工具，不感知管道。本技能拥有状态、门禁、阻塞与 handoff。
+需求 → 实现的唯一入口。Leaf 技能（`requirement-breakdown`、`ui-truth-mapping`）提供方法。唯一已安装的 `ai-delivery` CLI 是当前协议、适用性、动作检查和状态转换的执行权威；本技能组织调查、产物和 handoff，不复制另一规则表。
+
+尊重用户实际的 workspace、分支、集成和发布选择。已有授权在已审范围内持续有效，不因框架默认偏好重复询问；新的产品/资源决定仍走现有门禁。可选[原生 hook](references/native-hooks.md)使用同一程序，无 hook 也完整可用。外部框架需要 Python/Node 时仅是用户显式选择的能力，不成为 kit 运行依赖。
 
 ```
 需求 → [拆分？] → 能力审计 → 设计契约 → 实现 + 验证 → 合并 → 归档
@@ -29,13 +31,13 @@ description: 当需求文档需要经 UI truth、唯一设计契约、实现验�
 统一分类和正文，同机制补全原RET，独立机制融入分类及问题地图；禁止“2026-11-03补审”“本轮新增”、游离文末补充或第二份UI台账。批次收尾和归档前，利用现有来源逐项核对全部已知发现，尤其每个用户问题的具体案例和处置状态。索引资格不能过滤需求级收录。真正无问题也须有台账，完成核对后再更新唯一reviewed-at。
 
 问题地图的每一行都必须由 AI 声明 `knowledge_type`、`reuse_scope`、
-`index_decision`、`confidence` 和 `importance`。归档脚本仅当这些字段依次为
+`index_decision`、`confidence` 和 `importance`。归档命令仅当这些字段依次为
 `reusable`、`project` 或 `domain`、`include`、`confirmed`、`high` 或 `critical`
 时，才将问题路由到项目索引。临时决策、仅需求适用的变更、未确认根因和机械修正
 可以保留在台账中，但不会进入索引。
 
 归档前检查是否存在旧的 `problem-index:v1` 或六列表格。发现旧格式时，先读取完整台账，
-原位升级为 `problem-index:v2`，再调用归档脚本。必须保留所有问题 ID、详情章节、锚点、证据和结论；
+原位升级为 `problem-index:v2`，再调用归档命令。必须保留所有问题 ID、详情章节、锚点、证据和结论；
 只依据已有证据分类。若无法确认复用范围、置信度或重要性，设置保守的不可索引元数据
 （`index_decision=exclude`、`confidence=unverified`）。不得静默丢弃旧问题，也不得根据标题推断 `include`。
 
@@ -109,15 +111,20 @@ draft → split_ready → [acceptance_frozen] → design_ready → in_dev → [v
 
 每次恢复或继续前，在信任 `todo.md` 之前运行对账：
 
-```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery context --project . --req <req-id> --subreq <subreq-id> --role recovery --format json
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent <intent> --to <target-status> --format json
 ```
 
-reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `archive`，另含 kit 自有技能）— 绝不输出第三方技能名。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
+CLI 返回当前切片的 JSON 事实与动作诊断；从当前 status 与 handoff 表选择动作。context 材料齐全不等于动作授权。当前程序不输出旧脚本的键值队列协议。规则：[references/reconcile-rules.md](references/reconcile-rules.md)。
 
-当前状态模板为 schema `2.0`。恢复时，所有活跃旧条目必须重新审计并迁移后才能路由；`merged`/`archived` 历史记录只读兼容，不补造设计或评审证据。
+用 `ai-delivery check --help` 查询核心当前合法意图，用 `advance --help` /
+`context --help` 查询真实参数；未初始化项目也可使用。`analysis` 是 context
+角色，`analyze` 才是 check 意图。workflow 的 `finish` 包含完成纪律与集成动作；
+其 CLI 就绪检查使用 `merge`，不能传 `--intent finish`。merge 检查成功不代表
+已经执行集成，也不授予新的权限。
+
+kit 只接受当前协议：包括终态在内的 status 必须为 schema `2.0`。不支持的数据停止依赖路由，报告实际与要求格式，并提供 [升级指引](references/version-upgrade.md) 中两种平级选择：用户自行备份后迁移，或显式备份重建。不补造历史批准，不自动执行任一方案。
 
 ## Handoff 表
 
@@ -158,9 +165,9 @@ reconcile 输出抽象动作（`solution-design` / `implement` / `finish` / `arc
 - 对 `ui_truth_mode=figma` 或 `runtime-baseline`，每个 UI unit 尚未具备真实宿主组件、十个维度的按适用性运行时 coverage、每个视觉 scenario 的官方栈预览及已向用户出示的**绝对路径**，以及有效 v3 `contracts/ui-truth-index.json` 之前，不得设置 `acceptance_frozen`。每个 scenario 必须冻结 `evidence_scope` 与 `scope_decision`；只有 `host-static` 和 `host-runtime` 可以携带有效 `host_binding`，`component-only` 明确把宿主组合排除在验收声明外。路径/hash/来源/profile/scenario/coverage、当前预览 hash 绑定确认、独立动效确认/豁免（静态 unit 必须确认无动效）与干净的 Stage 2 评审仍为必需。宿主无法录制动效时，索引必须记录原因并把运行时验收延后到 Stage 4；Stage 4 在 `visual_acceptance_passed` 前必须为每个 unit 写独立动效验收。Stage 2 由 `ui-truth-mapping` 负责真实组件，所选提供方技能（包括官方 `figma:figma-design-to-code`）在其门槛下采集证据，也禁止生成 `ui-contract.html`。可见数据缺失必须呈现真实空/省略状态，禁止伪造内容。
 - Stage 4：`ui_truth_mode=figma` 或 `runtime-baseline` 的切片复用 Stage 2 用户已批准 workspace；不得创建第二个 workspace 或重画组件。`component-only` 复用组件 preview 与行为测试，不宣称宿主视觉通过；`host-static` 通过项目原生确定性工具捕获索引中的生产宿主；`host-runtime` 在昂贵的原生生命周期检查前先做设备/资源/视觉 smoke。运行时截图必须位于 `.ai-delivery/` 外、索引声明的原生测试证据根目录，并绑定索引宿主 provenance。`existing` 使用已有组件和普通行为/语义验证，`none` 没有 UI truth 产物。默认不要再查 TemPad 或官方 Figma；已冻结组件 + 已确认预览才是视觉真值。遵循 fill / hug / fixed（fill = 父宽减内边距，不是快照 px）。禁止把平行预览翻译到另一宿主栈。
 - `ui_truth_mode=figma` 或 `runtime-baseline` 的 UI truth 工作未先 `acceptance_frozen` + `visual_acceptance_passed`、有效 v3 `ui-truth-index.json`，以及按冻结证据范围覆盖全部已索引 scenario 的 schema v2 结构化 `visual-acceptance.json` 时，不得 `merged`；`none` 与 `existing` 按普通验证收口。
-- 仅在 CP-ARCHIVE 确认后通过 `scripts/archive-subrequirement.py` 设置 `archived`。该动作只原位更新 `status.json`，不得创建 `archive/<ISO-ts>/`、复制 canonical 产物或写入 `MANIFEST.json`。已完成需求目录保留为历史事实源；后续变更须使用新的 `<req-id>` 目录。
+- 仅在 CP-ARCHIVE 确认后通过 `ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>` 设置 `archived`。该动作只原位更新 `status.json`，不得创建 `archive/<ISO-ts>/`、复制 canonical 产物或写入 `MANIFEST.json`。已完成需求目录保留为历史事实源；后续变更须使用新的 `<req-id>` 目录。
 - 最新一轮评审不干净时不得声称任务完成或合并；评审循环预算耗尽时升级给用户。
-- 实现阶段一次只改一个文件；分支用 rebase 合并（禁止 merge commit）。
+- 实现阶段逐文件修改，尊重用户实际集成选择；仅在已授权分支流程需要时 rebase，不自动 commit、push 或 release。
 
 ## 状态转换门禁
 
@@ -240,16 +247,24 @@ API 文档直接进入 `design.md` 与实现。缺口按影响记录为风险、
 
 归档前从原始用户输入和已知发现逐项反查RET案例及处置状态，遗漏直接整合正文，再更新reviewed-at，详见复盘指导。客观归档检查不证明语义完整性。
 
-所有可执行子需求 `merged` → `runtime_mode` 为 `closing`（CP-ARCHIVE）。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `scripts/archive-subrequirement.py`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，仅将明确符合资格的高价值问题幂等更新到 `.ai-delivery/retrospectives/index.md`。会检查客观地图／详情结构，但不会创建、重写、总结或语义审计台账。没有合格问题的台账有效且不写新的索引文件或索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行以及哪些问题因资格字段缺失或不符合而跳过。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
+所有可执行子需求 `merged` 后，运行显式归档检查并处理 CP-ARCHIVE。执行最后一条归档命令前，先把 `templates/delivery-report-template.md` 实例化为使用用户当前对话语言的临时模板，删除其中的 `ai-delivery-template-language` 注释，并保留所有占位符。对每个子需求运行 `ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>`，仅原位推进状态至 `archived`，不得复制 canonical 产物或生成快照；最后一条命令须通过 `--delivery-report-template <path>` 传入准备好的模板。需求必须有 `retrospective.md`，还要把 `templates/retrospective-index-template.md` 实例化为使用用户当前对话语言的模板，删除语言指令并保留标记和占位符，在最后一条命令通过 `--retrospective-index-template <path>` 传入。归档命令要求唯一且可解析的 `<!-- ai-delivery-retrospective:reviewed-at:<RFC3339Nano-with-timezone> -->` 标记，其日历日期必须与归档日期一致；然后读取台账带标记的问题地图，仅将明确符合资格的高价值问题幂等更新到 `.ai-delivery/retrospectives/index.md`。会检查客观地图／详情结构，但不会创建、重写、总结或语义审计台账。没有合格问题的台账有效且不写新的索引文件或索引行；台账缺失或过期则阻断归档，并告知用户登记了哪些问题行以及哪些问题因资格字段缺失或不符合而跳过。已本地化的 `delivery-report.md` 不存在时，不得声称 `completed`。当每个子需求均为 `archived` 时，需求进入 `completed`；canonical 产物原位保留，后续变更须新建 `<req-id>` 目录。
 
 ## 编排形态（不变量）
 
 以下规则防止编排退化，适用于主会话与对账 dispatch：
 
 1. **主会话即编排者** — 单个人工会话驱动顺序管线（Pattern 4），阶段之间不得插入 router persona。
-2. **Dispatch 表是数据，不是 router** — `ACTION_BY_STATUS` / 对账输出的是抽象动作名；不得引入重新推导或转述该表的 persona。
+2. **Dispatch 指引是导航，不是另一规则引擎** — 使用当前 CLI 事实和动作诊断，不重建旧 reconcile 队列，也不引入重新推导核心规则的 persona。
 3. **Subagent 仅叶子、深度 ≤ 1** — 实现与评审可按 tier 规则委派 subagent；编排器不得嵌套编排 persona。
 4. **禁止模式** — persona 调 persona 链、仅转述上一阶段的「顺序编排器」层、深层 persona 树。
 5. **评审永不自动合并** — `merged` / `archived` 须有干净的 `verification.md` 证据与适用 gate；预算耗尽必须暂停等待用户。
 
 本 kit 只负责单仓治理交付（`.ai-delivery/`、`status.json`、门禁）。多方协同不在本 skill 范围内 — 需要时另行安装 [ai-delivery-coordination](https://github.com/s-charvin/ai-delivery-coordination)。
+
+## 规范上下文与质量闭环
+
+开工、恢复、阶段/范围变化和独立评审前，读取并执行 [质量闭环](references/delivery-quality-loop.md)。
+使用同一只读上下文入口；新 policy v4 的 verification v2 绑定当前输入、原生结果与新鲜上下文评审。
+区分知识、已确认规范及任务决定；证据无效先修取证，真实失败定向纠错，沿用三轮预算。
+已登记 sources 且 writable 的规范允许在授权范围维护，导入默认只读，不为通过检查自行降标。
+不引入 Trellis/Helix 的第二任务状态、自动提交、逐单元人审或无限循环。

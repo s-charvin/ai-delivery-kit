@@ -163,6 +163,11 @@ lifecycle test pass. Additional cleanup must be scoped to resources the host
 owns; unexpected pending work requires diagnosis. This test-harness handling
 does not establish that real system-back gestures have been verified.
 
-Use the host's exact module/variant test command. In the kit source checkout,
-`bash scripts/test-android-view.sh` runs the reference fixture and lint without
-an emulator. That script and fixture are not installed into business projects.
+Use the host's exact module/variant test command. From the kit source checkout root, enter the reference fixture before running its tests and lint without an emulator:
+
+```sh
+cd tests/fixtures/android-view
+./gradlew :app:testDebugUnitTest :app:lintDebug
+```
+
+The wrapper and fixture are not installed into business projects. The reference fixture requires the host Android SDK and Gradle toolchain.

@@ -127,7 +127,7 @@ with tempfile.TemporaryDirectory() as td:
         json.dumps({"_schema": "2.0", "sub_requirements": {"SR-001": ready}}),
         encoding="utf-8",
     )
-    result = reconcile.reconcile(status_path, req, validator_script=req / "missing-validator.py")
+    result = reconcile.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
     assert result["runtime_mode"] == "resume", result
     assert result["checkpoint"] is None, result
     assert result["next_action"] == "implement", result
@@ -140,7 +140,7 @@ with tempfile.TemporaryDirectory() as td:
         json.dumps({"_schema": "2.0", "sub_requirements": {"SR-001": pending}}),
         encoding="utf-8",
     )
-    result = reconcile.reconcile(status_path, req, validator_script=req / "missing-validator.py")
+    result = reconcile.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
     assert result["runtime_mode"] == "confirm_solution_design", result
     assert result["checkpoint"] == "CP-DESIGN", result
     assert result["next_action"] == "solution-design", result
@@ -161,7 +161,7 @@ with tempfile.TemporaryDirectory() as td:
         json.dumps({"_schema": "2.0", "sub_requirements": {"SR-001": approved}}),
         encoding="utf-8",
     )
-    result = reconcile.reconcile(status_path, req, validator_script=req / "missing-validator.py")
+    result = reconcile.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
     assert result["runtime_mode"] == "resume", result
     assert result["checkpoint"] is None, result
     assert result["next_action"] == "implement", result
@@ -200,7 +200,8 @@ with tempfile.TemporaryDirectory() as td:
         ),
         encoding="utf-8",
     )
-    result = reconcile.reconcile(status_path, req, validator_script=req / "missing-validator.py")
+    (req / "dependency-graph.json").write_text(json.dumps({"nodes": {"SR-001": {"depends_on": []}, "SR-002": {"depends_on": []}}}))
+    result = reconcile.reconcile(status_path, req, validator_script=root / "scripts/validate-delivery-status.py")
     assert result["runtime_mode"] == "resume", result
     assert result["checkpoint"] == "CP-DESIGN", result
     assert result["next_action"] == "implement", result

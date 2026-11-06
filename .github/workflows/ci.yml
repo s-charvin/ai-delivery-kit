@@ -18,6 +18,8 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
       - uses: gradle/actions/setup-gradle@v4
       - name: Install Android platform
         run: sdkmanager 'platforms;android-36' 'build-tools;35.0.0'
@@ -50,16 +52,16 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.26.2"
           cache: false
-
-      - name: Install zsh on Ubuntu
-        if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y zsh
 
       - name: Run Unix release rehearsal
         if: runner.os != 'Windows'
         run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh
+
+      - name: Run native Go and installed CLI tests on Windows
+        if: runner.os == 'Windows'
+        run: go test ./...
 
       - name: Validate PowerShell script syntax
         if: runner.os == 'Windows'
@@ -81,11 +83,8 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version: "1.22"
+          go-version: "1.26.2"
           cache: false
-
-      - name: Install zsh
-        run: sudo apt-get update && sudo apt-get install -y zsh
 
       - name: Run release rehearsal gates
         run: AI_DELIVERY_RUN_GORELEASER=never AI_DELIVERY_RUN_PWSH=never bash scripts/rehearse-release.sh

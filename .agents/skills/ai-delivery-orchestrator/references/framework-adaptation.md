@@ -1,8 +1,8 @@
 # Framework Adaptation
 
-The orchestrator owns state, gates, blockers, handoffs, and persisted artifact
-shape. Installed frameworks contribute reasoning or execution discipline; they
-do not add workflow stages or required documents.
+The single installed `ai-delivery` CLI evaluates current state, gates, applicability,
+and legal actions. The orchestrator organizes handoffs and canonical artifacts;
+frameworks provide methods, not another executable rule table or required documents.
 
 ## Artifact containment protocol (required)
 
@@ -12,6 +12,11 @@ do not add workflow stages or required documents.
   The sole Stage 3 contract is `design.md`; optional recovery uses `progress.md`.
 - Outside `.ai-delivery/`, writes are limited to production source,
   project-native tests, goldens/official previews, and runtime assets.
+  A project standard explicitly registered in `context.sources` with
+  `writable: true` is a narrow exception: maintain its single source within
+  existing authority, never write back to read-only imports or lower standards
+  to pass the current check. Product, permission, and truth changes retain
+  their decision gates. See [quality loop](delivery-quality-loop.md).
 - Before invoking an external skill, command, agent, or hook, pass the exact
   canonical output map and approved workspace. Defaults such as
   `docs/superpowers/**`, `.superpowers/**`, `.specify/**`, and `openspec/**` are
@@ -25,7 +30,7 @@ Existing framework trees are read-only inputs during orchestrated work.
 
 ## Lightweight artifact organization
 
-Formal paths still resolve through `project-binding.json` and `layout.py`.
+Formal paths still resolve through `project-binding.json` and `ai-delivery validate --kind layout`.
 Auxiliary material is allowed under the owning requirement without adding every
 file kind to that binding. These conventions guide new writes, not directory
 validation, file-count limits, new manifests, naming gates, or a cleanup phase.
@@ -222,6 +227,7 @@ and record the selected methods in `decisions.md`:
 | OpenSpec | `openspec/` or `openspec` CLI | optional brownfield delta reasoning |
 | superpowers | skills in a user or repository skill tree | design, TDD, review, finish discipline |
 | ECC | registered ECC commands/agents | design, execution, and review discipline |
+| Trellis | registered `.trellis/spec/` sources | [Limited adaptation](frameworks/trellis.md), no second task lifecycle |
 | native | always available | complete fallback |
 
 When detection is ambiguous, use the native tier unless the distinction would
@@ -253,5 +259,5 @@ gate does not advance status.
 Record the canonical `design.md` path, current SHA-256, source relationships,
 and selected reasoning method under the existing `traceability.json`
 `source_index.design` contract. Do not emit `spec_refs` or `kind=spec|plan|tasks`
-for schema 2.0. Historical `spec_refs` may be read only for legacy
-`merged`/`archived` records.
+for schema 2.0. Old spec/plan/tasks parsers are not part of the current runtime.
+Retain unsupported historical material only as backup/reference outside active governance.

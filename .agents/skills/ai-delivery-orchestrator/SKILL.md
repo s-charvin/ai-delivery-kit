@@ -5,13 +5,27 @@ description: Use when a requirement document needs governed end-to-end delivery 
 
 # AI Delivery Orchestrator
 
-Single entry for requirement → implementation. Leaf skills (`requirement-breakdown`, `ui-truth-mapping`) are pure tools — no pipeline awareness. This skill owns state, gates, blockers, and handoffs.
+Single entry for requirement → implementation. Leaf skills (`requirement-breakdown`, `ui-truth-mapping`) supply methods. The single installed `ai-delivery` CLI is the executable authority for current protocol, applicability, action checks, and transitions; this skill organizes investigation, artifacts, and handoffs without duplicating its rule table.
+
+Honor the user's actual workspace, branch, integration, and publishing choices. Existing authorization remains valid in its reviewed scope; do not ask again merely because a framework prefers another workflow. New product/resource decisions still use the existing gates. Optional [native hooks](references/native-hooks.md) use the same program; no hooks are required, and external Python/Node tooling is only a user-selected capability, never a kit runtime dependency.
 
 ```
 Requirement → [Breakdown?] → Capability review → Design Contract → Implement + Verify → Merge → Archive
 ```
 
 The orchestrator is **framework-agnostic**: it emits abstract stage actions and adapts them to whatever AI development framework the user has installed. It never requires installing anything.
+
+## Context and quality loop
+
+Before starting, resuming, changing stage/scope, or reviewing, read and apply
+[references/delivery-quality-loop.md](references/delivery-quality-loop.md)。
+`ai-delivery context` selects current sources for an explicit requirement,
+slice, and role. Resolve missing or incompletely provided required sources;
+context readiness never grants implementation authority. Policy v4 verification
+v2 binds actual inputs, native results, and applicable independent review.
+Neither a pass label nor a Stop hook authorizes progression. Trellis supplies
+limited source/method adaptation; Shopify Helix's bounded feedback loop uses
+this skill's existing batches, retry budget, and UI truth boundaries.
 
 ## Scenario guidance
 
@@ -48,7 +62,7 @@ required at archive even if genuinely empty; update its sole reviewed-at only
 after that review.
 
 For each problem-map row, AI must declare `knowledge_type`, `reuse_scope`,
-`index_decision`, `confidence`, and `importance`. The archive script routes a
+`index_decision`, `confidence`, and `importance`. The archive command routes a
 row only when those fields are `reusable`, `project` or `domain`, `include`,
 `confirmed`, and `high` or `critical`, respectively. Temporary decisions,
 requirement-only changes, unconfirmed causes, and mechanical corrections stay
@@ -56,7 +70,7 @@ in the ledger but are not indexed.
 
 Before archive, detect legacy `problem-index:v1` or six-column problem maps.
 Read the full ledger and upgrade them to `problem-index:v2` in place before
-calling the archive script. Preserve all problem IDs, detail sections, anchors,
+calling the archive command. Preserve all problem IDs, detail sections, anchors,
 evidence, and conclusions. Classify only from recorded evidence; when a row's
 reuse scope, confidence, or importance is not established, set conservative
 non-indexable metadata (`index_decision=exclude`, `confidence=unverified`).
@@ -132,7 +146,7 @@ The bracketed states are capability-gated. `ui_truth_mode=none` and `existing` s
 
 Truth lives in `.ai-delivery/requirements/<req-id>/status.json`. Copy the structure of [templates/status-template.json](templates/status-template.json) verbatim and localize its human-readable descriptive values; never regenerate the structure from memory. Instantiate [templates/todo-template.md](templates/todo-template.md) in the user's current conversation language (not source of truth).
 
-The current status template is schema `2.0`. On resume, every active older entry must be re-audited and migrated before routing; `merged`/`archived` legacy records remain read-only compatible and must not receive invented design or review evidence.
+The kit accepts only the current protocol: status schema `2.0`, including terminal entries. Unsupported data stops dependent routing and reports the actual/required format. Offer both choices in [version-upgrade.md](references/version-upgrade.md): user-managed migration after backup, or explicit backup-and-reset. Never fabricate historical approval or execute either choice automatically.
 
 | Field | Purpose |
 |-------|---------|
@@ -149,13 +163,19 @@ The current status template is schema `2.0`. On resume, every active older entry
 
 On every resume or continue, run reconcile before trusting `todo.md`:
 
-```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery context --project . --req <req-id> --subreq <subreq-id> --role recovery --format json
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent <intent> --to <target-status> --format json
 ```
 
-reconcile emits abstract actions (`solution-design` / `implement` / `finish` / `archive`, plus kit-owned skills) — never third-party skill names. Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
+The CLI returns scoped JSON facts and action diagnostics. Read the current status and handoff table to select the action; context completeness is not action permission. It does not emit the former reconcile script’s queue or key/value protocol. Rules: [references/reconcile-rules.md](references/reconcile-rules.md).
+
+Use `ai-delivery check --help` for the core's current intent choices, and
+`advance --help` / `context --help` for their actual parameters; these work
+before project initialization. `analysis` is a context role, while `analyze` is
+a check intent. Workflow `finish` includes completion and integration discipline;
+its CLI readiness check uses `merge`, never `--intent finish`. A successful
+merge check neither performs integration nor grants new authority.
 
 ## Handoff table
 
@@ -196,9 +216,9 @@ Each stage has one legal next action. Full table: [references/handoff-table.md](
 - For `ui_truth_mode=figma` or `runtime-baseline`, do not set `acceptance_frozen` until each UI unit has a real host-stack component, complete applicability-gated runtime coverage, an official-stack preview for every visual scenario whose **absolute path** was shown to the user, and a valid v3 `contracts/ui-truth-index.json`. Every scenario must freeze `evidence_scope` and `scope_decision`; only `host-static` and `host-runtime` may carry a validated `host_binding`. A `component-only` scenario explicitly excludes host composition from its acceptance claim. Matching SHA-256 hashes, preview-bound static confirmation, separate motion confirmation/waiver (including an explicit confirmed static/no-motion decision), and a clean Stage 2 review remain mandatory. When the host can deterministically record the real motion, include the GIF preview path and hash; when it cannot, record the reason and defer that runtime acceptance to Stage 4. Stage 4 must record independent motion acceptance for every unit before `visual_acceptance_passed`. Stage 2 authors via `ui-truth-mapping` only; selected provider skills (including official `figma:figma-design-to-code`) supply evidence under its gates, and never by generating `ui-contract.html`. Do not use an unapproved placeholder, generic icon, dummy/fixture visual, painted input shell, or silent asset fallback; missing resources require an explicit user choice to render empty, defer, or block. A missing data-bound value must render the real empty/omitted state, never fabricated content.
 - Stage 4: for `ui_truth_mode=figma` or `runtime-baseline`, reuse the Stage 2 user-approved workspace; do not create a second workspace or re-draw the component. `component-only` reuses component previews and behavior tests without a host-visual pass. `host-static` captures the indexed production host through deterministic project-native tooling. `host-runtime` runs device/resource/visual smoke before expensive native lifecycle checks. Runtime captures must live in the indexed native test evidence root outside `.ai-delivery/` and bind the indexed host provenance. `existing` uses the existing component and ordinary behavior/semantic checks; `none` has no UI truth artifact. Do not re-query TemPad or official Figma by default; the frozen component plus confirmed preview is the visual source of truth. Follow fill / hug / fixed (fill = parent minus insets, not snapshot px). Do not translate a parallel preview into another host stack.
 - Do not set `merged` for `ui_truth_mode=figma` or `runtime-baseline` without prior `acceptance_frozen` + `visual_acceptance_passed` + a valid v3 `ui-truth-index.json` + schema v2 structured `visual-acceptance.json` covering every indexed scenario at its frozen evidence scope. `none` and `existing` close through ordinary verification.
-- Set `archived` only through `scripts/archive-subrequirement.py` after CP-ARCHIVE confirmation. The action updates `status.json` in place and must not create an `archive/<ISO-ts>/` directory, copy canonical artifacts, or write `MANIFEST.json`. The completed requirement directory remains the historical source of truth; subsequent changes use a new `<req-id>` directory.
+- Set `archived` only through `ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>` after CP-ARCHIVE confirmation. The action updates `status.json` in place and must not create an `archive/<ISO-ts>/` directory, copy canonical artifacts, or write `MANIFEST.json`. The completed requirement directory remains the historical source of truth; subsequent changes use a new `<req-id>` directory.
 - Do not claim a task done or merge work whose latest review round is not clean; the review loop escalates to the user when its budget is exhausted.
-- Edit one file at a time during implementation; rebase branches (no merge commits).
+- Edit one file at a time. Follow the user's actual integration choice; use rebase only when an authorized branch workflow requires it, without automatic commit, push, or release.
 
 ## Status transition gates
 
@@ -311,14 +331,14 @@ that decision through the native user-choice UI or structured chat.
 
 ## Completion
 
-All executable subreqs `merged` → runtime_mode `closing` (CP-ARCHIVE). Reverse-check
+When all executable subreqs are `merged`, evaluate explicit archive checks and CP-ARCHIVE. Reverse-check
 all known findings and user input issues against RET cases, integrate omissions
 and current dispositions, then update reviewed-at as described in the retrospective
 guidance. Objective archive checks do not prove semantic completeness. Before
 the final archive command, instantiate `templates/delivery-report-template.md`
 as a temporary template in the user's current conversation language, remove its
 `ai-delivery-template-language` comment, and preserve its placeholders. Run
-`scripts/archive-subrequirement.py` per subreq to advance status to `archived` in
+`ai-delivery archive --confirm-archive --expected-snapshot <snapshot-id>` per subreq to advance status to `archived` in
 place without copying canonical artifacts; pass the prepared template to
 the final command with `--delivery-report-template <path>`. The requirement
 must have `retrospective.md`; instantiate
@@ -326,7 +346,7 @@ must have `retrospective.md`; instantiate
 language, remove its `ai-delivery-template-language` instruction, preserve its
 markers and placeholder, and pass it to the final command with
 `--retrospective-index-template <path>`. The archive command requires exactly
-one parseable `<!-- ai-delivery-retrospective:reviewed-at:<ISO-8601> -->` marker
+one parseable `<!-- ai-delivery-retrospective:reviewed-at:<RFC3339Nano-with-timezone> -->` marker
 whose calendar date matches the archive date, then reads the marked problem map
 and idempotently updates `.ai-delivery/retrospectives/index.md` with only
 explicitly qualified high-value rows; it checks objective map/detail structure but does not
@@ -343,7 +363,7 @@ remain in place and any later change requires a new `<req-id>` directory.
 These rules prevent orchestration regressions. They apply to the main session and reconcile dispatch:
 
 1. **Main session is the orchestrator** — one human-facing session drives the sequential pipeline (Pattern 4). No router persona sits between stages.
-2. **Dispatch table is data, not a router** — `ACTION_BY_STATUS` / reconcile output names abstract actions; do not introduce a persona that re-derives or re-explains the table.
+2. **Dispatch guidance is navigation, not another rule engine** — consult current CLI facts and action diagnostics; do not reconstruct the former reconcile queue or introduce a persona that re-derives the core rules.
 3. **Subagents are leaf-only, depth ≤ 1** — implementation and review may delegate to subagents per tier rules; the orchestrator never nests orchestrator personas.
 4. **Forbidden patterns** — persona-calls-persona chains, “sequential orchestrator” layers that only paraphrase the previous stage, and deep persona trees.
 5. **Review never auto-merges** — `merged` / `archived` require clean review evidence (`verification.md`) and their applicable gates; budget exhaustion always pauses for the user.

@@ -36,7 +36,7 @@ validator 通过后才能设置 `design_ready`。
 
 核对最终项目分析和完整测试覆盖，按 Stage 4 规则复用有效结果、补跑缺失/失效检查，
 完成所需视觉/动效验收，写带稳定 marker 的本地化
-`verification.md`，rebase 后仅在所有 gate 仍有效时设置 `merged`。
+`verification.md`，在用户选择的 workspace 完成已授权集成；当前 checkout 上的工作不强制新分支或 rebase，不自动 commit、push 或发布。仅在当前 CLI 检查和全部适用 gate 仍有效时设置 `merged`。
 
 在 `traceability.json` `source_index.design` 记录 native 方法和 canonical
 `design.md` 路径/hash；schema 2.0 不生成 `spec_refs`。

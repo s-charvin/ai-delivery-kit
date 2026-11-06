@@ -4,14 +4,12 @@ Run reconcile before trusting `todo.md` on every resume or continue.
 
 ## Command
 
-```bash
-python3 .agents/skills/ai-delivery-orchestrator/scripts/reconcile-delivery.py \
-  .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery context --project . --req <req-id> --subreq <subreq-id> --role recovery --format json
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent <intent> --to <target-status> --format json
 ```
 
-Bootstrap copies may use `.ai-delivery/scripts/`; the skill-local path works in
-the kit repository.
+Use the installed `ai-delivery` program. Project resources contain no executable core. Select each relevant slice explicitly; no project-local script fallback exists.
 
 ## Reconciliation contract
 
@@ -22,14 +20,14 @@ the kit repository.
 5. Reopen the narrowest action when evidence is absent or stale. A missing or
    stale `design_review` hash reopens `solution-design`.
 6. Keep blocked slices in the queue and continue any independent runnable slice.
-7. Emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`,
+7. Read the scoped JSON `allowed`, `snapshot_id`, `checks`, and `diagnostics`; derive the human-readable queue from current canonical status. The CLI does not emit `RUNTIME_MODE`, `CHECKPOINT`, `RUNNABLE`, `BLOCKED`,
    `BLOCKER_SCOPES`, `NEXT_ACTION`, and `NEXT_SUBREQ`.
 
 Schema 2.0 actions are `solution-design`, `implement`, `finish`, and `archive`,
 plus kit-owned skills. Do not emit or recreate `spec`, `plan`, or `tasks`
-actions. Active older schemas require migration and a fresh design capability
-audit; legacy `merged` or `archived` entries remain read-only compatible and do
-not receive invented review evidence.
+actions. Unsupported schemas, including terminal entries, stop dependent routing.
+Report actual/required formats and both user choices in [version-upgrade.md](version-upgrade.md).
+Never fabricate review evidence or execute migration/reset automatically.
 
 ## Runtime mode resolution
 
@@ -61,7 +59,7 @@ Checkpoints are current credentials, not history:
 ## Truth hierarchy
 
 1. `.ai-delivery/requirements/<req-id>/status.json` and governed artifacts
-2. `reconcile-delivery.py` output
+2. `ai-delivery check` output
 3. `todo.md` execution panel, rewritten when it drifts
 
 ## User entry mapping

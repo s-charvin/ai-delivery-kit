@@ -69,8 +69,34 @@ func TestDiscoverReportsSeededManagedFileConflicts(t *testing.T) {
 	}
 }
 
-func TestDiscoverRejectsPathOutsideGitRepository(t *testing.T) {
-	if _, err := Discover(t.TempDir()); err == nil {
-		t.Fatal("expected git repository error, got nil")
+func TestDiscoverAcceptsExplicitDirectoryWithoutGit(t *testing.T) {
+	root := t.TempDir()
+	got, err := Discover(root)
+	if err != nil || got.Root != root {
+		t.Fatalf("非 Git 根: %+v %v", got, err)
+	}
+}
+func TestDiscoverDoesNotTreatBrokenGitMarkerAsNonGit(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, ".git"), []byte("gitdir: absent"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Discover(root); err == nil {
+		t.Fatal("坏 Git 标记应拒绝")
+	}
+}
+
+func TestDiscoverNonGitExplicitNestedDeliveryRoot(t *testing.T) {
+	root := t.TempDir()
+	ad := filepath.Join(root, "tooling/delivery")
+	if err := os.MkdirAll(filepath.Join(ad, "meta"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(ad, "meta/project-binding.json"), []byte(`{"version":3,"ai_delivery_path":"tooling/delivery"}`), 0644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := Discover(ad)
+	if err != nil || got.Root != root {
+		t.Fatalf("实际项目根 %s, got %+v %v", root, got, err)
 	}
 }

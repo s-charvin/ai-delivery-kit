@@ -2,164 +2,12 @@ package bootstrap
 
 import (
 	"bytes"
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
-
-func TestMergeAmendableJSONPreservesForeignHooks(t *testing.T) {
-	existing := []byte(`{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [{"type":"command","command":"echo keep-me"}]
-      }
-    ],
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [{"type":"command","command":"echo notify"}]
-      }
-    ]
-  },
-  "permissions": {"allow": ["Bash"]}
-}
-`)
-	desired := []byte(`{"hooks":{}}`)
-
-	merged, err := mergeAmendableJSON(existing, desired)
-	if err != nil {
-		t.Fatalf("merge failed: %v", err)
-	}
-
-	var obj map[string]any
-	if err := json.Unmarshal(merged, &obj); err != nil {
-		t.Fatalf("merged json invalid: %v", err)
-	}
-	if _, ok := obj["permissions"]; !ok {
-		t.Fatal("expected existing top-level permissions to be preserved")
-	}
-	hooks := obj["hooks"].(map[string]any)
-	if _, ok := hooks["Notification"]; !ok {
-		t.Fatal("expected existing Notification hooks to be preserved")
-	}
-	if !strings.Contains(string(merged), "echo keep-me") {
-		t.Fatalf("expected foreign Bash hook preserved, got %s", string(merged))
-	}
-	if strings.Contains(string(merged), "validate-ui-contract.sh") {
-		t.Fatalf("did not expect UI contract hook to be inserted, got %s", string(merged))
-	}
-}
-
-func TestMergeAmendableJSONStripsOwnedGate(t *testing.T) {
-	existing := []byte(`{
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash old/validate-ui-contract.sh",
-            "timeout": 10
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [{"type":"command","command":"echo keep-me"}]
-      }
-    ]
-  }
-}
-`)
-	desired := []byte(`{"hooks":{}}`)
-
-	merged, err := mergeAmendableJSON(existing, desired)
-	if err != nil {
-		t.Fatalf("merge failed: %v", err)
-	}
-	if strings.Contains(string(merged), "validate-ui-contract.sh") {
-		t.Fatalf("expected owned UI contract gate stripped, got %s", string(merged))
-	}
-	if !strings.Contains(string(merged), "echo keep-me") {
-		t.Fatalf("expected foreign hook preserved, got %s", string(merged))
-	}
-}
-
-func TestWriteAmendableJSONBacksUpExistingSettings(t *testing.T) {
-	dir := t.TempDir()
-	target := filepath.Join(dir, ".claude", "settings.json")
-	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	existing := []byte(`{
-  "hooks": {
-    "Stop": [{"hooks":[{"type":"command","command":"echo stop"}]}]
-  },
-  "env": {"FOO":"bar"}
-}
-`)
-	if err := os.WriteFile(target, existing, 0o644); err != nil {
-		t.Fatal(err)
-	}
-
-	desired := []byte(`{"hooks":{}}`)
-
-	fixed := time.Date(2026, 7, 10, 6, 43, 0, 0, time.UTC)
-	report := AmendReport{}
-	session := newAmendSession(dir, func() time.Time { return fixed }, &report)
-	if err := session.writeAmendableJSON(".claude/settings.json", target, desired); err != nil {
-		t.Fatalf("writeAmendableJSON failed: %v", err)
-	}
-
-	body, err := os.ReadFile(target)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(body), `"FOO": "bar"`) && !strings.Contains(string(body), `"FOO":"bar"`) {
-		t.Fatalf("expected env preserved, got %s", string(body))
-	}
-	if !strings.Contains(string(body), "echo stop") {
-		t.Fatalf("expected Stop hook preserved, got %s", string(body))
-	}
-	if strings.Contains(string(body), "validate-ui-contract.sh") {
-		t.Fatalf("did not expect UI contract gate to be inserted, got %s", string(body))
-	}
-
-	if report.BackupStamp != "2026-07-10T06-43-00Z" {
-		t.Fatalf("expected backup stamp, got %#v", report)
-	}
-	backupFile := filepath.Join(report.BackupDir, ".claude", "settings.json")
-	backupBody, err := os.ReadFile(backupFile)
-	if err != nil {
-		t.Fatalf("expected backup file: %v", err)
-	}
-	if !strings.Contains(string(backupBody), "echo stop") {
-		t.Fatalf("expected original content in backup, got %s", string(backupBody))
-	}
-}
-
-func TestWriteAmendableJSONSkipsBackupOnCreate(t *testing.T) {
-	dir := t.TempDir()
-	target := filepath.Join(dir, ".claude", "settings.json")
-	desired := []byte(`{"hooks":{}}`)
-	report := AmendReport{}
-	session := newAmendSession(dir, nil, &report)
-	if err := session.writeAmendableJSON(".claude/settings.json", target, desired); err != nil {
-		t.Fatalf("writeAmendableJSON failed: %v", err)
-	}
-	if !report.Empty() {
-		t.Fatalf("expected no backup on create, got %#v", report)
-	}
-	if _, err := os.Stat(filepath.Join(dir, filepath.FromSlash(ideGateBackupRelRoot))); !os.IsNotExist(err) {
-		t.Fatalf("expected no backup dir on create, err=%v", err)
-	}
-}
 
 func TestPruneIDEGateBackupsKeepsThree(t *testing.T) {
 	root := t.TempDir()
@@ -193,7 +41,7 @@ func TestRestoreIDEGateBackupRestoresAndBacksUpCurrent(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(settings), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	current := []byte(`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo current"}]}]}}`)
+	current := []byte(`{ "third_party": 9007199254740993, "current": true }` + "\n")
 	if err := os.WriteFile(settings, current, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -203,7 +51,7 @@ func TestRestoreIDEGateBackupRestoresAndBacksUpCurrent(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(backupFile), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	old := []byte(`{"hooks":{"Stop":[{"hooks":[{"type":"command","command":"echo old"}]}]}}`)
+	old := []byte(`{ "third_party": 9007199254740995, "old": true }` + "\n")
 	if err := os.WriteFile(backupFile, old, 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -217,7 +65,7 @@ func TestRestoreIDEGateBackupRestoresAndBacksUpCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(body), "echo old") {
+	if !bytes.Equal(body, old) {
 		t.Fatalf("expected restored content, got %s", string(body))
 	}
 	if report.BackupStamp != "2026-07-10T12-00-00Z" {
@@ -227,7 +75,7 @@ func TestRestoreIDEGateBackupRestoresAndBacksUpCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(preRestore), "echo current") {
+	if !bytes.Equal(preRestore, current) {
 		t.Fatalf("expected current content backed up, got %s", string(preRestore))
 	}
 }
@@ -258,24 +106,5 @@ func TestUpsertAgentsMDSectionPreservesForeignContent(t *testing.T) {
 	}
 	if !strings.Contains(string(again), "updated") {
 		t.Fatalf("expected section replaced, got %s", again)
-	}
-}
-
-func TestEnsureCodexHooksEnabled(t *testing.T) {
-	desired := []byte("[features]\nhooks = true\n")
-	if got := string(ensureCodexHooksEnabled(nil, desired)); !strings.Contains(got, "hooks = true") {
-		t.Fatalf("expected desired written on create, got %q", got)
-	}
-	existingTrue := []byte("[features]\nhooks = true\nmodel = \"x\"\n")
-	if got := ensureCodexHooksEnabled(existingTrue, desired); !bytes.Equal(got, existingTrue) {
-		t.Fatalf("expected unchanged when already true")
-	}
-	existingFalse := []byte("[features]\nhooks = false\n")
-	if got := string(ensureCodexHooksEnabled(existingFalse, desired)); !strings.Contains(got, "hooks = true") || strings.Contains(got, "hooks = false") {
-		t.Fatalf("expected false flipped to true, got %q", got)
-	}
-	existingOther := []byte("model = \"gpt\"\n")
-	if got := string(ensureCodexHooksEnabled(existingOther, desired)); !strings.Contains(got, "model = \"gpt\"") || !strings.Contains(got, "hooks = true") {
-		t.Fatalf("expected append features, got %q", got)
 	}
 }

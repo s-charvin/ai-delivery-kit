@@ -3,6 +3,7 @@ package initflow
 import (
 	"context"
 	"fmt"
+	"io"
 	"path/filepath"
 	"strings"
 
@@ -17,17 +18,20 @@ type Bootstrapper interface {
 type Input struct {
 	TargetPath string
 	Upgrade    bool
+	ResetData  string
 }
 
 type Result struct {
 	RepoRoot     string
 	Upgraded     bool
 	IDEGateAmend bootstrap.AmendReport
+	DataReset    bootstrap.ResetReport
 }
 
 type Service struct {
 	Bootstrapper Bootstrapper
 	Discover     func(string) (repo.Info, error)
+	Progress     io.Writer
 }
 
 // Run resolves the target repository and seeds managed ai-delivery assets.
@@ -36,6 +40,9 @@ type Service struct {
 func (s Service) Run(_ context.Context, input Input) (Result, error) {
 	if input.TargetPath == "" {
 		return Result{}, fmt.Errorf("target repo path is required")
+	}
+	if input.ResetData != "" && !input.Upgrade {
+		return Result{}, fmt.Errorf("--reset-data requires --upgrade")
 	}
 
 	discover := s.Discover
@@ -51,6 +58,13 @@ func (s Service) Run(_ context.Context, input Input) (Result, error) {
 		return Result{}, fmt.Errorf("managed asset already exists: %s", info.ManagedConflicts[0])
 	}
 
+	deliveryPath := ""
+	if input.Upgrade && input.ResetData == "" {
+		deliveryPath, err = bootstrap.DeliveryPathHint(info.Root, input.TargetPath)
+		if err != nil {
+			return Result{}, err
+		}
+	}
 	projectID := slugify(filepath.Base(info.Root))
 
 	bootstrapper := s.Bootstrapper
@@ -58,11 +72,16 @@ func (s Service) Run(_ context.Context, input Input) (Result, error) {
 		bootstrapper = bootstrap.Engine{}
 	}
 	amendReport := bootstrap.AmendReport{}
+	resetReport := bootstrap.ResetReport{}
 	if err := bootstrapper.Run(bootstrap.Config{
 		RepoRoot:           info.Root,
 		ProjectID:          projectID,
 		AllowManagedUpdate: input.Upgrade,
+		ResetData:          input.ResetData,
+		DeliveryPath:       deliveryPath,
 		Report:             &amendReport,
+		ResetReport:        &resetReport,
+		Progress:           s.Progress,
 	}); err != nil {
 		return Result{}, err
 	}
@@ -71,6 +90,7 @@ func (s Service) Run(_ context.Context, input Input) (Result, error) {
 		RepoRoot:     info.Root,
 		Upgraded:     input.Upgrade,
 		IDEGateAmend: amendReport,
+		DataReset:    resetReport,
 	}, nil
 }
 

@@ -22,3 +22,17 @@ htmlcov/
 
 # Runtime backups from init --upgrade / ide-gates amend
 .ai-delivery/backups/
+
+# Project cooperation lock and explicit full-data reset backups
+.ai-delivery.lock
+.ai-delivery-backups/
+
+# Local development documents and acceptance artifacts
+/docs/evaluations/
+/docs/guides/
+/docs/plans/
+/docs/prd/
+/docs/research/
+/docs/superpowers/
+/docs/artifact-layout.md
+/docs/CHANGELOG.md

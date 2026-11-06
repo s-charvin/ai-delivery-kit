@@ -22,7 +22,6 @@ Before using this template, translate every human-readable heading, label, and p
 ## Verification Summary
 
 - Each sub-requirement's `verification.md` is signed and includes the three required language-neutral markers for review rounds, verification commands/results, and sign-off.
-- `validate-artifact-layout.py --verify-archive` may additionally verify legacy snapshots when an older repository contains them; current in-place archives do not require snapshots.
 
 ## Changes and Follow-up
 

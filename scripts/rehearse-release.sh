@@ -68,31 +68,9 @@ maybe_run_pwsh() {
 main() {
   cd "$ROOT"
 
-  need_cmd zsh
   run_step "go test ./..." env GOCACHE="$GOCACHE_DIR" go test ./...
-  run_step "kit root boundary" bash tests/ai-delivery-skills/kit-root-boundary.test.sh
-  run_step "skill validator" zsh scripts/validate-project-ai-delivery-skills.sh
-  run_step "English source policy" bash tests/ai-delivery-skills/english-source-policy.test.sh
-  run_step "artifact language policy" bash tests/ai-delivery-skills/artifact-language-policy.test.sh
-  run_step "ui-truth-mapping skill markers" bash tests/ai-delivery-skills/ui-truth-mapping-skill-markers.test.sh
-  run_step "change-scenario guidance markers" bash tests/ai-delivery-skills/change-scenario-guidance.test.sh
-  run_step "orchestrator Stage 4 skill markers" bash tests/ai-delivery-skills/orchestrator-stage4-skill-markers.test.sh
-  run_step "UI truth index v3 gate" bash tests/ai-delivery-skills/ui-truth-index-validator.test.sh
-  run_step "structured visual acceptance gate" bash tests/ai-delivery-skills/visual-acceptance-validator.test.sh
-  run_step "layout contract" bash tests/ai-delivery-skills/layout.test.sh
-  run_step "artifact layout + drift" bash tests/ai-delivery-skills/artifact-layout.test.sh
-  run_step "verification gate" bash tests/ai-delivery-skills/verification-gate.test.sh
-  run_step "reconcile delivery" zsh tests/ai-delivery-skills/reconcile-delivery.test.sh
-  run_step "archive immutability" bash tests/ai-delivery-skills/archive-immutability.test.sh
-  run_step "delivery report language" bash tests/ai-delivery-skills/delivery-report-language.test.sh
-  run_step "retrospective ledger and index" bash tests/ai-delivery-skills/retrospective-feature.test.sh
-  run_step "zero-based flow fixture" zsh tests/ai-delivery-contracts/zero-based-flow.test.sh
-  run_step "ui composition guardrails" bash tests/ai-delivery-skills/ui-composition-guardrails.test.sh
-  run_step "human gate pressure" bash tests/ai-delivery-skills/human-gate-pressure.test.sh
-  run_step "user interaction policy" bash tests/ai-delivery-skills/user-interaction-policy.test.sh
-  run_step "legacy bootstrap contract" env GOCACHE="$GOCACHE_DIR" zsh tests/ai-delivery-skills/bootstrap-project.test.sh
-  run_step "bootstrap smoke" bash tests/ai-delivery-cli/bootstrap-script.test.sh
-  run_step "install smoke" bash tests/ai-delivery-cli/install-script.test.sh
+  run_step "bootstrap installer convenience smoke" bash tests/ai-delivery-cli/bootstrap-script.test.sh
+  run_step "installer convenience smoke" bash tests/ai-delivery-cli/install-script.test.sh
   run_step "diff check" git diff --check
   maybe_run_pwsh
   maybe_run_goreleaser

@@ -30,6 +30,11 @@ The brief is transient execution context, not a new governed artifact. Do not
 persist `spec.md`, `plan.md`, or `tasks.md`, and do not copy file-level steps
 into `design.md`.
 
+Generate implement context using the [quality loop](delivery-quality-loop.md),
+then carry applicable sources and actual ownership in the existing four brief
+entries below. The review role independently rechecks scope. Do not add a fifth
+plan artifact or a reviewer gate per unit.
+
 Run focused TDD inside each unit; one implementer may complete consecutive units
 within a coherent batch before independent review. A batch follows one observable
 behavior or existing state owner and includes a complete, compilable call path

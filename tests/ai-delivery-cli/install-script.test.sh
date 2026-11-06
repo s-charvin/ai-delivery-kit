@@ -17,10 +17,6 @@ assert_file_contains() {
   grep -Fq -- "$needle" "$file" || fail "expected '$needle' in $file"
 }
 
-assert_install_script_pulls_existing_repo() {
-  assert_file_contains "$INSTALL_SCRIPT" 'git -C "$skills_repo_dir" pull --ff-only'
-}
-
 assert_file_not_contains() {
   local file=$1
   local needle=$2
@@ -32,7 +28,8 @@ assert_file_not_contains() {
 
 [[ -f "$INSTALL_SCRIPT" ]] || fail "missing install script"
 
-assert_install_script_pulls_existing_repo
+assert_file_not_contains "$INSTALL_SCRIPT" 'git clone'
+assert_file_not_contains "$INSTALL_SCRIPT" 'git -C'
 
 TEMP_DIR=$(mktemp -d "${TMPDIR:-/tmp}/ai-delivery-install-script.XXXXXX")
 INSTALL_DIR="$TEMP_DIR/bin"
@@ -81,13 +78,12 @@ tar -C "$TEMP_DIR" -czf "$TEMP_DIR/$ARCHIVE_NAME" "$(basename "$STUB_BIN")"
 CHECKSUM=$(shasum -a 256 "$TEMP_DIR/$ARCHIVE_NAME" | awk '{print $1}')
 cat >"$TEMP_DIR/checksums.txt" <<EOF
 $CHECKSUM  $ARCHIVE_NAME
-deadbeef  ai-delivery_linux_amd64.tar.gz
+deadbeef  unrelated.tar.gz
 EOF
 
 AI_DELIVERY_INSTALL_DIR="$INSTALL_DIR" \
   AI_DELIVERY_DOWNLOAD_BASE_URL="file://$TEMP_DIR" \
   AI_DELIVERY_VERSION="v9.9.9" \
-  AI_DELIVERY_SKIP_SKILLS="1" \
   bash "$INSTALL_SCRIPT"
 
 [[ -x "$INSTALL_DIR/ai-delivery" ]] || fail "expected installed ai-delivery binary"
@@ -162,7 +158,6 @@ PATH="$STUB_DIR:$PATH" \
   AI_DELIVERY_INSTALL_DIR="$AUTH_INSTALL_DIR" \
   AI_DELIVERY_REPO="example/private-repo" \
   AI_DELIVERY_VERSION="latest" \
-  AI_DELIVERY_SKIP_SKILLS="1" \
   bash "$INSTALL_SCRIPT"
 
 assert_file_contains "$CURL_LOG" 'Authorization: Bearer test-token'
@@ -179,7 +174,6 @@ bash "$INSTALL_SCRIPT" \
   --install-dir "$UPGRADE_INSTALL_DIR" \
   --download-base-url "file://$TEMP_DIR" \
   --version "v9.9.9" \
-  --upgrade-init /tmp/managed-repo \
-  --skip-skills
+  --upgrade-init /tmp/managed-repo
 
 assert_file_contains "$OUTPUT_LOG" 'init --upgrade /tmp/managed-repo'

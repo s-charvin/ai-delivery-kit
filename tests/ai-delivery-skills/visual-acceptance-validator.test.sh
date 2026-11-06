@@ -45,6 +45,9 @@ TWO_FRAME_GIF = bytes.fromhex(
 
 with tempfile.TemporaryDirectory(prefix="visual-acceptance-validator.") as td:
     repo = Path(td) / "repo"
+    meta=repo/".ai-delivery/meta";meta.mkdir(parents=True)
+    (meta/"project-binding.json").write_text('{"version":3,"layout":{}}')
+    (meta/"workflow-policy.json").write_text('{"version":4,"verification_contract_version":2,"context":{"sources":[]}}')
     req_root = repo / ".ai-delivery" / "requirements" / "REQ-UI"
     subreq = req_root / "sub-requirements" / "SR-001"
     contracts = subreq / "contracts"
@@ -466,7 +469,7 @@ not_applicable
 
     wrong_schema = copy.deepcopy(valid_acceptance)
     wrong_schema["schema_version"] = 1
-    expect_fail("wrong schema", wrong_schema, "schema_version must equal 2")
+    expect_fail("wrong schema", wrong_schema, "schema_version")
 
     stale_index = copy.deepcopy(valid_acceptance)
     stale_index["ui_truth_index_sha256"] = "0" * 64

@@ -99,7 +99,8 @@ def run(req, values, checkpoint=None, schema="2.0", validator=False):
         ),
         encoding="utf-8",
     )
-    validator_path = root / "scripts/validate-delivery-status.py" if validator else req / "missing-validator.py"
+    (req / "dependency-graph.json").write_text(json.dumps({"nodes": {sid: {"depends_on": []} for sid in values}}))
+    validator_path = root / "scripts/validate-delivery-status.py"
     return mod.reconcile(status, req, validator_script=validator_path)
 
 
@@ -110,15 +111,16 @@ with tempfile.TemporaryDirectory() as td:
     assert result["next_action"] == "none", result
     assert result["runtime_mode"] == "blocker_recovery", result
 
-# A removed CP-001 credential cannot create or block authority. Current design does.
+# A removed CP-001 credential is an unsupported protocol and cannot authorize work.
 with tempfile.TemporaryDirectory() as td:
     req = Path(td)
     path = write_design(req, "SR-001", contract())
     ready = entry("design_ready")
     bind(ready, path, "self")
     result = run(req, {"SR-001": ready}, checkpoint="CP-001")
-    assert result["next_action"] == "implement", result
-    assert result["checkpoint"] is None, result
+    assert result["next_action"] == "none", result
+    assert result["runtime_mode"] == "blocker_recovery", result
+    assert any(d["category"]=="compatibility" for d in result["diagnostics"]),result
 
 # A real user decision requires human review; forged self-review does not pass.
 with tempfile.TemporaryDirectory() as td:
@@ -192,7 +194,7 @@ with tempfile.TemporaryDirectory() as td:
     }
     result = run(req, {"SR-001": legacy}, schema="1.1")
     assert result["runtime_mode"] == "blocker_recovery", result
-    assert any("migration to schema 2.0" in item for item in result["errors"]), result
+    assert any("_schema" in item and "2.0" in item and "--reset-data" in item for item in result["errors"]), result
 
 # UI acceptance cannot be forged by advancing only the status string.
 with tempfile.TemporaryDirectory() as td:

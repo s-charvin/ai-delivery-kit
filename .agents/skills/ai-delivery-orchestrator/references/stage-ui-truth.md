@@ -76,16 +76,19 @@ records, with a short current pointer rather than duplicate reports.
 
 ## After completion
 
-There is no HTML validator and no active-delivery compatibility branch for earlier schemas. Kit status validation checks the v3 schema, containment, file types, hashes, dependencies, profiles, sourced states, scenarios, evidence scopes, host bindings, complete coverage, and preview-bound confirmation evidence; archived records remain readable under their legacy schema:
+There is no HTML validator or compatibility branch for earlier schemas. The UI freeze action checks the v3 schema, containment, file types, hashes, dependencies, profiles, sourced states, scenarios, evidence scopes, host bindings, complete coverage, and preview-bound confirmation evidence through the shared core:
 
-```bash
-python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent ui --to acceptance_frozen
 ```
 
-- Set `acceptance_frozen` only when the freeze bar is satisfied.
-- On failure → `blocked_verification_failure`; do not advance status.
-- Update `status.json`.
+Only when this check returns `allowed=true` and the freeze bar is satisfied, pass its `snapshot_id` to the guarded transition:
+
+```sh
+ai-delivery advance --project . --req <req-id> --subreq <subreq-id> --to acceptance_frozen --expected-snapshot <snapshot_id>
+```
+
+`advance` rechecks the same action and writes `status.json` only when the snapshot and authorization remain valid. On failure, resolve the reported diagnostics and rerun the check; do not write `acceptance_frozen` manually. The static `validate --kind status` query only checks status fields, mode consistency, and forbidden artifacts for troubleshooting; it does not prove UI freeze readiness.
 
 ## If no Figma link
 

@@ -45,8 +45,8 @@ Edit one file at a time during implementation.
 
 ## `finish` usage advice
 
-- `finishing-a-development-branch` — structured merge options; rebase onto the development branch (no merge commits).
-- Set `merged` only after the rebase succeeds and all gates hold.
+- `finishing-a-development-branch` supplies completion methods within the user's actual integration choice. A current-checkout/main preference does not authorize a new branch, worktree, commit, push, or release; do not require a rebase where no separate branch exists. Preserve unrelated changes and follow later explicit user instructions.
+- Set `merged` only after the authorized integration is complete and the current CLI checks and applicable gates hold; a framework completion message is not authorization.
 - Before `merged`, write `verification.md` in the user's current conversation language. Preserve the three `ai-delivery-verification:*` markers from `templates/verification-template.md`; the status validator rejects `merged` without them.
 
 ## Traceability recording

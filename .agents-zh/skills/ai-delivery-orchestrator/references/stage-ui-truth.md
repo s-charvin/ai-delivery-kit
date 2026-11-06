@@ -59,16 +59,19 @@ v3 `contracts/ui-truth-index.json` 记录治理元数据：truth mode/source、�
 
 ## 完成后
 
-没有 HTML 校验器，进行中的交付也不兼容旧 schema。Kit 状态校验检查 v3 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、证据范围、宿主绑定、完整 coverage 与预览绑定确认凭证；已归档记录保持旧 schema 可读：
+没有 HTML 校验器，也不兼容旧 schema。UI 冻结动作通过共享核心检查 v3 schema、路径边界、文件类型、hash、依赖、profile、带来源的 state、scenario、证据范围、宿主绑定、完整 coverage 与预览绑定确认凭证：
 
-```bash
-python3 scripts/validate-delivery-status.py .ai-delivery/requirements/<req-id>/status.json \
-  --req-root .ai-delivery/requirements/<req-id>
+```sh
+ai-delivery check --project . --req <req-id> --subreq <subreq-id> --intent ui --to acceptance_frozen
 ```
 
-- 仅当冻结门槛满足时设置 `acceptance_frozen`。
-- 失败 → `blocked_verification_failure`；不要推进状态。
-- 更新 `status.json`。
+仅当该检查返回 `allowed=true` 且满足冻结门槛时，将其 `snapshot_id` 传给受保护的状态推进：
+
+```sh
+ai-delivery advance --project . --req <req-id> --subreq <subreq-id> --to acceptance_frozen --expected-snapshot <snapshot_id>
+```
+
+`advance` 重新检查同一动作，仅在快照及授权仍有效时写入 `status.json`。失败时解决诊断并重新检查，不要手工写入 `acceptance_frozen`。静态 `validate --kind status` 查询仅用于排查状态字段、mode 一致性及禁止产物，不能证明 UI 冻结就绪。
 
 ## 若无 Figma 链接
 

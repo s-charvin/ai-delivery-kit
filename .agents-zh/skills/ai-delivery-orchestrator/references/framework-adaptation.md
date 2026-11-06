@@ -1,7 +1,8 @@
 # 框架适配
 
-编排器拥有状态、gate、blocker、handoff 和持久化产物形态。已安装框架只
-贡献推理方法或执行纪律，不新增阶段和必需文档。
+唯一已安装的 `ai-delivery` CLI 判断当前状态、gate、适用性和合法动作；编排器组织
+handoff 与 canonical 产物。已安装框架只贡献推理方法或执行纪律，不新增阶段、
+必需文档或另一执行规则表。
 
 ## 产物边界协议（必须）
 
@@ -16,7 +17,7 @@
 
 ## 轻量产物组织
 
-正式路径继续通过 `project-binding.json` 与 `layout.py` 解析。允许在所属需求内保存辅助材料，不为每种文件加入绑定。这些约定约束后续创建，不增加目录校验、文件数上限、manifest、命名门禁或强制整理阶段。
+正式路径继续通过 `project-binding.json` 与 `ai-delivery validate --kind layout` 解析。允许在所属需求内保存辅助材料，不为每种文件加入绑定。这些约定约束后续创建，不增加目录校验、文件数上限、manifest、命名门禁或强制整理阶段。
 
 创建前先判用途、所属对象、现有承载位置和发现入口。能更新已有正文就原位维护；只有独立来源、审查范围、运行或需保全的尝试才拆文件。小需求不创建空目录或额外报告。
 
@@ -128,4 +129,12 @@ superpowers，其次 ECC，最后 native。
 
 在 `traceability.json` `source_index.design` 记录 canonical `design.md`
 路径、当前 SHA-256、来源关系和推理方法。schema 2.0 不生成 `spec_refs` 或
-`kind=spec|plan|tasks`；旧终态记录只读兼容。
+`kind=spec|plan|tasks`；当前运行时不解析旧 spec/plan/tasks 格式，不支持的历史材料仅作为活跃治理范围外的备份或参考。
+
+## 规范上下文与质量闭环
+
+开工、恢复、阶段/范围变化和独立评审前，读取并执行 [质量闭环](delivery-quality-loop.md)。
+使用同一只读上下文入口；新 policy v4 的 verification v2 绑定当前输入、原生结果与新鲜上下文评审。
+区分知识、已确认规范及任务决定；证据无效先修取证，真实失败定向纠错，沿用三轮预算。
+已登记 sources 且 writable 的规范允许在授权范围维护，导入默认只读，不为通过检查自行降标。
+不引入 Trellis/Helix 的第二任务状态、自动提交、逐单元人审或无限循环。

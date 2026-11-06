@@ -127,6 +127,7 @@ cat > "$LEGACY_REQ/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$LEGACY_REQ"
 if python3 "$ARCHIVE" --req-root "$LEGACY_REQ" --subreq SR-001 \
   --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   --retrospective-index-template "$TMP/index-template.md" \
@@ -155,6 +156,7 @@ cat > "$PRE_REQ/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$PRE_REQ"
 if python3 "$ARCHIVE" --req-root "$PRE_REQ" --subreq SR-001 \
   --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   --retrospective-index-template "$ROOT/.agents/skills/ai-delivery-orchestrator/templates/retrospective-index-template.md" \
@@ -175,6 +177,7 @@ cat > "$REQ/status.json" <<'EOF'
   }
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$REQ"
 
 python3 "$ARCHIVE" --req-root "$REQ" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   --retrospective-index-template "$TMP/index-template.md" \
@@ -302,6 +305,7 @@ cat > "$CUSTOM_REQ/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$CUSTOM_REQ"
 python3 "$ARCHIVE" --req-root "$CUSTOM_REQ" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   --retrospective-index-template "$TMP/index-template.md" \
   || fail "custom ai_delivery_path archive command failed"
@@ -326,6 +330,7 @@ cat > "$NO_RET/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$NO_RET"
 if python3 "$ARCHIVE" --req-root "$NO_RET" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   >"$NO_ROOT/out" 2>"$NO_ROOT/err"; then
   fail "archive without retrospective unexpectedly succeeded"
@@ -361,6 +366,7 @@ cat > "$STALE_RET/status.json" <<'EOF'
   "sub_requirements": {"SR-001": {"status": "merged"}}
 }
 EOF
+python3 "$ROOT/tests/ai-delivery-skills/archive_fixture.py" "$STALE_RET"
 if python3 "$ARCHIVE" --req-root "$STALE_RET" --subreq SR-001 --now "2026-09-02T00:00:00+00:00" --no-delivery-report \
   >"$STALE_ROOT/out" 2>"$STALE_ROOT/err"; then
   fail "stale retrospective unexpectedly succeeded"
