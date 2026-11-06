@@ -21,7 +21,7 @@ func verificationFromRun(t *testing.T, root string, r model.RunReceipt, current 
 	t.Helper()
 	b, e := checks.ReceiptToCheck(r)
 	if e != nil {
-		t.Fatal(e)
+		t.Fatalf("%v\nreceipt=%s", e, r.Observation.Details)
 	}
 	c, e := protocol.Object(b)
 	if e != nil {
